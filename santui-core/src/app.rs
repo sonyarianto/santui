@@ -284,7 +284,6 @@ impl Santui {
         f.render_widget(Clear, content);
         f.render_widget(Paragraph::new(fill), content);
 
-        let mut pal_h = 2u16;
         let mut current_cat = "";
         let mut cat_items: Vec<usize> = Vec::new();
         let mut groups: Vec<(&str, Vec<usize>)> = Vec::new();
@@ -299,35 +298,43 @@ impl Santui {
         if !cat_items.is_empty() {
             groups.push((current_cat, cat_items));
         }
+
+        let mut pal_h = 2u16;
         for (_, items) in &groups {
             pal_h += 1 + items.len() as u16;
         }
+
         let pal_w = (content.width as f32 * 0.5).max(40.0) as u16;
         let x = content.x + (content.width - pal_w) / 2;
         let y = content.y + (content.height - pal_h) / 3;
         let pal_area = Rect { x, y, width: pal_w, height: pal_h };
 
         let mut lines = vec![
-            Line::from(Span::styled(format!("  {} ", query), Style::default().fg(Color::White))),
-            Line::from(""),
+            Line::from(Span::styled(query, Style::default().fg(Color::White))),
+            Line::from(Span::styled("", Style::default())),
         ];
 
         let accent = Color::Rgb(255, 185, 0);
         let mut flat_idx = 0;
         for (cat, items) in &groups {
+            let fill_w = pal_w as usize;
             lines.push(Line::from(Span::styled(
-                format!("  {}", cat),
+                format!("{:<width$}", cat, width = fill_w),
                 Style::default().fg(accent).add_modifier(Modifier::BOLD),
             )));
             for &idx in items {
                 let sel = flat_idx == cursor;
                 let item = &CMD_ITEMS[idx];
-                let content_line = format!("    {}", item.label);
-                let remaining = (pal_w as usize).saturating_sub(content_line.len());
-                let full = format!("{}{}", content_line, " ".repeat(remaining));
-                let style = if sel { Style::default().fg(Color::Black).bg(Color::Cyan) }
-                             else { Style::default().fg(Color::White) };
-                lines.push(Line::from(Span::styled(full, style)));
+                let inner = format!("  {}", item.label);
+                let style = if sel {
+                    Style::default().fg(Color::Black).bg(Color::Cyan)
+                } else {
+                    Style::default().fg(Color::White)
+                };
+                lines.push(Line::from(Span::styled(
+                    format!("{:<width$}", inner, width = fill_w),
+                    style,
+                )));
                 flat_idx += 1;
             }
         }
