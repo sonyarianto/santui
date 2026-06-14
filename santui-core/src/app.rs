@@ -440,7 +440,7 @@ impl Santui {
         if query.is_empty() {
             // Cursor sits ON the first character of placeholder (transparent overlay)
             let first_style = if cursor_on {
-                Style::default().fg(Color::Rgb(255, 185, 0)).bg(Color::Rgb(40, 40, 40))
+                Style::default().fg(Color::Black).bg(Color::Rgb(255, 185, 0))
             } else {
                 Style::default().fg(Color::DarkGray)
             };
@@ -450,10 +450,14 @@ impl Santui {
             ]));
         } else {
             // Cursor at end of query text
-            let cursor_fg = if cursor_on { Color::Rgb(255, 185, 0) } else { Color::Rgb(20, 20, 20) };
+            let cursor_style = if cursor_on {
+                Style::default().fg(Color::Black).bg(Color::Rgb(255, 185, 0))
+            } else {
+                Style::default().fg(Color::Rgb(20, 20, 20)).bg(Color::Rgb(20, 20, 20))
+            };
             header_lines.push(Line::from(vec![
                 Span::styled(query.clone(), Style::default().fg(Color::White)),
-                Span::styled("█", Style::default().fg(cursor_fg)),
+                Span::styled(" ", cursor_style),
             ]));
         }
         header_lines.push(Line::from(Span::styled("", Style::default())));
