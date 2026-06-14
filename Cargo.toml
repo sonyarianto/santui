@@ -1,0 +1,3 @@
+[workspace]
+members = ["santui-core", "santui-radio", "santui"]
+resolver = "2"

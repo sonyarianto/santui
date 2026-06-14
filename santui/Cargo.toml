@@ -1,0 +1,8 @@
+[package]
+name = "santui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+santui-core = { path = "../santui-core" }
+santui-radio = { path = "../santui-radio" }

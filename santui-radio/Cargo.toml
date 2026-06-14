@@ -1,0 +1,10 @@
+[package]
+name = "santui-radio"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+santui-core = { path = "../santui-core" }
+crossterm = "0.28"
+libloading = "0.8"
+ratatui = "0.29"
