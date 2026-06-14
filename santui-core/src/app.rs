@@ -26,6 +26,7 @@ const CMD_ITEMS: &[CmdItem] = &[
 struct PaletteState {
     query: String,
     cursor: usize,
+    scroll: u16,
 }
 
 pub struct Santui {
@@ -35,6 +36,7 @@ pub struct Santui {
     palette: Option<PaletteState>,
     show_about: bool,
     running: bool,
+    tick: u64,
 }
 
 impl Santui {
@@ -46,6 +48,7 @@ impl Santui {
             palette: None,
             show_about: false,
             running: true,
+            tick: 0,
         }
     }
 
@@ -72,6 +75,8 @@ impl Santui {
                 p.tick();
             }
 
+            self.tick = self.tick.wrapping_add(1);
+
             terminal.draw(|f| self.render(f))?;
 
             if crossterm::event::poll(tick_rate)? {
@@ -88,6 +93,49 @@ impl Santui {
         execute!(std::io::stdout(), LeaveAlternateScreen)?;
         terminal.show_cursor()?;
         Ok(())
+    }
+
+    fn palette_max_h(&self, area_h: u16) -> u16 {
+        let content_h = area_h.saturating_sub(1);
+        (content_h / 2).saturating_sub(6).max(4)
+    }
+
+    fn ensure_cursor_visible(&mut self, area_h: u16) {
+        let query = self.palette.as_ref().unwrap().query.clone();
+        let filtered = self.filtered_items(&query);
+        let cursor = self.palette.as_ref().unwrap().cursor;
+        let no_results = !query.is_empty() && filtered.is_empty();
+        let mut line: u16 = 0;
+        if no_results {
+            line += 1;
+        }
+        let mut flat = 0usize;
+        let mut cat = String::new();
+        let mut first_cat = true;
+        for &idx in &filtered {
+            let c = CMD_ITEMS[idx].category;
+            if c != cat {
+                cat = c.to_string();
+                if !first_cat {
+                    line += 1; // blank before subsequent category
+                }
+                first_cat = false;
+                line += 1; // category header
+            }
+            if flat == cursor {
+                break;
+            }
+            line += 1; // item
+            flat += 1;
+        }
+        let max_h = self.palette_max_h(area_h);
+        let list_h = max_h.saturating_sub(6).max(1); // 6 = pad_t(1) + header_h(4) + pad_b(1)
+        let pal = self.palette.as_mut().unwrap();
+        if line < pal.scroll {
+            pal.scroll = line;
+        } else if line >= pal.scroll + list_h {
+            pal.scroll = line.saturating_sub(list_h.saturating_sub(1));
+        }
     }
 
     fn filtered_items(&self, query: &str) -> Vec<usize> {
@@ -116,10 +164,12 @@ impl Santui {
                 KeyCode::Char(c) => {
                     palette.query.push(c);
                     palette.cursor = 0;
+                    palette.scroll = 0;
                 }
                 KeyCode::Backspace => {
                     palette.query.pop();
                     palette.cursor = 0;
+                    palette.scroll = 0;
                 }
                 KeyCode::Up => {
                     if !filtered.is_empty() {
@@ -147,11 +197,16 @@ impl Santui {
                 KeyCode::Esc => self.palette = None,
                 _ => {}
             }
+
+            if self.palette.is_some() {
+                let (_, term_h) = crossterm::terminal::size().unwrap_or((80, 24));
+                self.ensure_cursor_visible(term_h);
+            }
             return;
         }
 
         if matches!(key.code, KeyCode::Char('p') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL)) {
-            self.palette = Some(PaletteState { query: String::new(), cursor: 0 });
+            self.palette = Some(PaletteState { query: String::new(), cursor: 0, scroll: 0 });
             return;
         }
 
@@ -276,7 +331,9 @@ impl Santui {
         let query = &self.palette.as_ref().unwrap().query;
         let filtered = self.filtered_items(query);
         let cursor = self.palette.as_ref().map_or(0, |p| p.cursor);
+        let scroll = self.palette.as_ref().map_or(0, |p| p.scroll);
 
+        // Dim overlay
         let dim = Style::default().fg(Color::DarkGray).add_modifier(Modifier::DIM);
         let fill: Vec<Line> = (0..content.height)
             .map(|_| Line::from(Span::styled(" ".repeat(content.width as usize), dim)))
@@ -284,6 +341,7 @@ impl Santui {
         f.render_widget(Clear, content);
         f.render_widget(Paragraph::new(fill), content);
 
+        // Build category groups
         let mut current_cat = "";
         let mut cat_items: Vec<usize> = Vec::new();
         let mut groups: Vec<(&str, Vec<usize>)> = Vec::new();
@@ -299,50 +357,114 @@ impl Santui {
             groups.push((current_cat, cat_items));
         }
 
-        let mut pal_h = 2u16;
-        for (_, items) in &groups {
-            pal_h += 1 + items.len() as u16;
+        let pal_w: u16 = 60;
+        let no_results = !query.is_empty() && filtered.is_empty();
+        let pad_l = 2u16;
+        let pad_t = 1u16;
+        let pad_b = 1u16;
+        let header_h = 4u16; // title + blank + input + blank
+        let inner_w = pal_w.saturating_sub(pad_l * 2);
+
+        // Build list content
+        let mut list_lines = Vec::new();
+
+        if no_results {
+            list_lines.push(Line::from(Span::styled(
+                "No results found",
+                Style::default().fg(Color::DarkGray),
+            )));
         }
-
-        let pal_w = (content.width as f32 * 0.5).max(40.0) as u16;
-        let x = content.x + (content.width - pal_w) / 2;
-        let y = content.y + (content.height - pal_h) / 3;
-        let pal_area = Rect { x, y, width: pal_w, height: pal_h };
-
-        let mut lines = vec![
-            Line::from(Span::styled(query, Style::default().fg(Color::White))),
-            Line::from(Span::styled("", Style::default())),
-        ];
 
         let accent = Color::Rgb(255, 185, 0);
         let mut flat_idx = 0;
-        for (cat, items) in &groups {
-            let fill_w = pal_w as usize;
-            lines.push(Line::from(Span::styled(
-                format!("{:<width$}", cat, width = fill_w),
+        for (i, (cat, items)) in groups.iter().enumerate() {
+            if i > 0 {
+                list_lines.push(Line::from(Span::styled("", Style::default())));
+            }
+            list_lines.push(Line::from(Span::styled(
+                format!("{:<width$}", cat, width = inner_w as usize),
                 Style::default().fg(accent).add_modifier(Modifier::BOLD),
             )));
             for &idx in items {
                 let sel = flat_idx == cursor;
                 let item = &CMD_ITEMS[idx];
-                let inner = format!("  {}", item.label);
                 let style = if sel {
                     Style::default().fg(Color::Black).bg(Color::Cyan)
                 } else {
                     Style::default().fg(Color::White)
                 };
-                lines.push(Line::from(Span::styled(
-                    format!("{:<width$}", inner, width = fill_w),
+                list_lines.push(Line::from(Span::styled(
+                    format!("{:<width$}", item.label, width = inner_w as usize),
                     style,
                 )));
                 flat_idx += 1;
             }
         }
 
+        // Compute heights
+        let max_h = (content.height / 2).saturating_sub(6).max(4);
+        let natural_list_h = list_lines.len() as u16;
+        let list_h = natural_list_h.min(max_h.saturating_sub(pad_t + header_h + pad_b));
+        let pal_h = pad_t + header_h + list_h + pad_b;
+
+        let x = (content.width.saturating_sub(pal_w)) / 2;
+        let y = content.y + content.height / 4;
+        let pal_area = Rect { x, y, width: pal_w, height: pal_h };
+
+        // Dialog background
         f.render_widget(Clear, pal_area);
         f.render_widget(
-            Paragraph::new(lines).style(Style::default().bg(Color::Black)),
+            Paragraph::new(vec![]).style(Style::default().bg(Color::Rgb(20, 20, 20))),
             pal_area,
+        );
+
+        // ---- Fixed header ----
+        let mut header_lines = Vec::new();
+
+        let pad_w = inner_w.saturating_sub(11); // 8 "Commands" + 3 "esc"
+        let mut title_spans = vec![
+            Span::styled("Commands", Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
+        ];
+        if pad_w > 0 {
+            title_spans.push(Span::styled(
+                " ".repeat(pad_w as usize),
+                Style::default(),
+            ));
+        }
+        title_spans.push(Span::styled("esc", Style::default().fg(Color::DarkGray)));
+        header_lines.push(Line::from(title_spans));
+        header_lines.push(Line::from(Span::styled("", Style::default())));
+
+        let cursor_on = (self.tick / 5) % 2 == 0;
+        let cursor_fg = if cursor_on { Color::White } else { Color::Rgb(20, 20, 20) };
+        let cursor_c = Span::styled("█", Style::default().fg(cursor_fg));
+        let (input_left, input_right) = if query.is_empty() {
+            (cursor_c, Span::styled("Search", Style::default().fg(Color::DarkGray)))
+        } else {
+            (Span::styled(query.clone(), Style::default().fg(Color::White)), cursor_c)
+        };
+        header_lines.push(Line::from(vec![input_left, input_right]));
+        header_lines.push(Line::from(Span::styled("", Style::default())));
+
+        let header_area = Rect {
+            x: pal_area.x + pad_l,
+            y: pal_area.y + pad_t,
+            width: inner_w,
+            height: header_h,
+        };
+        f.render_widget(Paragraph::new(header_lines), header_area);
+
+        // ---- Scrollable list ----
+        let list_top = pal_area.y + pad_t + header_h;
+        let list_area = Rect {
+            x: pal_area.x + pad_l,
+            y: list_top,
+            width: inner_w,
+            height: list_h,
+        };
+        f.render_widget(
+            Paragraph::new(list_lines).scroll((scroll, 0)),
+            list_area,
         );
     }
 
