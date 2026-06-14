@@ -4,9 +4,9 @@ use crossterm::execute;
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
 use ratatui::backend::CrosstermBackend;
 use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
-use ratatui::style::{Color, Style};
+use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Clear, Paragraph};
+use ratatui::widgets::{Clear, Paragraph};
 use ratatui::Frame;
 use ratatui::Terminal;
 use std::time::Duration;
@@ -206,7 +206,7 @@ impl Santui {
         }
 
         if self.palette.is_some() {
-            self.render_palette(f, area);
+            self.render_palette(f, chunks[0]);
         }
 
         self.render_status_bar(f, chunks[1]);
@@ -272,19 +272,24 @@ impl Santui {
         f.render_widget(p, vert[1]);
     }
 
-    fn render_palette(&self, f: &mut Frame, area: Rect) {
+    fn render_palette(&self, f: &mut Frame, content: Rect) {
         let query = &self.palette.as_ref().unwrap().query;
         let filtered = self.filtered_items(query);
         let cursor = self.palette.as_ref().map_or(0, |p| p.cursor);
 
-        let item_count = filtered.len().max(1) as u16;
-        let width = (area.width as f32 * 0.5).max(40.0) as u16;
-        let inner_height = item_count + 2;
-        let height = inner_height.min(area.height.saturating_sub(4)) + 2;
-        let x = (area.width - width) / 2;
-        let y = (area.height - height) / 3;
+        let dim = Style::default().fg(Color::DarkGray).add_modifier(Modifier::DIM);
+        let fill: Vec<Line> = (0..content.height)
+            .map(|_| Line::from(Span::styled(" ".repeat(content.width as usize), dim)))
+            .collect();
+        f.render_widget(Clear, content);
+        f.render_widget(Paragraph::new(fill), content);
 
-        let pal_area = Rect { x, y, width, height };
+        let item_count = filtered.len().max(1) as u16;
+        let pal_w = (content.width as f32 * 0.5).max(40.0) as u16;
+        let pal_h = item_count + 2;
+        let x = content.x + (content.width - pal_w) / 2;
+        let y = content.y + (content.height - pal_h) / 3;
+        let pal_area = Rect { x, y, width: pal_w, height: pal_h };
 
         let max_label = filtered.iter()
             .map(|&i| CMD_ITEMS[i].label.len())
@@ -303,25 +308,20 @@ impl Santui {
             let prefix = if sel { "▸ " } else { "  " };
             let label = format!("{}{}", prefix, item.label);
             let padding = " ".repeat(pad.saturating_sub(label.len()));
-            let line = Line::from(vec![
-                Span::styled(format!("{}{}{}", label, padding, item.category),
+            lines.push(Line::from(vec![
+                Span::styled(
+                    format!("{}{}{}", label, padding, item.category),
                     if sel { Style::default().fg(Color::Black).bg(Color::Cyan) }
-                    else { Style::default().fg(Color::White) }
+                    else { Style::default().fg(Color::White) },
                 ),
-            ]);
-            lines.push(line);
+            ]));
         }
 
-        let block = Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::Cyan));
-
-        let p = Paragraph::new(lines)
-            .block(block)
-            .style(Style::default().bg(Color::Black));
-
         f.render_widget(Clear, pal_area);
-        f.render_widget(p, pal_area);
+        f.render_widget(
+            Paragraph::new(lines).style(Style::default().bg(Color::Black)),
+            pal_area,
+        );
     }
 
     fn render_status_bar(&self, f: &mut Frame, area: Rect) {
