@@ -295,7 +295,6 @@ impl Santui {
             .map(|&i| CMD_ITEMS[i].label.len())
             .max()
             .unwrap_or(0);
-        let pad = max_label + 5;
 
         let mut lines = vec![
             Line::from(Span::styled(format!("> {}", query), Style::default().fg(Color::White))),
@@ -305,16 +304,14 @@ impl Santui {
         for (i, &idx) in filtered.iter().enumerate() {
             let item = &CMD_ITEMS[idx];
             let sel = i == cursor;
-            let prefix = if sel { "▸ " } else { "  " };
-            let label = format!("{}{}", prefix, item.label);
-            let padding = " ".repeat(pad.saturating_sub(label.len()));
-            lines.push(Line::from(vec![
-                Span::styled(
-                    format!("{}{}{}", label, padding, item.category),
-                    if sel { Style::default().fg(Color::Black).bg(Color::Cyan) }
-                    else { Style::default().fg(Color::White) },
-                ),
-            ]));
+            let label = format!("  {}", item.label);
+            let pad = (max_label + 5).saturating_sub(item.label.len());
+            let content_line = format!("{}{}{}", label, " ".repeat(pad), item.category);
+            let remaining = (pal_w as usize).saturating_sub(content_line.len());
+            let full = format!("{}{}", content_line, " ".repeat(remaining));
+            let style = if sel { Style::default().fg(Color::Black).bg(Color::Cyan) }
+                         else { Style::default().fg(Color::White) };
+            lines.push(Line::from(Span::styled(full, style)));
         }
 
         f.render_widget(Clear, pal_area);
