@@ -436,14 +436,26 @@ impl Santui {
         header_lines.push(Line::from(Span::styled("", Style::default())));
 
         let cursor_on = (self.tick / 5) % 2 == 0;
-        let cursor_fg = if cursor_on { Color::White } else { Color::Rgb(20, 20, 20) };
-        let cursor_c = Span::styled("█", Style::default().fg(cursor_fg));
-        let (input_left, input_right) = if query.is_empty() {
-            (cursor_c, Span::styled("Search", Style::default().fg(Color::DarkGray)))
+
+        if query.is_empty() {
+            // Cursor sits ON the first character of placeholder (transparent overlay)
+            let first_style = if cursor_on {
+                Style::default().fg(Color::Rgb(255, 185, 0)).bg(Color::Rgb(40, 40, 40))
+            } else {
+                Style::default().fg(Color::DarkGray)
+            };
+            header_lines.push(Line::from(vec![
+                Span::styled("S", first_style),
+                Span::styled("earch", Style::default().fg(Color::DarkGray)),
+            ]));
         } else {
-            (Span::styled(query.clone(), Style::default().fg(Color::White)), cursor_c)
-        };
-        header_lines.push(Line::from(vec![input_left, input_right]));
+            // Cursor at end of query text
+            let cursor_fg = if cursor_on { Color::Rgb(255, 185, 0) } else { Color::Rgb(20, 20, 20) };
+            header_lines.push(Line::from(vec![
+                Span::styled(query.clone(), Style::default().fg(Color::White)),
+                Span::styled("█", Style::default().fg(cursor_fg)),
+            ]));
+        }
         header_lines.push(Line::from(Span::styled("", Style::default())));
 
         let header_area = Rect {
