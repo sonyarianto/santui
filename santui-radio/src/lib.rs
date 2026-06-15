@@ -1,14 +1,14 @@
 mod player;
-pub mod stations;
 mod state;
+pub mod stations;
 mod ui;
 
 use crate::player::Mpv;
 use crate::state::{PlayState, RadioState};
-use santui_core::{Plugin, PluginContext};
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::layout::Rect;
 use ratatui::Frame;
+use santui_core::{Plugin, PluginContext};
 use std::sync::mpsc;
 use std::thread;
 
@@ -30,10 +30,15 @@ pub struct RadioPlugin {
     init_error: Option<String>,
 }
 
+impl Default for RadioPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RadioPlugin {
     pub fn new() -> Self {
-        let station_list: Vec<&'static stations::Station> =
-            stations::STATIONS.iter().collect();
+        let station_list: Vec<&'static stations::Station> = stations::STATIONS.iter().collect();
         RadioPlugin {
             state: RadioState::new(station_list),
             tx_cmd: None,
@@ -87,8 +92,7 @@ impl Plugin for RadioPlugin {
                         break;
                     }
                     if id == player::MPV_EVENT_PROPERTY_CHANGE {
-                        let prop: &player::MpvEventProperty =
-                            unsafe { &*(ev.data as *const _) };
+                        let prop: &player::MpvEventProperty = unsafe { &*(ev.data as *const _) };
                         let name = unsafe {
                             std::ffi::CStr::from_ptr(prop.name)
                                 .to_string_lossy()
@@ -101,17 +105,22 @@ impl Plugin for RadioPlugin {
                         }
                     }
                     if id == player::MPV_EVENT_END_FILE {
-                        let ef: &player::MpvEventEndFile =
-                            unsafe { &*(ev.data as *const _) };
+                        let ef: &player::MpvEventEndFile = unsafe { &*(ev.data as *const _) };
                         let _ = tx_msg.send(MpvMsg::EndFile(ef.reason));
                     }
                 }
 
                 while let Ok(cmd) = rx_cmd.try_recv() {
                     match cmd {
-                        MpvCmd::LoadUrl(url) => { let _ = mpv.load_url(url); }
-                        MpvCmd::Stop => { let _ = mpv.stop(); }
-                        MpvCmd::SetVolume(v) => { let _ = mpv.set_volume(v); }
+                        MpvCmd::LoadUrl(url) => {
+                            let _ = mpv.load_url(url);
+                        }
+                        MpvCmd::Stop => {
+                            let _ = mpv.stop();
+                        }
+                        MpvCmd::SetVolume(v) => {
+                            let _ = mpv.set_volume(v);
+                        }
                     }
                 }
             }
@@ -177,8 +186,8 @@ impl Plugin for RadioPlugin {
     }
 
     fn render(&self, f: &mut Frame, area: Rect) {
-        if self.init_error.is_some() {
-            let text = format!("Failed to load libmpv: {}", self.init_error.as_ref().unwrap());
+        if let Some(ref err) = self.init_error {
+            let text = format!("Failed to load libmpv: {err}");
             let p = ratatui::widgets::Paragraph::new(text)
                 .style(ratatui::style::Style::default().fg(ratatui::style::Color::Red));
             f.render_widget(p, area);
@@ -201,8 +210,7 @@ impl Plugin for RadioPlugin {
                                 self.send_cmd(MpvCmd::LoadUrl(station.url));
                             }
                         } else if reason == player::MPV_END_FILE_REASON_ERROR {
-                            self.state.play_state =
-                                PlayState::Error("connection lost".into());
+                            self.state.play_state = PlayState::Error("connection lost".into());
                         }
                     }
                 }

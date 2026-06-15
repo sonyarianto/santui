@@ -1,7 +1,9 @@
 use crate::plugin::{Plugin, PluginContext};
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use crossterm::execute;
-use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
+use crossterm::terminal::{
+    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
+};
 use ratatui::backend::CrosstermBackend;
 use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
@@ -19,8 +21,14 @@ struct CmdItem {
 }
 
 const CMD_ITEMS: &[CmdItem] = &[
-    CmdItem { category: "Modules", label: "Radio Player" },
-    CmdItem { category: "System", label: "About" },
+    CmdItem {
+        category: "Modules",
+        label: "Radio Player",
+    },
+    CmdItem {
+        category: "System",
+        label: "About",
+    },
 ];
 
 struct PaletteState {
@@ -37,6 +45,12 @@ pub struct Santui {
     show_about: bool,
     running: bool,
     tick: u64,
+}
+
+impl Default for Santui {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Santui {
@@ -109,10 +123,9 @@ impl Santui {
         if no_results {
             line += 1;
         }
-        let mut flat = 0usize;
         let mut cat = String::new();
         let mut first_cat = true;
-        for &idx in &filtered {
+        for (flat, &idx) in filtered.iter().enumerate() {
             let c = CMD_ITEMS[idx].category;
             if c != cat {
                 cat = c.to_string();
@@ -126,7 +139,6 @@ impl Santui {
                 break;
             }
             line += 1; // item
-            flat += 1;
         }
         let max_h = self.palette_max_h(area_h);
         let list_h = max_h.saturating_sub(6).max(1); // 6 = pad_t(1) + header_h(4) + pad_b(1)
@@ -143,7 +155,9 @@ impl Santui {
             return (0..CMD_ITEMS.len()).collect();
         }
         let q = query.to_lowercase();
-        CMD_ITEMS.iter().enumerate()
+        CMD_ITEMS
+            .iter()
+            .enumerate()
             .filter(|(_, item)| item.label.to_lowercase().contains(&q))
             .map(|(i, _)| i)
             .collect()
@@ -156,7 +170,12 @@ impl Santui {
             let palette = self.palette.as_mut().unwrap();
 
             match key.code {
-                KeyCode::Char(c) if c == 'p' && key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+                KeyCode::Char(c)
+                    if c == 'p'
+                        && key
+                            .modifiers
+                            .contains(crossterm::event::KeyModifiers::CONTROL) =>
+                {
                     self.palette = None;
                     return;
                 }
@@ -205,8 +224,13 @@ impl Santui {
             return;
         }
 
-        if matches!(key.code, KeyCode::Char('p') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL)) {
-            self.palette = Some(PaletteState { query: String::new(), cursor: 0, scroll: 0 });
+        if matches!(key.code, KeyCode::Char('p') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL))
+        {
+            self.palette = Some(PaletteState {
+                query: String::new(),
+                cursor: 0,
+                scroll: 0,
+            });
             return;
         }
 
@@ -218,24 +242,20 @@ impl Santui {
         }
 
         match self.active_plugin {
-            None => {
-                match key.code {
-                    KeyCode::Char('q') => self.running = false,
-                    KeyCode::Char('?') => self.show_about = true,
-                    _ => {}
+            None => match key.code {
+                KeyCode::Char('q') => self.running = false,
+                KeyCode::Char('?') => self.show_about = true,
+                _ => {}
+            },
+            Some(idx) => match key.code {
+                KeyCode::Esc => {
+                    self.plugins[idx].on_blur();
+                    self.active_plugin = None;
                 }
-            }
-            Some(idx) => {
-                match key.code {
-                    KeyCode::Esc => {
-                        self.plugins[idx].on_blur();
-                        self.active_plugin = None;
-                    }
-                    _ => {
-                        self.plugins[idx].handle_key(key);
-                    }
+                _ => {
+                    self.plugins[idx].handle_key(key);
                 }
-            }
+            },
         }
     }
 
@@ -277,18 +297,32 @@ impl Santui {
             "╚════██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║",
             "███████║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║",
             "╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝",
-        ].iter().map(|line| {
-            Line::from(Span::styled(*line, Style::default().fg(gold)))
-        }).collect::<Vec<_>>();
+        ]
+        .iter()
+        .map(|line| Line::from(Span::styled(*line, Style::default().fg(gold))))
+        .collect::<Vec<_>>();
 
-        let logo = logo.into_iter().chain([
-            Line::from(Span::styled("modular TUI platform", Style::default().fg(Color::DarkGray))),
-            Line::from(Span::styled(format!("v{VERSION}"), Style::default().fg(Color::DarkGray))),
-        ]).collect::<Vec<_>>();
+        let logo = logo
+            .into_iter()
+            .chain([
+                Line::from(Span::styled(
+                    "modular TUI platform",
+                    Style::default().fg(Color::DarkGray),
+                )),
+                Line::from(Span::styled(
+                    format!("v{VERSION}"),
+                    Style::default().fg(Color::DarkGray),
+                )),
+            ])
+            .collect::<Vec<_>>();
 
         let vert = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Fill(1), Constraint::Length(8), Constraint::Fill(1)])
+            .constraints([
+                Constraint::Fill(1),
+                Constraint::Length(8),
+                Constraint::Fill(1),
+            ])
             .split(area);
 
         let p = Paragraph::new(logo).alignment(Alignment::Center);
@@ -305,24 +339,44 @@ impl Santui {
             "╚════██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║",
             "███████║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║",
             "╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝",
-        ].iter().map(|line| {
-            Line::from(Span::styled(*line, Style::default().fg(gold)))
-        }).collect();
+        ]
+        .iter()
+        .map(|line| Line::from(Span::styled(*line, Style::default().fg(gold))))
+        .collect();
 
-        let text = text.into_iter().chain([
-            Line::from(Span::styled("modular TUI platform", Style::default().fg(Color::DarkGray))),
-            Line::from(Span::styled(format!("v{VERSION}"), Style::default().fg(Color::DarkGray))),
-            Line::from(""),
-            Line::from("Copyright \u{00a9} Sony AK  <sony@sony-ak.com>"),
-            Line::from(""),
-            Line::from(Span::styled("https://santui.vercel.app", Style::default().fg(Color::DarkGray))),
-            Line::from(""),
-            Line::from(Span::styled("Press esc to go back", Style::default().fg(Color::DarkGray))),
-        ]).collect::<Vec<_>>();
+        let text = text
+            .into_iter()
+            .chain([
+                Line::from(Span::styled(
+                    "modular TUI platform",
+                    Style::default().fg(Color::DarkGray),
+                )),
+                Line::from(Span::styled(
+                    format!("v{VERSION}"),
+                    Style::default().fg(Color::DarkGray),
+                )),
+                Line::from(""),
+                Line::from("Copyright \u{00a9} Sony AK  <sony@sony-ak.com>"),
+                Line::from(""),
+                Line::from(Span::styled(
+                    "https://santui.vercel.app",
+                    Style::default().fg(Color::DarkGray),
+                )),
+                Line::from(""),
+                Line::from(Span::styled(
+                    "Press esc to go back",
+                    Style::default().fg(Color::DarkGray),
+                )),
+            ])
+            .collect::<Vec<_>>();
 
         let vert = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Fill(1), Constraint::Length(16), Constraint::Fill(1)])
+            .constraints([
+                Constraint::Fill(1),
+                Constraint::Length(16),
+                Constraint::Fill(1),
+            ])
             .split(area);
 
         let p = Paragraph::new(text).alignment(Alignment::Center);
@@ -336,7 +390,9 @@ impl Santui {
         let scroll = self.palette.as_ref().map_or(0, |p| p.scroll);
 
         // Dim overlay
-        let dim = Style::default().fg(Color::DarkGray).add_modifier(Modifier::DIM);
+        let dim = Style::default()
+            .fg(Color::DarkGray)
+            .add_modifier(Modifier::DIM);
         let fill: Vec<Line> = (0..content.height)
             .map(|_| Line::from(Span::styled(" ".repeat(content.width as usize), dim)))
             .collect();
@@ -391,7 +447,9 @@ impl Santui {
                 let sel = flat_idx == cursor;
                 let item = &CMD_ITEMS[idx];
                 let style = if sel {
-                    Style::default().fg(Color::Black).bg(Color::Cyan)
+                    Style::default()
+                        .fg(Color::Black)
+                        .bg(Color::Rgb(250, 178, 131))
                 } else {
                     Style::default().fg(Color::White)
                 };
@@ -411,7 +469,12 @@ impl Santui {
 
         let x = (content.width.saturating_sub(pal_w)) / 2;
         let y = content.y + content.height / 4;
-        let pal_area = Rect { x, y, width: pal_w, height: pal_h };
+        let pal_area = Rect {
+            x,
+            y,
+            width: pal_w,
+            height: pal_h,
+        };
 
         // Dialog background
         f.render_widget(Clear, pal_area);
@@ -424,25 +487,27 @@ impl Santui {
         let mut header_lines = Vec::new();
 
         let pad_w = inner_w.saturating_sub(11); // 8 "Commands" + 3 "esc"
-        let mut title_spans = vec![
-            Span::styled("Commands", Style::default().fg(Color::White).add_modifier(Modifier::BOLD)),
-        ];
+        let mut title_spans = vec![Span::styled(
+            "Commands",
+            Style::default()
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD),
+        )];
         if pad_w > 0 {
-            title_spans.push(Span::styled(
-                " ".repeat(pad_w as usize),
-                Style::default(),
-            ));
+            title_spans.push(Span::styled(" ".repeat(pad_w as usize), Style::default()));
         }
         title_spans.push(Span::styled("esc", Style::default().fg(Color::DarkGray)));
         header_lines.push(Line::from(title_spans));
         header_lines.push(Line::from(Span::styled("", Style::default())));
 
-        let cursor_on = (self.tick / 5) % 2 == 0;
+        let cursor_on = (self.tick / 5).is_multiple_of(2);
 
         if query.is_empty() {
             // Cursor sits ON the first character of placeholder (transparent overlay)
             let first_style = if cursor_on {
-                Style::default().fg(Color::Black).bg(Color::Rgb(255, 185, 0))
+                Style::default()
+                    .fg(Color::Black)
+                    .bg(Color::Rgb(250, 178, 131))
             } else {
                 Style::default().fg(Color::DarkGray)
             };
@@ -453,9 +518,13 @@ impl Santui {
         } else {
             // Cursor at end of query text
             let cursor_style = if cursor_on {
-                Style::default().fg(Color::Black).bg(Color::Rgb(255, 185, 0))
+                Style::default()
+                    .fg(Color::Black)
+                    .bg(Color::Rgb(250, 178, 131))
             } else {
-                Style::default().fg(Color::Rgb(20, 20, 20)).bg(Color::Rgb(20, 20, 20))
+                Style::default()
+                    .fg(Color::Rgb(20, 20, 20))
+                    .bg(Color::Rgb(20, 20, 20))
             };
             header_lines.push(Line::from(vec![
                 Span::styled(query.clone(), Style::default().fg(Color::White)),
@@ -480,10 +549,7 @@ impl Santui {
             width: inner_w,
             height: list_h,
         };
-        f.render_widget(
-            Paragraph::new(list_lines).scroll((scroll, 0)),
-            list_area,
-        );
+        f.render_widget(Paragraph::new(list_lines).scroll((scroll, 0)), list_area);
     }
 
     fn render_status_bar(&self, f: &mut Frame, area: Rect) {
@@ -502,10 +568,7 @@ impl Santui {
                 Span::styled(" close", dim),
             ])
         } else if self.show_about {
-            Line::from(vec![
-                Span::styled("esc", key),
-                Span::styled(" close", dim),
-            ])
+            Line::from(vec![Span::styled("esc", key), Span::styled(" close", dim)])
         } else if self.active_plugin.is_some() {
             Line::from(vec![
                 Span::styled("ctrl+p", key),

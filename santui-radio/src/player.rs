@@ -109,7 +109,8 @@ impl Mpv {
             .and_then(|p| p.parent().map(|d| d.join("native").join("mpv-1.dll")));
 
         let lib = match unsafe {
-            native_path.as_ref()
+            native_path
+                .as_ref()
                 .and_then(|p| Library::new(p.as_os_str()).ok())
                 .or_else(|| Library::new("mpv-1.dll").ok())
                 .or_else(|| Library::new("libmpv-2.dll").ok())
@@ -144,7 +145,11 @@ impl Mpv {
             return Err("mpv_create returned null".into());
         }
 
-        let mpv = Mpv { handle, _lib: lib, funcs };
+        let mpv = Mpv {
+            handle,
+            _lib: lib,
+            funcs,
+        };
 
         for (k, v) in [
             ("config", "no"),
@@ -166,11 +171,17 @@ impl Mpv {
     fn set_option(&self, name: &str, value: &str) -> Result<(), Box<dyn std::error::Error>> {
         let n = CString::new(name)?;
         let v = CString::new(value)?;
-        to_rc(unsafe { (self.funcs.set_option)(self.handle, n.as_ptr(), v.as_ptr()) }, name)
+        to_rc(
+            unsafe { (self.funcs.set_option)(self.handle, n.as_ptr(), v.as_ptr()) },
+            name,
+        )
     }
 
     pub fn initialize(&self) -> Result<(), Box<dyn std::error::Error>> {
-        to_rc(unsafe { (self.funcs.initialize)(self.handle) }, "initialize")
+        to_rc(
+            unsafe { (self.funcs.initialize)(self.handle) },
+            "initialize",
+        )
     }
 
     pub fn command(&self, args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
@@ -189,7 +200,10 @@ impl Mpv {
 
     pub fn observe_property(&self, id: u64, name: &str) -> Result<(), Box<dyn std::error::Error>> {
         let n = CString::new(name)?;
-        to_rc(unsafe { (self.funcs.observe)(self.handle, id, n.as_ptr(), MPV_FORMAT_NODE) }, name)
+        to_rc(
+            unsafe { (self.funcs.observe)(self.handle, id, n.as_ptr(), MPV_FORMAT_NODE) },
+            name,
+        )
     }
 
     pub fn stop(&self) -> Result<(), Box<dyn std::error::Error>> {
@@ -198,7 +212,10 @@ impl Mpv {
 
     pub fn set_volume(&self, vol: i64) -> Result<(), Box<dyn std::error::Error>> {
         let v = CString::new(format!("{vol}"))?;
-        to_rc(unsafe { (self.funcs.set_property)(self.handle, b"volume\0".as_ptr() as *const i8, v.as_ptr()) }, "volume")
+        to_rc(
+            unsafe { (self.funcs.set_property)(self.handle, c"volume".as_ptr(), v.as_ptr()) },
+            "volume",
+        )
     }
 
     pub fn metadata_title(&self) -> Result<Option<String>, Box<dyn std::error::Error>> {
@@ -206,7 +223,7 @@ impl Mpv {
         let rc = unsafe {
             (self.funcs.get_property)(
                 self.handle,
-                b"metadata\0".as_ptr() as *const i8,
+                c"metadata".as_ptr(),
                 MPV_FORMAT_NODE,
                 &mut node,
             )
@@ -248,8 +265,7 @@ unsafe fn extract_title_from_node(node: &MpvNode) -> Option<String> {
         let key_str = unsafe { std::ffi::CStr::from_ptr(*key) }.to_string_lossy();
         let val = unsafe { &*list.values.offset(i as isize) };
         if val.format == MPV_NODE_STRING
-            && (key_str.eq_ignore_ascii_case("icy-title")
-                || key_str.eq_ignore_ascii_case("title"))
+            && (key_str.eq_ignore_ascii_case("icy-title") || key_str.eq_ignore_ascii_case("title"))
         {
             let s = unsafe { std::ffi::CStr::from_ptr(val.data.string) }
                 .to_string_lossy()

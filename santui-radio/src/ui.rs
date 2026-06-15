@@ -58,7 +58,11 @@ fn draw_station_list(f: &mut Frame, area: Rect, state: &RadioState) {
 fn draw_now_playing(f: &mut Frame, area: Rect, state: &RadioState) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(6), Constraint::Min(6), Constraint::Length(12)])
+        .constraints([
+            Constraint::Length(6),
+            Constraint::Min(6),
+            Constraint::Length(12),
+        ])
         .split(area);
 
     draw_info_panel(f, chunks[0], state);
@@ -87,18 +91,31 @@ fn draw_info_panel(f: &mut Frame, area: Rect, state: &RadioState) {
                 state.song_title.clone()
             };
             (
-                Line::from(Span::styled(name.clone(), Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))),
-                Line::from(Span::styled(format!("♫  {title}"), Style::default().fg(Color::White))),
+                Line::from(Span::styled(
+                    name.clone(),
+                    Style::default()
+                        .fg(Color::Green)
+                        .add_modifier(Modifier::BOLD),
+                )),
+                Line::from(Span::styled(
+                    format!("♫  {title}"),
+                    Style::default().fg(Color::White),
+                )),
             )
         }
         PlayState::Error(e) => (
             Line::from(Span::styled("Error", Style::default().fg(Color::Red))),
-            Line::from(Span::styled(format!("⚠  {e}"), Style::default().fg(Color::Red))),
+            Line::from(Span::styled(
+                format!("⚠  {e}"),
+                Style::default().fg(Color::Red),
+            )),
         ),
     };
 
     let lines = vec![station_line, status_line];
-    let p = Paragraph::new(lines).block(block).wrap(Wrap { trim: false });
+    let p = Paragraph::new(lines)
+        .block(block)
+        .wrap(Wrap { trim: false });
     f.render_widget(p, area);
 }
 
@@ -157,11 +174,7 @@ fn draw_volume_gauge(f: &mut Frame, area: Rect, state: &RadioState) {
 
     let label = format!("{}%", state.volume);
     let gauge = Gauge::default()
-        .gauge_style(
-            Style::default()
-                .fg(Color::Green)
-                .bg(Color::DarkGray),
-        )
+        .gauge_style(Style::default().fg(Color::Green).bg(Color::DarkGray))
         .percent(state.volume as u16)
         .label(label);
 
@@ -179,7 +192,12 @@ fn draw_help_popup(f: &mut Frame) {
     };
 
     let text = vec![
-        Line::from(Span::styled("Help", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))),
+        Line::from(Span::styled(
+            "Help",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )),
         Line::from(""),
         Line::from("↑/↓      Navigate station list"),
         Line::from("Enter    Play selected station"),
@@ -190,7 +208,10 @@ fn draw_help_popup(f: &mut Frame) {
         Line::from("Esc       Back to Santui menu"),
         Line::from("q         Quit"),
         Line::from(""),
-        Line::from(Span::styled("Press any key to close", Style::default().fg(Color::DarkGray))),
+        Line::from(Span::styled(
+            "Press any key to close",
+            Style::default().fg(Color::DarkGray),
+        )),
     ];
 
     let block = Block::default()
@@ -198,7 +219,9 @@ fn draw_help_popup(f: &mut Frame) {
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Cyan));
 
-    let p = Paragraph::new(text).block(block).alignment(ratatui::layout::Alignment::Center);
+    let p = Paragraph::new(text)
+        .block(block)
+        .alignment(ratatui::layout::Alignment::Center);
     f.render_widget(Clear, popup);
     f.render_widget(p, popup);
 }

@@ -24,3 +24,9 @@ impl PluginContext {
         }
     }
 }
+
+impl Default for PluginContext {
+    fn default() -> Self {
+        Self::new()
+    }
+}
