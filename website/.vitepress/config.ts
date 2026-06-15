@@ -3,6 +3,12 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: 'Santui',
   description: 'A modular TUI framework for Rust, built on Ratatui',
+  cleanUrls: true,
+
+  head: [
+    ['link', { rel: 'canonical', href: 'https://santui.vercel.app' }],
+  ],
+
   themeConfig: {
     siteTitle: 'Santui',
     nav: [
