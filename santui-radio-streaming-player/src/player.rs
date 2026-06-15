@@ -6,37 +6,15 @@ type MpvHandle = std::ffi::c_void;
 
 pub const MPV_EVENT_NONE: u32 = 0;
 pub const MPV_EVENT_SHUTDOWN: u32 = 1;
-pub const MPV_EVENT_PROPERTY_CHANGE: u32 = 13;
+pub const MPV_EVENT_FILE_LOADED: u32 = 6;
+pub const MPV_EVENT_PLAYBACK_RESTART: u32 = 18;
+pub const MPV_EVENT_PROPERTY_CHANGE: u32 = 22;
 pub const MPV_EVENT_END_FILE: u32 = 25;
-pub const MPV_FORMAT_NODE: u32 = 73;
+pub const MPV_FORMAT_NODE_OBSERVE: u32 = 6;
+pub const MPV_FORMAT_STRING: u32 = 1;
 
 pub const MPV_END_FILE_REASON_EOF: u32 = 0;
 pub const MPV_END_FILE_REASON_ERROR: u32 = 3;
-
-const MPV_NODE_STRING: i32 = 1;
-const MPV_NODE_MAP: i32 = 5;
-
-#[repr(C)]
-struct MpvNodeList {
-    num: i32,
-    keys: *mut *const i8,
-    values: *mut MpvNode,
-}
-
-#[repr(C)]
-union MpvNodeData {
-    string: *const i8,
-    int64: i64,
-    double_: f64,
-    flag: bool,
-    list: *mut MpvNodeList,
-}
-
-#[repr(C)]
-pub(crate) struct MpvNode {
-    data: MpvNodeData,
-    format: i32,
-}
 
 #[repr(C)]
 pub struct MpvEventEndFile {
@@ -53,10 +31,10 @@ pub struct MpvEvent {
 }
 
 #[repr(C)]
-pub(crate) struct MpvEventProperty {
+pub struct MpvEventProperty {
     pub name: *const i8,
     pub format: u32,
-    pub data: *mut MpvNode,
+    pub data: *mut std::ffi::c_void,
 }
 
 type CreateFn = unsafe extern "C" fn() -> *mut MpvHandle;
@@ -66,8 +44,7 @@ type SetPropFn = unsafe extern "C" fn(*mut MpvHandle, *const i8, *const i8) -> i
 type CommandFn = unsafe extern "C" fn(*mut MpvHandle, *const *const i8) -> i32;
 type ObserveFn = unsafe extern "C" fn(*mut MpvHandle, u64, *const i8, u32) -> i32;
 type WaitEventFn = unsafe extern "C" fn(*mut MpvHandle, f64) -> *mut MpvEvent;
-type GetPropFn = unsafe extern "C" fn(*mut MpvHandle, *const i8, u32, *mut *mut MpvNode) -> i32;
-type FreeNodeFn = unsafe extern "C" fn(*mut MpvNode);
+type GetPropFn = unsafe extern "C" fn(*mut MpvHandle, *const i8, u32, *mut std::ffi::c_void) -> i32;
 type DestroyFn = unsafe extern "C" fn(*mut MpvHandle);
 
 struct Funcs {
@@ -79,7 +56,6 @@ struct Funcs {
     observe: ObserveFn,
     wait_event: WaitEventFn,
     get_property: GetPropFn,
-    free_node: FreeNodeFn,
     destroy: DestroyFn,
 }
 
@@ -136,7 +112,6 @@ impl Mpv {
             observe: unsafe { *lib.get(b"mpv_observe_property\0").unwrap() },
             wait_event: unsafe { *lib.get(b"mpv_wait_event\0").unwrap() },
             get_property: unsafe { *lib.get(b"mpv_get_property\0").unwrap() },
-            free_node: unsafe { *lib.get(b"mpv_free_node_contents\0").unwrap() },
             destroy: unsafe { *lib.get(b"mpv_destroy\0").unwrap() },
         }));
 
@@ -155,6 +130,7 @@ impl Mpv {
             ("config", "no"),
             ("vo", "null"),
             ("audio-client-name", "santui-radio-streaming-player"),
+            ("stream-lavf-o", "icy=1"),
         ] {
             if let Err(e) = mpv.set_option(k, v) {
                 errors.push(format!("  {k}: {e}"));
@@ -173,6 +149,15 @@ impl Mpv {
         let v = CString::new(value)?;
         to_rc(
             unsafe { (self.funcs.set_option)(self.handle, n.as_ptr(), v.as_ptr()) },
+            name,
+        )
+    }
+
+    pub fn set_property(&self, name: &str, value: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let n = CString::new(name)?;
+        let v = CString::new(value)?;
+        to_rc(
+            unsafe { (self.funcs.set_property)(self.handle, n.as_ptr(), v.as_ptr()) },
             name,
         )
     }
@@ -201,7 +186,7 @@ impl Mpv {
     pub fn observe_property(&self, id: u64, name: &str) -> Result<(), Box<dyn std::error::Error>> {
         let n = CString::new(name)?;
         to_rc(
-            unsafe { (self.funcs.observe)(self.handle, id, n.as_ptr(), MPV_FORMAT_NODE) },
+            unsafe { (self.funcs.observe)(self.handle, id, n.as_ptr(), MPV_FORMAT_NODE_OBSERVE) },
             name,
         )
     }
@@ -211,29 +196,58 @@ impl Mpv {
     }
 
     pub fn set_volume(&self, vol: i64) -> Result<(), Box<dyn std::error::Error>> {
-        let v = CString::new(format!("{vol}"))?;
-        to_rc(
-            unsafe { (self.funcs.set_property)(self.handle, c"volume".as_ptr(), v.as_ptr()) },
-            "volume",
-        )
+        self.set_property("volume", &vol.to_string())
     }
 
-    pub fn metadata_title(&self) -> Result<Option<String>, Box<dyn std::error::Error>> {
-        let mut node: *mut MpvNode = std::ptr::null_mut();
+    pub fn media_title(&self) -> Result<Option<String>, Box<dyn std::error::Error>> {
+        let mut ptr: *mut i8 = std::ptr::null_mut();
+        let name = CString::new("media-title")?;
         let rc = unsafe {
             (self.funcs.get_property)(
                 self.handle,
-                c"metadata".as_ptr(),
-                MPV_FORMAT_NODE,
-                &mut node,
+                name.as_ptr(),
+                MPV_FORMAT_STRING,
+                &mut ptr as *mut *mut i8 as *mut std::ffi::c_void,
             )
         };
-        if rc < 0 || node.is_null() {
+        if rc < 0 || ptr.is_null() {
             return Ok(None);
         }
-        let title = unsafe { extract_title_from_node(&*node) };
-        unsafe { (self.funcs.free_node)(node) };
-        Ok(title)
+        let s = unsafe {
+            std::ffi::CStr::from_ptr(ptr)
+                .to_string_lossy()
+                .to_string()
+        };
+        if s.is_empty() { Ok(None) } else { Ok(Some(s)) }
+    }
+
+    pub fn metadata_title(&self) -> Result<Option<String>, Box<dyn std::error::Error>> {
+        if let Some(t) = self.get_property_string("stream-title")? {
+            return Ok(Some(t));
+        }
+        self.get_property_string("media-title")
+    }
+
+    fn get_property_string(&self, name: &str) -> Result<Option<String>, Box<dyn std::error::Error>> {
+        let mut ptr: *mut i8 = std::ptr::null_mut();
+        let n = CString::new(name)?;
+        let rc = unsafe {
+            (self.funcs.get_property)(
+                self.handle,
+                n.as_ptr(),
+                MPV_FORMAT_STRING,
+                &mut ptr as *mut *mut i8 as *mut std::ffi::c_void,
+            )
+        };
+        if rc < 0 || ptr.is_null() {
+            return Ok(None);
+        }
+        let s = unsafe {
+            std::ffi::CStr::from_ptr(ptr)
+                .to_string_lossy()
+                .to_string()
+        };
+        if s.is_empty() { Ok(None) } else { Ok(Some(s)) }
     }
 
     pub fn wait_event_raw(&self, timeout: f64) -> Option<&MpvEvent> {
@@ -249,31 +263,4 @@ impl Mpv {
     pub fn destroy(&self) {
         unsafe { (self.funcs.destroy)(self.handle) };
     }
-}
-
-unsafe fn extract_title_from_node(node: &MpvNode) -> Option<String> {
-    if node.format != MPV_NODE_MAP {
-        return None;
-    }
-    let raw_list = unsafe { node.data.list };
-    if raw_list.is_null() {
-        return None;
-    }
-    let list = unsafe { &*raw_list };
-    for i in 0..list.num {
-        let key = unsafe { &*list.keys.offset(i as isize) };
-        let key_str = unsafe { std::ffi::CStr::from_ptr(*key) }.to_string_lossy();
-        let val = unsafe { &*list.values.offset(i as isize) };
-        if val.format == MPV_NODE_STRING
-            && (key_str.eq_ignore_ascii_case("icy-title") || key_str.eq_ignore_ascii_case("title"))
-        {
-            let s = unsafe { std::ffi::CStr::from_ptr(val.data.string) }
-                .to_string_lossy()
-                .to_string();
-            if !s.is_empty() {
-                return Some(s);
-            }
-        }
-    }
-    None
 }

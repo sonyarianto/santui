@@ -87,7 +87,7 @@ fn draw_info_panel(f: &mut Frame, area: Rect, state: &RadioState, theme: &Theme)
         ),
         PlayState::Playing(name) => {
             let title = if state.song_title.is_empty() {
-                "Buffering...".to_string()
+                "(no metadata)".to_string()
             } else {
                 state.song_title.clone()
             };

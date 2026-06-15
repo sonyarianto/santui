@@ -1,4 +1,4 @@
-mod player;
+pub mod player;
 mod state;
 pub mod stations;
 mod ui;
@@ -80,7 +80,8 @@ impl Plugin for RadioPlugin {
         }
 
         let _ = mpv.observe_property(0, "metadata");
-        let _ = mpv.observe_property(1, "volume");
+        let _ = mpv.observe_property(1, "media-title");
+        let _ = mpv.observe_property(2, "volume");
         let _ = mpv.set_volume(self.state.volume);
 
         let (tx_msg, rx_msg) = mpsc::channel::<MpvMsg>();
@@ -94,6 +95,20 @@ impl Plugin for RadioPlugin {
                     if id == player::MPV_EVENT_SHUTDOWN {
                         break;
                     }
+                    if id == player::MPV_EVENT_FILE_LOADED {
+                        if let Ok(Some(t)) = mpv.metadata_title() {
+                            let _ = tx_msg.send(MpvMsg::Metadata(t));
+                        } else if let Ok(Some(t)) = mpv.media_title() {
+                            let _ = tx_msg.send(MpvMsg::Metadata(t));
+                        }
+                    }
+                    if id == player::MPV_EVENT_PLAYBACK_RESTART {
+                        let title = mpv.metadata_title().ok().flatten()
+                            .or_else(|| mpv.media_title().ok().flatten());
+                        if let Some(title) = title {
+                            let _ = tx_msg.send(MpvMsg::Metadata(title));
+                        }
+                    }
                     if id == player::MPV_EVENT_PROPERTY_CHANGE {
                         let prop: &player::MpvEventProperty = unsafe { &*(ev.data as *const _) };
                         let name = unsafe {
@@ -102,8 +117,12 @@ impl Plugin for RadioPlugin {
                                 .to_string()
                         };
                         if name == "metadata" {
-                            if let Some(title) = mpv.metadata_title().ok().flatten() {
-                                let _ = tx_msg.send(MpvMsg::Metadata(title));
+                            if let Ok(Some(t)) = mpv.metadata_title() {
+                                let _ = tx_msg.send(MpvMsg::Metadata(t));
+                            }
+                        } else if name == "media-title" {
+                            if let Ok(Some(t)) = mpv.media_title() {
+                                let _ = tx_msg.send(MpvMsg::Metadata(t));
                             }
                         }
                     }
@@ -117,6 +136,9 @@ impl Plugin for RadioPlugin {
                     match cmd {
                         MpvCmd::LoadUrl(url) => {
                             let _ = mpv.load_url(url);
+                            if let Some(title) = mpv.metadata_title().ok().flatten() {
+                                let _ = tx_msg.send(MpvMsg::Metadata(title));
+                            }
                         }
                         MpvCmd::Stop => {
                             let _ = mpv.stop();
