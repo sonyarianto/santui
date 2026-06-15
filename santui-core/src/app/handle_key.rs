@@ -30,12 +30,20 @@ impl super::Santui {
                 }
                 KeyCode::Up => {
                     if !filtered.is_empty() {
-                        palette.cursor = palette.cursor.saturating_sub(1);
+                        palette.cursor = if palette.cursor == 0 {
+                            filtered.len() - 1
+                        } else {
+                            palette.cursor - 1
+                        };
                     }
                 }
                 KeyCode::Down => {
                     if !filtered.is_empty() {
-                        palette.cursor = (palette.cursor + 1).min(filtered.len() - 1);
+                        palette.cursor = if palette.cursor + 1 >= filtered.len() {
+                            0
+                        } else {
+                            palette.cursor + 1
+                        };
                     }
                 }
                 KeyCode::Enter => {
@@ -99,7 +107,11 @@ impl super::Santui {
                 }
                 KeyCode::Up => {
                     if !filtered.is_empty() {
-                        self.theme_picker_cursor = self.theme_picker_cursor.saturating_sub(1);
+                        self.theme_picker_cursor = if self.theme_picker_cursor == 0 {
+                            filtered.len() - 1
+                        } else {
+                            self.theme_picker_cursor - 1
+                        };
                         if let Some(&idx) = filtered.get(self.theme_picker_cursor) {
                             self.preview_theme(idx);
                         }
@@ -107,8 +119,12 @@ impl super::Santui {
                 }
                 KeyCode::Down => {
                     if !filtered.is_empty() {
-                        self.theme_picker_cursor =
-                            (self.theme_picker_cursor + 1).min(filtered.len() - 1);
+                        self.theme_picker_cursor = if self.theme_picker_cursor + 1 >= filtered.len()
+                        {
+                            0
+                        } else {
+                            self.theme_picker_cursor + 1
+                        };
                         if let Some(&idx) = filtered.get(self.theme_picker_cursor) {
                             self.preview_theme(idx);
                         }
