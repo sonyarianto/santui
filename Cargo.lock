@@ -634,7 +634,7 @@ name = "santui"
 version = "0.1.0"
 dependencies = [
  "santui-core",
- "santui-radio-streaming-player",
+ "santui-ipc",
 ]
 
 [[package]]
@@ -646,13 +646,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "santui-radio-streaming-player"
+name = "santui-ipc"
 version = "0.1.0"
 dependencies = [
  "crossterm",
- "libloading",
  "ratatui",
  "santui-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-radio-streaming-player"
+version = "0.1.0"
+dependencies = [
+ "libloading",
+ "santui-ipc",
  "serde",
  "serde_json",
  "ureq",

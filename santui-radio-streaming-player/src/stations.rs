@@ -19,7 +19,8 @@ fn default_stations() -> Vec<Station> {
         },
         Station {
             name: "GOLD 905".into(),
-            url: "https://playerservices.streamtheworld.com/api/livestream-redirect/GOLD905AAC.aac".into(),
+            url: "https://playerservices.streamtheworld.com/api/livestream-redirect/GOLD905AAC.aac"
+                .into(),
             genre: "Oldies".into(),
             bitrate: 48,
         },

@@ -15,7 +15,7 @@ pub trait Plugin {
     fn on_theme_change(&mut self, theme: &Theme) {
         let _ = theme;
     }
-    fn status_hints(&self) -> Vec<(&'static str, &'static str)> {
+    fn status_hints(&self) -> Vec<(String, String)> {
         vec![]
     }
 }

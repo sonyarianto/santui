@@ -3,7 +3,7 @@
 ## Build & Test
 
 ```bash
-cargo build              # build all workspace crates
+cargo build              # build all workspace crates (including plugin binaries)
 cargo check              # fast compile check
 cargo clippy --workspace -- -D warnings  # lint
 cargo fmt --check        # formatting check
@@ -11,12 +11,13 @@ cargo fmt                # auto-format
 cargo test --workspace   # run tests
 ```
 
-Run: `cargo run` or `.\target\debug\santui.exe`
+Run: `cargo build --workspace && cargo run -p santui` or `.\target\debug\santui.exe`
 
 ## Workspace Structure
 
 ```
 santui-core/     — framework core: App, Plugin trait, event loop, palette
+santui-ipc/      — IPC protocol types + host (`IpcPluginHost`) plugin runner
 santui-radio-streaming-player/    — plugin: internet radio streaming player using libmpv
 santui/          — binary entry point; wires plugins together
 website/         — VitePress documentation site
@@ -25,10 +26,10 @@ website/         — VitePress documentation site
 ## Architecture
 
 - **Santui** — main app struct; owns plugin list, palette state, event loop, theme system
-- **Plugin trait** — each plugin implements `id`, `name`, `init`, `handle_key`, `render`, `tick`, `on_focus`/`on_blur`, `on_theme_change`
+- **Plugin trait** — each plugin implements `id`, `name`, `init`, `handle_key`, `render`, `tick`, `on_focus`/`on_blur`, `on_theme_change`, `status_hints`
 - **Event loop** — `Santui::run()` drives tick, key dispatch, and render
-- **Palette** — command palette overlay (`Ctrl+P`); items defined in `CMD_ITEMS`, filtering via substring match. "Switch Theme" opens a searchable theme picker showing all 37 OpenCode themes.
-- **Theme** — `santui-core/src/theme.rs` defines `Theme` struct with 10 semantic color keys + all 37 OpenCode themes (from `THEMES` const array). `Default` = OpenCode (purple/orange). Passed to plugins via `PluginContext.theme` during `init()`. Plugins override `on_theme_change()` to react to runtime theme switches. `Theme::all()` returns `Vec<(&'static str, Theme)>` for the picker. `text_muted` is computed as 60/40 blend of neutral/ink.
+- **Palette** — command palette overlay (`Ctrl+P`); items defined in `CMD_ITEMS`, filtering via substring match. "Switch Theme" opens a searchable theme picker showing all 38 OpenCode themes.
+- **Theme** — `santui-core/src/theme.rs` defines `Theme` struct with 10 semantic color keys + all 38 OpenCode themes (from `THEMES` const array). `Default` = Santui (dark neutral `0x141414`, yellow primary `0xffb900`). Passed to plugins via `PluginContext.theme` during `init()`. Plugins override `on_theme_change()` to react to runtime theme switches. `Theme::all()` returns `Vec<(&'static str, Theme)>` for the picker. `text_muted` is computed as 60/40 blend of neutral/ink.
 - **About screen** — shown on `?` key; uses `render_about()`
 - **Status bar** — rendered at bottom; shows key hints per context
 

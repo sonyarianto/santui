@@ -4,8 +4,6 @@ use serde::Deserialize;
 pub struct TrackInfo {
     pub artist: Option<String>,
     pub title: Option<String>,
-    #[allow(dead_code)]
-    pub album: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -21,6 +19,7 @@ struct ITunesTrack {
     track_name: Option<String>,
     #[serde(rename = "artistName")]
     artist_name: Option<String>,
+    #[allow(dead_code)]
     #[serde(rename = "collectionName")]
     collection_name: Option<String>,
 }
@@ -65,7 +64,6 @@ pub fn lookup(title: &str) -> Result<Option<TrackInfo>, String> {
     Ok(Some(TrackInfo {
         artist: track.artist_name.clone(),
         title: track.track_name.clone(),
-        album: track.collection_name.clone(),
     }))
 }
 
