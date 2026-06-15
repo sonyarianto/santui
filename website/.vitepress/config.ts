@@ -22,6 +22,7 @@ export default defineConfig({
           items: [
             { text: 'What is Santui?', link: '/guide/what-is-santui' },
             { text: 'Getting Started', link: '/guide/' },
+            { text: 'Themes', link: '/guide/themes' },
           ],
         },
       ],
