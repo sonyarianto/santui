@@ -375,7 +375,7 @@ impl Santui {
             )));
         }
 
-        let accent = Color::Rgb(255, 185, 0);
+        let accent = Color::Rgb(157, 124, 216);
         let mut flat_idx = 0;
         for (i, (cat, items)) in groups.iter().enumerate() {
             if i > 0 {
