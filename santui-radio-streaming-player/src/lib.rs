@@ -1,5 +1,5 @@
-pub mod player;
 mod itunes;
+pub mod player;
 mod state;
 pub mod stations;
 mod ui;
@@ -109,7 +109,10 @@ impl Plugin for RadioPlugin {
                         }
                     }
                     if id == player::MPV_EVENT_PLAYBACK_RESTART {
-                        let title = mpv.metadata_title().ok().flatten()
+                        let title = mpv
+                            .metadata_title()
+                            .ok()
+                            .flatten()
                             .or_else(|| mpv.media_title().ok().flatten());
                         if let Some(title) = title {
                             let _ = tx_msg_mpv.send(MpvMsg::Metadata(title));
@@ -267,5 +270,16 @@ impl Plugin for RadioPlugin {
                 }
             }
         }
+    }
+
+    fn status_hints(&self) -> Vec<(&'static str, &'static str)> {
+        vec![
+            ("↑/↓", "Select"),
+            ("Enter", "Play"),
+            ("s", "Stop"),
+            ("+/-", "Volume"),
+            ("/", "Filter"),
+            ("?", "Help"),
+        ]
     }
 }

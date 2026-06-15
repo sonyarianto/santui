@@ -59,16 +59,11 @@ fn draw_station_list(f: &mut Frame, area: Rect, state: &RadioState, theme: &Them
 fn draw_now_playing(f: &mut Frame, area: Rect, state: &RadioState, theme: &Theme) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(6),
-            Constraint::Min(6),
-            Constraint::Length(12),
-        ])
+        .constraints([Constraint::Length(6), Constraint::Min(0)])
         .split(area);
 
     draw_info_panel(f, chunks[0], state, theme);
-    draw_lyrics(f, chunks[1], theme);
-    draw_volume_gauge(f, chunks[2], state, theme);
+    draw_volume_gauge(f, chunks[1], state, theme);
 }
 
 fn draw_info_panel(f: &mut Frame, area: Rect, state: &RadioState, theme: &Theme) {
@@ -130,47 +125,6 @@ fn draw_info_panel(f: &mut Frame, area: Rect, state: &RadioState, theme: &Theme)
     let p = Paragraph::new(lines)
         .block(block)
         .wrap(Wrap { trim: false });
-    f.render_widget(p, area);
-}
-
-fn draw_lyrics(f: &mut Frame, area: Rect, theme: &Theme) {
-    let block = Block::default()
-        .title(" Info ")
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(theme.text_muted));
-
-    let text = vec![
-        Line::from(Span::styled(
-            "↑/↓  Select station",
-            Style::default().fg(theme.text_muted),
-        )),
-        Line::from(Span::styled(
-            "Enter  Play selected",
-            Style::default().fg(theme.text_muted),
-        )),
-        Line::from(Span::styled(
-            "s  Stop",
-            Style::default().fg(theme.text_muted),
-        )),
-        Line::from(Span::styled(
-            "+/-  Volume",
-            Style::default().fg(theme.text_muted),
-        )),
-        Line::from(Span::styled(
-            "/  Filter stations",
-            Style::default().fg(theme.text_muted),
-        )),
-        Line::from(Span::styled(
-            "?  Toggle help",
-            Style::default().fg(theme.text_muted),
-        )),
-        Line::from(Span::styled(
-            "Esc  Back to menu",
-            Style::default().fg(theme.text_muted),
-        )),
-    ];
-
-    let p = Paragraph::new(text).block(block);
     f.render_widget(p, area);
 }
 

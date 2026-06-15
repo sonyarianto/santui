@@ -15,17 +15,18 @@ pub trait Plugin {
     fn on_theme_change(&mut self, theme: &Theme) {
         let _ = theme;
     }
+    fn status_hints(&self) -> Vec<(&'static str, &'static str)> {
+        vec![]
+    }
 }
 
 pub struct PluginContext {
-    pub status_text: String,
     pub theme: Theme,
 }
 
 impl PluginContext {
     pub fn new() -> Self {
         PluginContext {
-            status_text: String::new(),
             theme: Theme::default(),
         }
     }
