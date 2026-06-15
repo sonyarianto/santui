@@ -851,15 +851,26 @@ impl Santui {
             ])
         } else if self.show_about {
             Line::from(vec![Span::styled("esc", key), Span::styled(" close", dim)])
-        } else if self.active_plugin.is_some() {
-            Line::from(vec![
-                Span::styled("ctrl+p", key),
-                Span::styled(" commands • ", dim),
-                Span::styled("esc", key),
-                Span::styled(" back • ", dim),
-                Span::styled("q", key),
-                Span::styled(" quit", dim),
-            ])
+        } else if let Some(idx) = self.active_plugin {
+            let plugin_hints = self.plugins[idx].status_hints();
+            let mut spans: Vec<Span> = Vec::new();
+            for (i, (hint_key, hint_desc)) in plugin_hints.iter().enumerate() {
+                if i > 0 {
+                    spans.push(Span::styled(" • ", dim));
+                }
+                spans.push(Span::styled(*hint_key, key));
+                spans.push(Span::styled(format!(" {hint_desc}"), dim));
+            }
+            if !plugin_hints.is_empty() {
+                spans.push(Span::styled(" • ", dim));
+            }
+            spans.push(Span::styled("ctrl+p", key));
+            spans.push(Span::styled(" commands • ", dim));
+            spans.push(Span::styled("esc", key));
+            spans.push(Span::styled(" back • ", dim));
+            spans.push(Span::styled("q", key));
+            spans.push(Span::styled(" quit", dim));
+            Line::from(spans)
         } else {
             Line::from(vec![
                 Span::styled("ctrl+p", key),
