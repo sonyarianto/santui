@@ -1,3 +1,4 @@
+use crate::theme::Theme;
 use crossterm::event::KeyEvent;
 use ratatui::layout::Rect;
 use ratatui::Frame;
@@ -11,16 +12,21 @@ pub trait Plugin {
     fn tick(&mut self);
     fn on_focus(&mut self) {}
     fn on_blur(&mut self) {}
+    fn on_theme_change(&mut self, theme: &Theme) {
+        let _ = theme;
+    }
 }
 
 pub struct PluginContext {
     pub status_text: String,
+    pub theme: Theme,
 }
 
 impl PluginContext {
     pub fn new() -> Self {
         PluginContext {
             status_text: String::new(),
+            theme: Theme::default(),
         }
     }
 }

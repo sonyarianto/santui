@@ -1,4 +1,5 @@
 use crate::plugin::{Plugin, PluginContext};
+use crate::theme::Theme;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use crossterm::execute;
 use crossterm::terminal::{
@@ -27,6 +28,10 @@ const CMD_ITEMS: &[CmdItem] = &[
     },
     CmdItem {
         category: "System",
+        label: "Switch Theme",
+    },
+    CmdItem {
+        category: "System",
         label: "About",
     },
 ];
@@ -40,9 +45,14 @@ struct PaletteState {
 pub struct Santui {
     plugins: Vec<Box<dyn Plugin>>,
     ctx: PluginContext,
+    theme: Theme,
+    themes: Vec<(&'static str, Theme)>,
+    theme_idx: usize,
     active_plugin: Option<usize>,
     palette: Option<PaletteState>,
     show_about: bool,
+    show_theme_picker: bool,
+    theme_picker_cursor: usize,
     running: bool,
     tick: u64,
 }
@@ -55,12 +65,20 @@ impl Default for Santui {
 
 impl Santui {
     pub fn new() -> Self {
+        let themes: Vec<(&'static str, Theme)> =
+            vec![("Santui", Theme::default()), ("Nord", Theme::nord())];
+        let theme = themes[0].1.clone();
         Santui {
             plugins: Vec::new(),
             ctx: PluginContext::new(),
+            theme,
+            themes,
+            theme_idx: 0,
             active_plugin: None,
             palette: None,
             show_about: false,
+            show_theme_picker: false,
+            theme_picker_cursor: 0,
             running: true,
             tick: 0,
         }
@@ -78,6 +96,7 @@ impl Santui {
         let mut terminal = Terminal::new(backend)?;
         terminal.clear()?;
 
+        self.ctx.theme = self.theme.clone();
         for p in &mut self.plugins {
             p.init(&mut self.ctx)?;
         }
@@ -207,6 +226,10 @@ impl Santui {
                                 self.plugins[0].on_focus();
                                 self.active_plugin = Some(0);
                             }
+                            "Switch Theme" => {
+                                self.show_theme_picker = true;
+                                self.theme_picker_cursor = self.theme_idx;
+                            }
                             "About" => self.show_about = true,
                             _ => {}
                         }
@@ -231,6 +254,35 @@ impl Santui {
                 cursor: 0,
                 scroll: 0,
             });
+            return;
+        }
+
+        if self.show_theme_picker {
+            match key.code {
+                KeyCode::Up => {
+                    self.theme_picker_cursor = self.theme_picker_cursor.saturating_sub(1);
+                }
+                KeyCode::Down => {
+                    self.theme_picker_cursor =
+                        (self.theme_picker_cursor + 1).min(self.themes.len() - 1);
+                }
+                KeyCode::Enter => {
+                    self.select_theme(self.theme_picker_cursor);
+                    self.show_theme_picker = false;
+                }
+                KeyCode::Esc => {
+                    self.show_theme_picker = false;
+                }
+                KeyCode::Char(c)
+                    if c == 'p'
+                        && key
+                            .modifiers
+                            .contains(crossterm::event::KeyModifiers::CONTROL) =>
+                {
+                    self.show_theme_picker = false;
+                }
+                _ => {}
+            }
             return;
         }
 
@@ -259,6 +311,15 @@ impl Santui {
         }
     }
 
+    fn select_theme(&mut self, idx: usize) {
+        self.theme_idx = idx;
+        self.theme = self.themes[idx].1.clone();
+        self.ctx.theme = self.theme.clone();
+        for p in &mut self.plugins {
+            p.on_theme_change(&self.theme);
+        }
+    }
+
     fn render(&self, f: &mut Frame) {
         let area = f.area();
 
@@ -284,11 +345,15 @@ impl Santui {
             self.render_palette(f, chunks[0]);
         }
 
+        if self.show_theme_picker {
+            self.render_theme_picker(f, chunks[0]);
+        }
+
         self.render_status_bar(f, chunks[1]);
     }
 
     fn render_splash(&self, f: &mut Frame, area: Rect) {
-        let gold = Color::Rgb(255, 185, 0);
+        let t = &self.theme;
 
         let logo: Vec<Line> = [
             "███████╗ █████╗ ███╗   ██╗████████╗██╗   ██╗██╗",
@@ -299,7 +364,7 @@ impl Santui {
             "╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝",
         ]
         .iter()
-        .map(|line| Line::from(Span::styled(*line, Style::default().fg(gold))))
+        .map(|line| Line::from(Span::styled(*line, Style::default().fg(t.logo))))
         .collect::<Vec<_>>();
 
         let logo = logo
@@ -307,11 +372,11 @@ impl Santui {
             .chain([
                 Line::from(Span::styled(
                     "modular TUI platform",
-                    Style::default().fg(Color::DarkGray),
+                    Style::default().fg(t.text_muted),
                 )),
                 Line::from(Span::styled(
                     format!("v{VERSION}"),
-                    Style::default().fg(Color::DarkGray),
+                    Style::default().fg(t.text_muted),
                 )),
             ])
             .collect::<Vec<_>>();
@@ -330,7 +395,7 @@ impl Santui {
     }
 
     fn render_about(&self, f: &mut Frame, area: Rect) {
-        let gold = Color::Rgb(255, 185, 0);
+        let t = &self.theme;
 
         let text: Vec<Line> = [
             "███████╗ █████╗ ███╗   ██╗████████╗██╗   ██╗██╗",
@@ -341,7 +406,7 @@ impl Santui {
             "╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝",
         ]
         .iter()
-        .map(|line| Line::from(Span::styled(*line, Style::default().fg(gold))))
+        .map(|line| Line::from(Span::styled(*line, Style::default().fg(t.logo))))
         .collect();
 
         let text = text
@@ -349,23 +414,23 @@ impl Santui {
             .chain([
                 Line::from(Span::styled(
                     "modular TUI platform",
-                    Style::default().fg(Color::DarkGray),
+                    Style::default().fg(t.text_muted),
                 )),
                 Line::from(Span::styled(
                     format!("v{VERSION}"),
-                    Style::default().fg(Color::DarkGray),
+                    Style::default().fg(t.text_muted),
                 )),
                 Line::from(""),
                 Line::from("Copyright \u{00a9} Sony AK  <sony@sony-ak.com>"),
                 Line::from(""),
                 Line::from(Span::styled(
                     "https://santui.vercel.app",
-                    Style::default().fg(Color::DarkGray),
+                    Style::default().fg(t.text_muted),
                 )),
                 Line::from(""),
                 Line::from(Span::styled(
                     "Press esc to go back",
-                    Style::default().fg(Color::DarkGray),
+                    Style::default().fg(t.text_muted),
                 )),
             ])
             .collect::<Vec<_>>();
@@ -383,7 +448,104 @@ impl Santui {
         f.render_widget(p, vert[1]);
     }
 
+    fn render_theme_picker(&self, f: &mut Frame, content: Rect) {
+        let t = &self.theme;
+
+        let dim = Style::default()
+            .fg(t.text_muted)
+            .add_modifier(Modifier::DIM);
+        let fill: Vec<Line> = (0..content.height)
+            .map(|_| Line::from(Span::styled(" ".repeat(content.width as usize), dim)))
+            .collect();
+        f.render_widget(Clear, content);
+        f.render_widget(Paragraph::new(fill), content);
+
+        let pal_w: u16 = 60;
+        let pad_l = 2u16;
+        let pad_t = 1u16;
+        let pad_b = 1u16;
+        let header_h = 2u16;
+        let inner_w = pal_w.saturating_sub(pad_l * 2);
+
+        let item_count = self.themes.len() as u16;
+        let list_h = item_count;
+        let pal_h = pad_t + header_h + list_h + pad_b;
+
+        let x = (content.width.saturating_sub(pal_w)) / 2;
+        let y = content.y + content.height / 4;
+        let pal_area = Rect {
+            x,
+            y,
+            width: pal_w,
+            height: pal_h,
+        };
+
+        f.render_widget(Clear, pal_area);
+        f.render_widget(
+            Paragraph::new(vec![]).style(Style::default().bg(t.background_panel)),
+            pal_area,
+        );
+
+        // Header: "Themes" + "esc"
+        let pad_w = inner_w.saturating_sub(9); // 6 "Themes" + 3 "esc"
+        let mut title_spans = vec![Span::styled(
+            "Themes",
+            Style::default().fg(t.text).add_modifier(Modifier::BOLD),
+        )];
+        if pad_w > 0 {
+            title_spans.push(Span::styled(" ".repeat(pad_w as usize), Style::default()));
+        }
+        title_spans.push(Span::styled("esc", Style::default().fg(t.text_muted)));
+        let header_lines = vec![Line::from(title_spans), Line::from("")];
+
+        let header_area = Rect {
+            x: pal_area.x + pad_l,
+            y: pal_area.y + pad_t,
+            width: inner_w,
+            height: header_h,
+        };
+        f.render_widget(Paragraph::new(header_lines), header_area);
+
+        // Theme list
+        let mut list_lines = Vec::new();
+        for (i, (name, _)) in self.themes.iter().enumerate() {
+            let current = i == self.theme_idx;
+            let hovered = i == self.theme_picker_cursor;
+            let prefix = if current { " ● " } else { "   " };
+            let text_fg = if hovered {
+                Color::Black
+            } else if current {
+                t.accent
+            } else {
+                t.text
+            };
+            let style = Style::default().fg(text_fg);
+            let style = if hovered {
+                style.bg(t.highlight).add_modifier(Modifier::BOLD)
+            } else if current {
+                style.add_modifier(Modifier::BOLD)
+            } else {
+                style
+            };
+            let display = format!("{prefix}{name}");
+            list_lines.push(Line::from(Span::styled(
+                format!("{:<width$}", display, width = inner_w as usize),
+                style,
+            )));
+        }
+
+        let list_top = pal_area.y + pad_t + header_h;
+        let list_area = Rect {
+            x: pal_area.x + pad_l,
+            y: list_top,
+            width: inner_w,
+            height: list_h,
+        };
+        f.render_widget(Paragraph::new(list_lines), list_area);
+    }
+
     fn render_palette(&self, f: &mut Frame, content: Rect) {
+        let t = &self.theme;
         let query = &self.palette.as_ref().unwrap().query;
         let filtered = self.filtered_items(query);
         let cursor = self.palette.as_ref().map_or(0, |p| p.cursor);
@@ -391,7 +553,7 @@ impl Santui {
 
         // Dim overlay
         let dim = Style::default()
-            .fg(Color::DarkGray)
+            .fg(t.text_muted)
             .add_modifier(Modifier::DIM);
         let fill: Vec<Line> = (0..content.height)
             .map(|_| Line::from(Span::styled(" ".repeat(content.width as usize), dim)))
@@ -429,11 +591,10 @@ impl Santui {
         if no_results {
             list_lines.push(Line::from(Span::styled(
                 "No results found",
-                Style::default().fg(Color::DarkGray),
+                Style::default().fg(t.text_muted),
             )));
         }
 
-        let accent = Color::Rgb(157, 124, 216);
         let mut flat_idx = 0;
         for (i, (cat, items)) in groups.iter().enumerate() {
             if i > 0 {
@@ -441,17 +602,15 @@ impl Santui {
             }
             list_lines.push(Line::from(Span::styled(
                 format!("{:<width$}", cat, width = inner_w as usize),
-                Style::default().fg(accent).add_modifier(Modifier::BOLD),
+                Style::default().fg(t.accent).add_modifier(Modifier::BOLD),
             )));
             for &idx in items {
                 let sel = flat_idx == cursor;
                 let item = &CMD_ITEMS[idx];
                 let style = if sel {
-                    Style::default()
-                        .fg(Color::Black)
-                        .bg(Color::Rgb(250, 178, 131))
+                    Style::default().fg(Color::Black).bg(t.highlight)
                 } else {
-                    Style::default().fg(Color::White)
+                    Style::default().fg(t.text)
                 };
                 list_lines.push(Line::from(Span::styled(
                     format!("{:<width$}", item.label, width = inner_w as usize),
@@ -479,7 +638,7 @@ impl Santui {
         // Dialog background
         f.render_widget(Clear, pal_area);
         f.render_widget(
-            Paragraph::new(vec![]).style(Style::default().bg(Color::Rgb(20, 20, 20))),
+            Paragraph::new(vec![]).style(Style::default().bg(t.background_panel)),
             pal_area,
         );
 
@@ -489,14 +648,12 @@ impl Santui {
         let pad_w = inner_w.saturating_sub(11); // 8 "Commands" + 3 "esc"
         let mut title_spans = vec![Span::styled(
             "Commands",
-            Style::default()
-                .fg(Color::White)
-                .add_modifier(Modifier::BOLD),
+            Style::default().fg(t.text).add_modifier(Modifier::BOLD),
         )];
         if pad_w > 0 {
             title_spans.push(Span::styled(" ".repeat(pad_w as usize), Style::default()));
         }
-        title_spans.push(Span::styled("esc", Style::default().fg(Color::DarkGray)));
+        title_spans.push(Span::styled("esc", Style::default().fg(t.text_muted)));
         header_lines.push(Line::from(title_spans));
         header_lines.push(Line::from(Span::styled("", Style::default())));
 
@@ -505,29 +662,25 @@ impl Santui {
         if query.is_empty() {
             // Cursor sits ON the first character of placeholder (transparent overlay)
             let first_style = if cursor_on {
-                Style::default()
-                    .fg(Color::Black)
-                    .bg(Color::Rgb(250, 178, 131))
+                Style::default().fg(Color::Black).bg(t.highlight)
             } else {
-                Style::default().fg(Color::DarkGray)
+                Style::default().fg(t.text_muted)
             };
             header_lines.push(Line::from(vec![
                 Span::styled("S", first_style),
-                Span::styled("earch", Style::default().fg(Color::DarkGray)),
+                Span::styled("earch", Style::default().fg(t.text_muted)),
             ]));
         } else {
             // Cursor at end of query text
             let cursor_style = if cursor_on {
-                Style::default()
-                    .fg(Color::Black)
-                    .bg(Color::Rgb(250, 178, 131))
+                Style::default().fg(Color::Black).bg(t.highlight)
             } else {
                 Style::default()
-                    .fg(Color::Rgb(20, 20, 20))
-                    .bg(Color::Rgb(20, 20, 20))
+                    .fg(t.background_panel)
+                    .bg(t.background_panel)
             };
             header_lines.push(Line::from(vec![
-                Span::styled(query.clone(), Style::default().fg(Color::White)),
+                Span::styled(query.clone(), Style::default().fg(t.text)),
                 Span::styled(" ", cursor_style),
             ]));
         }
@@ -553,8 +706,9 @@ impl Santui {
     }
 
     fn render_status_bar(&self, f: &mut Frame, area: Rect) {
-        let dim = Style::default().fg(Color::DarkGray);
-        let key = Style::default().fg(Color::White);
+        let t = &self.theme;
+        let dim = Style::default().fg(t.text_muted);
+        let key = Style::default().fg(t.text);
 
         let line: Line = if self.palette.is_some() {
             Line::from(vec![
@@ -566,6 +720,17 @@ impl Santui {
                 Span::styled(" enter • ", dim),
                 Span::styled("esc", key),
                 Span::styled(" close", dim),
+            ])
+        } else if self.show_theme_picker {
+            Line::from(vec![
+                Span::styled("↑", key),
+                Span::styled(" up • ", dim),
+                Span::styled("↓", key),
+                Span::styled(" down • ", dim),
+                Span::styled("↵", key),
+                Span::styled(" select • ", dim),
+                Span::styled("esc", key),
+                Span::styled(" back", dim),
             ])
         } else if self.show_about {
             Line::from(vec![Span::styled("esc", key), Span::styled(" close", dim)])

@@ -1,25 +1,26 @@
 use crate::state::{PlayState, RadioState};
-use ratatui::layout::{Constraint, Direction, Layout, Rect};
+use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, Gauge, List, ListItem, Paragraph, Wrap};
 use ratatui::Frame;
+use santui_core::Theme;
 
-pub fn draw_radio(f: &mut Frame, area: Rect, state: &RadioState) {
+pub fn draw_radio(f: &mut Frame, area: Rect, state: &RadioState, theme: &Theme) {
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Ratio(1, 3), Constraint::Ratio(2, 3)])
         .split(area);
 
-    draw_station_list(f, chunks[0], state);
-    draw_now_playing(f, chunks[1], state);
+    draw_station_list(f, chunks[0], state, theme);
+    draw_now_playing(f, chunks[1], state, theme);
 
     if state.show_help {
-        draw_help_popup(f);
+        draw_help_popup(f, theme);
     }
 }
 
-fn draw_station_list(f: &mut Frame, area: Rect, state: &RadioState) {
+fn draw_station_list(f: &mut Frame, area: Rect, state: &RadioState, theme: &Theme) {
     let items: Vec<ListItem> = state
         .filtered
         .iter()
@@ -29,11 +30,11 @@ fn draw_station_list(f: &mut Frame, area: Rect, state: &RadioState) {
             let is_selected = i == state.selected;
             let is_current = state.current_station == Some(station_idx);
             let style = if is_selected {
-                Style::default().fg(Color::Black).bg(Color::Cyan)
+                Style::default().fg(Color::Black).bg(theme.accent)
             } else if is_current {
-                Style::default().fg(Color::Cyan)
+                Style::default().fg(theme.accent)
             } else {
-                Style::default().fg(Color::White)
+                Style::default().fg(theme.text)
             };
             let icon = if is_current { " ♫ " } else { "   " };
             ListItem::new(Line::from(Span::styled(
@@ -48,14 +49,14 @@ fn draw_station_list(f: &mut Frame, area: Rect, state: &RadioState) {
             Block::default()
                 .title(" Stations ")
                 .borders(Borders::ALL)
-                .border_style(Style::default().fg(Color::Cyan)),
+                .border_style(Style::default().fg(theme.border)),
         )
-        .highlight_style(Style::default().fg(Color::Black).bg(Color::Cyan));
+        .highlight_style(Style::default().fg(Color::Black).bg(theme.accent));
 
     f.render_widget(list, area);
 }
 
-fn draw_now_playing(f: &mut Frame, area: Rect, state: &RadioState) {
+fn draw_now_playing(f: &mut Frame, area: Rect, state: &RadioState, theme: &Theme) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -65,24 +66,24 @@ fn draw_now_playing(f: &mut Frame, area: Rect, state: &RadioState) {
         ])
         .split(area);
 
-    draw_info_panel(f, chunks[0], state);
-    draw_lyrics(f, chunks[1]);
-    draw_volume_gauge(f, chunks[2], state);
+    draw_info_panel(f, chunks[0], state, theme);
+    draw_lyrics(f, chunks[1], theme);
+    draw_volume_gauge(f, chunks[2], state, theme);
 }
 
-fn draw_info_panel(f: &mut Frame, area: Rect, state: &RadioState) {
+fn draw_info_panel(f: &mut Frame, area: Rect, state: &RadioState, theme: &Theme) {
     let block = Block::default()
         .title(" Now Playing ")
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Cyan));
+        .border_style(Style::default().fg(theme.border));
 
     let (station_line, status_line) = match &state.play_state {
         PlayState::Stopped => (
             Line::from(Span::styled(
                 "No station selected",
-                Style::default().fg(Color::DarkGray),
+                Style::default().fg(theme.text_muted),
             )),
-            Line::from(Span::styled("⏹  Stopped", Style::default().fg(Color::Red))),
+            Line::from(Span::styled("⏹  Stopped", Style::default().fg(theme.error))),
         ),
         PlayState::Playing(name) => {
             let title = if state.song_title.is_empty() {
@@ -94,20 +95,20 @@ fn draw_info_panel(f: &mut Frame, area: Rect, state: &RadioState) {
                 Line::from(Span::styled(
                     name.clone(),
                     Style::default()
-                        .fg(Color::Green)
+                        .fg(theme.success)
                         .add_modifier(Modifier::BOLD),
                 )),
                 Line::from(Span::styled(
                     format!("♫  {title}"),
-                    Style::default().fg(Color::White),
+                    Style::default().fg(theme.text),
                 )),
             )
         }
         PlayState::Error(e) => (
-            Line::from(Span::styled("Error", Style::default().fg(Color::Red))),
+            Line::from(Span::styled("Error", Style::default().fg(theme.error))),
             Line::from(Span::styled(
                 format!("⚠  {e}"),
-                Style::default().fg(Color::Red),
+                Style::default().fg(theme.error),
             )),
         ),
     };
@@ -119,40 +120,40 @@ fn draw_info_panel(f: &mut Frame, area: Rect, state: &RadioState) {
     f.render_widget(p, area);
 }
 
-fn draw_lyrics(f: &mut Frame, area: Rect) {
+fn draw_lyrics(f: &mut Frame, area: Rect, theme: &Theme) {
     let block = Block::default()
         .title(" Info ")
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::DarkGray));
+        .border_style(Style::default().fg(theme.text_muted));
 
     let text = vec![
         Line::from(Span::styled(
             "↑/↓  Select station",
-            Style::default().fg(Color::DarkGray),
+            Style::default().fg(theme.text_muted),
         )),
         Line::from(Span::styled(
             "Enter  Play selected",
-            Style::default().fg(Color::DarkGray),
+            Style::default().fg(theme.text_muted),
         )),
         Line::from(Span::styled(
             "s  Stop",
-            Style::default().fg(Color::DarkGray),
+            Style::default().fg(theme.text_muted),
         )),
         Line::from(Span::styled(
             "+/-  Volume",
-            Style::default().fg(Color::DarkGray),
+            Style::default().fg(theme.text_muted),
         )),
         Line::from(Span::styled(
             "/  Filter stations",
-            Style::default().fg(Color::DarkGray),
+            Style::default().fg(theme.text_muted),
         )),
         Line::from(Span::styled(
             "?  Toggle help",
-            Style::default().fg(Color::DarkGray),
+            Style::default().fg(theme.text_muted),
         )),
         Line::from(Span::styled(
             "Esc  Back to menu",
-            Style::default().fg(Color::DarkGray),
+            Style::default().fg(theme.text_muted),
         )),
     ];
 
@@ -160,11 +161,11 @@ fn draw_lyrics(f: &mut Frame, area: Rect) {
     f.render_widget(p, area);
 }
 
-fn draw_volume_gauge(f: &mut Frame, area: Rect, state: &RadioState) {
+fn draw_volume_gauge(f: &mut Frame, area: Rect, state: &RadioState, theme: &Theme) {
     let block = Block::default()
         .title(" Volume ")
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Cyan));
+        .border_style(Style::default().fg(theme.border));
 
     let inner = Layout::default()
         .direction(Direction::Vertical)
@@ -174,7 +175,7 @@ fn draw_volume_gauge(f: &mut Frame, area: Rect, state: &RadioState) {
 
     let label = format!("{}%", state.volume);
     let gauge = Gauge::default()
-        .gauge_style(Style::default().fg(Color::Green).bg(Color::DarkGray))
+        .gauge_style(Style::default().fg(theme.success).bg(theme.text_muted))
         .percent(state.volume as u16)
         .label(label);
 
@@ -182,7 +183,7 @@ fn draw_volume_gauge(f: &mut Frame, area: Rect, state: &RadioState) {
     f.render_widget(gauge, inner[0]);
 }
 
-fn draw_help_popup(f: &mut Frame) {
+fn draw_help_popup(f: &mut Frame, theme: &Theme) {
     let area = f.area();
     let popup = Rect {
         x: area.width / 4,
@@ -195,7 +196,7 @@ fn draw_help_popup(f: &mut Frame) {
         Line::from(Span::styled(
             "Help",
             Style::default()
-                .fg(Color::Cyan)
+                .fg(theme.accent)
                 .add_modifier(Modifier::BOLD),
         )),
         Line::from(""),
@@ -210,18 +211,18 @@ fn draw_help_popup(f: &mut Frame) {
         Line::from(""),
         Line::from(Span::styled(
             "Press any key to close",
-            Style::default().fg(Color::DarkGray),
+            Style::default().fg(theme.text_muted),
         )),
     ];
 
     let block = Block::default()
         .title(" Help ")
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Cyan));
+        .border_style(Style::default().fg(theme.border));
 
     let p = Paragraph::new(text)
         .block(block)
-        .alignment(ratatui::layout::Alignment::Center);
+        .alignment(Alignment::Center);
     f.render_widget(Clear, popup);
     f.render_widget(p, popup);
 }

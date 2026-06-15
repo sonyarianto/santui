@@ -8,7 +8,7 @@ use crate::state::{PlayState, RadioState};
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::layout::Rect;
 use ratatui::Frame;
-use santui_core::{Plugin, PluginContext};
+use santui_core::{Plugin, PluginContext, Theme};
 use std::sync::mpsc;
 use std::thread;
 
@@ -25,6 +25,7 @@ enum MpvCmd {
 
 pub struct RadioPlugin {
     state: RadioState,
+    theme: Theme,
     tx_cmd: Option<mpsc::Sender<MpvCmd>>,
     rx_msg: Option<mpsc::Receiver<MpvMsg>>,
     init_error: Option<String>,
@@ -41,6 +42,7 @@ impl RadioPlugin {
         let station_list: Vec<&'static stations::Station> = stations::STATIONS.iter().collect();
         RadioPlugin {
             state: RadioState::new(station_list),
+            theme: Theme::default(),
             tx_cmd: None,
             rx_msg: None,
             init_error: None,
@@ -63,7 +65,8 @@ impl Plugin for RadioPlugin {
         "Radio Player"
     }
 
-    fn init(&mut self, _ctx: &mut PluginContext) -> Result<(), Box<dyn std::error::Error>> {
+    fn init(&mut self, ctx: &mut PluginContext) -> Result<(), Box<dyn std::error::Error>> {
+        self.theme = ctx.theme.clone();
         let (mpv, warns) = match Mpv::new() {
             Ok(v) => v,
             Err(e) => {
@@ -185,15 +188,19 @@ impl Plugin for RadioPlugin {
         }
     }
 
+    fn on_theme_change(&mut self, theme: &santui_core::Theme) {
+        self.theme = theme.clone();
+    }
+
     fn render(&self, f: &mut Frame, area: Rect) {
         if let Some(ref err) = self.init_error {
             let text = format!("Failed to load libmpv: {err}");
             let p = ratatui::widgets::Paragraph::new(text)
-                .style(ratatui::style::Style::default().fg(ratatui::style::Color::Red));
+                .style(ratatui::style::Style::default().fg(self.theme.error));
             f.render_widget(p, area);
             return;
         }
-        ui::draw_radio(f, area, &self.state);
+        ui::draw_radio(f, area, &self.state, &self.theme);
     }
 
     fn tick(&mut self) {
