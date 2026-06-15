@@ -55,6 +55,7 @@ pub struct Santui {
     theme_picker_query: String,
     theme_picker_cursor: usize,
     theme_picker_scroll: u16,
+    theme_picker_orig_idx: usize,
     running: bool,
     tick: u64,
 }
@@ -82,6 +83,7 @@ impl Santui {
             theme_picker_query: String::new(),
             theme_picker_cursor: 0,
             theme_picker_scroll: 0,
+            theme_picker_orig_idx: 0,
             running: true,
             tick: 0,
         }
@@ -252,6 +254,7 @@ impl Santui {
                                 self.theme_picker_query.clear();
                                 self.theme_picker_cursor = self.theme_idx;
                                 self.theme_picker_scroll = 0;
+                                self.theme_picker_orig_idx = self.theme_idx;
                             }
                             "About" => self.show_about = true,
                             _ => {}
@@ -289,26 +292,40 @@ impl Santui {
                             .modifiers
                             .contains(crossterm::event::KeyModifiers::CONTROL) =>
                 {
+                    self.select_theme(self.theme_picker_orig_idx);
                     self.show_theme_picker = false;
                 }
                 KeyCode::Char(_) if !key.modifiers.is_empty() => {}
                 KeyCode::Char(c) => {
                     self.theme_picker_query.push(c);
                     self.theme_picker_cursor = 0;
+                    if let Some(&idx) = filtered.first() {
+                        self.preview_theme(idx);
+                    }
                 }
                 KeyCode::Backspace => {
                     self.theme_picker_query.pop();
                     self.theme_picker_cursor = 0;
+                    let filtered = self.filtered_themes();
+                    if let Some(&idx) = filtered.first() {
+                        self.preview_theme(idx);
+                    }
                 }
                 KeyCode::Up => {
                     if !filtered.is_empty() {
                         self.theme_picker_cursor = self.theme_picker_cursor.saturating_sub(1);
+                        if let Some(&idx) = filtered.get(self.theme_picker_cursor) {
+                            self.preview_theme(idx);
+                        }
                     }
                 }
                 KeyCode::Down => {
                     if !filtered.is_empty() {
                         self.theme_picker_cursor =
                             (self.theme_picker_cursor + 1).min(filtered.len() - 1);
+                        if let Some(&idx) = filtered.get(self.theme_picker_cursor) {
+                            self.preview_theme(idx);
+                        }
                     }
                 }
                 KeyCode::Enter => {
@@ -318,6 +335,7 @@ impl Santui {
                     self.show_theme_picker = false;
                 }
                 KeyCode::Esc => {
+                    self.select_theme(self.theme_picker_orig_idx);
                     self.show_theme_picker = false;
                 }
                 _ => {}
@@ -374,6 +392,12 @@ impl Santui {
         for p in &mut self.plugins {
             p.on_theme_change(&self.theme);
         }
+    }
+
+    fn preview_theme(&mut self, idx: usize) {
+        self.theme_idx = idx;
+        self.theme = self.themes[idx].1.clone();
+        self.ctx.theme = self.theme.clone();
     }
 
     fn render(&self, f: &mut Frame) {
