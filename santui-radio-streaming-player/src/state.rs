@@ -1,3 +1,4 @@
+use crate::itunes::TrackInfo;
 use crate::stations::Station;
 use std::time::Instant;
 
@@ -8,20 +9,21 @@ pub enum PlayState {
 }
 
 pub struct RadioState {
-    pub stations: Vec<&'static Station>,
+    pub stations: Vec<Station>,
     pub selected: usize,
     pub filter: String,
     pub filtered: Vec<usize>,
     pub play_state: PlayState,
     pub current_station: Option<usize>,
     pub song_title: String,
+    pub track_info: Option<TrackInfo>,
     pub volume: i64,
     pub start_time: Instant,
     pub show_help: bool,
 }
 
 impl RadioState {
-    pub fn new(stations: Vec<&'static Station>) -> Self {
+    pub fn new(stations: Vec<Station>) -> Self {
         let count = stations.len();
         RadioState {
             filtered: (0..count).collect(),
@@ -31,6 +33,7 @@ impl RadioState {
             play_state: PlayState::Stopped,
             current_station: None,
             song_title: String::new(),
+            track_info: None,
             volume: 75,
             start_time: Instant::now(),
             show_help: false,
@@ -80,7 +83,7 @@ impl RadioState {
             return None;
         }
         let idx = self.filtered[self.selected.min(self.filtered.len() - 1)];
-        self.stations.get(idx).copied()
+        self.stations.get(idx)
     }
 
     pub fn volume_up(&mut self) {

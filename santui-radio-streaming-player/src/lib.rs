@@ -1,4 +1,5 @@
 pub mod player;
+mod itunes;
 mod state;
 pub mod stations;
 mod ui;
@@ -14,11 +15,12 @@ use std::thread;
 
 enum MpvMsg {
     Metadata(String),
+    TrackInfo(itunes::TrackInfo),
     EndFile(u32),
 }
 
 enum MpvCmd {
-    LoadUrl(&'static str),
+    LoadUrl(String),
     Stop,
     SetVolume(i64),
 }
@@ -28,6 +30,7 @@ pub struct RadioPlugin {
     theme: Theme,
     tx_cmd: Option<mpsc::Sender<MpvCmd>>,
     rx_msg: Option<mpsc::Receiver<MpvMsg>>,
+    tx_msg: Option<mpsc::Sender<MpvMsg>>,
     init_error: Option<String>,
 }
 
@@ -39,12 +42,13 @@ impl Default for RadioPlugin {
 
 impl RadioPlugin {
     pub fn new() -> Self {
-        let station_list: Vec<&'static stations::Station> = stations::STATIONS.iter().collect();
+        let station_list = stations::load();
         RadioPlugin {
             state: RadioState::new(station_list),
             theme: Theme::default(),
             tx_cmd: None,
             rx_msg: None,
+            tx_msg: None,
             init_error: None,
         }
     }
@@ -87,6 +91,8 @@ impl Plugin for RadioPlugin {
         let (tx_msg, rx_msg) = mpsc::channel::<MpvMsg>();
         let (tx_cmd, rx_cmd) = mpsc::channel::<MpvCmd>();
 
+        let tx_msg_mpv = tx_msg.clone();
+
         thread::spawn(move || {
             loop {
                 let ev = mpv.wait_event_raw(0.1);
@@ -97,16 +103,16 @@ impl Plugin for RadioPlugin {
                     }
                     if id == player::MPV_EVENT_FILE_LOADED {
                         if let Ok(Some(t)) = mpv.metadata_title() {
-                            let _ = tx_msg.send(MpvMsg::Metadata(t));
+                            let _ = tx_msg_mpv.send(MpvMsg::Metadata(t));
                         } else if let Ok(Some(t)) = mpv.media_title() {
-                            let _ = tx_msg.send(MpvMsg::Metadata(t));
+                            let _ = tx_msg_mpv.send(MpvMsg::Metadata(t));
                         }
                     }
                     if id == player::MPV_EVENT_PLAYBACK_RESTART {
                         let title = mpv.metadata_title().ok().flatten()
                             .or_else(|| mpv.media_title().ok().flatten());
                         if let Some(title) = title {
-                            let _ = tx_msg.send(MpvMsg::Metadata(title));
+                            let _ = tx_msg_mpv.send(MpvMsg::Metadata(title));
                         }
                     }
                     if id == player::MPV_EVENT_PROPERTY_CHANGE {
@@ -118,26 +124,26 @@ impl Plugin for RadioPlugin {
                         };
                         if name == "metadata" {
                             if let Ok(Some(t)) = mpv.metadata_title() {
-                                let _ = tx_msg.send(MpvMsg::Metadata(t));
+                                let _ = tx_msg_mpv.send(MpvMsg::Metadata(t));
                             }
                         } else if name == "media-title" {
                             if let Ok(Some(t)) = mpv.media_title() {
-                                let _ = tx_msg.send(MpvMsg::Metadata(t));
+                                let _ = tx_msg_mpv.send(MpvMsg::Metadata(t));
                             }
                         }
                     }
                     if id == player::MPV_EVENT_END_FILE {
                         let ef: &player::MpvEventEndFile = unsafe { &*(ev.data as *const _) };
-                        let _ = tx_msg.send(MpvMsg::EndFile(ef.reason));
+                        let _ = tx_msg_mpv.send(MpvMsg::EndFile(ef.reason));
                     }
                 }
 
                 while let Ok(cmd) = rx_cmd.try_recv() {
                     match cmd {
                         MpvCmd::LoadUrl(url) => {
-                            let _ = mpv.load_url(url);
+                            let _ = mpv.load_url(&url);
                             if let Some(title) = mpv.metadata_title().ok().flatten() {
-                                let _ = tx_msg.send(MpvMsg::Metadata(title));
+                                let _ = tx_msg_mpv.send(MpvMsg::Metadata(title));
                             }
                         }
                         MpvCmd::Stop => {
@@ -154,6 +160,7 @@ impl Plugin for RadioPlugin {
 
         self.tx_cmd = Some(tx_cmd);
         self.rx_msg = Some(rx_msg);
+        self.tx_msg = Some(tx_msg);
 
         Ok(())
     }
@@ -183,6 +190,7 @@ impl Plugin for RadioPlugin {
                     self.state.current_station = Some(idx);
                     self.state.play_state = PlayState::Playing(station.name.to_string());
                     self.state.song_title.clear();
+                    self.state.track_info = None;
                     self.state.start_time = std::time::Instant::now();
                     self.send_cmd(MpvCmd::Stop);
                     self.send_cmd(MpvCmd::LoadUrl(station.url));
@@ -194,6 +202,7 @@ impl Plugin for RadioPlugin {
                 self.state.play_state = PlayState::Stopped;
                 self.state.current_station = None;
                 self.state.song_title.clear();
+                self.state.track_info = None;
                 true
             }
             KeyCode::Char('=') | KeyCode::Char('+') => {
@@ -230,12 +239,25 @@ impl Plugin for RadioPlugin {
             while let Ok(msg) = rx.try_recv() {
                 match msg {
                     MpvMsg::Metadata(title) => {
-                        self.state.song_title = title;
+                        self.state.song_title = title.clone();
+                        self.state.track_info = None;
+                        let tx = self.tx_msg.clone().unwrap();
+                        thread::spawn(move || {
+                            if let Ok(Some(info)) = itunes::lookup(&title) {
+                                let _ = tx.send(MpvMsg::TrackInfo(info));
+                            }
+                        });
+                    }
+                    MpvMsg::TrackInfo(info) => {
+                        self.state.track_info = Some(info.clone());
+                        if let Some(title) = &info.title {
+                            self.state.song_title = title.clone();
+                        }
                     }
                     MpvMsg::EndFile(reason) => {
                         if reason == player::MPV_END_FILE_REASON_EOF {
                             if let Some(idx) = self.state.current_station {
-                                let station = self.state.stations[idx];
+                                let station = self.state.stations[idx].clone();
                                 self.send_cmd(MpvCmd::LoadUrl(station.url));
                             }
                         } else if reason == player::MPV_END_FILE_REASON_ERROR {

@@ -26,7 +26,7 @@ fn draw_station_list(f: &mut Frame, area: Rect, state: &RadioState, theme: &Them
         .iter()
         .enumerate()
         .map(|(i, &station_idx)| {
-            let station = state.stations[station_idx];
+            let station = &state.stations[station_idx];
             let is_selected = i == state.selected;
             let is_current = state.current_station == Some(station_idx);
             let style = if is_selected {
@@ -77,13 +77,16 @@ fn draw_info_panel(f: &mut Frame, area: Rect, state: &RadioState, theme: &Theme)
         .borders(Borders::ALL)
         .border_style(Style::default().fg(theme.border));
 
-    let (station_line, status_line) = match &state.play_state {
+    let (station_line, status_lines) = match &state.play_state {
         PlayState::Stopped => (
             Line::from(Span::styled(
                 "No station selected",
                 Style::default().fg(theme.text_muted),
             )),
-            Line::from(Span::styled("⏹  Stopped", Style::default().fg(theme.error))),
+            vec![Line::from(Span::styled(
+                "⏹  Stopped",
+                Style::default().fg(theme.error),
+            ))],
         ),
         PlayState::Playing(name) => {
             let title = if state.song_title.is_empty() {
@@ -91,6 +94,18 @@ fn draw_info_panel(f: &mut Frame, area: Rect, state: &RadioState, theme: &Theme)
             } else {
                 state.song_title.clone()
             };
+            let mut lines = vec![Line::from(Span::styled(
+                title,
+                Style::default().fg(theme.text),
+            ))];
+            if let Some(ref info) = state.track_info {
+                if let Some(ref artist) = info.artist {
+                    lines.push(Line::from(Span::styled(
+                        artist.clone(),
+                        Style::default().fg(theme.text_muted),
+                    )));
+                }
+            }
             (
                 Line::from(Span::styled(
                     name.clone(),
@@ -98,22 +113,20 @@ fn draw_info_panel(f: &mut Frame, area: Rect, state: &RadioState, theme: &Theme)
                         .fg(theme.success)
                         .add_modifier(Modifier::BOLD),
                 )),
-                Line::from(Span::styled(
-                    format!("♫  {title}"),
-                    Style::default().fg(theme.text),
-                )),
+                lines,
             )
         }
         PlayState::Error(e) => (
             Line::from(Span::styled("Error", Style::default().fg(theme.error))),
-            Line::from(Span::styled(
+            vec![Line::from(Span::styled(
                 format!("⚠  {e}"),
                 Style::default().fg(theme.error),
-            )),
+            ))],
         ),
     };
 
-    let lines = vec![station_line, status_line];
+    let mut lines = vec![station_line];
+    lines.extend(status_lines);
     let p = Paragraph::new(lines)
         .block(block)
         .wrap(Wrap { trim: false });
