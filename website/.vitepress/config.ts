@@ -21,7 +21,7 @@ export default defineConfig({
       ],
     },
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/sonyak/santui' },
+      { icon: 'github', link: 'https://github.com/sonyarianto/santui' },
     ],
     footer: {
       message: 'Built with Rust and Ratatui',

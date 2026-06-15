@@ -11,7 +11,7 @@ hero:
       link: /guide/
     - theme: alt
       text: View on GitHub
-      link: https://github.com/sonyak/santui
+      link: https://github.com/sonyarianto/santui
 
 features:
   - title: Modular by design
