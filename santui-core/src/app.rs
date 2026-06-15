@@ -28,7 +28,7 @@ const CMD_ITEMS: &[CmdItem] = &[
     },
     CmdItem {
         category: "System",
-        label: "Switch Theme",
+        label: "Switch theme",
     },
     CmdItem {
         category: "System",
@@ -52,7 +52,9 @@ pub struct Santui {
     palette: Option<PaletteState>,
     show_about: bool,
     show_theme_picker: bool,
+    theme_picker_query: String,
     theme_picker_cursor: usize,
+    theme_picker_scroll: u16,
     running: bool,
     tick: u64,
 }
@@ -65,8 +67,7 @@ impl Default for Santui {
 
 impl Santui {
     pub fn new() -> Self {
-        let themes: Vec<(&'static str, Theme)> =
-            vec![("Santui", Theme::default()), ("Nord", Theme::nord())];
+        let themes = Theme::all();
         let theme = themes[0].1.clone();
         Santui {
             plugins: Vec::new(),
@@ -78,7 +79,9 @@ impl Santui {
             palette: None,
             show_about: false,
             show_theme_picker: false,
+            theme_picker_query: String::new(),
             theme_picker_cursor: 0,
+            theme_picker_scroll: 0,
             running: true,
             tick: 0,
         }
@@ -169,6 +172,24 @@ impl Santui {
         }
     }
 
+    fn ensure_theme_cursor_visible(&mut self, area_h: u16) {
+        let list_h = self.theme_picker_max_list_h(area_h);
+        let cursor = self.theme_picker_cursor as u16;
+        if cursor < self.theme_picker_scroll {
+            self.theme_picker_scroll = cursor;
+        } else if cursor >= self.theme_picker_scroll + list_h {
+            self.theme_picker_scroll = cursor.saturating_sub(list_h.saturating_sub(1));
+        }
+    }
+
+    fn theme_picker_max_list_h(&self, area_h: u16) -> u16 {
+        let max_pal_h = area_h.saturating_sub(2).saturating_sub(1); // 1 for status bar
+        let pad_t = 1;
+        let header_h = 4;
+        let pad_b = 1;
+        max_pal_h.saturating_sub(pad_t + header_h + pad_b).max(1)
+    }
+
     fn filtered_items(&self, query: &str) -> Vec<usize> {
         if query.is_empty() {
             return (0..CMD_ITEMS.len()).collect();
@@ -226,9 +247,11 @@ impl Santui {
                                 self.plugins[0].on_focus();
                                 self.active_plugin = Some(0);
                             }
-                            "Switch Theme" => {
+                            "Switch theme" => {
                                 self.show_theme_picker = true;
+                                self.theme_picker_query.clear();
                                 self.theme_picker_cursor = self.theme_idx;
+                                self.theme_picker_scroll = 0;
                             }
                             "About" => self.show_about = true,
                             _ => {}
@@ -258,21 +281,8 @@ impl Santui {
         }
 
         if self.show_theme_picker {
+            let filtered = self.filtered_themes();
             match key.code {
-                KeyCode::Up => {
-                    self.theme_picker_cursor = self.theme_picker_cursor.saturating_sub(1);
-                }
-                KeyCode::Down => {
-                    self.theme_picker_cursor =
-                        (self.theme_picker_cursor + 1).min(self.themes.len() - 1);
-                }
-                KeyCode::Enter => {
-                    self.select_theme(self.theme_picker_cursor);
-                    self.show_theme_picker = false;
-                }
-                KeyCode::Esc => {
-                    self.show_theme_picker = false;
-                }
                 KeyCode::Char(c)
                     if c == 'p'
                         && key
@@ -281,7 +291,40 @@ impl Santui {
                 {
                     self.show_theme_picker = false;
                 }
+                KeyCode::Char(_) if !key.modifiers.is_empty() => {}
+                KeyCode::Char(c) => {
+                    self.theme_picker_query.push(c);
+                    self.theme_picker_cursor = 0;
+                }
+                KeyCode::Backspace => {
+                    self.theme_picker_query.pop();
+                    self.theme_picker_cursor = 0;
+                }
+                KeyCode::Up => {
+                    if !filtered.is_empty() {
+                        self.theme_picker_cursor = self.theme_picker_cursor.saturating_sub(1);
+                    }
+                }
+                KeyCode::Down => {
+                    if !filtered.is_empty() {
+                        self.theme_picker_cursor =
+                            (self.theme_picker_cursor + 1).min(filtered.len() - 1);
+                    }
+                }
+                KeyCode::Enter => {
+                    if let Some(&idx) = filtered.get(self.theme_picker_cursor) {
+                        self.select_theme(idx);
+                    }
+                    self.show_theme_picker = false;
+                }
+                KeyCode::Esc => {
+                    self.show_theme_picker = false;
+                }
                 _ => {}
+            }
+            if self.show_theme_picker {
+                let (_, term_h) = crossterm::terminal::size().unwrap_or((80, 24));
+                self.ensure_theme_cursor_visible(term_h);
             }
             return;
         }
@@ -309,6 +352,19 @@ impl Santui {
                 }
             },
         }
+    }
+
+    fn filtered_themes(&self) -> Vec<usize> {
+        if self.theme_picker_query.is_empty() {
+            return (0..self.themes.len()).collect();
+        }
+        let q = self.theme_picker_query.to_lowercase();
+        self.themes
+            .iter()
+            .enumerate()
+            .filter(|(_, (name, _))| name.to_lowercase().contains(&q))
+            .map(|(i, _)| i)
+            .collect()
     }
 
     fn select_theme(&mut self, idx: usize) {
@@ -450,6 +506,9 @@ impl Santui {
 
     fn render_theme_picker(&self, f: &mut Frame, content: Rect) {
         let t = &self.theme;
+        let query = &self.theme_picker_query;
+        let filtered = self.filtered_themes();
+        let cursor = self.theme_picker_cursor;
 
         let dim = Style::default()
             .fg(t.text_muted)
@@ -464,15 +523,18 @@ impl Santui {
         let pad_l = 2u16;
         let pad_t = 1u16;
         let pad_b = 1u16;
-        let header_h = 2u16;
+        let header_h = 4u16; // title + blank + input + blank
         let inner_w = pal_w.saturating_sub(pad_l * 2);
 
-        let item_count = self.themes.len() as u16;
-        let list_h = item_count;
-        let pal_h = pad_t + header_h + list_h + pad_b;
+        let no_results = !query.is_empty() && filtered.is_empty();
+        let list_items = if no_results { 1 } else { filtered.len() };
 
+        let max_pal_h = content.height.saturating_sub(2);
+        let pal_h = (pad_t + header_h + list_items as u16 + pad_b).min(max_pal_h);
+        let list_h = pal_h.saturating_sub(pad_t + header_h + pad_b);
+
+        let y = content.y + (content.height.saturating_sub(pal_h)) / 2;
         let x = (content.width.saturating_sub(pal_w)) / 2;
-        let y = content.y + content.height / 4;
         let pal_area = Rect {
             x,
             y,
@@ -496,7 +558,39 @@ impl Santui {
             title_spans.push(Span::styled(" ".repeat(pad_w as usize), Style::default()));
         }
         title_spans.push(Span::styled("esc", Style::default().fg(t.text_muted)));
-        let header_lines = vec![Line::from(title_spans), Line::from("")];
+
+        let cursor_on = (self.tick / 5).is_multiple_of(2);
+
+        let input_line = if query.is_empty() {
+            let first_style = if cursor_on {
+                Style::default().fg(Color::Black).bg(t.highlight)
+            } else {
+                Style::default().fg(t.text_muted)
+            };
+            Line::from(vec![
+                Span::styled("S", first_style),
+                Span::styled("earch", Style::default().fg(t.text_muted)),
+            ])
+        } else {
+            let cursor_style = if cursor_on {
+                Style::default().fg(Color::Black).bg(t.highlight)
+            } else {
+                Style::default()
+                    .fg(t.background_panel)
+                    .bg(t.background_panel)
+            };
+            Line::from(vec![
+                Span::styled(query.clone(), Style::default().fg(t.text)),
+                Span::styled(" ", cursor_style),
+            ])
+        };
+
+        let header_lines = vec![
+            Line::from(title_spans),
+            Line::from(""),
+            input_line,
+            Line::from(""),
+        ];
 
         let header_area = Rect {
             x: pal_area.x + pad_l,
@@ -508,9 +602,18 @@ impl Santui {
 
         // Theme list
         let mut list_lines = Vec::new();
-        for (i, (name, _)) in self.themes.iter().enumerate() {
+
+        if no_results {
+            list_lines.push(Line::from(Span::styled(
+                "No results found",
+                Style::default().fg(t.text_muted),
+            )));
+        }
+
+        for (flat, &i) in filtered.iter().enumerate() {
+            let (name, _) = &self.themes[i];
             let current = i == self.theme_idx;
-            let hovered = i == self.theme_picker_cursor;
+            let hovered = flat == cursor;
             let prefix = if current { " ● " } else { "   " };
             let text_fg = if hovered {
                 Color::Black
@@ -519,14 +622,12 @@ impl Santui {
             } else {
                 t.text
             };
-            let style = Style::default().fg(text_fg);
-            let style = if hovered {
-                style.bg(t.highlight).add_modifier(Modifier::BOLD)
+            let mut style = Style::default().fg(text_fg);
+            if hovered {
+                style = style.bg(t.highlight).add_modifier(Modifier::BOLD);
             } else if current {
-                style.add_modifier(Modifier::BOLD)
-            } else {
-                style
-            };
+                style = style.add_modifier(Modifier::BOLD);
+            }
             let display = format!("{prefix}{name}");
             list_lines.push(Line::from(Span::styled(
                 format!("{:<width$}", display, width = inner_w as usize),
@@ -541,7 +642,10 @@ impl Santui {
             width: inner_w,
             height: list_h,
         };
-        f.render_widget(Paragraph::new(list_lines), list_area);
+        f.render_widget(
+            Paragraph::new(list_lines).scroll((self.theme_picker_scroll, 0)),
+            list_area,
+        );
     }
 
     fn render_palette(&self, f: &mut Frame, content: Rect) {
@@ -627,7 +731,7 @@ impl Santui {
         let pal_h = pad_t + header_h + list_h + pad_b;
 
         let x = (content.width.saturating_sub(pal_w)) / 2;
-        let y = content.y + content.height / 4;
+        let y = content.y + (content.height.saturating_sub(pal_h)) / 2;
         let pal_area = Rect {
             x,
             y,
