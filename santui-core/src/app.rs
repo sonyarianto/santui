@@ -323,7 +323,7 @@ impl Santui {
 
         let vert = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Fill(1), Constraint::Length(13), Constraint::Fill(1)])
+            .constraints([Constraint::Fill(1), Constraint::Length(16), Constraint::Fill(1)])
             .split(area);
 
         let p = Paragraph::new(text).alignment(Alignment::Center);
