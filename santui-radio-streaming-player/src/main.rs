@@ -1,3 +1,4 @@
+mod database;
 mod itunes;
 mod player;
 mod state;

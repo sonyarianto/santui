@@ -53,7 +53,6 @@ impl RadioState {
                 .enumerate()
                 .filter(|(_, s)| {
                     s.name.to_lowercase().contains(&lower)
-                        || s.genre.to_lowercase().contains(&lower)
                 })
                 .map(|(i, _)| i)
                 .collect();

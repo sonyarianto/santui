@@ -271,7 +271,7 @@ pub fn render_ui(
             ("Enter    Play selected station", theme.text),
             ("s         Stop playback", theme.text),
             ("+/-       Adjust volume", theme.text),
-            ("/         Filter stations by name/genre", theme.text),
+            ("/         Filter stations by name", theme.text),
             ("?         Toggle this help", theme.text),
             ("Esc       Back to Santui menu", theme.text),
             ("", theme.text_muted),
