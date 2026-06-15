@@ -5,4 +5,8 @@ edition = "2021"
 
 [dependencies]
 santui-core = { path = "../santui-core" }
-santui-radio-streaming-player = { path = "../santui-radio-streaming-player" }
+santui-ipc = { path = "../santui-ipc" }
+
+[features]
+default = ["radio-streaming-player"]
+radio-streaming-player = []

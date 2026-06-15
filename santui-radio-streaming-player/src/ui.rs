@@ -1,195 +1,298 @@
 use crate::state::{PlayState, RadioState};
-use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
-use ratatui::style::{Color, Modifier, Style};
-use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Clear, Gauge, List, ListItem, Paragraph, Wrap};
-use ratatui::Frame;
-use santui_core::Theme;
+use santui_ipc::protocol::{RenderCmd, ThemeData};
 
-pub fn draw_radio(f: &mut Frame, area: Rect, state: &RadioState, theme: &Theme) {
-    let chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Ratio(1, 3), Constraint::Ratio(2, 3)])
-        .split(area);
-
-    draw_station_list(f, chunks[0], state, theme);
-    draw_now_playing(f, chunks[1], state, theme);
-
-    if state.show_help {
-        draw_help_popup(f, theme);
+fn panel_top(w: u16, title: &str) -> String {
+    if w < 2 {
+        return String::new();
+    }
+    let inner = w as usize - 2;
+    let title_len = title.len();
+    if title_len <= inner.saturating_sub(2) {
+        let right = inner - 1 - title_len;
+        format!("┌─{}{}┐", title, "─".repeat(right))
+    } else {
+        let n = inner.min(title_len);
+        format!("┌{}┐", &title[..n])
     }
 }
 
-fn draw_station_list(f: &mut Frame, area: Rect, state: &RadioState, theme: &Theme) {
-    let items: Vec<ListItem> = state
-        .filtered
-        .iter()
-        .enumerate()
-        .map(|(i, &station_idx)| {
-            let station = &state.stations[station_idx];
-            let is_selected = i == state.selected;
-            let is_current = state.current_station == Some(station_idx);
-            let style = if is_selected {
-                Style::default().fg(Color::Black).bg(theme.accent)
-            } else if is_current {
-                Style::default().fg(theme.accent)
-            } else {
-                Style::default().fg(theme.text)
-            };
-            let icon = if is_current { " ♫ " } else { "   " };
-            ListItem::new(Line::from(Span::styled(
-                format!("{icon}{}", station.name),
-                style,
-            )))
-        })
-        .collect();
-
-    let list = List::new(items)
-        .block(
-            Block::default()
-                .title(" Stations ")
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(theme.border)),
-        )
-        .highlight_style(Style::default().fg(Color::Black).bg(theme.accent));
-
-    f.render_widget(list, area);
+fn panel_bottom(w: u16) -> String {
+    if w < 2 {
+        return String::new();
+    }
+    format!("└{}┘", "─".repeat(w as usize - 2))
 }
 
-fn draw_now_playing(f: &mut Frame, area: Rect, state: &RadioState, theme: &Theme) {
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Length(6), Constraint::Min(0)])
-        .split(area);
-
-    draw_info_panel(f, chunks[0], state, theme);
-    draw_volume_gauge(f, chunks[1], state, theme);
+fn panel_mid(w: u16) -> String {
+    if w < 2 {
+        return String::new();
+    }
+    format!("│{}│", " ".repeat(w as usize - 2))
 }
 
-fn draw_info_panel(f: &mut Frame, area: Rect, state: &RadioState, theme: &Theme) {
-    let block = Block::default()
-        .title(" Now Playing ")
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(theme.border));
+fn draw_panel(
+    cmds: &mut Vec<RenderCmd>,
+    theme: &ThemeData,
+    x: u16,
+    y: u16,
+    w: u16,
+    h: u16,
+    title: &str,
+) {
+    if w < 4 || h < 3 {
+        return;
+    }
 
-    let (station_line, status_lines) = match &state.play_state {
-        PlayState::Stopped => (
-            Line::from(Span::styled(
+    cmds.push(RenderCmd::Text {
+        x,
+        y,
+        text: panel_top(w, title),
+        fg: Some(theme.border),
+        bg: None,
+        bold: false,
+    });
+
+    for row in (y + 1)..(y + h - 1) {
+        cmds.push(RenderCmd::Text {
+            x,
+            y: row,
+            text: panel_mid(w),
+            fg: Some(theme.border),
+            bg: None,
+            bold: false,
+        });
+    }
+
+    cmds.push(RenderCmd::Text {
+        x,
+        y: y + h - 1,
+        text: panel_bottom(w),
+        fg: Some(theme.border),
+        bg: None,
+        bold: false,
+    });
+}
+
+fn text_at(cmds: &mut Vec<RenderCmd>, x: u16, y: u16, text: &str, fg: [u8; 3], max_w: u16) {
+    let max = max_w as usize;
+    let display = if text.len() > max && max > 1 {
+        let mut t = text.chars().take(max.saturating_sub(1)).collect::<String>();
+        t.push('…');
+        t
+    } else {
+        format!("{:<width$}", text, width = max)
+    };
+    cmds.push(RenderCmd::Text {
+        x,
+        y,
+        text: display,
+        fg: Some(fg),
+        bg: None,
+        bold: false,
+    });
+}
+
+pub fn render_ui(
+    state: &RadioState,
+    theme: &ThemeData,
+    area_w: u16,
+    area_h: u16,
+) -> Vec<RenderCmd> {
+    let mut cmds = Vec::new();
+
+    if area_w < 10 || area_h < 3 {
+        return cmds;
+    }
+
+    cmds.push(RenderCmd::Clear {
+        x: 0,
+        y: 0,
+        w: area_w,
+        h: area_h,
+    });
+
+    let left_w = (area_w / 3).max(12);
+    let right_w = area_w.saturating_sub(left_w);
+    let info_h = 6u16.min(area_h);
+
+    // ---- Left panel: station list ----
+    draw_panel(&mut cmds, theme, 0, 0, left_w, area_h, " Stations ");
+
+    let inner_x = 2u16;
+    let inner_w = left_w.saturating_sub(4);
+
+    for (i, &station_idx) in state.filtered.iter().enumerate() {
+        let item_y = 1u16 + i as u16;
+        if item_y >= area_h.saturating_sub(1) {
+            break;
+        }
+
+        let station = &state.stations[station_idx];
+        let is_selected = i == state.selected;
+        let is_current = state.current_station == Some(station_idx);
+
+        let icon = if is_current { " ♫ " } else { "   " };
+        let text = format!("{}{}", icon, station.name);
+        let max_len = inner_w as usize;
+        let display = if text.len() > max_len && max_len > 0 {
+            let mut t = text
+                .chars()
+                .take(max_len.saturating_sub(1))
+                .collect::<String>();
+            t.push('…');
+            t
+        } else {
+            format!("{:<width$}", text, width = max_len)
+        };
+
+        let (fg, bg, bold) = if is_selected {
+            (Some([0u8, 0, 0]), Some(theme.highlight), false)
+        } else if is_current {
+            (Some(theme.accent), None, true)
+        } else {
+            (Some(theme.text), None, false)
+        };
+
+        cmds.push(RenderCmd::Text {
+            x: inner_x,
+            y: item_y,
+            text: display,
+            fg,
+            bg,
+            bold,
+        });
+    }
+
+    // ---- Right panel: Now Playing ----
+    draw_panel(
+        &mut cmds,
+        theme,
+        left_w,
+        0,
+        right_w,
+        info_h,
+        " Now Playing ",
+    );
+
+    let r_inner_x = left_w + 2;
+    let r_inner_w = right_w.saturating_sub(4);
+
+    match &state.play_state {
+        PlayState::Stopped => {
+            text_at(
+                &mut cmds,
+                r_inner_x,
+                2,
                 "No station selected",
-                Style::default().fg(theme.text_muted),
-            )),
-            vec![Line::from(Span::styled(
+                theme.text_muted,
+                r_inner_w,
+            );
+            text_at(
+                &mut cmds,
+                r_inner_x,
+                3,
                 "⏹  Stopped",
-                Style::default().fg(theme.error),
-            ))],
-        ),
-        PlayState::Playing(name) => {
+                theme.error,
+                r_inner_w,
+            );
+        }
+        PlayState::Playing(station_name) => {
+            text_at(
+                &mut cmds,
+                r_inner_x,
+                2,
+                station_name,
+                theme.success,
+                r_inner_w,
+            );
+
             let title = if state.song_title.is_empty() {
-                "(no metadata)".to_string()
+                "(no metadata)"
             } else {
-                state.song_title.clone()
+                &state.song_title
             };
-            let mut lines = vec![Line::from(Span::styled(
-                title,
-                Style::default().fg(theme.text),
-            ))];
+            text_at(&mut cmds, r_inner_x, 3, title, theme.text, r_inner_w);
+
             if let Some(ref info) = state.track_info {
                 if let Some(ref artist) = info.artist {
-                    lines.push(Line::from(Span::styled(
-                        artist.clone(),
-                        Style::default().fg(theme.text_muted),
-                    )));
+                    text_at(&mut cmds, r_inner_x, 4, artist, theme.text_muted, r_inner_w);
                 }
             }
-            (
-                Line::from(Span::styled(
-                    name.clone(),
-                    Style::default()
-                        .fg(theme.success)
-                        .add_modifier(Modifier::BOLD),
-                )),
-                lines,
-            )
         }
-        PlayState::Error(e) => (
-            Line::from(Span::styled("Error", Style::default().fg(theme.error))),
-            vec![Line::from(Span::styled(
-                format!("⚠  {e}"),
-                Style::default().fg(theme.error),
-            ))],
-        ),
-    };
+        PlayState::Error(e) => {
+            text_at(&mut cmds, r_inner_x, 2, "Error", theme.error, r_inner_w);
+            text_at(&mut cmds, r_inner_x, 3, e, theme.error, r_inner_w);
+        }
+    }
 
-    let mut lines = vec![station_line];
-    lines.extend(status_lines);
-    let p = Paragraph::new(lines)
-        .block(block)
-        .wrap(Wrap { trim: false });
-    f.render_widget(p, area);
-}
+    // ---- Right panel bottom: Volume gauge ----
+    let gauge_y = info_h;
+    let gauge_h = area_h.saturating_sub(gauge_y);
+    if gauge_h >= 3 {
+        draw_panel(
+            &mut cmds, theme, left_w, gauge_y, right_w, gauge_h, " Volume ",
+        );
 
-fn draw_volume_gauge(f: &mut Frame, area: Rect, state: &RadioState, theme: &Theme) {
-    let block = Block::default()
-        .title(" Volume ")
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(theme.border));
+        let g_inner_x = left_w + 2;
+        let g_inner_w = right_w.saturating_sub(4) as usize;
+        let bar_w = g_inner_w.saturating_sub(5); // room for " 100%"
+        let filled = (bar_w as u64 * state.volume as u64 / 100) as usize;
+        let empty = bar_w.saturating_sub(filled);
+        let gauge_text = format!(
+            "{}{} {:>3}%",
+            "█".repeat(filled),
+            "░".repeat(empty),
+            state.volume
+        );
+        cmds.push(RenderCmd::Text {
+            x: g_inner_x,
+            y: gauge_y + 2,
+            text: gauge_text,
+            fg: Some(theme.success),
+            bg: None,
+            bold: false,
+        });
+    }
 
-    let inner = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Min(0)])
-        .margin(1)
-        .split(area);
+    // ---- Help popup ----
+    if state.show_help && area_w >= 40 && area_h >= 16 {
+        let pw = (area_w / 2).min(50);
+        let ph = 13u16;
+        let px = (area_w - pw) / 2;
+        let py = (area_h - ph) / 2;
 
-    let label = format!("{}%", state.volume);
-    let gauge = Gauge::default()
-        .gauge_style(Style::default().fg(theme.success).bg(theme.text_muted))
-        .percent(state.volume as u16)
-        .label(label);
+        draw_panel(&mut cmds, theme, px, py, pw, ph, " Help ");
 
-    f.render_widget(block, area);
-    f.render_widget(gauge, inner[0]);
-}
+        let hx = px + 2;
+        let hw = pw.saturating_sub(4);
 
-fn draw_help_popup(f: &mut Frame, theme: &Theme) {
-    let area = f.area();
-    let popup = Rect {
-        x: area.width / 4,
-        y: area.height / 4,
-        width: area.width / 2,
-        height: 14,
-    };
+        let help_lines: &[(&str, [u8; 3])] = &[
+            ("↑/↓      Navigate station list", theme.text),
+            ("Enter    Play selected station", theme.text),
+            ("s         Stop playback", theme.text),
+            ("+/-       Adjust volume", theme.text),
+            ("/         Filter stations by name/genre", theme.text),
+            ("?         Toggle this help", theme.text),
+            ("Esc       Back to Santui menu", theme.text),
+            ("", theme.text_muted),
+            ("Press any key to close", theme.text_muted),
+        ];
 
-    let text = vec![
-        Line::from(Span::styled(
-            "Help",
-            Style::default()
-                .fg(theme.accent)
-                .add_modifier(Modifier::BOLD),
-        )),
-        Line::from(""),
-        Line::from("↑/↓      Navigate station list"),
-        Line::from("Enter    Play selected station"),
-        Line::from("s         Stop playback"),
-        Line::from("+/-       Adjust volume"),
-        Line::from("/         Filter stations by name/genre"),
-        Line::from("?         Toggle this help"),
-        Line::from("Esc       Back to Santui menu"),
-        Line::from("q         Quit"),
-        Line::from(""),
-        Line::from(Span::styled(
-            "Press any key to close",
-            Style::default().fg(theme.text_muted),
-        )),
-    ];
+        for (li, (line, color)) in help_lines.iter().enumerate() {
+            let ly = py + 2 + li as u16;
+            if ly >= py + ph - 1 {
+                break;
+            }
+            cmds.push(RenderCmd::Text {
+                x: hx,
+                y: ly,
+                text: format!("{:<width$}", line, width = hw as usize),
+                fg: Some(*color),
+                bg: None,
+                bold: false,
+            });
+        }
+    }
 
-    let block = Block::default()
-        .title(" Help ")
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(theme.border));
-
-    let p = Paragraph::new(text)
-        .block(block)
-        .alignment(Alignment::Center);
-    f.render_widget(Clear, popup);
-    f.render_widget(p, popup);
+    cmds
 }

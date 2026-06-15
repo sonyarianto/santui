@@ -213,12 +213,12 @@ impl Mpv {
         if rc < 0 || ptr.is_null() {
             return Ok(None);
         }
-        let s = unsafe {
-            std::ffi::CStr::from_ptr(ptr)
-                .to_string_lossy()
-                .to_string()
-        };
-        if s.is_empty() { Ok(None) } else { Ok(Some(s)) }
+        let s = unsafe { std::ffi::CStr::from_ptr(ptr).to_string_lossy().to_string() };
+        if s.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(s))
+        }
     }
 
     pub fn metadata_title(&self) -> Result<Option<String>, Box<dyn std::error::Error>> {
@@ -228,7 +228,10 @@ impl Mpv {
         self.get_property_string("media-title")
     }
 
-    fn get_property_string(&self, name: &str) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    fn get_property_string(
+        &self,
+        name: &str,
+    ) -> Result<Option<String>, Box<dyn std::error::Error>> {
         let mut ptr: *mut i8 = std::ptr::null_mut();
         let n = CString::new(name)?;
         let rc = unsafe {
@@ -242,12 +245,12 @@ impl Mpv {
         if rc < 0 || ptr.is_null() {
             return Ok(None);
         }
-        let s = unsafe {
-            std::ffi::CStr::from_ptr(ptr)
-                .to_string_lossy()
-                .to_string()
-        };
-        if s.is_empty() { Ok(None) } else { Ok(Some(s)) }
+        let s = unsafe { std::ffi::CStr::from_ptr(ptr).to_string_lossy().to_string() };
+        if s.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(s))
+        }
     }
 
     pub fn wait_event_raw(&self, timeout: f64) -> Option<&MpvEvent> {
