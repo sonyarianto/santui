@@ -36,6 +36,12 @@ const CMD_ITEMS: &[CmdItem] = &[
     },
 ];
 
+const PAL_W: u16 = 60;
+const PAD_L: u16 = 2;
+const PAD_T: u16 = 1;
+const PAD_B: u16 = 1;
+const HEADER_H: u16 = 4;
+
 struct PaletteState {
     query: String,
     cursor: usize,
@@ -165,7 +171,7 @@ impl Santui {
             line += 1; // item
         }
         let max_h = self.palette_max_h(area_h);
-        let list_h = max_h.saturating_sub(6).max(1); // 6 = pad_t(1) + header_h(4) + pad_b(1)
+        let list_h = max_h.saturating_sub(6).max(1); // 6 = PAD_T(1) + HEADER_H(4) + pad_b(1)
         let pal = self.palette.as_mut().unwrap();
         if line < pal.scroll {
             pal.scroll = line;
@@ -185,11 +191,8 @@ impl Santui {
     }
 
     fn theme_picker_max_list_h(&self, area_h: u16) -> u16 {
-        let max_pal_h = area_h.saturating_sub(2).saturating_sub(1); // 1 for status bar
-        let pad_t = 1;
-        let header_h = 4;
-        let pad_b = 1;
-        max_pal_h.saturating_sub(pad_t + header_h + pad_b).max(1)
+        let max_pal_h = area_h.saturating_sub(2).saturating_sub(1);
+        max_pal_h.saturating_sub(PAD_T + HEADER_H + PAD_B).max(1)
     }
 
     fn filtered_items(&self, query: &str) -> Vec<usize> {
@@ -207,8 +210,8 @@ impl Santui {
 
     fn handle_key(&mut self, key: KeyEvent) {
         if self.palette.is_some() {
-            let query = self.palette.as_ref().unwrap().query.clone();
-            let filtered = self.filtered_items(&query);
+            let query = &self.palette.as_ref().unwrap().query;
+            let filtered = self.filtered_items(query);
             let palette = self.palette.as_mut().unwrap();
 
             match key.code {
@@ -400,6 +403,17 @@ impl Santui {
         self.ctx.theme = self.theme.clone();
     }
 
+    fn render_dim_overlay(&self, f: &mut Frame, content: Rect) {
+        let dim = Style::default()
+            .fg(self.theme.text_muted)
+            .add_modifier(Modifier::DIM);
+        let fill: Vec<Line> = (0..content.height)
+            .map(|_| Line::from(Span::styled(" ".repeat(content.width as usize), dim)))
+            .collect();
+        f.render_widget(Clear, content);
+        f.render_widget(Paragraph::new(fill), content);
+    }
+
     fn render(&self, f: &mut Frame) {
         let area = f.area();
 
@@ -534,35 +548,23 @@ impl Santui {
         let filtered = self.filtered_themes();
         let cursor = self.theme_picker_cursor;
 
-        let dim = Style::default()
-            .fg(t.text_muted)
-            .add_modifier(Modifier::DIM);
-        let fill: Vec<Line> = (0..content.height)
-            .map(|_| Line::from(Span::styled(" ".repeat(content.width as usize), dim)))
-            .collect();
-        f.render_widget(Clear, content);
-        f.render_widget(Paragraph::new(fill), content);
+        self.render_dim_overlay(f, content);
 
-        let pal_w: u16 = 60;
-        let pad_l = 2u16;
-        let pad_t = 1u16;
-        let pad_b = 1u16;
-        let header_h = 4u16; // title + blank + input + blank
-        let inner_w = pal_w.saturating_sub(pad_l * 2);
+        let inner_w = PAL_W.saturating_sub(PAD_L * 2);
 
         let no_results = !query.is_empty() && filtered.is_empty();
         let list_items = if no_results { 1 } else { filtered.len() };
 
         let max_pal_h = content.height.saturating_sub(2);
-        let pal_h = (pad_t + header_h + list_items as u16 + pad_b).min(max_pal_h);
-        let list_h = pal_h.saturating_sub(pad_t + header_h + pad_b);
+        let pal_h = (PAD_T + HEADER_H + list_items as u16 + PAD_B).min(max_pal_h);
+        let list_h = pal_h.saturating_sub(PAD_T + HEADER_H + PAD_B);
 
         let y = content.y + (content.height.saturating_sub(pal_h)) / 2;
-        let x = (content.width.saturating_sub(pal_w)) / 2;
+        let x = (content.width.saturating_sub(PAL_W)) / 2;
         let pal_area = Rect {
             x,
             y,
-            width: pal_w,
+            width: PAL_W,
             height: pal_h,
         };
 
@@ -617,10 +619,10 @@ impl Santui {
         ];
 
         let header_area = Rect {
-            x: pal_area.x + pad_l,
-            y: pal_area.y + pad_t,
+            x: pal_area.x + PAD_L,
+            y: pal_area.y + PAD_T,
             width: inner_w,
-            height: header_h,
+            height: HEADER_H,
         };
         f.render_widget(Paragraph::new(header_lines), header_area);
 
@@ -659,9 +661,9 @@ impl Santui {
             )));
         }
 
-        let list_top = pal_area.y + pad_t + header_h;
+        let list_top = pal_area.y + PAD_T + HEADER_H;
         let list_area = Rect {
-            x: pal_area.x + pad_l,
+            x: pal_area.x + PAD_L,
             y: list_top,
             width: inner_w,
             height: list_h,
@@ -679,15 +681,7 @@ impl Santui {
         let cursor = self.palette.as_ref().map_or(0, |p| p.cursor);
         let scroll = self.palette.as_ref().map_or(0, |p| p.scroll);
 
-        // Dim overlay
-        let dim = Style::default()
-            .fg(t.text_muted)
-            .add_modifier(Modifier::DIM);
-        let fill: Vec<Line> = (0..content.height)
-            .map(|_| Line::from(Span::styled(" ".repeat(content.width as usize), dim)))
-            .collect();
-        f.render_widget(Clear, content);
-        f.render_widget(Paragraph::new(fill), content);
+        self.render_dim_overlay(f, content);
 
         // Build category groups
         let mut current_cat = "";
@@ -705,13 +699,8 @@ impl Santui {
             groups.push((current_cat, cat_items));
         }
 
-        let pal_w: u16 = 60;
         let no_results = !query.is_empty() && filtered.is_empty();
-        let pad_l = 2u16;
-        let pad_t = 1u16;
-        let pad_b = 1u16;
-        let header_h = 4u16; // title + blank + input + blank
-        let inner_w = pal_w.saturating_sub(pad_l * 2);
+        let inner_w = PAL_W.saturating_sub(PAD_L * 2);
 
         // Build list content
         let mut list_lines = Vec::new();
@@ -751,15 +740,15 @@ impl Santui {
         // Compute heights
         let max_h = (content.height / 2).saturating_sub(6).max(4);
         let natural_list_h = list_lines.len() as u16;
-        let list_h = natural_list_h.min(max_h.saturating_sub(pad_t + header_h + pad_b));
-        let pal_h = pad_t + header_h + list_h + pad_b;
+        let list_h = natural_list_h.min(max_h.saturating_sub(PAD_T + HEADER_H + PAD_B));
+        let pal_h = PAD_T + HEADER_H + list_h + PAD_B;
 
-        let x = (content.width.saturating_sub(pal_w)) / 2;
+        let x = (content.width.saturating_sub(PAL_W)) / 2;
         let y = content.y + (content.height.saturating_sub(pal_h)) / 2;
         let pal_area = Rect {
             x,
             y,
-            width: pal_w,
+            width: PAL_W,
             height: pal_h,
         };
 
@@ -815,17 +804,17 @@ impl Santui {
         header_lines.push(Line::from(Span::styled("", Style::default())));
 
         let header_area = Rect {
-            x: pal_area.x + pad_l,
-            y: pal_area.y + pad_t,
+            x: pal_area.x + PAD_L,
+            y: pal_area.y + PAD_T,
             width: inner_w,
-            height: header_h,
+            height: HEADER_H,
         };
         f.render_widget(Paragraph::new(header_lines), header_area);
 
         // ---- Scrollable list ----
-        let list_top = pal_area.y + pad_t + header_h;
+        let list_top = pal_area.y + PAD_T + HEADER_H;
         let list_area = Rect {
-            x: pal_area.x + pad_l,
+            x: pal_area.x + PAD_L,
             y: list_top,
             width: inner_w,
             height: list_h,
