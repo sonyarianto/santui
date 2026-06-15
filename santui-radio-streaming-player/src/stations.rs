@@ -25,3 +25,10 @@ pub fn load() -> Vec<Station> {
         }
     }
 }
+
+pub fn reload() -> Vec<Station> {
+    match crate::database::open() {
+        Ok(conn) => crate::database::load_all(&conn).unwrap_or_else(|_| embedded_stations()),
+        Err(_) => embedded_stations(),
+    }
+}

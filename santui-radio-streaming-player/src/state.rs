@@ -21,6 +21,7 @@ pub struct RadioState {
     pub volume: i64,
     pub start_time: Instant,
     pub show_help: bool,
+    pub scan_msg: Option<String>,
 }
 
 impl RadioState {
@@ -39,6 +40,7 @@ impl RadioState {
             volume: 75,
             start_time: Instant::now(),
             show_help: false,
+            scan_msg: None,
         }
     }
 
@@ -51,9 +53,7 @@ impl RadioState {
                 .stations
                 .iter()
                 .enumerate()
-                .filter(|(_, s)| {
-                    s.name.to_lowercase().contains(&lower)
-                })
+                .filter(|(_, s)| s.name.to_lowercase().contains(&lower))
                 .map(|(i, _)| i)
                 .collect();
         }

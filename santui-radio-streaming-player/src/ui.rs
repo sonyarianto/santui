@@ -163,6 +163,25 @@ pub fn render_ui(
         });
     }
 
+    // ---- Scan message (temporary overlay in left panel) ----
+    if let Some(ref msg) = state.scan_msg {
+        let msg_y = area_h.saturating_sub(2);
+        let max_w = left_w.saturating_sub(4) as usize;
+        let display = if msg.len() > max_w {
+            format!("{}…", &msg[..max_w.saturating_sub(1)])
+        } else {
+            format!("{:<width$}", msg, width = max_w)
+        };
+        cmds.push(RenderCmd::Text {
+            x: 2,
+            y: msg_y,
+            text: display,
+            fg: Some(theme.accent),
+            bg: None,
+            bold: false,
+        });
+    }
+
     // ---- Right panel: Now Playing ----
     draw_panel(
         &mut cmds,
@@ -270,6 +289,7 @@ pub fn render_ui(
             ("↑/↓      Navigate station list", theme.text),
             ("Enter    Play selected station", theme.text),
             ("s         Stop playback", theme.text),
+            ("r         Reload stations from DB", theme.text),
             ("+/-       Adjust volume", theme.text),
             ("/         Filter stations by name", theme.text),
             ("?         Toggle this help", theme.text),

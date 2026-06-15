@@ -162,6 +162,7 @@ impl App {
     }
 
     fn handle_key(&mut self, key: IpcKey) {
+        self.state.scan_msg = None;
         if self.state.filter_active {
             match key {
                 IpcKey::Char(c) => {
@@ -209,6 +210,15 @@ impl App {
                         send_cmd(self, MpvCmd::Stop);
                         send_cmd(self, MpvCmd::LoadUrl(station.url));
                     }
+                }
+                IpcKey::Char('r') => {
+                    let new_stations = crate::stations::reload();
+                    let count = new_stations.len();
+                    self.state.stations = new_stations;
+                    self.state.filter.clear();
+                    self.state.filter_active = false;
+                    self.state.apply_filter();
+                    self.state.scan_msg = Some(format!("Reloaded {count} stations from DB"));
                 }
                 IpcKey::Char('s') => {
                     send_cmd(self, MpvCmd::Stop);
@@ -277,6 +287,7 @@ impl App {
                 ("↑/↓".into(), "select".into()),
                 ("enter".into(), "play".into()),
                 ("s".into(), "stop".into()),
+                ("r".into(), "reload".into()),
                 ("+/-".into(), "volume".into()),
                 ("/".into(), "filter".into()),
                 ("?".into(), "help".into()),

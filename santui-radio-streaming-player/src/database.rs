@@ -9,12 +9,10 @@ fn app_data_dir() -> PathBuf {
         std::env::var_os("XDG_DATA_HOME")
             .map(PathBuf::from)
             .or_else(|| {
-                std::env::var_os("HOME")
-                    .map(|h| PathBuf::from(h).join(".local").join("share"))
+                std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".local").join("share"))
             })
     };
-    path.unwrap_or_else(|| PathBuf::from("."))
-        .join("santui")
+    path.unwrap_or_else(|| PathBuf::from(".")).join("santui")
 }
 
 pub fn db_path() -> PathBuf {
@@ -34,15 +32,14 @@ pub fn open() -> Result<Connection, rusqlite::Error> {
             url TEXT NOT NULL,
             country TEXT NOT NULL DEFAULT ''
         );
-        CREATE INDEX IF NOT EXISTS idx_stations_name ON stations(name);
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_stations_name_url ON stations(name, url);
         CREATE INDEX IF NOT EXISTS idx_stations_country ON stations(country);",
     )?;
     Ok(conn)
 }
 
 pub fn seed_if_empty(conn: &mut Connection) -> Result<(), rusqlite::Error> {
-    let count: i64 =
-        conn.query_row("SELECT COUNT(*) FROM stations", [], |row| row.get(0))?;
+    let count: i64 = conn.query_row("SELECT COUNT(*) FROM stations", [], |row| row.get(0))?;
     if count > 0 {
         return Ok(());
     }
