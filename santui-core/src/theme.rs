@@ -56,6 +56,15 @@ const THEMES: &[ThemeDef] = &[
         error: 0xe06c75,
     },
     ThemeDef {
+        name: "Santui",
+        neutral: 0x141414,
+        ink: 0xffffff,
+        primary: 0xffb900,
+        accent: 0x9d7cd8,
+        success: 0x7fd88f,
+        error: 0xe06c75,
+    },
+    ThemeDef {
         name: "AMOLED",
         neutral: 0x000000,
         ink: 0xffffff,
@@ -408,7 +417,7 @@ impl Theme {
 
 impl Default for Theme {
     fn default() -> Self {
-        let d = &THEMES[0];
+        let d = &THEMES[1];
         Self {
             accent: rgb(d.accent),
             highlight: rgb(d.primary),

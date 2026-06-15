@@ -68,13 +68,13 @@ impl Default for Santui {
 impl Santui {
     pub fn new() -> Self {
         let themes = Theme::all();
-        let theme = themes[0].1.clone();
+        let theme = themes[1].1.clone();
         Santui {
             plugins: Vec::new(),
             ctx: PluginContext::new(),
             theme,
             themes,
-            theme_idx: 0,
+            theme_idx: 1,
             active_plugin: None,
             palette: None,
             show_about: false,
