@@ -315,6 +315,9 @@ impl Santui {
             Line::from(""),
             Line::from("Copyright \u{00a9} Sony AK  <sony@sony-ak.com>"),
             Line::from(""),
+            Line::from(Span::styled("https://github.com/sonyarianto/santui", Style::default().fg(Color::DarkGray))),
+            Line::from(Span::styled("https://santui.vercel.app", Style::default().fg(Color::DarkGray))),
+            Line::from(""),
             Line::from(Span::styled("Press esc to go back", Style::default().fg(Color::DarkGray))),
         ]).collect::<Vec<_>>();
 
