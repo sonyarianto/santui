@@ -1,0 +1,14 @@
+{
+  "name": "santui-website",
+  "version": "0.1.0",
+  "description": "Santui website & documentation",
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview"
+  },
+  "type": "module",
+  "devDependencies": {
+    "vitepress": "^1.6.4"
+  }
+}
