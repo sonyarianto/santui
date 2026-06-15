@@ -11,16 +11,14 @@ pub enum PlayState {
 pub struct RadioState {
     pub stations: Vec<Station>,
     pub selected: usize,
-    pub filter: String,
+    pub scroll: usize,
     pub filtered: Vec<usize>,
-    pub filter_active: bool,
     pub play_state: PlayState,
     pub current_station: Option<usize>,
     pub song_title: String,
     pub track_info: Option<TrackInfo>,
     pub volume: i64,
     pub start_time: Instant,
-    pub show_help: bool,
     pub scan_msg: Option<String>,
 }
 
@@ -31,33 +29,25 @@ impl RadioState {
             filtered: (0..count).collect(),
             stations,
             selected: 0,
-            filter: String::new(),
-            filter_active: false,
+            scroll: 0,
             play_state: PlayState::Stopped,
             current_station: None,
             song_title: String::new(),
             track_info: None,
             volume: 75,
             start_time: Instant::now(),
-            show_help: false,
             scan_msg: None,
         }
     }
 
-    pub fn apply_filter(&mut self) {
-        if self.filter.is_empty() {
-            self.filtered = (0..self.stations.len()).collect();
-        } else {
-            let lower = self.filter.to_lowercase();
-            self.filtered = self
-                .stations
-                .iter()
-                .enumerate()
-                .filter(|(_, s)| s.name.to_lowercase().contains(&lower))
-                .map(|(i, _)| i)
-                .collect();
+    pub fn ensure_scroll_visible(&mut self, max_visible: usize) {
+        let m = max_visible.max(1);
+        if self.selected >= self.scroll + m {
+            self.scroll = self.selected.saturating_sub(m.saturating_sub(1));
         }
-        self.selected = 0;
+        if self.selected < self.scroll {
+            self.scroll = self.selected;
+        }
     }
 
     pub fn select_next(&mut self) {
@@ -69,6 +59,18 @@ impl RadioState {
     pub fn select_prev(&mut self) {
         if self.selected > 0 {
             self.selected -= 1;
+        }
+    }
+
+    pub fn select_page_down(&mut self, page_size: usize) {
+        if !self.filtered.is_empty() {
+            self.selected = (self.selected + page_size).min(self.filtered.len() - 1);
+        }
+    }
+
+    pub fn select_page_up(&mut self, page_size: usize) {
+        if self.selected > 0 {
+            self.selected = self.selected.saturating_sub(page_size);
         }
     }
 

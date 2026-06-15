@@ -9,6 +9,7 @@ pub struct ThemeData {
     pub border: [u8; 3],
     pub success: [u8; 3],
     pub error: [u8; 3],
+    pub background_panel: [u8; 3],
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -21,6 +22,8 @@ pub struct Area {
 pub enum IpcKey {
     Up,
     Down,
+    PageUp,
+    PageDown,
     Enter,
     Esc,
     Backspace,

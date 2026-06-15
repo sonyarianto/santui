@@ -1,35 +1,6 @@
 use crate::state::{PlayState, RadioState};
 use santui_ipc::protocol::{RenderCmd, ThemeData};
 
-fn panel_top(w: u16, title: &str) -> String {
-    if w < 2 {
-        return String::new();
-    }
-    let inner = w as usize - 2;
-    let title_len = title.len();
-    if title_len <= inner.saturating_sub(2) {
-        let right = inner - 1 - title_len;
-        format!("┌─{}{}┐", title, "─".repeat(right))
-    } else {
-        let n = inner.min(title_len);
-        format!("┌{}┐", &title[..n])
-    }
-}
-
-fn panel_bottom(w: u16) -> String {
-    if w < 2 {
-        return String::new();
-    }
-    format!("└{}┘", "─".repeat(w as usize - 2))
-}
-
-fn panel_mid(w: u16) -> String {
-    if w < 2 {
-        return String::new();
-    }
-    format!("│{}│", " ".repeat(w as usize - 2))
-}
-
 fn draw_panel(
     cmds: &mut Vec<RenderCmd>,
     theme: &ThemeData,
@@ -39,41 +10,49 @@ fn draw_panel(
     h: u16,
     title: &str,
 ) {
-    if w < 4 || h < 3 {
+    if w < 3 || h < 2 {
         return;
     }
 
-    cmds.push(RenderCmd::Text {
-        x,
-        y,
-        text: panel_top(w, title),
-        fg: Some(theme.border),
-        bg: None,
-        bold: false,
-    });
-
-    for row in (y + 1)..(y + h - 1) {
+    let fill_w = w.saturating_sub(1);
+    for row in y..(y + h) {
         cmds.push(RenderCmd::Text {
             x,
             y: row,
-            text: panel_mid(w),
+            text: "┃".into(),
             fg: Some(theme.border),
-            bg: None,
+            bg: Some(theme.background_panel),
+            bold: false,
+        });
+        cmds.push(RenderCmd::Text {
+            x: x + 1,
+            y: row,
+            text: " ".repeat(fill_w as usize),
+            fg: None,
+            bg: Some(theme.background_panel),
             bold: false,
         });
     }
 
     cmds.push(RenderCmd::Text {
-        x,
-        y: y + h - 1,
-        text: panel_bottom(w),
-        fg: Some(theme.border),
-        bg: None,
-        bold: false,
+        x: x + 2,
+        y,
+        text: title.trim().into(),
+        fg: Some(theme.text),
+        bg: Some(theme.background_panel),
+        bold: true,
     });
 }
 
-fn text_at(cmds: &mut Vec<RenderCmd>, x: u16, y: u16, text: &str, fg: [u8; 3], max_w: u16) {
+fn text_at(
+    cmds: &mut Vec<RenderCmd>,
+    x: u16,
+    y: u16,
+    text: &str,
+    fg: [u8; 3],
+    bg: [u8; 3],
+    max_w: u16,
+) {
     let max = max_w as usize;
     let display = if text.len() > max && max > 1 {
         let mut t = text.chars().take(max.saturating_sub(1)).collect::<String>();
@@ -87,7 +66,7 @@ fn text_at(cmds: &mut Vec<RenderCmd>, x: u16, y: u16, text: &str, fg: [u8; 3], m
         y,
         text: display,
         fg: Some(fg),
-        bg: None,
+        bg: Some(bg),
         bold: false,
     });
 }
@@ -111,24 +90,48 @@ pub fn render_ui(
         h: area_h,
     });
 
+    const GAP: u16 = 1;
     let left_w = (area_w / 3).max(12);
-    let right_w = area_w.saturating_sub(left_w);
-    let info_h = 6u16.min(area_h);
+    let right_w = area_w.saturating_sub(left_w + GAP);
+    let info_h = (match &state.play_state {
+        PlayState::Stopped => 3,
+        PlayState::Playing(_) => {
+            if state
+                .track_info
+                .as_ref()
+                .and_then(|i| i.artist.as_ref())
+                .is_some()
+            {
+                6
+            } else {
+                5
+            }
+        }
+        PlayState::Error(_) => 4,
+    })
+    .max(4)
+    .min(area_h.saturating_sub(GAP + 3));
 
     // ---- Left panel: station list ----
-    draw_panel(&mut cmds, theme, 0, 0, left_w, area_h, " Stations ");
+    draw_panel(&mut cmds, theme, 0, 0, left_w, area_h, "Stations");
 
     let inner_x = 2u16;
     let inner_w = left_w.saturating_sub(4);
+    // Reserve bottom row for scroll indicator; stay clear of status bar
+    let max_visible = area_h.saturating_sub(4) as usize;
 
-    for (i, &station_idx) in state.filtered.iter().enumerate() {
-        let item_y = 1u16 + i as u16;
-        if item_y >= area_h.saturating_sub(1) {
-            break;
-        }
+    let scroll = state.scroll.min(state.filtered.len().saturating_sub(1));
 
+    for (vis_idx, &station_idx) in state
+        .filtered
+        .iter()
+        .enumerate()
+        .skip(scroll)
+        .take(max_visible)
+    {
+        let item_y = 2u16 + (vis_idx - scroll) as u16;
         let station = &state.stations[station_idx];
-        let is_selected = i == state.selected;
+        let is_selected = vis_idx == state.selected;
         let is_current = state.current_station == Some(station_idx);
 
         let icon = if is_current { " ♫ " } else { "   " };
@@ -148,9 +151,9 @@ pub fn render_ui(
         let (fg, bg, bold) = if is_selected {
             (Some([0u8, 0, 0]), Some(theme.highlight), false)
         } else if is_current {
-            (Some(theme.accent), None, true)
+            (Some(theme.accent), Some(theme.background_panel), true)
         } else {
-            (Some(theme.text), None, false)
+            (Some(theme.text), Some(theme.background_panel), false)
         };
 
         cmds.push(RenderCmd::Text {
@@ -160,6 +163,37 @@ pub fn render_ui(
             fg,
             bg,
             bold,
+        });
+    }
+
+    // Scroll indicators (last station row + 1)
+    let scroll_indicator_y = area_h.saturating_sub(2);
+    if scroll > 0 {
+        cmds.push(RenderCmd::Text {
+            x: 1,
+            y: 2,
+            text: "▲".into(),
+            fg: Some(theme.text_muted),
+            bg: Some(theme.background_panel),
+            bold: false,
+        });
+    }
+    if scroll + max_visible < state.filtered.len() {
+        let more = state.filtered.len() - scroll - max_visible;
+        let label = format!("▼ {more} more");
+        let max_w = inner_w as usize;
+        let display = if label.len() > max_w {
+            format!("▼ {}…", more)
+        } else {
+            label
+        };
+        cmds.push(RenderCmd::Text {
+            x: inner_x,
+            y: scroll_indicator_y,
+            text: display,
+            fg: Some(theme.text_muted),
+            bg: Some(theme.background_panel),
+            bold: false,
         });
     }
 
@@ -177,7 +211,7 @@ pub fn render_ui(
             y: msg_y,
             text: display,
             fg: Some(theme.accent),
-            bg: None,
+            bg: Some(theme.background_panel),
             bold: false,
         });
     }
@@ -186,14 +220,14 @@ pub fn render_ui(
     draw_panel(
         &mut cmds,
         theme,
-        left_w,
+        left_w + GAP,
         0,
         right_w,
         info_h,
-        " Now Playing ",
+        "Now Playing",
     );
 
-    let r_inner_x = left_w + 2;
+    let r_inner_x = left_w + GAP + 2;
     let r_inner_w = right_w.saturating_sub(4);
 
     match &state.play_state {
@@ -204,14 +238,7 @@ pub fn render_ui(
                 2,
                 "No station selected",
                 theme.text_muted,
-                r_inner_w,
-            );
-            text_at(
-                &mut cmds,
-                r_inner_x,
-                3,
-                "⏹  Stopped",
-                theme.error,
+                theme.background_panel,
                 r_inner_w,
             );
         }
@@ -222,6 +249,7 @@ pub fn render_ui(
                 2,
                 station_name,
                 theme.success,
+                theme.background_panel,
                 r_inner_w,
             );
 
@@ -230,29 +258,67 @@ pub fn render_ui(
             } else {
                 &state.song_title
             };
-            text_at(&mut cmds, r_inner_x, 3, title, theme.text, r_inner_w);
+            text_at(
+                &mut cmds,
+                r_inner_x,
+                3,
+                title,
+                theme.text,
+                theme.background_panel,
+                r_inner_w,
+            );
 
             if let Some(ref info) = state.track_info {
                 if let Some(ref artist) = info.artist {
-                    text_at(&mut cmds, r_inner_x, 4, artist, theme.text_muted, r_inner_w);
+                    text_at(
+                        &mut cmds,
+                        r_inner_x,
+                        4,
+                        artist,
+                        theme.text_muted,
+                        theme.background_panel,
+                        r_inner_w,
+                    );
                 }
             }
         }
         PlayState::Error(e) => {
-            text_at(&mut cmds, r_inner_x, 2, "Error", theme.error, r_inner_w);
-            text_at(&mut cmds, r_inner_x, 3, e, theme.error, r_inner_w);
+            text_at(
+                &mut cmds,
+                r_inner_x,
+                2,
+                "Error",
+                theme.error,
+                theme.background_panel,
+                r_inner_w,
+            );
+            text_at(
+                &mut cmds,
+                r_inner_x,
+                3,
+                e,
+                theme.error,
+                theme.background_panel,
+                r_inner_w,
+            );
         }
     }
 
     // ---- Right panel bottom: Volume gauge ----
-    let gauge_y = info_h;
-    let gauge_h = area_h.saturating_sub(gauge_y);
-    if gauge_h >= 3 {
+    let gauge_y = info_h + GAP;
+    let gauge_h = 4u16;
+    if gauge_y + gauge_h <= area_h {
         draw_panel(
-            &mut cmds, theme, left_w, gauge_y, right_w, gauge_h, " Volume ",
+            &mut cmds,
+            theme,
+            left_w + GAP,
+            gauge_y,
+            right_w,
+            gauge_h,
+            "Volume",
         );
 
-        let g_inner_x = left_w + 2;
+        let g_inner_x = left_w + GAP + 2;
         let g_inner_w = right_w.saturating_sub(4) as usize;
         let bar_w = g_inner_w.saturating_sub(5); // room for " 100%"
         let filled = (bar_w as u64 * state.volume as u64 / 100) as usize;
@@ -268,50 +334,9 @@ pub fn render_ui(
             y: gauge_y + 2,
             text: gauge_text,
             fg: Some(theme.success),
-            bg: None,
+            bg: Some(theme.background_panel),
             bold: false,
         });
-    }
-
-    // ---- Help popup ----
-    if state.show_help && area_w >= 40 && area_h >= 16 {
-        let pw = (area_w / 2).min(50);
-        let ph = 13u16;
-        let px = (area_w - pw) / 2;
-        let py = (area_h - ph) / 2;
-
-        draw_panel(&mut cmds, theme, px, py, pw, ph, " Help ");
-
-        let hx = px + 2;
-        let hw = pw.saturating_sub(4);
-
-        let help_lines: &[(&str, [u8; 3])] = &[
-            ("↑/↓      Navigate station list", theme.text),
-            ("Enter    Play selected station", theme.text),
-            ("s         Stop playback", theme.text),
-            ("r         Reload stations from DB", theme.text),
-            ("+/-       Adjust volume", theme.text),
-            ("/         Filter stations by name", theme.text),
-            ("?         Toggle this help", theme.text),
-            ("Esc       Back to Santui menu", theme.text),
-            ("", theme.text_muted),
-            ("Press any key to close", theme.text_muted),
-        ];
-
-        for (li, (line, color)) in help_lines.iter().enumerate() {
-            let ly = py + 2 + li as u16;
-            if ly >= py + ph - 1 {
-                break;
-            }
-            cmds.push(RenderCmd::Text {
-                x: hx,
-                y: ly,
-                text: format!("{:<width$}", line, width = hw as usize),
-                fg: Some(*color),
-                bg: None,
-                bold: false,
-            });
-        }
     }
 
     cmds

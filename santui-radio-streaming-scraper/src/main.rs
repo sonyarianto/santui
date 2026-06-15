@@ -1,3 +1,22 @@
+//! Scrapes internet radio stations from [onlineradiobox.com](https://onlineradiobox.com)
+//! and saves them to the Santui radio streaming player's SQLite database.
+//!
+//! ## Usage
+//!
+//! ```bash
+//! cargo run -p santui-radio-streaming-scraper
+//! ```
+//!
+//! Fetches the currently-playing station list from every country via the
+//! `?nowlisten=1` endpoint. Deduplicates by `(name, url)` using `UNIQUE`
+//! constraint + `INSERT OR IGNORE`. Run periodically to keep stations fresh.
+//!
+//! The database is shared with the radio plugin at:
+//! - **Windows**: `%APPDATA%\santui\radio_streaming_stations.db`
+//! - **Linux/macOS**: `~/.local/share/santui/radio_streaming_stations.db`
+//!
+//! Press `r` in the radio player plugin to reload stations from the DB.
+
 use rusqlite::Connection;
 use std::path::PathBuf;
 

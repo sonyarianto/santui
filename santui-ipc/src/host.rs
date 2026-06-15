@@ -45,6 +45,7 @@ impl IpcPluginHost {
                 border: [250, 178, 131],
                 success: [127, 216, 143],
                 error: [224, 108, 117],
+                background_panel: [20, 20, 20],
             },
         }
     }
@@ -66,6 +67,7 @@ fn theme_to_data(theme: &Theme) -> ThemeData {
         border: color_to_rgb(&theme.border),
         success: color_to_rgb(&theme.success),
         error: color_to_rgb(&theme.error),
+        background_panel: color_to_rgb(&theme.background_panel),
     }
 }
 
@@ -189,6 +191,8 @@ impl Plugin for IpcPluginHost {
         let ipc_key = match key.code {
             KeyCode::Up => IpcKey::Up,
             KeyCode::Down => IpcKey::Down,
+            KeyCode::PageUp => IpcKey::PageUp,
+            KeyCode::PageDown => IpcKey::PageDown,
             KeyCode::Enter => IpcKey::Enter,
             KeyCode::Esc => IpcKey::Esc,
             KeyCode::Backspace => IpcKey::Backspace,

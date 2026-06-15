@@ -53,6 +53,7 @@ impl App {
                 border: [250, 178, 131],
                 success: [127, 216, 143],
                 error: [224, 108, 117],
+                background_panel: [20, 20, 20],
             },
             area: Area { w: 80, h: 24 },
             tx_cmd: None,
@@ -163,80 +164,64 @@ impl App {
 
     fn handle_key(&mut self, key: IpcKey) {
         self.state.scan_msg = None;
-        if self.state.filter_active {
-            match key {
-                IpcKey::Char(c) => {
-                    self.state.filter.push(c);
-                    self.state.apply_filter();
-                }
-                IpcKey::Backspace => {
-                    self.state.filter.pop();
-                    self.state.apply_filter();
-                }
-                IpcKey::Esc => {
-                    self.state.filter.clear();
-                    self.state.filter_active = false;
-                    self.state.apply_filter();
-                }
-                IpcKey::Enter => {
-                    self.state.filter_active = false;
-                }
-                _ => {}
+        match key {
+            IpcKey::Up => {
+                self.state.select_prev();
+                let max_visible = self.area.h.saturating_sub(4) as usize;
+                self.state.ensure_scroll_visible(max_visible.max(1));
             }
-        } else {
-            match key {
-                IpcKey::Char('?') => {
-                    self.state.show_help = !self.state.show_help;
-                }
-                IpcKey::Char('/') => {
-                    self.state.filter.clear();
-                    self.state.filter_active = true;
-                    self.state.apply_filter();
-                }
-                IpcKey::Up => {
-                    self.state.select_prev();
-                }
-                IpcKey::Down => {
-                    self.state.select_next();
-                }
-                IpcKey::Enter => {
-                    if let Some(station) = self.state.selected_station().cloned() {
-                        let idx = self.state.current_filtered_index();
-                        self.state.current_station = Some(idx);
-                        self.state.play_state = state::PlayState::Playing(station.name.to_string());
-                        self.state.song_title.clear();
-                        self.state.track_info = None;
-                        self.state.start_time = std::time::Instant::now();
-                        send_cmd(self, MpvCmd::Stop);
-                        send_cmd(self, MpvCmd::LoadUrl(station.url));
-                    }
-                }
-                IpcKey::Char('r') => {
-                    let new_stations = crate::stations::reload();
-                    let count = new_stations.len();
-                    self.state.stations = new_stations;
-                    self.state.filter.clear();
-                    self.state.filter_active = false;
-                    self.state.apply_filter();
-                    self.state.scan_msg = Some(format!("Reloaded {count} stations from DB"));
-                }
-                IpcKey::Char('s') => {
-                    send_cmd(self, MpvCmd::Stop);
-                    self.state.play_state = state::PlayState::Stopped;
-                    self.state.current_station = None;
+            IpcKey::Down => {
+                self.state.select_next();
+                let max_visible = self.area.h.saturating_sub(4) as usize;
+                self.state.ensure_scroll_visible(max_visible.max(1));
+            }
+            IpcKey::PageUp => {
+                let page = self.area.h.saturating_sub(4) as usize;
+                self.state.select_page_up(page.max(1));
+                self.state.ensure_scroll_visible(page.max(1));
+            }
+            IpcKey::PageDown => {
+                let page = self.area.h.saturating_sub(4) as usize;
+                self.state.select_page_down(page.max(1));
+                self.state.ensure_scroll_visible(page.max(1));
+            }
+            IpcKey::Enter => {
+                if let Some(station) = self.state.selected_station().cloned() {
+                    let idx = self.state.current_filtered_index();
+                    self.state.current_station = Some(idx);
+                    self.state.play_state = state::PlayState::Playing(station.name.to_string());
                     self.state.song_title.clear();
                     self.state.track_info = None;
+                    self.state.start_time = std::time::Instant::now();
+                    send_cmd(self, MpvCmd::Stop);
+                    send_cmd(self, MpvCmd::LoadUrl(station.url));
                 }
-                IpcKey::Char('+') | IpcKey::Char('=') => {
-                    self.state.volume_up();
-                    send_cmd(self, MpvCmd::SetVolume(self.state.volume));
-                }
-                IpcKey::Char('-') => {
-                    self.state.volume_down();
-                    send_cmd(self, MpvCmd::SetVolume(self.state.volume));
-                }
-                _ => {}
             }
+            IpcKey::Char('r') => {
+                let new_stations = crate::stations::reload();
+                let count = new_stations.len();
+                self.state.stations = new_stations;
+                self.state.filtered = (0..count).collect();
+                self.state.selected = 0;
+                self.state.scroll = 0;
+                self.state.scan_msg = Some(format!("Reloaded {count} stations from DB"));
+            }
+            IpcKey::Char('s') => {
+                send_cmd(self, MpvCmd::Stop);
+                self.state.play_state = state::PlayState::Stopped;
+                self.state.current_station = None;
+                self.state.song_title.clear();
+                self.state.track_info = None;
+            }
+            IpcKey::Char('+') | IpcKey::Char('=') => {
+                self.state.volume_up();
+                send_cmd(self, MpvCmd::SetVolume(self.state.volume));
+            }
+            IpcKey::Char('-') => {
+                self.state.volume_down();
+                send_cmd(self, MpvCmd::SetVolume(self.state.volume));
+            }
+            _ => {}
         }
     }
 
@@ -277,22 +262,14 @@ impl App {
     }
 
     fn status_hints(&self) -> Vec<(String, String)> {
-        if self.state.filter_active {
-            vec![
-                ("esc".into(), "cancel".into()),
-                ("enter".into(), "confirm".into()),
-            ]
-        } else {
-            vec![
-                ("↑/↓".into(), "select".into()),
-                ("enter".into(), "play".into()),
-                ("s".into(), "stop".into()),
-                ("r".into(), "reload".into()),
-                ("+/-".into(), "volume".into()),
-                ("/".into(), "filter".into()),
-                ("?".into(), "help".into()),
-            ]
-        }
+        vec![
+            ("↑/↓".into(), "select".into()),
+            ("PgUp/PgDn".into(), "page".into()),
+            ("enter".into(), "play".into()),
+            ("s".into(), "stop".into()),
+            ("r".into(), "reload".into()),
+            ("+/-".into(), "volume".into()),
+        ]
     }
 
     fn render(&self) -> Vec<RenderCmd> {
