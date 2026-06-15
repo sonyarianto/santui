@@ -58,11 +58,11 @@ impl RadioPlugin {
 
 impl Plugin for RadioPlugin {
     fn id(&self) -> &'static str {
-        "santui-radio"
+        "santui-radio-streaming-player"
     }
 
     fn name(&self) -> &str {
-        "Radio Player"
+        "Radio Streaming Player"
     }
 
     fn init(&mut self, ctx: &mut PluginContext) -> Result<(), Box<dyn std::error::Error>> {

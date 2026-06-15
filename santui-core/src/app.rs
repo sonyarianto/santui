@@ -24,7 +24,7 @@ struct CmdItem {
 const CMD_ITEMS: &[CmdItem] = &[
     CmdItem {
         category: "Modules",
-        label: "Radio Player",
+        label: "Radio Streaming Player",
     },
     CmdItem {
         category: "System",
@@ -248,7 +248,7 @@ impl Santui {
                 KeyCode::Enter => {
                     if let Some(&idx) = filtered.get(palette.cursor) {
                         match CMD_ITEMS[idx].label {
-                            "Radio Player" if !self.plugins.is_empty() => {
+                            "Radio Streaming Player" if !self.plugins.is_empty() => {
                                 self.plugins[0].on_focus();
                                 self.active_plugin = Some(0);
                             }

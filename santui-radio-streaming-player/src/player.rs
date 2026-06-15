@@ -154,7 +154,7 @@ impl Mpv {
         for (k, v) in [
             ("config", "no"),
             ("vo", "null"),
-            ("audio-client-name", "santui-radio"),
+            ("audio-client-name", "santui-radio-streaming-player"),
         ] {
             if let Err(e) = mpv.set_option(k, v) {
                 errors.push(format!("  {k}: {e}"));

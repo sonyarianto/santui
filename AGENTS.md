@@ -17,7 +17,7 @@ Run: `cargo run` or `.\target\debug\santui.exe`
 
 ```
 santui-core/     — framework core: App, Plugin trait, event loop, palette
-santui-radio/    — plugin: internet radio player using libmpv
+santui-radio-streaming-player/    — plugin: internet radio streaming player using libmpv
 santui/          — binary entry point; wires plugins together
 website/         — VitePress documentation site
 ```

@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 santui-core = { path = "../santui-core" }
-santui-radio = { path = "../santui-radio" }
+santui-radio-streaming-player = { path = "../santui-radio-streaming-player" }
