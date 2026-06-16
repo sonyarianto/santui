@@ -16,9 +16,9 @@ use ratatui::Terminal;
 use std::time::Duration;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-const STAR_COUNT: usize = 80;
-const SHOOTING_LIFETIME: u64 = 80;
-const SHOOTING_COOLDOWN: u64 = 300;
+const STAR_COUNT: usize = 99;
+const SHOOTING_LIFETIME: u64 = 60;
+const SHOOTING_COOLDOWN: u64 = 200;
 
 struct CmdItem {
     category: &'static str,
@@ -56,6 +56,9 @@ struct Star {
     x: u16,
     y: u16,
     phase: u16,
+    mag: u8,
+    freq: u16,
+    tint: u8,
 }
 
 struct ShootingStar {
@@ -138,13 +141,38 @@ impl Santui {
             theme_picker_orig_idx: 0,
             running: true,
             tick: 0,
-            stars: (0..STAR_COUNT)
-                .map(|i| Star {
-                    x: ((i * 157 + 11) * 131 % 997) as u16,
-                    y: ((i * 311 + 7) * 173 % 997) as u16,
-                    phase: ((i * 53 + 13) * 71 % 628) as u16,
-                })
-                .collect(),
+            stars: {
+                let mut s = Vec::with_capacity(STAR_COUNT);
+                let mut h = 0x9e3779b97f4a7c15u64;
+                for _ in 0..STAR_COUNT {
+                    h = h
+                        .wrapping_mul(0x5851f42d4c957f2d)
+                        .wrapping_add(0x14057b7ef767814f);
+                    let a = h >> 32;
+                    let b = h >> 16;
+                    let c = h;
+                    s.push(Star {
+                        x: (a % 1009) as u16,
+                        y: (b % 1009) as u16,
+                        phase: (c % 628) as u16,
+                        mag: {
+                            let m = ((c >> 8) & 0xff) as u8;
+                            if m < 100 {
+                                0
+                            } else if m < 200 {
+                                1
+                            } else if m < 240 {
+                                2
+                            } else {
+                                3
+                            }
+                        },
+                        freq: (4 + ((c >> 12) & 0x3f)) as u16,
+                        tint: (c >> 20 & 0xff) as u8,
+                    });
+                }
+                s
+            },
             shooting: None,
             shooting_cooldown: 0,
         }

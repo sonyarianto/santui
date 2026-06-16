@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: 'Santui',
-  description: 'A modular TUI app for your daily companion',
+  description: 'My terminal home base',
   cleanUrls: true,
 
   head: [

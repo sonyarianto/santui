@@ -1,6 +1,6 @@
 # Santui
 
-A modular TUI app for your daily companion.
+My terminal home base.
 
 ## Features
 
