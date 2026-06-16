@@ -18,7 +18,7 @@ cargo build --release --workspace
 if ($LASTEXITCODE -ne 0) { throw "build failed" }
 
 # ── stage ──
-$Stage = "$env:TEMP\santui-pkg\$Version"
+$Stage = Join-Path ([System.IO.Path]::GetTempPath()) "santui-pkg\$Version"
 if (Test-Path $Stage) { Remove-Item $Stage -Recurse -Force }
 New-Item -ItemType Directory -Path "$Stage\native" -Force | Out-Null
 

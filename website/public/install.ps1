@@ -27,7 +27,7 @@ $ZipUrl = "https://github.com/$Repo/releases/download/$Tag/santui-$Arch.zip"
 Write-Host "» Installing santui ($Arch)..." -ForegroundColor Cyan
 
 # ── download ──
-$Tmp = "$env:TEMP\santui-$([System.IO.Path]::GetRandomFileName()).zip"
+$Tmp = Join-Path ([System.IO.Path]::GetTempPath()) "santui-$([System.IO.Path]::GetRandomFileName()).zip"
 Write-Host "  Downloading $ZipUrl ..."
 Invoke-WebRequest -Uri $ZipUrl -OutFile $Tmp -UseBasicParsing
 
