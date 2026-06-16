@@ -35,4 +35,4 @@ irm https://santuiapp.vercel.app/install.ps1 | iex
 curl -fsSL https://santuiapp.vercel.app/install.sh | sh
 ```
 
-Installs mpv (macOS via Homebrew), downloads the latest release, and adds it to your PATH. Run `santui` from any terminal.
+Downloads the latest release and adds it to your PATH. On macOS, also installs mpv via Homebrew. Run `santui` from any terminal.
