@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: Santui
-  text: Modular TUI framework for Rust
-  tagline: Build interactive terminal applications with Ratatui, state machines, event handling, and hot-reloadable widgets.
+  text: Modular TUI platform
+  tagline: TUI app for your daily companion.
   actions:
     - theme: brand
       text: Get Started

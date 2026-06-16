@@ -13,6 +13,8 @@ cargo test --workspace   # run tests
 
 Run: `cargo build --workspace && cargo run -p santui` or `.\target\debug\santui.exe`
 
+Watch (auto-rebuild & re-launch on save): `cargo watch -x "run -p santui"`
+
 ## Workspace Structure
 
 ```
