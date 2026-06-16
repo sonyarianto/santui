@@ -1,0 +1,9 @@
+.VPHero .name {
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.VPHero .tagline {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
