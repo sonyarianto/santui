@@ -29,3 +29,24 @@ features:
 ```powershell
 irm https://santuiapp.vercel.app/install.ps1 | iex
 ```
+
+### macOS
+```bash
+brew install mpv
+git clone https://github.com/sonyarianto/santui
+cd santui
+cargo build --workspace && cargo run -p santui
+```
+
+### Linux
+```bash
+# Debian/Ubuntu
+sudo apt install libmpv-dev
+
+# Fedora
+sudo dnf install mpv-libs-devel
+
+git clone https://github.com/sonyarianto/santui
+cd santui
+cargo build --workspace && cargo run -p santui
+```
