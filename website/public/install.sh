@@ -12,9 +12,12 @@ OS="$(uname -s)"
 case "${OS}" in
   Darwin)
     case "${ARCH}" in
-      x86_64) TRIPLE="x86_64-apple-darwin" ;;
       arm64|aarch64) TRIPLE="aarch64-apple-darwin" ;;
-      *) echo "Unsupported architecture: ${ARCH}"; exit 1 ;;
+      *)
+        echo "Unsupported architecture: ${ARCH} (only Apple Silicon is available as a pre-built binary)"
+        echo "  Build from source: https://github.com/sonyarianto/santui"
+        exit 1
+        ;;
     esac
     # ensure mpv is installed
     if ! command -v mpv >/dev/null 2>&1; then
@@ -29,8 +32,11 @@ case "${OS}" in
   Linux)
     case "${ARCH}" in
       x86_64) TRIPLE="x86_64-unknown-linux-gnu" ;;
-      aarch64) TRIPLE="aarch64-unknown-linux-gnu" ;;
-      *) echo "Unsupported architecture: ${ARCH}"; exit 1 ;;
+      *)
+        echo "Unsupported architecture: ${ARCH} (only x86_64 is available as a pre-built binary)"
+        echo "  Build from source: https://github.com/sonyarianto/santui"
+        exit 1
+        ;;
     esac
     # check for libmpv
     if ! ldconfig -p 2>/dev/null | grep -q libmpv; then
@@ -45,20 +51,20 @@ esac
 
 echo ">> Fetching latest release..."
 API_URL="https://api.github.com/repos/${REPO}/releases/latest"
-TAG="$(curl -sfL "${API_URL}" | grep '"tag_name"' | cut -d'"' -f4)"
-ZIP_URL="https://github.com/${REPO}/releases/download/${TAG}/santui-${TRIPLE}.zip"
+TAG="$(curl -sSfL "${API_URL}" | grep '"tag_name"' | cut -d'"' -f4)"
+ARCHIVE_URL="https://github.com/${REPO}/releases/download/${TAG}/santui-${TRIPLE}.tar.gz"
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "${TMP}"' EXIT
 
 echo ">> Downloading santui (${TRIPLE})..."
-curl -fsSL "${ZIP_URL}" -o "${TMP}/santui.zip"
+curl -fsSL "${ARCHIVE_URL}" -o "${TMP}/santui.tar.gz"
 
 echo "  Extracting..."
-unzip -qo "${TMP}/santui.zip" -d "${TMP}/extracted"
+tar xzf "${TMP}/santui.tar.gz" -C "${TMP}"
 
 mkdir -p "${BIN_DIR}"
-cp -r "${TMP}/extracted/"* "${BIN_DIR}/"
+cp -r "${TMP}/"* "${BIN_DIR}/"
 chmod +x "${BIN_DIR}/santui" "${BIN_DIR}/santui-radio-streaming-player" 2>/dev/null || true
 
 # ── PATH ──

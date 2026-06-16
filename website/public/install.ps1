@@ -7,8 +7,7 @@ $BinDir = "$Dest\current"
 # ── detect arch ──
 $Arch = switch ($env:PROCESSOR_ARCHITECTURE) {
     'AMD64'  { 'x86_64-pc-windows-msvc' }
-    'ARM64'  { 'aarch64-pc-windows-msvc' }
-    default { throw "Unsupported architecture: $env:PROCESSOR_ARCHITECTURE" }
+    default { throw "Unsupported architecture: $env:PROCESSOR_ARCHITECTURE (only x86_64 is available)" }
 }
 
 Write-Host ">> Fetching latest release ..." -ForegroundColor Cyan
