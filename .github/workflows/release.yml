@@ -45,6 +45,10 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: sudo apt-get update && sudo apt-get install -y libmpv-dev
 
+      - name: Install macOS deps
+        if: matrix.os == 'macos-latest'
+        run: brew install mpv
+
       - name: Build
         run: cargo build --release --workspace
 
@@ -74,8 +78,6 @@ jobs:
           cp native/radio_streaming_stations.db staging/native/
           # bundle libmpv
           cp /opt/homebrew/lib/libmpv.2.dylib staging/native/
-          # make the dylib relocatable
-          install_name_tool -change /opt/homebrew/opt/mpv/lib/libmpv.2.dylib @rpath/libmpv.2.dylib staging/native/libmpv.2.dylib || true
 
       - name: Prepare Linux artifacts
         if: matrix.os == 'ubuntu-latest'
