@@ -30,23 +30,9 @@ features:
 irm https://santuiapp.vercel.app/install.ps1 | iex
 ```
 
-### macOS
+### macOS / Linux
 ```bash
-brew install mpv
-git clone https://github.com/sonyarianto/santui
-cd santui
-cargo build --workspace && cargo run -p santui
+curl -fsSL https://santuiapp.vercel.app/install.sh | sh
 ```
 
-### Linux
-```bash
-# Debian/Ubuntu
-sudo apt install libmpv-dev
-
-# Fedora
-sudo dnf install mpv-libs-devel
-
-git clone https://github.com/sonyarianto/santui
-cd santui
-cargo build --workspace && cargo run -p santui
-```
+Installs mpv (macOS via Homebrew), downloads the latest release, and adds it to your PATH. Run `santui` from any terminal.

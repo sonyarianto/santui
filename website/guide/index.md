@@ -10,30 +10,23 @@ irm https://santuiapp.vercel.app/install.ps1 | iex
 
 This downloads the latest release, extracts it to `%LOCALAPPDATA%\santui\current`, and adds it to your PATH. Then run `santui` from any terminal.
 
-### macOS
+### macOS / Linux
 
 ```bash
-brew install mpv
+curl -fsSL https://santuiapp.vercel.app/install.sh | sh
+```
+
+Installs mpv (macOS via Homebrew, checks for libmpv on Linux), downloads the latest release to `~/.local/share/santui/current`, and adds it to your PATH. Run `santui` from any terminal.
+
+### From source
+
+```bash
 git clone https://github.com/sonyarianto/santui
 cd santui
 cargo build --workspace && cargo run -p santui
 ```
 
-### Linux
-
-```bash
-# Debian/Ubuntu
-sudo apt install libmpv-dev
-
-# Fedora
-sudo dnf install mpv-libs-devel
-
-git clone https://github.com/sonyarianto/santui
-cd santui
-cargo build --workspace && cargo run -p santui
-```
-
-Requires Rust 1.70+.
+Requires Rust 1.70+ (all platforms).
 
 ## Usage
 
