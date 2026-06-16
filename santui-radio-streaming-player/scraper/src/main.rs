@@ -314,7 +314,9 @@ fn extract_stations(html: &str) -> Vec<(String, String)> {
             if !url.is_empty() && !name.is_empty() {
                 let url = url
                     .replace("?dist=onlineradiobox", "")
-                    .replace("&dist=onlineradiobox", "");
+                    .replace("&dist=onlineradiobox", "")
+                    .replace("?ref=onlineradiobox26", "")
+                    .replace("&ref=onlineradiobox26", "");
                 stations.push((name, url));
             }
         }
@@ -376,25 +378,25 @@ fn main() {
         }
     };
 
-    // Clean up ?dist=onlineradiobox from existing URLs
+    // Clean up ?dist=onlineradiobox and ?ref=onlineradiobox26 from existing URLs
     // First, remove duplicates where the cleaned URL already exists
     let deleted = conn
         .execute(
-            "DELETE FROM stations WHERE url LIKE '%dist=onlineradiobox%' AND EXISTS (
+            "DELETE FROM stations WHERE (url LIKE '%dist=onlineradiobox%' OR url LIKE '%ref=onlineradiobox26%') AND EXISTS (
                 SELECT 1 FROM stations AS s2
                 WHERE s2.name = stations.name
-                AND s2.url = REPLACE(REPLACE(stations.url, '?dist=onlineradiobox', ''), '&dist=onlineradiobox', '')
+                AND s2.url = REPLACE(REPLACE(REPLACE(REPLACE(stations.url, '?dist=onlineradiobox', ''), '&dist=onlineradiobox', ''), '?ref=onlineradiobox26', ''), '&ref=onlineradiobox26', '')
             )",
             [],
         )
         .unwrap_or(0);
     if deleted > 0 {
-        println!("Removed {deleted} duplicate stations with ?dist=");
+        println!("Removed {deleted} duplicate stations with tracking params");
     }
     // Then clean the remaining
     let cleaned = conn
         .execute(
-            "UPDATE stations SET url = REPLACE(REPLACE(url, '?dist=onlineradiobox', ''), '&dist=onlineradiobox', '') WHERE url LIKE '%dist=onlineradiobox%'",
+            "UPDATE stations SET url = REPLACE(REPLACE(REPLACE(REPLACE(url, '?dist=onlineradiobox', ''), '&dist=onlineradiobox', ''), '?ref=onlineradiobox26', ''), '&ref=onlineradiobox26', '') WHERE url LIKE '%dist=onlineradiobox%' OR url LIKE '%ref=onlineradiobox26%'",
             [],
         )
         .unwrap_or(0);
