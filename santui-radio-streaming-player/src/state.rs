@@ -20,6 +20,9 @@ pub struct RadioState {
     pub volume: i64,
     pub start_time: Instant,
     pub scan_msg: Option<String>,
+    pub query: String,
+    pub search_mode: bool,
+    pub tick_counter: u64,
 }
 
 impl RadioState {
@@ -37,7 +40,34 @@ impl RadioState {
             volume: 75,
             start_time: Instant::now(),
             scan_msg: None,
+            query: String::new(),
+            search_mode: false,
+            tick_counter: 0,
         }
+    }
+
+    pub fn apply_filter(&mut self) {
+        let q = self.query.to_lowercase();
+        if q.is_empty() {
+            self.filtered = (0..self.stations.len()).collect();
+        } else {
+            self.filtered = self
+                .stations
+                .iter()
+                .enumerate()
+                .filter(|(_, s)| {
+                    s.name.to_lowercase().contains(&q) || s.country.to_lowercase().contains(&q)
+                })
+                .map(|(i, _)| i)
+                .collect();
+        }
+        self.selected = self.selected.min(self.filtered.len().saturating_sub(1));
+        self.scroll = 0;
+    }
+
+    pub fn set_query(&mut self, query: String) {
+        self.query = query;
+        self.apply_filter();
     }
 
     pub fn ensure_scroll_visible(&mut self, max_visible: usize) {

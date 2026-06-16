@@ -177,8 +177,6 @@ const ALL_COUNTRIES: &[(&str, &str)] = &[
     ("ni", "NI"),
     ("ne", "NE"),
     ("ng", "NG"),
-    ("nu", "NU"),
-    ("nf", "NF"),
     ("mk", "MK"),
     ("mp", "MP"),
     ("no", "NO"),
@@ -191,7 +189,6 @@ const ALL_COUNTRIES: &[(&str, &str)] = &[
     ("py", "PY"),
     ("pe", "PE"),
     ("ph", "PH"),
-    ("pn", "PN"),
     ("pl", "PL"),
     ("pt", "PT"),
     ("pr", "PR"),
@@ -222,7 +219,6 @@ const ALL_COUNTRIES: &[(&str, &str)] = &[
     ("sb", "SB"),
     ("so", "SO"),
     ("za", "ZA"),
-    ("gs", "GS"),
     ("ss", "SS"),
     ("es", "ES"),
     ("lk", "LK"),
@@ -249,7 +245,6 @@ const ALL_COUNTRIES: &[(&str, &str)] = &[
     ("ug", "UG"),
     ("ua", "UA"),
     ("ae", "AE"),
-    ("gb", "GB"),
     ("us", "US"),
     ("uy", "UY"),
     ("uz", "UZ"),
@@ -266,8 +261,6 @@ const ALL_COUNTRIES: &[(&str, &str)] = &[
     ("zw", "ZW"),
     // Non-standard codes used by onlineradiobox
     ("uk", "GB"), // onlineradiobox uses 'uk' for United Kingdom
-    ("an", "AN"), // Netherlands Antilles (historical)
-    ("cs", "CS"), // Serbia and Montenegro (historical)
 ];
 
 #[derive(serde::Deserialize)]

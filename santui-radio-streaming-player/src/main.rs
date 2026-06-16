@@ -172,6 +172,37 @@ impl App {
     fn handle_key(&mut self, key: IpcKey) {
         self.state.scan_msg = None;
         self.dirty = true;
+        if self.state.search_mode {
+            match key {
+                IpcKey::Esc => {
+                    self.state.search_mode = false;
+                    self.state.set_query(String::new());
+                }
+                IpcKey::Enter => {
+                    self.state.search_mode = false;
+                }
+                IpcKey::Backspace => {
+                    self.state.query.pop();
+                    self.state.apply_filter();
+                }
+                IpcKey::Char(c) if !c.is_control() => {
+                    self.state.query.push(c);
+                    self.state.apply_filter();
+                }
+                IpcKey::Up => {
+                    self.state.select_prev();
+                    let max_visible = self.area.h.saturating_sub(6) as usize;
+                    self.state.ensure_scroll_visible(max_visible.max(1));
+                }
+                IpcKey::Down => {
+                    self.state.select_next();
+                    let max_visible = self.area.h.saturating_sub(6) as usize;
+                    self.state.ensure_scroll_visible(max_visible.max(1));
+                }
+                _ => {}
+            }
+            return;
+        }
         match key {
             IpcKey::Up => {
                 self.state.select_prev();
@@ -193,6 +224,13 @@ impl App {
                 self.state.select_page_down(page.max(1));
                 self.state.ensure_scroll_visible(page.max(1));
             }
+            IpcKey::Char('/') => {
+                self.state.search_mode = true;
+                self.state.query.clear();
+                self.state.filtered = (0..self.state.stations.len()).collect();
+                self.state.selected = 0;
+                self.state.scroll = 0;
+            }
             IpcKey::Enter => {
                 if let Some(station) = self.state.selected_station().cloned() {
                     let idx = self.state.current_filtered_index();
@@ -209,7 +247,7 @@ impl App {
                 let new_stations = crate::stations::reload();
                 let count = new_stations.len();
                 self.state.stations = new_stations;
-                self.state.filtered = (0..count).collect();
+                self.state.set_query(String::new());
                 self.state.selected = 0;
                 self.state.scroll = 0;
                 self.state.scan_msg = Some(format!("Reloaded {count} stations from DB"));
@@ -269,13 +307,24 @@ impl App {
                 }
             }
         }
+        self.state.tick_counter += 1;
+        if self.state.search_mode && self.state.tick_counter.is_multiple_of(3) {
+            changed = true;
+        }
         self.dirty = changed;
     }
 
     fn status_hints(&self) -> Vec<(String, String)> {
+        if self.state.search_mode {
+            return vec![
+                ("Enter".into(), "done".into()),
+                ("⌫".into(), "delete".into()),
+            ];
+        }
         vec![
             ("↑/↓".into(), "select".into()),
             ("PgUp/PgDn".into(), "page".into()),
+            ("/".into(), "search".into()),
             ("enter".into(), "play".into()),
             ("s".into(), "stop".into()),
             ("r".into(), "reload".into()),

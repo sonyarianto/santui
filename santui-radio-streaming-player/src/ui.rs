@@ -121,8 +121,9 @@ pub fn render_ui(
 
     let inner_x = 2u16;
     let inner_w = left_w.saturating_sub(3);
-    // Reserve bottom row for scroll indicator; stay clear of status bar
-    let max_visible = area_h.saturating_sub(4) as usize;
+    // Reserve bottom rows for scroll indicator + search bar
+    let search_extra = if state.search_mode { 2 } else { 0 };
+    let max_visible = (area_h.saturating_sub(4 + search_extra)) as usize;
 
     let scroll = state.scroll.min(state.filtered.len().saturating_sub(1));
 
@@ -170,21 +171,62 @@ pub fn render_ui(
         });
     }
 
-    // More stations indicator
-    let scroll_indicator_y = area_h.saturating_sub(2);
-    if scroll + max_visible < state.filtered.len() {
-        let more = state.filtered.len() - scroll - max_visible;
-        let label = format!("{more} more");
-        let max_w = inner_w as usize;
-        let display = if label.len() > max_w {
-            format!("{}…", more)
+    // More stations indicator (hidden during search)
+    if !state.search_mode {
+        let scroll_indicator_y = area_h.saturating_sub(2);
+        if scroll + max_visible < state.filtered.len() {
+            let more = state.filtered.len() - scroll - max_visible;
+            let label = format!("{more} more");
+            let max_w = inner_w as usize;
+            let display = if label.len() > max_w {
+                format!("{}…", more)
+            } else {
+                label
+            };
+            cmds.push(RenderCmd::Text {
+                x: inner_x,
+                y: scroll_indicator_y,
+                text: display,
+                fg: Some(theme.text_muted),
+                bg: Some(theme.background_panel),
+                bold: false,
+            });
+        }
+    }
+
+    // ---- Search bar overlay ----
+    if state.search_mode {
+        let search_y = area_h.saturating_sub(3);
+        let bar_w = left_w.saturating_sub(4) as usize;
+
+        // Draw search input line
+        let cursor = if state.tick_counter % 6 < 3 {
+            '█'
         } else {
-            label
+            ' '
         };
+        let search_text = if state.query.is_empty() {
+            format!(" Search: {cursor}")
+        } else {
+            format!(" Search: {}{cursor}", state.query)
+        };
+        let display: String = search_text.chars().take(bar_w).collect();
         cmds.push(RenderCmd::Text {
-            x: inner_x,
-            y: scroll_indicator_y,
+            x: 2,
+            y: search_y,
             text: display,
+            fg: Some(theme.accent),
+            bg: Some(theme.background_panel),
+            bold: false,
+        });
+
+        // Draw results count
+        let count_y = area_h.saturating_sub(2);
+        let count_text = format!(" {} of {}", state.filtered.len(), state.stations.len());
+        cmds.push(RenderCmd::Text {
+            x: 2,
+            y: count_y,
+            text: count_text,
             fg: Some(theme.text_muted),
             bg: Some(theme.background_panel),
             bold: false,
