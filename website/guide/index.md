@@ -1,12 +1,14 @@
 # Getting Started
 
-## Prerequisites
-
-- Rust 1.70+
-- [libmpv](https://mpv.io/installation/) (for the radio player plugin)
-- A terminal that supports Ratatui (most modern terminals do)
-
 ## Installation
+
+### Windows
+
+```powershell
+irm https://santuiapp.vercel.app/install.ps1 | iex
+```
+
+This downloads the latest release, extracts it to `%LOCALAPPDATA%\santui\current`, and adds it to your PATH. Then run `santui` from any terminal.
 
 ### From source
 
@@ -16,11 +18,7 @@ cd santui
 cargo build --workspace && cargo run -p santui
 ```
 
-Or install directly:
-
-```bash
-cargo install --git https://github.com/sonyarianto/santui
-```
+Requires Rust 1.70+.
 
 ## Usage
 
@@ -36,23 +34,25 @@ Santui is keyboard-driven. Here are the keybindings:
 
 ## Radio Player
 
-The radio player plugin lets you browse and stream internet radio stations:
+Browse and stream internet radio stations:
 
-- **Browse by country** — stations are grouped by country
-- **Search** — type to filter stations by name
+- **Browse** — filtered by genre or country
+- **Search** — type to filter by name, country, or genre
 - **Play** — press Enter to start streaming
+- **Volume** — `+` / `-` to adjust
+- **Reload** — press `r` to reload stations from the database
 
-Press `r` in the radio player to reload stations from the database.
+Stations are pre-populated in the bundled database — ready to use out of the box.
 
-## Scraping Stations
+## Updating Stations
 
-Santui includes a scraper utility to populate the radio station database:
+To refresh or expand the station database, run the scraper:
 
 ```bash
 cargo run -p santui-radio-streaming-scraper
 ```
 
-This fetches currently-playing stations from onlineradiobox.com for every country and inserts them into the local SQLite database.
+This fetches currently-playing stations from onlineradiobox.com and inserts them into the local SQLite database at `%APPDATA%\santui\radio_streaming_stations.db`.
 
 ## Themes
 
