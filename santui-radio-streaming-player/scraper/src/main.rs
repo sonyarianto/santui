@@ -361,12 +361,12 @@ fn fetch_country(conn: &Connection, url_code: &str, iso_code: &str) -> usize {
         Ok(r) => match r.into_string() {
             Ok(s) => s,
             Err(e) => {
-                eprintln!("  ⚠️  {url_code}: failed to read response: {e}");
+                eprintln!("  ΓÜá∩╕Å  {url_code}: failed to read response: {e}");
                 return 0;
             }
         },
         Err(e) => {
-            eprintln!("  ⚠️  {url_code}: request failed: {e}");
+            eprintln!("  ΓÜá∩╕Å  {url_code}: request failed: {e}");
             return 0;
         }
     };
@@ -374,7 +374,7 @@ fn fetch_country(conn: &Connection, url_code: &str, iso_code: &str) -> usize {
     let resp: RadioBoxResponse = match serde_json::from_str(&body) {
         Ok(r) => r,
         Err(e) => {
-            eprintln!("  ⚠️  {url_code}: JSON parse error: {e}");
+            eprintln!("  ΓÜá∩╕Å  {url_code}: JSON parse error: {e}");
             return 0;
         }
     };
@@ -396,7 +396,7 @@ fn fetch_country(conn: &Connection, url_code: &str, iso_code: &str) -> usize {
                 }
             }
             Err(e) => {
-                eprintln!("  ⚠️  insert error for {name}: {e}");
+                eprintln!("  ΓÜá∩╕Å  insert error for {name}: {e}");
             }
         }
     }
@@ -419,7 +419,7 @@ fn fetch_country(conn: &Connection, url_code: &str, iso_code: &str) -> usize {
 }
 
 fn main() {
-    println!("Radio Station Scraper — onlineradiobox.com");
+    println!("Radio Station Scraper ΓÇö onlineradiobox.com");
     println!("{} countries to scan", ALL_COUNTRIES.len());
     println!();
 
@@ -461,7 +461,7 @@ fn main() {
 
     println!();
     println!(
-        "Done — {countries_with_data} countries with stations, \
+        "Done ΓÇö {countries_with_data} countries with stations, \
          {total_fetched} stations fetched, \
          {total} total in DB"
     );

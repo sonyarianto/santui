@@ -14,6 +14,10 @@ fn draw_panel(
         return;
     }
 
+    if w < 3 || h < 2 {
+        return;
+    }
+
     let fill_w = w.saturating_sub(1);
     for row in y..(y + h) {
         cmds.push(RenderCmd::Text {
@@ -21,7 +25,7 @@ fn draw_panel(
             y: row,
             text: "┃".into(),
             fg: Some(theme.border),
-            bg: Some(theme.background_panel),
+            bg: None,
             bold: false,
         });
         cmds.push(RenderCmd::Text {
@@ -116,7 +120,7 @@ pub fn render_ui(
     draw_panel(&mut cmds, theme, 0, 0, left_w, area_h, "Stations");
 
     let inner_x = 2u16;
-    let inner_w = left_w.saturating_sub(4);
+    let inner_w = left_w.saturating_sub(3);
     // Reserve bottom row for scroll indicator; stay clear of status bar
     let max_visible = area_h.saturating_sub(4) as usize;
 
@@ -166,24 +170,14 @@ pub fn render_ui(
         });
     }
 
-    // Scroll indicators (last station row + 1)
+    // More stations indicator
     let scroll_indicator_y = area_h.saturating_sub(2);
-    if scroll > 0 {
-        cmds.push(RenderCmd::Text {
-            x: 1,
-            y: 2,
-            text: "▲".into(),
-            fg: Some(theme.text_muted),
-            bg: Some(theme.background_panel),
-            bold: false,
-        });
-    }
     if scroll + max_visible < state.filtered.len() {
         let more = state.filtered.len() - scroll - max_visible;
-        let label = format!("▼ {more} more");
+        let label = format!("{more} more");
         let max_w = inner_w as usize;
         let display = if label.len() > max_w {
-            format!("▼ {}…", more)
+            format!("{}…", more)
         } else {
             label
         };
@@ -200,7 +194,7 @@ pub fn render_ui(
     // ---- Scan message (temporary overlay in left panel) ----
     if let Some(ref msg) = state.scan_msg {
         let msg_y = area_h.saturating_sub(2);
-        let max_w = left_w.saturating_sub(4) as usize;
+        let max_w = left_w.saturating_sub(3) as usize;
         let display = if msg.len() > max_w {
             format!("{}…", &msg[..max_w.saturating_sub(1)])
         } else {
@@ -228,7 +222,7 @@ pub fn render_ui(
     );
 
     let r_inner_x = left_w + GAP + 2;
-    let r_inner_w = right_w.saturating_sub(4);
+    let r_inner_w = right_w.saturating_sub(3);
 
     match &state.play_state {
         PlayState::Stopped => {
@@ -319,7 +313,7 @@ pub fn render_ui(
         );
 
         let g_inner_x = left_w + GAP + 2;
-        let g_inner_w = right_w.saturating_sub(4) as usize;
+        let g_inner_w = right_w.saturating_sub(3) as usize;
         let bar_w = g_inner_w.saturating_sub(5); // room for " 100%"
         let filled = (bar_w as u64 * state.volume as u64 / 100) as usize;
         let empty = bar_w.saturating_sub(filled);

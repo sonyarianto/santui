@@ -32,6 +32,8 @@ struct App {
     rx_msg: Option<mpsc::Receiver<MpvMsg>>,
     tx_msg: Option<mpsc::Sender<MpvMsg>>,
     init_error: Option<String>,
+    dirty: bool,
+    cached_commands: Vec<RenderCmd>,
 }
 
 fn send_cmd(app: &App, cmd: MpvCmd) {
@@ -60,12 +62,15 @@ impl App {
             rx_msg: None,
             tx_msg: None,
             init_error: None,
+            dirty: true,
+            cached_commands: Vec::new(),
         }
     }
 
     fn handle_init(&mut self, theme: ThemeData, area: Area) {
         self.theme = theme;
         self.area = area;
+        self.dirty = true;
 
         let (mpv, warns) = match Mpv::new() {
             Ok(v) => v,
@@ -164,6 +169,7 @@ impl App {
 
     fn handle_key(&mut self, key: IpcKey) {
         self.state.scan_msg = None;
+        self.dirty = true;
         match key {
             IpcKey::Up => {
                 self.state.select_prev();
@@ -226,8 +232,10 @@ impl App {
     }
 
     fn handle_tick(&mut self) {
+        let mut changed = false;
         if let Some(ref rx) = self.rx_msg {
             while let Ok(msg) = rx.try_recv() {
+                changed = true;
                 match msg {
                     MpvMsg::Metadata(title) => {
                         self.state.song_title = title.clone();
@@ -259,6 +267,7 @@ impl App {
                 }
             }
         }
+        self.dirty = changed;
     }
 
     fn status_hints(&self) -> Vec<(String, String)> {
@@ -272,7 +281,7 @@ impl App {
         ]
     }
 
-    fn render(&self) -> Vec<RenderCmd> {
+    fn render(&mut self) -> Vec<RenderCmd> {
         if let Some(ref err) = self.init_error {
             return vec![RenderCmd::Text {
                 x: 0,
@@ -283,11 +292,16 @@ impl App {
                 bold: false,
             }];
         }
-        ui::render_ui(&self.state, &self.theme, self.area.w, self.area.h)
+        if self.dirty || self.cached_commands.is_empty() {
+            self.cached_commands =
+                ui::render_ui(&self.state, &self.theme, self.area.w, self.area.h);
+            self.dirty = false;
+        }
+        self.cached_commands.clone()
     }
 }
 
-fn respond(app: &App) {
+fn respond(app: &mut App) {
     let msg = PluginMsg::Render {
         commands: app.render(),
         hints: app.status_hints(),
@@ -320,26 +334,28 @@ fn main() {
                 match msg {
                     HostMsg::Init { theme, area } => {
                         app.handle_init(theme, area);
-                        respond(&app);
+                        respond(&mut app);
                     }
                     HostMsg::Key { key } => {
                         app.handle_key(key);
-                        respond(&app);
+                        respond(&mut app);
                     }
                     HostMsg::Tick => {
                         app.handle_tick();
-                        respond(&app);
+                        respond(&mut app);
                     }
                     HostMsg::Focus | HostMsg::Blur => {
-                        respond(&app);
+                        respond(&mut app);
                     }
                     HostMsg::ThemeChange { theme } => {
                         app.theme = theme;
-                        respond(&app);
+                        app.dirty = true;
+                        respond(&mut app);
                     }
                     HostMsg::Resize { area } => {
                         app.area = area;
-                        respond(&app);
+                        app.dirty = true;
+                        respond(&mut app);
                     }
                     HostMsg::Shutdown => break,
                 }

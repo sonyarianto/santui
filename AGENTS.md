@@ -18,7 +18,8 @@ Run: `cargo build --workspace && cargo run -p santui` or `.\target\debug\santui.
 ```
 santui-core/     — framework core: App, Plugin trait, event loop, palette
 santui-ipc/      — IPC protocol types + host (`IpcPluginHost`) plugin runner
-santui-radio-streaming-player/    — plugin: internet radio streaming player using libmpv
+santui-radio-streaming-player/    — only plugin: internet radio player
+  └─ scraper/                     — utility binary to scrape radio stations into the player's DB
 santui/          — binary entry point; wires plugins together
 website/         — VitePress documentation site
 ```
