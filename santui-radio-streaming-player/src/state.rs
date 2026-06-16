@@ -37,7 +37,7 @@ impl RadioState {
             current_station: None,
             song_title: String::new(),
             track_info: None,
-            volume: 75,
+            volume: 100,
             start_time: Instant::now(),
             scan_msg: None,
             query: String::new(),
