@@ -1004,7 +1004,7 @@ checksum = "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f"
 
 [[package]]
 name = "santui"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "santui-auth",
  "santui-core",
@@ -1013,7 +1013,7 @@ dependencies = [
 
 [[package]]
 name = "santui-auth"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "dirs",
  "oauth2",
@@ -1025,7 +1025,7 @@ dependencies = [
 
 [[package]]
 name = "santui-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "crossterm",
  "ratatui",
@@ -1033,7 +1033,7 @@ dependencies = [
 
 [[package]]
 name = "santui-ipc"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "crossterm",
  "ratatui",
@@ -1044,7 +1044,7 @@ dependencies = [
 
 [[package]]
 name = "santui-radio-streaming-player"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "libloading",
  "rusqlite",
@@ -1056,7 +1056,7 @@ dependencies = [
 
 [[package]]
 name = "santui-radio-streaming-scraper"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "rusqlite",
  "serde",

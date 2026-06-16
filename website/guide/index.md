@@ -10,13 +10,26 @@ irm https://santuiapp.vercel.app/install.ps1 | iex
 
 This downloads the latest release, extracts it to `%LOCALAPPDATA%\santui\current`, and adds it to your PATH. Then run `santui` from any terminal.
 
-### macOS / Linux
+### macOS
 
 ```bash
 curl -fsSL https://santuiapp.vercel.app/install.sh | sh
 ```
 
-Installs mpv (macOS via Homebrew, checks for libmpv on Linux), downloads the latest release to `~/.local/share/santui/current`, and adds it to your PATH. Run `santui` from any terminal.
+Downloads the latest release (with bundled libmpv) to `~/.local/share/santui/current` and adds it to your PATH. Run `santui` from any terminal.
+
+### Linux
+
+```bash
+# Install libmpv first
+sudo apt install mpv      # Debian / Ubuntu / Pop!_OS
+sudo dnf install mpv      # Fedora
+sudo pacman -S mpv        # Arch
+
+curl -fsSL https://santuiapp.vercel.app/install.sh | sh
+```
+
+Downloads the latest release to `~/.local/share/santui/current` and adds it to your PATH. libmpv must be installed via your package manager — it's not bundled in the archive.
 
 ## Usage
 

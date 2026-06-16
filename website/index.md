@@ -30,9 +30,18 @@ features:
 irm https://santuiapp.vercel.app/install.ps1 | iex
 ```
 
-### macOS / Linux
+### macOS
 ```bash
 curl -fsSL https://santuiapp.vercel.app/install.sh | sh
 ```
 
-Downloads the latest release with bundled libmpv and adds it to your PATH. On Linux, install libmpv via your package manager. Run `santui` from any terminal.
+Downloads the latest release with bundled libmpv and adds it to your PATH. Run `santui` from any terminal.
+
+### Linux
+```bash
+# Install libmpv first
+sudo apt install mpv  # Debian/Ubuntu
+sudo dnf install mpv  # Fedora
+
+curl -fsSL https://santuiapp.vercel.app/install.sh | sh
+```
