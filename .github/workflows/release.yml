@@ -65,13 +65,26 @@ jobs:
           }
           Copy-Item "native\radio_streaming_stations.db" "staging\native\"
 
-      - name: Prepare Unix artifacts
-        if: matrix.os != 'windows-latest'
+      - name: Prepare macOS artifacts
+        if: matrix.os == 'macos-latest'
         run: |
           mkdir -p staging/native
           cp target/release/santui staging/
           cp target/release/santui-radio-streaming-player staging/
           cp native/radio_streaming_stations.db staging/native/
+          # bundle libmpv
+          cp /opt/homebrew/lib/libmpv.2.dylib staging/native/
+          # make the dylib relocatable
+          install_name_tool -change /opt/homebrew/opt/mpv/lib/libmpv.2.dylib @rpath/libmpv.2.dylib staging/native/libmpv.2.dylib || true
+
+      - name: Prepare Linux artifacts
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          mkdir -p staging/native
+          cp target/release/santui staging/
+          cp target/release/santui-radio-streaming-player staging/
+          cp native/radio_streaming_stations.db staging/native/
+          # libmpv not bundled on Linux — use system package manager
 
       - name: Package Windows
         if: matrix.os == 'windows-latest'

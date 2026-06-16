@@ -80,14 +80,26 @@ impl Mpv {
     pub fn new() -> Result<(Self, Vec<String>), Box<dyn std::error::Error>> {
         let mut errors = Vec::new();
 
-        let native_path = std::env::current_exe()
+        let native_dir = std::env::current_exe()
             .ok()
-            .and_then(|p| p.parent().map(|d| d.join("native").join("libmpv-2.dll")));
+            .and_then(|p| p.parent().map(|d| d.join("native")));
+
+        let native_names = [
+            "libmpv-2.dll",
+            "libmpv.so.2",
+            "libmpv.so",
+            "libmpv.2.dylib",
+            "libmpv.dylib",
+        ];
+        let native_try = native_dir.as_ref().and_then(|d| {
+            native_names.iter().find_map(|name| {
+                let p = d.join(name);
+                unsafe { Library::new(p.as_os_str()).ok() }
+            })
+        });
 
         let lib = match unsafe {
-            native_path
-                .as_ref()
-                .and_then(|p| Library::new(p.as_os_str()).ok())
+            native_try
                 .or_else(|| Library::new("libmpv-2.dll").ok())
                 .or_else(|| Library::new("mpv.dll").ok())
                 .or_else(|| Library::new("libmpv.so.2").ok())

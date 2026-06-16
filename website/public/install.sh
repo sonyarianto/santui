@@ -19,15 +19,7 @@ case "${OS}" in
         exit 1
         ;;
     esac
-    # ensure mpv is installed
-    if ! command -v mpv >/dev/null 2>&1; then
-      if command -v brew >/dev/null 2>&1; then
-        echo ">> Installing mpv via Homebrew..."
-        brew install mpv
-      else
-        echo "  [!] mpv not found. Install it first: brew install mpv"
-      fi
-    fi
+    # libmpv is bundled in the release archive
     ;;
   Linux)
     case "${ARCH}" in
