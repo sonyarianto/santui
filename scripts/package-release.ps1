@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 
 $Root = Split-Path $PSScriptRoot -Parent
 $Target = "$Root\target\release"
-$OutDir = "$Root\website\public\releases"
+$OutDir = "$Root\releases"
 
 $Version = if ($args[0]) { $args[0] } else { "nightly" }
 

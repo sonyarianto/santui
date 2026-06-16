@@ -11,7 +11,10 @@ $Arch = switch ($env:PROCESSOR_ARCHITECTURE) {
     default { throw "Unsupported architecture: $env:PROCESSOR_ARCHITECTURE" }
 }
 
-$ZipUrl = "https://santuiapp.vercel.app/releases/santui-$Arch.zip"
+$ApiUrl = "https://api.github.com/repos/$Repo/releases/latest"
+$Release = Invoke-RestMethod -Uri $ApiUrl -UseBasicParsing
+$Tag = $Release.tag_name
+$ZipUrl = "https://github.com/$Repo/releases/download/$Tag/santui-$Arch.zip"
 
 Write-Host "» Installing santui ($Arch)..." -ForegroundColor Cyan
 
