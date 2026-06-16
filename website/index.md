@@ -3,8 +3,7 @@ layout: home
 
 hero:
   name: Santui
-  text: My terminal home base
-  tagline: TUI app for your daily companion.
+  tagline: My terminal home base
   actions:
     - theme: brand
       text: Get Started
