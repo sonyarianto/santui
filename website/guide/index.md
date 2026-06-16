@@ -18,16 +18,6 @@ curl -fsSL https://santuiapp.vercel.app/install.sh | sh
 
 Installs mpv (macOS via Homebrew, checks for libmpv on Linux), downloads the latest release to `~/.local/share/santui/current`, and adds it to your PATH. Run `santui` from any terminal.
 
-### From source
-
-```bash
-git clone https://github.com/sonyarianto/santui
-cd santui
-cargo build --workspace && cargo run -p santui
-```
-
-Requires Rust 1.70+ (all platforms).
-
 ## Usage
 
 Santui is keyboard-driven. Here are the keybindings:
