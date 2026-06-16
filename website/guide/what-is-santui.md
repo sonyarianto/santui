@@ -1,6 +1,6 @@
 # What is Santui?
 
-Santui is a **modular terminal user interface** — a daily companion TUI app that lives in your terminal, built on [Ratatui](https://ratatui.rs).
+Santui is **my terminal home base** — a daily companion TUI app that lives in your terminal, built on [Ratatui](https://ratatui.rs).
 
 It's not a framework or library for building other apps. It's the app itself, designed to be:
 
@@ -10,7 +10,7 @@ It's not a framework or library for building other apps. It's the app itself, de
 
 ## Current features
 
-- **Internet Radio Player** — browse radio stations by country, search by name, and stream audio via libmpv.
+- **Internet Radio Player** — browse radio stations by country, search by name or genre, and stream audio via libmpv.
 - **Command Palette** — `Ctrl+P` to search commands: switch themes, reload plugins, and more.
 - **Themes** — 38 built-in themes with instant switching and live preview.
 - **Plugin System** — headless plugin binaries that Santui spawns and manages. Crash-isolated and hot-reloadable.
