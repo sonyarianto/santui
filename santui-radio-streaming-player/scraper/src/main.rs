@@ -1,4 +1,4 @@
-//! Scrapes internet radio stations from [onlineradiobox.com](https://onlineradiobox.com)
+//! Scrapes internet radio stations from an online directory
 //! and saves them to the Santui radio streaming player's SQLite database.
 //!
 //! ## Usage
@@ -357,7 +357,7 @@ fn fetch_country_http(url_code: &str) -> Result<Vec<(String, String)>, String> {
 }
 
 fn main() {
-    println!("Radio Station Scraper \u{2014} onlineradiobox.com");
+    println!("Radio Station Scraper");
     let num_workers: usize = std::thread::available_parallelism()
         .map(|n| n.get())
         .unwrap_or(4);
