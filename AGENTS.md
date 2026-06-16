@@ -72,4 +72,4 @@ cd website && npm run dev   # dev server
 cd website && npm run build # static build
 ```
 
-Deployed on Vercel at https://santui.vercel.app
+Deployed on Vercel at https://santuiapp.vercel.app

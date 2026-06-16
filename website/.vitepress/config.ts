@@ -6,7 +6,7 @@ export default defineConfig({
   cleanUrls: true,
 
   head: [
-    ['link', { rel: 'canonical', href: 'https://santui.vercel.app' }],
+    ['link', { rel: 'canonical', href: 'https://santuiapp.vercel.app' }],
   ],
 
   themeConfig: {
