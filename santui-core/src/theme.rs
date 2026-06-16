@@ -33,6 +33,7 @@ pub struct Theme {
     pub border: Color,
     pub success: Color,
     pub error: Color,
+    pub inverted_text: Color,
 }
 
 struct ThemeDef {
@@ -408,6 +409,7 @@ impl Theme {
                         border: rgb(d.primary),
                         success: rgb(d.success),
                         error: rgb(d.error),
+                        inverted_text: rgb(d.neutral),
                     },
                 )
             })
@@ -429,6 +431,7 @@ impl Default for Theme {
             border: rgb(d.primary),
             success: rgb(d.success),
             error: rgb(d.error),
+            inverted_text: rgb(d.neutral),
         }
     }
 }

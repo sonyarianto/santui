@@ -1,5 +1,5 @@
 use ratatui::layout::Rect;
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Clear, Paragraph};
 use ratatui::Frame;
@@ -142,7 +142,7 @@ impl super::Santui {
 
         let input_line = if query.is_empty() {
             let first_style = if cursor_on {
-                Style::default().fg(Color::Black).bg(t.highlight)
+                Style::default().fg(t.inverted_text).bg(t.highlight)
             } else {
                 Style::default().fg(t.text_muted)
             };
@@ -152,7 +152,7 @@ impl super::Santui {
             ])
         } else {
             let cursor_style = if cursor_on {
-                Style::default().fg(Color::Black).bg(t.highlight)
+                Style::default().fg(t.inverted_text).bg(t.highlight)
             } else {
                 Style::default()
                     .fg(t.background_panel)
@@ -194,7 +194,7 @@ impl super::Santui {
             let hovered = flat == cursor;
             let prefix = if current { " ● " } else { "   " };
             let text_fg = if hovered {
-                Color::Black
+                t.inverted_text
             } else if current {
                 t.accent
             } else {
@@ -276,7 +276,7 @@ impl super::Santui {
                 let sel = flat_idx == cursor;
                 let item = &super::CMD_ITEMS[idx];
                 let style = if sel {
-                    Style::default().fg(Color::Black).bg(t.highlight)
+                    Style::default().fg(t.inverted_text).bg(t.highlight)
                 } else {
                     Style::default().fg(t.text)
                 };
@@ -329,7 +329,7 @@ impl super::Santui {
 
         if query.is_empty() {
             let first_style = if cursor_on {
-                Style::default().fg(Color::Black).bg(t.highlight)
+                Style::default().fg(t.inverted_text).bg(t.highlight)
             } else {
                 Style::default().fg(t.text_muted)
             };
@@ -339,7 +339,7 @@ impl super::Santui {
             ]));
         } else {
             let cursor_style = if cursor_on {
-                Style::default().fg(Color::Black).bg(t.highlight)
+                Style::default().fg(t.inverted_text).bg(t.highlight)
             } else {
                 Style::default()
                     .fg(t.background_panel)
