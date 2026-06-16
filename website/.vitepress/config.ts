@@ -9,6 +9,8 @@ export default defineConfig({
     ['link', { rel: 'canonical', href: 'https://santuiapp.vercel.app' }],
   ],
 
+  appearance: 'dark',
+
   themeConfig: {
     siteTitle: 'Santui',
     nav: [
