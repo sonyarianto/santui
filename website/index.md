@@ -3,7 +3,7 @@ layout: home
 
 hero:
   name: Santui
-  text: Modular TUI platform
+  text: My terminal home base
   tagline: TUI app for your daily companion.
   actions:
     - theme: brand
