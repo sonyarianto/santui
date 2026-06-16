@@ -16,7 +16,7 @@ use ratatui::Terminal;
 use std::time::Duration;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-const STAR_COUNT: usize = 99;
+const STAR_COUNT: usize = 88;
 const SHOOTING_LIFETIME: u64 = 50;
 const SHOOTING_COOLDOWN: u64 = 180;
 const COMET_LIFETIME: u64 = 100;
