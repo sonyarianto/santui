@@ -11,12 +11,12 @@ $Arch = switch ($env:PROCESSOR_ARCHITECTURE) {
     default { throw "Unsupported architecture: $env:PROCESSOR_ARCHITECTURE" }
 }
 
-Write-Host "» Fetching latest release ..." -ForegroundColor Cyan
+Write-Host ">> Fetching latest release ..." -ForegroundColor Cyan
 $ApiUrl = "https://api.github.com/repos/$Repo/releases/latest"
 try {
     $Release = Invoke-RestMethod -Uri $ApiUrl -UseBasicParsing
 } catch {
-    Write-Host "  ⚠️  No release found on GitHub yet. Build from source instead:" -ForegroundColor Yellow
+    Write-Host "  [!] No release found on GitHub yet. Build from source instead:" -ForegroundColor Yellow
     Write-Host "  git clone https://github.com/$Repo.git" -ForegroundColor Cyan
     Write-Host "  cd santui && cargo build --workspace && cargo run -p santui"
     exit 1
@@ -24,7 +24,7 @@ try {
 $Tag = $Release.tag_name
 $ZipUrl = "https://github.com/$Repo/releases/download/$Tag/santui-$Arch.zip"
 
-Write-Host "» Installing santui ($Arch)..." -ForegroundColor Cyan
+Write-Host ">> Installing santui ($Arch)..." -ForegroundColor Cyan
 
 # ── download ──
 $Tmp = Join-Path ([System.IO.Path]::GetTempPath()) "santui-$([System.IO.Path]::GetRandomFileName()).zip"
@@ -48,5 +48,5 @@ if ($UserPath -notlike "*$BinDir*") {
     $env:PATH = "$env:PATH;$BinDir"
 }
 
-Write-Host "✔ Installed to $BinDir" -ForegroundColor Green
+Write-Host "[OK] Installed to $BinDir" -ForegroundColor Green
 Write-Host "  Run santui from any terminal."
