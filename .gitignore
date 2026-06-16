@@ -1,5 +1,6 @@
 target/
 
-native/
+native/*
+!native/radio_streaming_stations.db
 
 releases/

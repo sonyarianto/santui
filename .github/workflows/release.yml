@@ -1,0 +1,111 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  MPV_VERSION: 20260610
+  MPV_SHA: 304426c
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            ext: .exe
+            archive: zip
+            mpv_url: https://github.com/shinchiro/mpv-winbuild-cmake/releases/download/20260610/mpv-dev-x86_64-20260610-git-304426c.7z
+            mpv_dll: libmpv-2.dll
+
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            ext: ''
+            archive: tar.gz
+
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            ext: ''
+            archive: tar.gz
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux deps
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y libmpv-dev
+
+      - name: Build
+        run: cargo build --release --workspace
+
+      - name: Prepare Windows artifacts
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          mkdir staging\native -Force
+          Copy-Item "target\release\santui.exe" staging\
+          Copy-Item "target\release\santui-radio-streaming-player.exe" staging\
+          Copy-Item "native\libmpv-2.dll" "staging\native\" -ErrorAction SilentlyContinue
+          if (-not (Test-Path "staging\native\libmpv-2.dll")) {
+            Write-Host "Downloading mpv DLL..."
+            $tmp = "$env:TEMP\mpv.7z"
+            Invoke-WebRequest -Uri "${{ matrix.mpv_url }}" -OutFile $tmp -UseBasicParsing
+            7z x $tmp -o"staging\native\" "*.dll" -y | Out-Null
+            Remove-Item $tmp -Force
+          }
+          Copy-Item "native\radio_streaming_stations.db" "staging\native\"
+
+      - name: Prepare Unix artifacts
+        if: matrix.os != 'windows-latest'
+        run: |
+          mkdir -p staging/native
+          cp target/release/santui staging/
+          cp target/release/santui-radio-streaming-player staging/
+          cp native/radio_streaming_stations.db staging/native/
+
+      - name: Package Windows
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Add-Type -Assembly System.IO.Compression.FileSystem
+          [System.IO.Compression.ZipFile]::CreateFromDirectory("staging", "santui-${{ matrix.target }}.zip")
+
+      - name: Package Unix
+        if: matrix.os != 'windows-latest'
+        run: |
+          tar czf "santui-${{ matrix.target }}.tar.gz" -C staging .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: santui-${{ matrix.target }}
+          path: santui-${{ matrix.target }}.${{ matrix.archive }}
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: santui-*
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: santui-*
+          generate_release_notes: true
