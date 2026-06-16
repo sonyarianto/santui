@@ -1,6 +1,6 @@
 $ErrorActionPreference = 'Stop'
 
-$Repo = 'santuiapp/santui'
+$Repo = 'sonyarianto/santui'
 $Dest = "$env:LOCALAPPDATA\santui"
 $BinDir = "$Dest\current"
 
@@ -11,8 +11,16 @@ $Arch = switch ($env:PROCESSOR_ARCHITECTURE) {
     default { throw "Unsupported architecture: $env:PROCESSOR_ARCHITECTURE" }
 }
 
+Write-Host "» Fetching latest release ..." -ForegroundColor Cyan
 $ApiUrl = "https://api.github.com/repos/$Repo/releases/latest"
-$Release = Invoke-RestMethod -Uri $ApiUrl -UseBasicParsing
+try {
+    $Release = Invoke-RestMethod -Uri $ApiUrl -UseBasicParsing
+} catch {
+    Write-Host "  ⚠️  No release found on GitHub yet. Build from source instead:" -ForegroundColor Yellow
+    Write-Host "  git clone https://github.com/$Repo.git" -ForegroundColor Cyan
+    Write-Host "  cd santui && cargo build --workspace && cargo run -p santui"
+    exit 1
+}
 $Tag = $Release.tag_name
 $ZipUrl = "https://github.com/$Repo/releases/download/$Tag/santui-$Arch.zip"
 
