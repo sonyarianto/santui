@@ -32,7 +32,7 @@ export default defineConfig({
       { icon: 'github', link: 'https://github.com/sonyarianto/santui' },
     ],
     footer: {
-      message: 'Copyright 2026 Sony AK <sony@sony-ak.com>',
+      message: 'Copyright \u00a9 2026 Sony AK <sony@sony-ak.com>',
     },
   },
 })
