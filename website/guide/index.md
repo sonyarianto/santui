@@ -3,45 +3,57 @@
 ## Prerequisites
 
 - Rust 1.70+
+- [libmpv](https://mpv.io/installation/) (for the radio player plugin)
 - A terminal that supports Ratatui (most modern terminals do)
 
-## Create a new project
+## Installation
+
+### From source
 
 ```bash
-cargo new my-app
-cd my-app
+git clone https://github.com/sonyarianto/santui
+cd santui
+cargo build --workspace && cargo run -p santui
 ```
 
-Add Santui and Ratatui to your `Cargo.toml`:
+Or install directly:
 
-```toml
-[dependencies]
-santui-core = { git = "https://github.com/sonyak/santui" }
-ratatui = "0.26"
+```bash
+cargo install --git https://github.com/sonyarianto/santui
 ```
 
-## Minimal example
+## Usage
 
-```rust
-use santui_core::app::App;
-use santui_core::event::Event;
-use santui_core::widget::{Widget, WidgetContext};
-use ratatui::Frame;
+Santui is keyboard-driven. Here are the keybindings:
 
-struct HelloWidget;
+| Key | Action |
+|-----|--------|
+| `?` | About screen |
+| `Ctrl+P` | Command palette |
+| `↑` / `↓` | Navigate lists |
+| `Enter` | Select / play station |
+| `Esc` | Back / close panel |
 
-impl Widget for HelloWidget {
-    fn render(&mut self, ctx: &mut WidgetContext, frame: &mut Frame) {
-        frame.render_widget(
-            ratatui::widgets::Paragraph::new("Hello, Santui!"),
-            frame.area(),
-        );
-    }
-}
+## Radio Player
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut app = App::new()?;
-    app.add_widget(Box::new(HelloWidget));
-    app.run()
-}
+The radio player plugin lets you browse and stream internet radio stations:
+
+- **Browse by country** — stations are grouped by country
+- **Search** — type to filter stations by name
+- **Play** — press Enter to start streaming
+
+Press `r` in the radio player to reload stations from the database.
+
+## Scraping Stations
+
+Santui includes a scraper utility to populate the radio station database:
+
+```bash
+cargo run -p santui-radio-streaming-scraper
 ```
+
+This fetches currently-playing stations from onlineradiobox.com for every country and inserts them into the local SQLite database.
+
+## Themes
+
+Press `Ctrl+P`, select **Switch theme**, and browse 38 OpenCode themes with live preview.

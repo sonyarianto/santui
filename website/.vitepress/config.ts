@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: 'Santui',
-  description: 'A modular TUI framework for Rust, built on Ratatui',
+  description: 'A modular TUI app for your daily companion',
   cleanUrls: true,
 
   head: [
@@ -13,7 +13,6 @@ export default defineConfig({
     siteTitle: 'Santui',
     nav: [
       { text: 'Guide', link: '/guide/' },
-      { text: 'API', link: '/api/' },
     ],
     sidebar: {
       '/guide/': [

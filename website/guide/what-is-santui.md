@@ -1,12 +1,16 @@
 # What is Santui?
 
-Santui is a **modular terminal user interface framework** for Rust, built on top of [Ratatui](https://ratatui.rs).
+Santui is a **modular terminal user interface** — a daily companion TUI app that lives in your terminal, built on [Ratatui](https://ratatui.rs).
 
-It provides a lightweight architecture for building interactive TUI applications with:
+It's not a framework or library for building other apps. It's the app itself, designed to be:
 
-- **Widget-based composition** — each widget is self-contained with its own state, event handling, and rendering
-- **State machine routing** — app modes and transitions are explicit and easy to follow
-- **Event-driven** — keyboard input, resize events, and custom events flow through a channel
-- **Hot reload** — widgets can be reloaded at runtime without restarting the app
+- **Extensible** — plugins run as separate processes and communicate over JSON IPC. Write a plugin in Rust, register it, and it becomes part of Santui.
+- **Themeable** — 38 OpenCode themes you can switch at runtime with live preview.
+- **Keyboard-driven** — everything is a key press away, from the command palette to navigation.
 
-Santui is not a batteries-included framework. It gives you the skeleton — you bring the UI components, business logic, and styling.
+## Current features
+
+- **Internet Radio Player** — browse radio stations by country, search by name, and stream audio via libmpv.
+- **Command Palette** — `Ctrl+P` to search commands: switch themes, reload plugins, and more.
+- **Themes** — 38 built-in themes with instant switching and live preview.
+- **Plugin System** — headless plugin binaries that Santui spawns and manages. Crash-isolated and hot-reloadable.
