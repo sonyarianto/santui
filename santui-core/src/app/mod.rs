@@ -16,6 +16,9 @@ use ratatui::Terminal;
 use std::time::Duration;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+const STAR_COUNT: usize = 80;
+const SHOOTING_LIFETIME: u64 = 80;
+const SHOOTING_COOLDOWN: u64 = 300;
 
 struct CmdItem {
     category: &'static str,
@@ -48,6 +51,20 @@ const CMD_ITEMS: &[CmdItem] = &[
         label: "About",
     },
 ];
+
+struct Star {
+    x: u16,
+    y: u16,
+    phase: u16,
+}
+
+struct ShootingStar {
+    x: f64,
+    y: f64,
+    dx: f64,
+    dy: f64,
+    age: u64,
+}
 
 const PAD_L: u16 = 2;
 const PAD_T: u16 = 1;
@@ -90,6 +107,9 @@ pub struct Santui {
     theme_picker_orig_idx: usize,
     running: bool,
     tick: u64,
+    stars: Vec<Star>,
+    shooting: Option<ShootingStar>,
+    shooting_cooldown: u64,
 }
 
 impl Default for Santui {
@@ -118,6 +138,68 @@ impl Santui {
             theme_picker_orig_idx: 0,
             running: true,
             tick: 0,
+            stars: (0..STAR_COUNT)
+                .map(|i| Star {
+                    x: ((i * 157 + 11) * 131 % 997) as u16,
+                    y: ((i * 311 + 7) * 173 % 997) as u16,
+                    phase: ((i * 53 + 13) * 71 % 628) as u16,
+                })
+                .collect(),
+            shooting: None,
+            shooting_cooldown: 0,
+        }
+    }
+
+    fn update_stars(&mut self) {
+        let n = (self.tick ^ 0xdeadbeef)
+            .wrapping_mul(1103515245)
+            .wrapping_add(12345);
+        let r = n >> 16;
+        self.shooting_cooldown = self.shooting_cooldown.saturating_sub(1);
+        if self.shooting.is_none() && self.shooting_cooldown == 0 && (r & 0x3f) < 8 {
+            let side = r & 3;
+            let (x, y, dx, dy) = match side {
+                0 => (
+                    0.0,
+                    (r >> 2 & 0x3ff) as f64 / 1024.0,
+                    0.6 + (r >> 12 & 0x7f) as f64 / 256.0,
+                    0.4 + (r >> 19 & 0x7f) as f64 / 256.0,
+                ),
+                1 => (
+                    (r >> 2 & 0x3ff) as f64 / 1024.0,
+                    0.0,
+                    0.3 + (r >> 12 & 0x7f) as f64 / 256.0,
+                    0.6 + (r >> 19 & 0x7f) as f64 / 256.0,
+                ),
+                2 => (
+                    1.0,
+                    (r >> 2 & 0x3ff) as f64 / 1024.0,
+                    -0.6 - (r >> 12 & 0x7f) as f64 / 256.0,
+                    0.3 + (r >> 19 & 0x7f) as f64 / 256.0,
+                ),
+                _ => (
+                    (r >> 2 & 0x3ff) as f64 / 1024.0,
+                    0.0,
+                    0.3 + (r >> 12 & 0x7f) as f64 / 256.0,
+                    0.6 + (r >> 19 & 0x7f) as f64 / 256.0,
+                ),
+            };
+            self.shooting = Some(ShootingStar {
+                x,
+                y,
+                dx,
+                dy,
+                age: 0,
+            });
+        }
+        if let Some(ref mut s) = self.shooting {
+            s.x += s.dx / 100.0;
+            s.y += s.dy / 100.0;
+            s.age += 1;
+            if s.age > SHOOTING_LIFETIME || s.x < -0.2 || s.x > 1.2 || s.y > 1.2 {
+                self.shooting = None;
+                self.shooting_cooldown = SHOOTING_COOLDOWN + (r & 0x1ff);
+            }
         }
     }
 
@@ -146,6 +228,7 @@ impl Santui {
             }
 
             self.tick = self.tick.wrapping_add(1);
+            self.update_stars();
 
             terminal.draw(|f| self.render(f))?;
 
