@@ -41,7 +41,6 @@ const ALL_COUNTRIES: &[(&str, &str)] = &[
     ("bh", "BH"),
     ("bd", "BD"),
     ("bb", "BB"),
-    ("by", "BY"),
     ("be", "BE"),
     ("bz", "BZ"),
     ("bj", "BJ"),
@@ -132,7 +131,6 @@ const ALL_COUNTRIES: &[(&str, &str)] = &[
     ("kz", "KZ"),
     ("ke", "KE"),
     ("ki", "KI"),
-    ("kp", "KP"),
     ("kr", "KR"),
     ("xk", "XK"),
     ("kw", "KW"),
@@ -146,7 +144,6 @@ const ALL_COUNTRIES: &[(&str, &str)] = &[
     ("li", "LI"),
     ("lt", "LT"),
     ("lu", "LU"),
-    ("mo", "MO"),
     ("mg", "MG"),
     ("mw", "MW"),
     ("my", "MY"),
@@ -195,10 +192,8 @@ const ALL_COUNTRIES: &[(&str, &str)] = &[
     ("qa", "QA"),
     ("re", "RE"),
     ("ro", "RO"),
-    ("ru", "RU"),
     ("rw", "RW"),
     ("bl", "BL"),
-    ("sh", "SH"),
     ("kn", "KN"),
     ("lc", "LC"),
     ("mf", "MF"),
@@ -243,7 +238,6 @@ const ALL_COUNTRIES: &[(&str, &str)] = &[
     ("tc", "TC"),
     ("tv", "TV"),
     ("ug", "UG"),
-    ("ua", "UA"),
     ("ae", "AE"),
     ("us", "US"),
     ("uy", "UY"),
@@ -318,6 +312,9 @@ fn extract_stations(html: &str) -> Vec<(String, String)> {
         if let (Some(url), Some(name)) = (stream, name) {
             let name = unescape_html(&name);
             if !url.is_empty() && !name.is_empty() {
+                let url = url
+                    .replace("?dist=onlineradiobox", "")
+                    .replace("&dist=onlineradiobox", "");
                 stations.push((name, url));
             }
         }
@@ -343,80 +340,35 @@ fn unescape_html(s: &str) -> String {
         .replace("&gt;", ">")
 }
 
-fn fetch_country(conn: &Connection, url_code: &str, iso_code: &str) -> usize {
+fn fetch_country_http(url_code: &str) -> Result<Vec<(String, String)>, String> {
     let url = format!("https://onlineradiobox.com/{url_code}/?nowlisten=1");
-
-    let body = match ureq::get(&url)
+    let body = ureq::get(&url)
         .set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
         .set("Accept", "application/json, text/plain, */*")
         .call()
-    {
-        Ok(r) => match r.into_string() {
-            Ok(s) => s,
-            Err(e) => {
-                eprintln!("  ΓÜá∩╕Å  {url_code}: failed to read response: {e}");
-                return 0;
-            }
-        },
-        Err(e) => {
-            eprintln!("  ΓÜá∩╕Å  {url_code}: request failed: {e}");
-            return 0;
-        }
-    };
+        .map_err(|e| format!("request failed: {e}"))?
+        .into_string()
+        .map_err(|e| format!("failed to read response: {e}"))?;
 
-    let resp: RadioBoxResponse = match serde_json::from_str(&body) {
-        Ok(r) => r,
-        Err(e) => {
-            eprintln!("  ΓÜá∩╕Å  {url_code}: JSON parse error: {e}");
-            return 0;
-        }
-    };
+    let resp: RadioBoxResponse =
+        serde_json::from_str(&body).map_err(|e| format!("JSON parse error: {e}"))?;
 
-    let stations = extract_stations(&resp.data);
-    if stations.is_empty() {
-        return 0;
-    }
-
-    let mut inserted = 0usize;
-    for (name, url) in &stations {
-        match conn.execute(
-            "INSERT OR IGNORE INTO stations (name, url, country) VALUES (?1, ?2, ?3)",
-            rusqlite::params![name, url, iso_code],
-        ) {
-            Ok(rows) => {
-                if rows > 0 {
-                    inserted += 1;
-                }
-            }
-            Err(e) => {
-                eprintln!("  ΓÜá∩╕Å  insert error for {name}: {e}");
-            }
-        }
-    }
-
-    let total: i64 = conn
-        .query_row(
-            "SELECT COUNT(*) FROM stations WHERE country = ?1",
-            rusqlite::params![iso_code],
-            |row| row.get(0),
-        )
-        .unwrap_or(0);
-
-    if inserted > 0 || total > 0 {
-        println!(
-            "  {iso_code}: +{inserted} new (={total} total, {station_count} fetched)",
-            station_count = stations.len()
-        );
-    }
-    stations.len()
+    Ok(extract_stations(&resp.data))
 }
 
 fn main() {
-    println!("Radio Station Scraper ΓÇö onlineradiobox.com");
-    println!("{} countries to scan", ALL_COUNTRIES.len());
+    println!("Radio Station Scraper \u{2014} onlineradiobox.com");
+    let num_workers: usize = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(4);
+    println!(
+        "{} countries to scan ({} workers)",
+        ALL_COUNTRIES.len(),
+        num_workers
+    );
     println!();
 
-    let mut conn = match open_db() {
+    let conn = match open_db() {
         Ok(c) => c,
         Err(e) => {
             eprintln!("Failed to open database: {e}");
@@ -424,29 +376,101 @@ fn main() {
         }
     };
 
-    let tx = match conn.transaction() {
-        Ok(t) => t,
-        Err(e) => {
-            eprintln!("Failed to start transaction: {e}");
-            std::process::exit(1);
-        }
-    };
+    // Clean up ?dist=onlineradiobox from existing URLs
+    // First, remove duplicates where the cleaned URL already exists
+    let deleted = conn
+        .execute(
+            "DELETE FROM stations WHERE url LIKE '%dist=onlineradiobox%' AND EXISTS (
+                SELECT 1 FROM stations AS s2
+                WHERE s2.name = stations.name
+                AND s2.url = REPLACE(REPLACE(stations.url, '?dist=onlineradiobox', ''), '&dist=onlineradiobox', '')
+            )",
+            [],
+        )
+        .unwrap_or(0);
+    if deleted > 0 {
+        println!("Removed {deleted} duplicate stations with ?dist=");
+    }
+    // Then clean the remaining
+    let cleaned = conn
+        .execute(
+            "UPDATE stations SET url = REPLACE(REPLACE(url, '?dist=onlineradiobox', ''), '&dist=onlineradiobox', '') WHERE url LIKE '%dist=onlineradiobox%'",
+            [],
+        )
+        .unwrap_or(0);
+    if cleaned > 0 {
+        println!("Cleaned {cleaned} existing URLs");
+    }
+
+    conn.execute_batch("BEGIN TRANSACTION")
+        .expect("begin transaction");
+
+    let (tx, rx) = std::sync::mpsc::channel::<(String, String, Vec<(String, String)>)>();
+    let countries: Vec<(&str, &str)> = ALL_COUNTRIES.to_vec();
+    let chunk_size = countries.len().div_ceil(num_workers);
 
     let mut total_fetched = 0usize;
     let mut countries_with_data = 0usize;
 
-    for &(url_code, iso_code) in ALL_COUNTRIES {
-        let count = fetch_country(&tx, url_code, iso_code);
-        if count > 0 {
-            countries_with_data += 1;
+    std::thread::scope(|s| {
+        for chunk in countries.chunks(chunk_size) {
+            let tx = tx.clone();
+            let chunk: Vec<(&str, &str)> = chunk.to_vec();
+            s.spawn(move || {
+                for &(url_code, iso_code) in &chunk {
+                    match fetch_country_http(url_code) {
+                        Ok(stations) => {
+                            let _ = tx.send((iso_code.to_string(), url_code.to_string(), stations));
+                        }
+                        Err(e) => {
+                            eprintln!("  \u{26a0}\u{fe0f}  {url_code}: {e}");
+                        }
+                    }
+                }
+            });
         }
-        total_fetched += count;
-    }
+        drop(tx);
 
-    if let Err(e) = tx.commit() {
-        eprintln!("Failed to commit transaction: {e}");
-        std::process::exit(1);
-    }
+        for (iso_code, _url_code, stations) in rx {
+            if stations.is_empty() {
+                continue;
+            }
+            countries_with_data += 1;
+            total_fetched += stations.len();
+
+            let mut inserted = 0usize;
+            for (name, url) in &stations {
+                match conn.execute(
+                    "INSERT OR IGNORE INTO stations (name, url, country) VALUES (?1, ?2, ?3)",
+                    rusqlite::params![name, url, iso_code],
+                ) {
+                    Ok(rows) => {
+                        if rows > 0 {
+                            inserted += 1;
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("  \u{26a0}\u{fe0f}  insert error for {name}: {e}");
+                    }
+                }
+            }
+
+            let total: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM stations WHERE country = ?1",
+                    rusqlite::params![iso_code],
+                    |row| row.get(0),
+                )
+                .unwrap_or(0);
+
+            println!(
+                "  {iso_code}: +{inserted} new (={total} total, {} fetched)",
+                stations.len()
+            );
+        }
+    });
+
+    conn.execute_batch("COMMIT").expect("commit transaction");
 
     let total: i64 = conn
         .query_row("SELECT COUNT(*) FROM stations", [], |row| row.get(0))
@@ -454,8 +478,8 @@ fn main() {
 
     println!();
     println!(
-        "Done ΓÇö {countries_with_data} countries with stations, \
-         {total_fetched} stations fetched, \
+        "Done \u{2014} {countries_with_data} countries with \
+         stations, {total_fetched} stations fetched, \
          {total} total in DB"
     );
     println!("Database: {}", db_path().display());
