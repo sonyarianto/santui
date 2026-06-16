@@ -3,7 +3,7 @@
 ## Core
 
 - **Santui** — main app struct; owns plugin list, palette state, event loop, theme system
-- **Plugin trait** — each plugin implements `id`, `name`, `init`, `handle_key`, `render`, `tick`, `on_focus`/`on_blur`, `on_theme_change`, `status_hints`
+- **Plugin trait** — each plugin implements `id`, `name`, `init`, `handle_key`, `render`, `tick`, `on_focus`/`on_blur`, `on_theme_change`, `status_hints`, `on_user_update`
 - **Event loop** — `Santui::run()` drives tick, key dispatch, and render
 - **Palette** — command palette overlay (`Ctrl+P`); items defined in `CMD_ITEMS`, filtering via substring match. "Switch Theme" opens a searchable theme picker showing all 38 OpenCode themes.
 - **About screen** — shown on `?` key; uses `render_about()`
@@ -17,7 +17,7 @@ Plugins can run as separate processes via `IpcPluginHost`, which implements the 
 santui.exe (host)
   └─ IpcPluginHost (implements Plugin trait)
        ├─ sends HostMsg (Init, Key, Tick, Resize, ...) via stdin  ──►
-       └─ reads PluginMsg (Render { commands, hints }) via stdout ◄──
+       └─ reads PluginMsg { commands, hints, request } via stdout ◄──
             │ spawns & manages
             ▼
        santui-radio-streaming-player.exe (headless, no ratatui)

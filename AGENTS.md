@@ -20,6 +20,7 @@ Watch: `cargo watch -x "run -p santui"`
 ```
 santui-core/     — framework core: App, Plugin trait, event loop, palette
 santui-ipc/      — IPC protocol types + host (`IpcPluginHost`) plugin runner
+santui-auth/     — GitHub OAuth + auth handle/client
 santui-radio-streaming-player/    — radio plugin
   └─ scraper/                     — scrape radio stations into DB
 santui/          — binary entry point
