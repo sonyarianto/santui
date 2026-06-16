@@ -40,5 +40,8 @@ cd website && npm run dev   # dev server
 cd website && npm run build # static build
 ```
 
-Architecture details: `docs/architecture.md`
-Conventions details: `docs/conventions.md`
+## Docs Index
+
+- `docs/architecture.md` — architecture & IPC plugin model
+- `docs/conventions.md` — coding conventions
+- `docs/development.md` — tooling setup (lefthook, pre-commit hooks)
