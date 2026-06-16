@@ -1,7 +1,9 @@
+use crate::auth::{AuthHandle, User};
 use crate::theme::Theme;
 use crossterm::event::KeyEvent;
 use ratatui::layout::Rect;
 use ratatui::Frame;
+use std::sync::Arc;
 
 pub trait Plugin {
     fn id(&self) -> &'static str;
@@ -15,6 +17,7 @@ pub trait Plugin {
     fn on_theme_change(&mut self, theme: &Theme) {
         let _ = theme;
     }
+    fn on_user_update(&mut self, _user: Option<&User>) {}
     fn status_hints(&self) -> Vec<(String, String)> {
         vec![]
     }
@@ -22,12 +25,14 @@ pub trait Plugin {
 
 pub struct PluginContext {
     pub theme: Theme,
+    pub auth: Option<Arc<dyn AuthHandle>>,
 }
 
 impl PluginContext {
     pub fn new() -> Self {
         PluginContext {
             theme: Theme::default(),
+            auth: None,
         }
     }
 }

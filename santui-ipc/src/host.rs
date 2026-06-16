@@ -1,14 +1,18 @@
-use crate::protocol::{Area, HostMsg, IpcKey, PluginMsg, RenderCmd, ThemeData};
+use crate::protocol::{
+    Area, HostMsg, IpcKey, PluginMsg, PluginRequest, RenderCmd, ThemeData, UserData,
+};
 use crate::render::render_commands;
 use crossterm::event::{KeyCode, KeyEvent};
 use crossterm::terminal;
 use ratatui::layout::Rect;
 use ratatui::Frame;
+use santui_core::auth::User;
 use santui_core::theme::Theme;
-use santui_core::{Plugin, PluginContext};
+use santui_core::{AuthHandle, Plugin, PluginContext};
 use std::cell::Cell;
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Child, ChildStdout, Command, Stdio};
+use std::sync::Arc;
 
 pub struct IpcPluginHost {
     id: &'static str,
@@ -21,11 +25,10 @@ pub struct IpcPluginHost {
     area: Area,
     current_area: Cell<Area>,
     theme_data: ThemeData,
+    pending_request: Option<PluginRequest>,
 }
 
 impl IpcPluginHost {
-    /// `binary_base` is the binary name without platform suffix
-    /// (e.g. `"santui-radio-streaming-player"` — `.exe` is added on Windows automatically).
     pub fn new(id: &'static str, name: &'static str, binary_base: &'static str) -> Self {
         IpcPluginHost {
             id,
@@ -47,6 +50,7 @@ impl IpcPluginHost {
                 error: [224, 108, 117],
                 background_panel: [20, 20, 20],
             },
+            pending_request: None,
         }
     }
 }
@@ -68,6 +72,16 @@ fn theme_to_data(theme: &Theme) -> ThemeData {
         success: color_to_rgb(&theme.success),
         error: color_to_rgb(&theme.error),
         background_panel: color_to_rgb(&theme.background_panel),
+    }
+}
+
+fn user_to_data(user: &User) -> UserData {
+    UserData {
+        id: user.id.clone(),
+        email: user.email.clone(),
+        name: user.name.clone(),
+        avatar_url: user.avatar_url.clone(),
+        provider: user.provider.clone(),
     }
 }
 
@@ -105,12 +119,9 @@ impl IpcPluginHost {
             }
             Ok(_) => {
                 if let Ok(msg) = serde_json::from_str::<PluginMsg>(&line) {
-                    match msg {
-                        PluginMsg::Render { commands, hints } => {
-                            self.cached_commands = commands;
-                            self.cached_hints = hints;
-                        }
-                    }
+                    self.cached_commands = msg.commands;
+                    self.cached_hints = msg.hints;
+                    self.pending_request = msg.request;
                 }
             }
         }
@@ -122,7 +133,6 @@ impl IpcPluginHost {
     }
 
     fn spawn_binary_name(&self) -> String {
-        // Platform suffix: ".exe" on Windows, "" elsewhere
         let base = self.binary_name;
         if cfg!(windows) && !base.ends_with(".exe") {
             format!("{}.exe", base)
@@ -158,6 +168,36 @@ impl IpcPluginHost {
             }
         }
     }
+
+    /// Process any pending request from the plugin.
+    /// Returns true if the plugin's render cache is now stale and should be re-queried.
+    pub fn process_request(&mut self, auth: &Arc<dyn AuthHandle>) -> bool {
+        let req = match self.pending_request.take() {
+            Some(r) => r,
+            None => return false,
+        };
+        match req {
+            PluginRequest::SignIn { provider } => {
+                match auth.sign_in(&provider) {
+                    Ok(user) => {
+                        self.send_recv(&HostMsg::UserUpdate {
+                            user: Some(user_to_data(&user)),
+                        });
+                    }
+                    Err(e) => {
+                        eprintln!("[santui] Sign-in failed: {e}");
+                        self.send_recv(&HostMsg::UserUpdate { user: None });
+                    }
+                }
+                true
+            }
+            PluginRequest::SignOut => {
+                auth.sign_out();
+                self.send_recv(&HostMsg::UserUpdate { user: None });
+                true
+            }
+        }
+    }
 }
 
 impl Plugin for IpcPluginHost {
@@ -172,7 +212,6 @@ impl Plugin for IpcPluginHost {
     fn init(&mut self, ctx: &mut PluginContext) -> Result<(), Box<dyn std::error::Error>> {
         self.theme_data = theme_to_data(&ctx.theme);
         if let Ok((w, h)) = terminal::size() {
-            // Reserve 1 row for the host's status bar
             self.area = Area {
                 w,
                 h: h.saturating_sub(1),
@@ -180,10 +219,21 @@ impl Plugin for IpcPluginHost {
             self.current_area.set(self.area);
         }
         self.spawn();
-        self.send_recv(&HostMsg::Init {
+
+        let msg = HostMsg::Init {
             theme: self.theme_data.clone(),
             area: self.area,
-        });
+        };
+        self.send_recv(&msg);
+
+        if let Some(ref auth) = ctx.auth {
+            if let Some(user) = auth.current_user() {
+                self.send_recv(&HostMsg::UserUpdate {
+                    user: Some(user_to_data(&user)),
+                });
+            }
+        }
+
         Ok(())
     }
 
@@ -239,6 +289,12 @@ impl Plugin for IpcPluginHost {
         self.theme_data = theme_to_data(theme);
         self.send_recv(&HostMsg::ThemeChange {
             theme: self.theme_data.clone(),
+        });
+    }
+
+    fn on_user_update(&mut self, user: Option<&User>) {
+        self.send_recv(&HostMsg::UserUpdate {
+            user: user.map(user_to_data),
         });
     }
 

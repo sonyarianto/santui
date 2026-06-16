@@ -6,7 +6,9 @@ edition = "2021"
 [dependencies]
 santui-core = { path = "../santui-core" }
 santui-ipc = { path = "../santui-ipc" }
+santui-auth = { path = "../santui-auth", optional = true }
 
 [features]
 default = ["radio-streaming-player"]
 radio-streaming-player = []
+auth = ["dep:santui-auth"]

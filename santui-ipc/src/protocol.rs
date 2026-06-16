@@ -30,6 +30,15 @@ pub enum IpcKey {
     Char(char),
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserData {
+    pub id: String,
+    pub email: String,
+    pub name: String,
+    pub avatar_url: Option<String>,
+    pub provider: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum HostMsg {
@@ -41,6 +50,7 @@ pub enum HostMsg {
     ThemeChange { theme: ThemeData },
     Resize { area: Area },
     Shutdown,
+    UserUpdate { user: Option<UserData> },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -61,11 +71,16 @@ pub enum RenderCmd {
     },
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PluginRequest {
+    SignIn { provider: String },
+    SignOut,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum PluginMsg {
-    Render {
-        commands: Vec<RenderCmd>,
-        hints: Vec<(String, String)>,
-    },
+pub struct PluginMsg {
+    pub commands: Vec<RenderCmd>,
+    pub hints: Vec<(String, String)>,
+    #[serde(default)]
+    pub request: Option<PluginRequest>,
 }

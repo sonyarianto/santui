@@ -10,7 +10,7 @@ use std::sync::mpsc;
 use std::thread;
 
 use player::Mpv;
-use santui_ipc::protocol::{Area, HostMsg, IpcKey, PluginMsg, RenderCmd, ThemeData};
+use santui_ipc::protocol::{Area, HostMsg, IpcKey, PluginMsg, RenderCmd, ThemeData, UserData};
 
 enum MpvMsg {
     Metadata(String),
@@ -34,6 +34,7 @@ struct App {
     init_error: Option<String>,
     dirty: bool,
     cached_commands: Vec<RenderCmd>,
+    user: Option<UserData>,
 }
 
 fn send_cmd(app: &App, cmd: MpvCmd) {
@@ -64,6 +65,7 @@ impl App {
             init_error: None,
             dirty: true,
             cached_commands: Vec::new(),
+            user: None,
         }
     }
 
@@ -302,9 +304,10 @@ impl App {
 }
 
 fn respond(app: &mut App) {
-    let msg = PluginMsg::Render {
+    let msg = PluginMsg {
         commands: app.render(),
         hints: app.status_hints(),
+        request: None,
     };
     let json = serde_json::to_string(&msg).expect("PluginMsg serialization");
     let mut out = std::io::stdout().lock();
@@ -354,6 +357,11 @@ fn main() {
                     }
                     HostMsg::Resize { area } => {
                         app.area = area;
+                        app.dirty = true;
+                        respond(&mut app);
+                    }
+                    HostMsg::UserUpdate { user } => {
+                        app.user = user;
                         app.dirty = true;
                         respond(&mut app);
                     }

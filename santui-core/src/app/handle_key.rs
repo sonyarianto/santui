@@ -53,6 +53,38 @@ impl super::Santui {
                                 self.plugins[0].on_focus();
                                 self.active_plugin = Some(0);
                             }
+                            "Sign in with Google" => {
+                                if let Some(ref auth) = self.ctx.auth {
+                                    match auth.sign_in("google") {
+                                        Ok(user) => {
+                                            for p in &mut self.plugins {
+                                                p.on_user_update(Some(&user));
+                                            }
+                                        }
+                                        Err(e) => eprintln!("[santui] Sign-in failed: {e}"),
+                                    }
+                                }
+                            }
+                            "Sign in with GitHub" => {
+                                if let Some(ref auth) = self.ctx.auth {
+                                    match auth.sign_in("github") {
+                                        Ok(user) => {
+                                            for p in &mut self.plugins {
+                                                p.on_user_update(Some(&user));
+                                            }
+                                        }
+                                        Err(e) => eprintln!("[santui] Sign-in failed: {e}"),
+                                    }
+                                }
+                            }
+                            "Sign out" => {
+                                if let Some(ref auth) = self.ctx.auth {
+                                    auth.sign_out();
+                                    for p in &mut self.plugins {
+                                        p.on_user_update(None);
+                                    }
+                                }
+                            }
                             "Switch theme" => {
                                 self.show_theme_picker = true;
                                 self.theme_picker_query.clear();

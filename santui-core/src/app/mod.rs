@@ -28,6 +28,18 @@ const CMD_ITEMS: &[CmdItem] = &[
         label: "Radio Streaming Player",
     },
     CmdItem {
+        category: "Auth",
+        label: "Sign in with Google",
+    },
+    CmdItem {
+        category: "Auth",
+        label: "Sign in with GitHub",
+    },
+    CmdItem {
+        category: "Auth",
+        label: "Sign out",
+    },
+    CmdItem {
         category: "System",
         label: "Switch theme",
     },
