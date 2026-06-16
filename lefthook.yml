@@ -1,0 +1,13 @@
+# Lefthook config — https://github.com/evilmartians/lefthook
+pre-commit:
+  parallel: true
+  commands:
+    fmt:
+      run: cargo fmt --check
+      glob: "*.rs"
+    clippy:
+      run: cargo clippy --workspace -- -D warnings
+      glob: "*.rs"
+    check:
+      run: cargo check --workspace
+      glob: "*.rs"
