@@ -279,6 +279,21 @@ fn db_path() -> PathBuf {
     app_data_dir().join("radio_streaming_stations.db")
 }
 
+fn migrate(conn: &Connection) -> Result<(), rusqlite::Error> {
+    let has_genre: bool = conn
+        .prepare("PRAGMA table_info(stations)")?
+        .query_map([], |row| {
+            let name: String = row.get(1)?;
+            Ok(name)
+        })?
+        .any(|r| r.is_ok_and(|n| n == "genre"));
+
+    if !has_genre {
+        conn.execute_batch("ALTER TABLE stations ADD COLUMN genre TEXT NOT NULL DEFAULT '';")?;
+    }
+    Ok(())
+}
+
 fn open_db() -> Result<Connection, rusqlite::Error> {
     let path = db_path();
     if let Some(parent) = path.parent() {
@@ -290,10 +305,15 @@ fn open_db() -> Result<Connection, rusqlite::Error> {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             url TEXT NOT NULL,
-            country TEXT NOT NULL DEFAULT ''
-        );
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_stations_name_url ON stations(name, url);
-        CREATE INDEX IF NOT EXISTS idx_stations_country ON stations(country);",
+            country TEXT NOT NULL DEFAULT '',
+            genre TEXT NOT NULL DEFAULT ''
+        );",
+    )?;
+    migrate(&conn)?;
+    conn.execute_batch(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_stations_name_url ON stations(name, url);
+        CREATE INDEX IF NOT EXISTS idx_stations_country ON stations(country);
+        CREATE INDEX IF NOT EXISTS idx_stations_genre ON stations(genre);",
     )?;
     Ok(conn)
 }
@@ -443,8 +463,8 @@ fn main() {
             let mut inserted = 0usize;
             for (name, url) in &stations {
                 match conn.execute(
-                    "INSERT OR IGNORE INTO stations (name, url, country) VALUES (?1, ?2, ?3)",
-                    rusqlite::params![name, url, iso_code],
+                    "INSERT OR IGNORE INTO stations (name, url, country, genre) VALUES (?1, ?2, ?3, ?4)",
+                    rusqlite::params![name, url, iso_code, ""],
                 ) {
                     Ok(rows) => {
                         if rows > 0 {

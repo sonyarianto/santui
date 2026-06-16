@@ -1,21 +1,10 @@
 use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::{Color, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Clear, Paragraph};
+use ratatui::widgets::Paragraph;
 use ratatui::Frame;
 
 impl super::Santui {
-    pub(super) fn render_dim_overlay(&self, f: &mut Frame, content: Rect) {
-        let dim = Style::default()
-            .fg(self.theme.text_muted)
-            .add_modifier(Modifier::DIM);
-        let fill: Vec<Line> = (0..content.height)
-            .map(|_| Line::from(Span::styled(" ".repeat(content.width as usize), dim)))
-            .collect();
-        f.render_widget(Clear, content);
-        f.render_widget(Paragraph::new(fill), content);
-    }
-
     pub(super) fn render_starfield(&self, f: &mut Frame, area: Rect) {
         if area.width < 10 || area.height < 5 {
             return;
@@ -203,6 +192,7 @@ impl super::Santui {
     }
 
     pub(super) fn render_about(&self, f: &mut Frame, area: Rect) {
+        self.render_starfield(f, area);
         let t = &self.theme;
         let ver = super::VERSION;
 

@@ -97,8 +97,6 @@ impl super::Santui {
         let filtered = self.filtered_themes();
         let cursor = self.theme_picker_cursor;
 
-        self.render_dim_overlay(f, content);
-
         let pw = super::pal_w(content.width);
         let inner_w = pw.saturating_sub(super::PAD_L * 2);
 
@@ -232,8 +230,6 @@ impl super::Santui {
         let filtered = self.filtered_items(query);
         let cursor = self.palette.as_ref().map_or(0, |p| p.cursor);
         let scroll = self.palette.as_ref().map_or(0, |p| p.scroll);
-
-        self.render_dim_overlay(f, content);
 
         let mut current_cat = "";
         let mut cat_items: Vec<usize> = Vec::new();

@@ -23,3 +23,10 @@ features:
   - title: Plugin Architecture
     details: Plugins run as separate processes with JSON IPC. Hot-reloadable, crash-isolated, and easy to write in Rust.
 ---
+
+## Install
+
+### Windows
+```powershell
+irm https://santuiapp.vercel.app/install.ps1 | iex
+```

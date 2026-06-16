@@ -82,13 +82,12 @@ impl Mpv {
 
         let native_path = std::env::current_exe()
             .ok()
-            .and_then(|p| p.parent().map(|d| d.join("native").join("mpv-1.dll")));
+            .and_then(|p| p.parent().map(|d| d.join("native").join("libmpv-2.dll")));
 
         let lib = match unsafe {
             native_path
                 .as_ref()
                 .and_then(|p| Library::new(p.as_os_str()).ok())
-                .or_else(|| Library::new("mpv-1.dll").ok())
                 .or_else(|| Library::new("libmpv-2.dll").ok())
                 .or_else(|| Library::new("mpv.dll").ok())
                 .or_else(|| Library::new("libmpv.so.2").ok())
