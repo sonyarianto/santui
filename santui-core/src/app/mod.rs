@@ -17,8 +17,10 @@ use std::time::Duration;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const STAR_COUNT: usize = 99;
-const SHOOTING_LIFETIME: u64 = 60;
-const SHOOTING_COOLDOWN: u64 = 200;
+const SHOOTING_LIFETIME: u64 = 50;
+const SHOOTING_COOLDOWN: u64 = 180;
+const COMET_LIFETIME: u64 = 100;
+const COMET_COOLDOWN: u64 = 500;
 
 struct CmdItem {
     category: &'static str,
@@ -67,6 +69,7 @@ struct ShootingStar {
     dx: f64,
     dy: f64,
     age: u64,
+    kind: u8,
 }
 
 const PAD_L: u16 = 2;
@@ -184,32 +187,28 @@ impl Santui {
             .wrapping_add(12345);
         let r = n >> 16;
         self.shooting_cooldown = self.shooting_cooldown.saturating_sub(1);
-        if self.shooting.is_none() && self.shooting_cooldown == 0 && (r & 0x3f) < 8 {
+        let kind = if (r & 0x80) == 0 { 0 } else { 1 };
+        if self.shooting.is_none() && self.shooting_cooldown == 0 && (r & 0x3f) < 6 {
+            let (speed, max_extra) = if kind == 0 { (1.0, 1.2) } else { (0.2, 0.4) };
             let side = r & 3;
             let (x, y, dx, dy) = match side {
                 0 => (
                     0.0,
                     (r >> 2 & 0x3ff) as f64 / 1024.0,
-                    0.6 + (r >> 12 & 0x7f) as f64 / 256.0,
-                    0.4 + (r >> 19 & 0x7f) as f64 / 256.0,
+                    speed + ((r >> 12 & 0x7f) as f64 / 256.0) * max_extra,
+                    speed * 0.6 + ((r >> 19 & 0x7f) as f64 / 256.0) * max_extra,
                 ),
                 1 => (
                     (r >> 2 & 0x3ff) as f64 / 1024.0,
                     0.0,
-                    0.3 + (r >> 12 & 0x7f) as f64 / 256.0,
-                    0.6 + (r >> 19 & 0x7f) as f64 / 256.0,
-                ),
-                2 => (
-                    1.0,
-                    (r >> 2 & 0x3ff) as f64 / 1024.0,
-                    -0.6 - (r >> 12 & 0x7f) as f64 / 256.0,
-                    0.3 + (r >> 19 & 0x7f) as f64 / 256.0,
+                    speed * 0.5 + ((r >> 12 & 0x7f) as f64 / 256.0) * max_extra,
+                    speed + ((r >> 19 & 0x7f) as f64 / 256.0) * max_extra,
                 ),
                 _ => (
+                    1.0,
                     (r >> 2 & 0x3ff) as f64 / 1024.0,
-                    0.0,
-                    0.3 + (r >> 12 & 0x7f) as f64 / 256.0,
-                    0.6 + (r >> 19 & 0x7f) as f64 / 256.0,
+                    -speed - ((r >> 12 & 0x7f) as f64 / 256.0) * max_extra,
+                    speed * 0.6 + ((r >> 19 & 0x7f) as f64 / 256.0) * max_extra,
                 ),
             };
             self.shooting = Some(ShootingStar {
@@ -218,16 +217,32 @@ impl Santui {
                 dx,
                 dy,
                 age: 0,
+                kind,
             });
         }
         if let Some(ref mut s) = self.shooting {
-            s.x += s.dx / 100.0;
-            s.y += s.dy / 100.0;
+            let speed = if s.kind == 0 { 100.0 } else { 180.0 };
+            s.x += s.dx / speed;
+            s.y += s.dy / speed;
             s.age += 1;
-            if s.age > SHOOTING_LIFETIME || s.x < -0.2 || s.x > 1.2 || s.y > 1.2 {
-                self.shooting = None;
-                self.shooting_cooldown = SHOOTING_COOLDOWN + (r & 0x1ff);
-            }
+        }
+        let shooting_expired = self.shooting.as_ref().is_some_and(|s| {
+            let max_age = if s.kind == 0 {
+                SHOOTING_LIFETIME
+            } else {
+                COMET_LIFETIME
+            };
+            s.age > max_age || s.x < -0.3 || s.x > 1.3 || s.y > 1.3
+        });
+        if shooting_expired {
+            let kind = self.shooting.as_ref().map(|s| s.kind).unwrap_or(0);
+            let cooldown = if kind == 0 {
+                SHOOTING_COOLDOWN
+            } else {
+                COMET_COOLDOWN
+            };
+            self.shooting = None;
+            self.shooting_cooldown = cooldown + (r & 0xff);
         }
     }
 

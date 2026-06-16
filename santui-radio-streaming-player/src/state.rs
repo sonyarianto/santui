@@ -120,10 +120,10 @@ impl RadioState {
     }
 
     pub fn volume_up(&mut self) {
-        self.volume = (self.volume + 5).min(100);
+        self.volume = (self.volume + 2).min(100);
     }
 
     pub fn volume_down(&mut self) {
-        self.volume = (self.volume - 5).max(0);
+        self.volume = (self.volume - 2).max(0);
     }
 }

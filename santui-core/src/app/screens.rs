@@ -74,35 +74,86 @@ impl super::Santui {
             cell.set_bg(Color::Reset);
         }
         if let Some(ref s) = self.shooting {
-            let len = (10 + (s.age % 6) as usize).min(area.width.min(area.height) as usize);
+            let is_comet = s.kind == 1;
+            let max_age = if is_comet { 100u64 } else { 50 };
+            let life_pct = (s.age as f64 / max_age as f64).min(1.0);
+            let trail_len = if is_comet { 28 } else { 14 };
+            let trail_cells = (trail_len as f64 * 2.0) as usize;
             let sx = area.x + (s.x * area.width as f64) as u16;
             let sy = area.y + (s.y * area.height as f64) as u16;
-            for i in 0..len {
-                let px = (sx as i16 - (s.dx * i as f64 * 1.2) as i16)
-                    .max(area.x as i16)
-                    .min((area.x + area.width - 1) as i16) as u16;
-                let py = (sy as i16 - (s.dy * i as f64 * 1.2) as i16)
-                    .max(area.y as i16)
-                    .min((area.y + area.height - 1) as i16) as u16;
-                if px == sx && py == sy && i > 0 {
+            let mut drawn = Vec::new();
+            for step in 0..trail_cells {
+                let t = step as f64 / trail_cells as f64;
+                let px = (sx as f64 - s.dx * t * trail_len as f64 * 0.7) as i16;
+                let py = (sy as f64 - s.dy * t * trail_len as f64 * 0.7) as i16;
+                if px < area.x as i16 || px >= (area.x + area.width) as i16 {
                     continue;
                 }
-                let t = i as f64 / len as f64;
-                let vv = (220.0 * (1.0 - t * t * t)) as u8;
-                let cell = &mut buf[(px, py)];
-                cell.set_char(match i {
-                    0 => '\u{2726}',
-                    1 => '*',
-                    2 => '\u{00b7}',
-                    _ => '.',
-                });
-                cell.set_fg(if i < 3 {
-                    Color::Rgb(180, 190, 255)
+                if py < area.y as i16 || py >= (area.y + area.height) as i16 {
+                    continue;
+                }
+                let key = (px as u32) << 16 | py as u32;
+                if drawn.contains(&key) {
+                    continue;
+                }
+                drawn.push(key);
+                let fade = (1.0 - t).powf(if is_comet { 1.8 } else { 2.5 });
+                let brightness = (200.0 * fade * (1.0 - life_pct * 0.3)) as u8;
+                if brightness < 20 {
+                    continue;
+                }
+                let cell = &mut buf[(px as u16, py as u16)];
+                cell.set_char(if step == 0 {
+                    if is_comet {
+                        '\u{2726}'
+                    } else {
+                        '*'
+                    }
+                } else if fade > 0.5 {
+                    '\u{00b7}'
                 } else {
-                    let fade = vv.max(30);
-                    Color::Rgb(fade, fade, (fade as f64 * 1.2).min(255.0) as u8)
+                    '.'
                 });
+                if is_comet && step == 0 {
+                    cell.set_fg(Color::Rgb(200, 230, 255));
+                } else if is_comet {
+                    let b = brightness.max(30);
+                    cell.set_fg(Color::Rgb(
+                        b,
+                        (b as f64 * 1.1) as u8,
+                        (b as f64 * 1.3).min(255.0) as u8,
+                    ));
+                } else {
+                    let b = brightness.max(30);
+                    cell.set_fg(Color::Rgb(b, b, (b as f64 * 1.15) as u8));
+                }
                 cell.set_bg(Color::Reset);
+                if is_comet && step > 4 && (step & 1) == 0 {
+                    for off in [-1i16, 1i16] {
+                        let wx = px + off;
+                        if wx < area.x as i16 || wx >= (area.x + area.width) as i16 {
+                            continue;
+                        }
+                        let wkey = (wx as u32) << 16 | py as u32;
+                        if drawn.contains(&wkey) {
+                            continue;
+                        }
+                        drawn.push(wkey);
+                        let wfade = fade * 0.5;
+                        let wb = (120.0 * wfade * (1.0 - life_pct * 0.3)) as u8;
+                        if wb < 15 {
+                            continue;
+                        }
+                        let wcell = &mut buf[(wx as u16, py as u16)];
+                        wcell.set_char('.');
+                        wcell.set_fg(Color::Rgb(
+                            wb,
+                            (wb as f64 * 1.15) as u8,
+                            (wb as f64 * 1.4).min(255.0) as u8,
+                        ));
+                        wcell.set_bg(Color::Reset);
+                    }
+                }
             }
         }
     }
