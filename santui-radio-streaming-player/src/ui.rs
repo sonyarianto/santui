@@ -14,10 +14,6 @@ fn draw_panel(
         return;
     }
 
-    if w < 3 || h < 2 {
-        return;
-    }
-
     let fill_w = w.saturating_sub(1);
     for row in y..(y + h) {
         cmds.push(RenderCmd::Text {

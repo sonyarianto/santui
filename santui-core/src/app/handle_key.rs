@@ -110,7 +110,7 @@ impl super::Santui {
         }
 
         if self.show_theme_picker {
-            let filtered = self.filtered_themes();
+            let mut filtered = self.filtered_themes();
             match key.code {
                 KeyCode::Char(c)
                     if c == 'p'
@@ -132,7 +132,7 @@ impl super::Santui {
                 KeyCode::Backspace => {
                     self.theme_picker_query.pop();
                     self.theme_picker_cursor = 0;
-                    let filtered = self.filtered_themes();
+                    filtered = self.filtered_themes();
                     if let Some(&idx) = filtered.first() {
                         self.preview_theme(idx);
                     }

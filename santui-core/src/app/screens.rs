@@ -90,7 +90,7 @@ impl super::Santui {
                 Line::from("Copyright \u{00a9} Sony AK  <sony@sony-ak.com>"),
                 Line::from(""),
                 Line::from(Span::styled(
-                    "https://santui.vercel.app",
+                    "https://santuiapp.vercel.app",
                     Style::default().fg(t.text_muted),
                 )),
                 Line::from(""),
