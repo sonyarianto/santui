@@ -1,3 +1,9 @@
+:root {
+  --vp-c-brand-1: #ffb900;
+  --vp-c-brand-2: #e0a800;
+  --vp-c-brand-3: #c09000;
+}
+
 .VPHero .name {
   margin-bottom: 0 !important;
   padding-bottom: 0 !important;
