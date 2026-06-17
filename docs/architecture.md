@@ -29,6 +29,26 @@ santui.exe (host)
 - Render commands (`Text`, `Clear`) are cached on the host and composited into the ratatui buffer each frame — no IPC round-trip on every frame.
 - To write a new plugin: create a binary crate depending on `santui-ipc` (protocol types only, no ratatui), implement stdin/stdout JSON loop, register it in `santui/src/main.rs` via `IpcPluginHost::new("id", "name", "binary-name")`.
 
+## Default Plugins & Feature Flags
+
+The radio streaming player ships as a **default plugin** — it's enabled via the `radio-streaming-player` feature in `santui/Cargo.toml`:
+
+```toml
+[features]
+default = ["radio-streaming-player"]
+radio-streaming-player = []
+```
+
+At build time, `cargo build --workspace` produces two binaries: `santui.exe` (host) and `santui-radio-streaming-player.exe` (plugin). The host spawns the plugin from the same directory at runtime, so packaging is just copying both `.exe` files side by side (along with any native DLLs like `libmpv-2.dll`).
+
+To **opt out** of the radio player, build with `--no-default-features`:
+
+```bash
+cargo build --workspace --no-default-features
+```
+
+This omits the `IpcPluginHost` registration in `main.rs`, and the plugin binary won't be compiled (it's a workspace member regardless, but the feature gate controls the runtime registration).
+
 ## Theme
 
 `santui-core/src/theme.rs` defines `Theme` struct with ~10 semantic color keys + all 38 OpenCode themes (from `THEMES` const array). `Default` = Santui (dark neutral `0x141414`, yellow primary `0xffb900`). Passed to plugins via `PluginContext.theme` during `init()`. Plugins override `on_theme_change()` to react to runtime theme switches. `Theme::all()` returns `Vec<(&'static str, Theme)>` for the picker. `text_muted` is computed as 60/40 blend of neutral/ink.
