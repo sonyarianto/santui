@@ -364,12 +364,14 @@ fn unescape_html(s: &str) -> String {
 
 fn fetch_country_http(url_code: &str) -> Result<Vec<(String, String)>, String> {
     let url = format!("https://onlineradiobox.com/{url_code}/?nowlisten=1");
-    let body = ureq::get(&url)
-        .set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-        .set("Accept", "application/json, text/plain, */*")
+    let mut resp = ureq::get(&url)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .header("Accept", "application/json, text/plain, */*")
         .call()
-        .map_err(|e| format!("request failed: {e}"))?
-        .into_string()
+        .map_err(|e| format!("request failed: {e}"))?;
+    let body = resp
+        .body_mut()
+        .read_to_string()
         .map_err(|e| format!("failed to read response: {e}"))?;
 
     let resp: RadioBoxResponse =

@@ -5,8 +5,8 @@ edition = "2021"
 
 [dependencies]
 santui-ipc = { path = "../santui-ipc", default-features = false }
-libloading = "0.8"
-ureq = "2"
+libloading = "0.9"
+ureq = "3"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-rusqlite = { version = "0.31", features = ["bundled"] }
+rusqlite = { version = "0.40", features = ["bundled"] }

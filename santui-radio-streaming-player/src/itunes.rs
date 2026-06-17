@@ -47,10 +47,12 @@ pub fn lookup(title: &str) -> Result<Option<TrackInfo>, String> {
         encoded
     );
 
-    let body: String = ureq::get(&url)
+    let mut resp = ureq::get(&url)
         .call()
-        .map_err(|e| format!("iTunes request failed: {e}"))?
-        .into_string()
+        .map_err(|e| format!("iTunes request failed: {e}"))?;
+    let body: String = resp
+        .body_mut()
+        .read_to_string()
         .map_err(|e| format!("iTunes read body failed: {e}"))?;
 
     let parsed: ITunesResponse =

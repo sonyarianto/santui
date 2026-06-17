@@ -1,4 +1,3 @@
-use oauth2::basic::BasicClient;
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge, RedirectUrl,
     Scope, TokenResponse, TokenUrl,
@@ -109,10 +108,10 @@ fn user_from_token(provider: &str, access_token: &str) -> Result<User, Box<dyn s
     // Fetch user info from the provider's userinfo endpoint
     match provider {
         "google" => {
-            let resp = ureq::get("https://www.googleapis.com/oauth2/v2/userinfo")
-                .set("Authorization", &format!("Bearer {access_token}"))
+            let mut resp = ureq::get("https://www.googleapis.com/oauth2/v2/userinfo")
+                .header("Authorization", &format!("Bearer {access_token}"))
                 .call()?;
-            let body: serde_json::Value = serde_json::from_str(&resp.into_string()?)?;
+            let body: serde_json::Value = serde_json::from_str(&resp.body_mut().read_to_string()?)?;
             Ok(User {
                 id: body["id"].as_str().unwrap_or("").into(),
                 email: body["email"].as_str().unwrap_or("").into(),
@@ -122,11 +121,11 @@ fn user_from_token(provider: &str, access_token: &str) -> Result<User, Box<dyn s
             })
         }
         "github" => {
-            let resp = ureq::get("https://api.github.com/user")
-                .set("Authorization", &format!("Bearer {access_token}"))
-                .set("Accept", "application/vnd.github.v3+json")
+            let mut resp = ureq::get("https://api.github.com/user")
+                .header("Authorization", &format!("Bearer {access_token}"))
+                .header("Accept", "application/vnd.github.v3+json")
                 .call()?;
-            let body: serde_json::Value = serde_json::from_str(&resp.into_string()?)?;
+            let body: serde_json::Value = serde_json::from_str(&resp.body_mut().read_to_string()?)?;
             Ok(User {
                 id: body["id"].to_string(),
                 email: body["email"].as_str().unwrap_or("").into(),
@@ -144,6 +143,22 @@ pub struct AuthClient {
     user: Mutex<Option<User>>,
     token_path: PathBuf,
 }
+
+type ConfiguredClient = oauth2::Client<
+    oauth2::StandardErrorResponse<oauth2::basic::BasicErrorResponseType>,
+    oauth2::StandardTokenResponse<oauth2::EmptyExtraTokenFields, oauth2::basic::BasicTokenType>,
+    oauth2::StandardTokenIntrospectionResponse<
+        oauth2::EmptyExtraTokenFields,
+        oauth2::basic::BasicTokenType,
+    >,
+    oauth2::StandardRevocableToken,
+    oauth2::StandardErrorResponse<oauth2::RevocationErrorResponseType>,
+    oauth2::EndpointSet,
+    oauth2::EndpointNotSet,
+    oauth2::EndpointNotSet,
+    oauth2::EndpointNotSet,
+    oauth2::EndpointSet,
+>;
 
 impl AuthClient {
     pub fn new(config: AuthConfig) -> Self {
@@ -187,34 +202,20 @@ impl AuthClient {
     fn build_oauth_client(
         &self,
         provider: &str,
-    ) -> Result<BasicClient, Box<dyn std::error::Error>> {
-        let (client_id, client_secret, auth_uri, token_uri, port) = match provider {
-            "google" => (
-                self.config.client_id.clone(),
-                self.config.client_secret.clone(),
-                self.config.auth_uri.clone(),
-                self.config.token_uri.clone(),
-                self.config.redirect_port,
-            ),
-            "github" => (
-                self.config.client_id.clone(),
-                self.config.client_secret.clone(),
-                self.config.auth_uri.clone(),
-                self.config.token_uri.clone(),
-                self.config.redirect_port,
-            ),
+    ) -> Result<ConfiguredClient, Box<dyn std::error::Error>> {
+        match provider {
+            "google" | "github" => {}
             _ => return Err("unsupported provider".into()),
-        };
+        }
 
-        let client = BasicClient::new(
-            ClientId::new(client_id),
-            Some(ClientSecret::new(client_secret)),
-            AuthUrl::new(auth_uri)?,
-            Some(TokenUrl::new(token_uri)?),
-        )
-        .set_redirect_uri(RedirectUrl::new(format!(
-            "http://127.0.0.1:{port}/callback"
-        ))?);
+        let client = oauth2::basic::BasicClient::new(ClientId::new(self.config.client_id.clone()))
+            .set_client_secret(ClientSecret::new(self.config.client_secret.clone()))
+            .set_auth_uri(AuthUrl::new(self.config.auth_uri.clone())?)
+            .set_token_uri(TokenUrl::new(self.config.token_uri.clone())?)
+            .set_redirect_uri(RedirectUrl::new(format!(
+                "http://127.0.0.1:{}/callback",
+                self.config.redirect_port
+            ))?);
 
         Ok(client)
     }
@@ -257,7 +258,7 @@ impl AuthHandle for AuthClient {
         let token = client
             .exchange_code(AuthorizationCode::new(code))
             .set_pkce_verifier(pkce_verifier)
-            .request(oauth2::ureq::http_client)?;
+            .request(&oauth2::ureq::Agent::new())?;
 
         let access_token = token.access_token().secret().clone();
         let refresh_token = token.refresh_token().map(|t| t.secret().clone());
