@@ -312,6 +312,22 @@ impl Santui {
             }
         }
 
+        self.render_status_bar(f, chunks[1]);
+
+        if self.palette.is_some() || self.show_theme_picker {
+            let dim_bg = self.theme.background_overlay;
+            let buf = f.buffer_mut();
+            for y in area.top()..area.bottom() {
+                for x in area.left()..area.right() {
+                    if let Some(cell) = buf.cell_mut((x, y)) {
+                        let mut style = cell.style();
+                        style.bg = Some(dim_bg);
+                        cell.set_style(style);
+                    }
+                }
+            }
+        }
+
         if self.palette.is_some() {
             self.render_palette(f, chunks[0]);
         }
@@ -319,7 +335,5 @@ impl Santui {
         if self.show_theme_picker {
             self.render_theme_picker(f, chunks[0]);
         }
-
-        self.render_status_bar(f, chunks[1]);
     }
 }

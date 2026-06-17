@@ -8,6 +8,18 @@ fn rgb(hex: u32) -> Color {
     )
 }
 
+fn darken(hex: u32, factor: u8) -> Color {
+    let r = ((hex >> 16) & 0xFF) as u16;
+    let g = ((hex >> 8) & 0xFF) as u16;
+    let b = (hex & 0xFF) as u16;
+    let f = factor as u16;
+    Color::Rgb(
+        (r * f / 100) as u8,
+        (g * f / 100) as u8,
+        (b * f / 100) as u8,
+    )
+}
+
 fn muted(neutral: u32, ink: u32) -> Color {
     let nr = (neutral >> 16) & 0xFF;
     let ng = (neutral >> 8) & 0xFF;
@@ -30,6 +42,7 @@ pub struct Theme {
     pub text_muted: Color,
     pub background: Color,
     pub background_panel: Color,
+    pub background_overlay: Color,
     pub border: Color,
     pub success: Color,
     pub error: Color,
@@ -406,6 +419,7 @@ impl Theme {
                         text_muted: muted(d.neutral, d.ink),
                         background: Color::Reset,
                         background_panel: rgb(d.neutral),
+                        background_overlay: darken(d.neutral, 40),
                         border: rgb(d.primary),
                         success: rgb(d.success),
                         error: rgb(d.error),
@@ -428,6 +442,7 @@ impl Default for Theme {
             text_muted: muted(d.neutral, d.ink),
             background: Color::Reset,
             background_panel: rgb(d.neutral),
+            background_overlay: darken(d.neutral, 40),
             border: rgb(d.primary),
             success: rgb(d.success),
             error: rgb(d.error),
