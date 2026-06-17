@@ -366,3 +366,40 @@ impl super::Santui {
         f.render_widget(Paragraph::new(list_lines).scroll((scroll, 0)), list_area);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::Santui;
+
+    #[test]
+    fn filtered_items_empty_query_returns_all() {
+        let app = Santui::new();
+        let items = app.filtered_items("");
+        assert_eq!(items.len(), super::super::CMD_ITEMS.len());
+    }
+
+    #[test]
+    fn filtered_items_matches_label() {
+        let app = Santui::new();
+        let items = app.filtered_items("radio");
+        assert_eq!(items.len(), 1);
+        assert_eq!(
+            super::super::CMD_ITEMS[items[0]].label,
+            "Radio Streaming Player"
+        );
+    }
+
+    #[test]
+    fn filtered_items_matches_case_insensitive() {
+        let app = Santui::new();
+        let items = app.filtered_items("RADIO");
+        assert_eq!(items.len(), 1);
+    }
+
+    #[test]
+    fn filtered_items_no_match() {
+        let app = Santui::new();
+        let items = app.filtered_items("xyznonexistent");
+        assert!(items.is_empty());
+    }
+}

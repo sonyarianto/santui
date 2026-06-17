@@ -91,6 +91,105 @@ fn max_list_h(content_h: u16) -> u16 {
     (content_h / 2).saturating_sub(6).max(3)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pal_w_given_small_width_returns_width() {
+        let w = pal_w(10);
+        assert_eq!(w, 8);
+    }
+
+    #[test]
+    fn pal_w_returns_content_minus_two_when_above_min() {
+        let w = pal_w(40);
+        assert_eq!(w, 38);
+    }
+
+    #[test]
+    fn pal_w_clamps_to_max() {
+        let w = pal_w(200);
+        assert_eq!(w, 60);
+    }
+
+    #[test]
+    fn pal_w_zero_saturates() {
+        let w = pal_w(0);
+        assert_eq!(w, 0);
+    }
+
+    #[test]
+    fn pal_w_one_saturates() {
+        let w = pal_w(1);
+        assert_eq!(w, 0);
+    }
+
+    #[test]
+    fn max_list_h_small_height() {
+        let h = max_list_h(10);
+        assert_eq!(h, 3);
+    }
+
+    #[test]
+    fn max_list_h_normal() {
+        let h = max_list_h(48);
+        assert_eq!(h, 18);
+    }
+
+    #[test]
+    fn max_list_h_large() {
+        let h = max_list_h(100);
+        assert_eq!(h, 44);
+    }
+
+    #[test]
+    fn max_list_h_minimum() {
+        let h = max_list_h(4);
+        assert_eq!(h, 3);
+    }
+
+    #[test]
+    fn filtered_themes_empty_query_returns_all() {
+        let app = Santui::new();
+        let themes = app.filtered_themes();
+        assert_eq!(themes.len(), app.themes.len());
+    }
+
+    #[test]
+    fn filtered_themes_matches_partial() {
+        let mut app = Santui::new();
+        app.theme_picker_query = "cat".into();
+        let themes = app.filtered_themes();
+        assert!(themes.len() >= 3);
+        for &i in &themes {
+            let name = app.themes[i].0.to_lowercase();
+            assert!(
+                name.contains("cat"),
+                "expected '{}' to contain 'cat'",
+                app.themes[i].0
+            );
+        }
+    }
+
+    #[test]
+    fn filtered_themes_no_match() {
+        let mut app = Santui::new();
+        app.theme_picker_query = "xyznonexistent".into();
+        let themes = app.filtered_themes();
+        assert!(themes.is_empty());
+    }
+
+    #[test]
+    fn filtered_themes_case_insensitive() {
+        let mut app = Santui::new();
+        app.theme_picker_query = "NORD".into();
+        let themes = app.filtered_themes();
+        assert_eq!(themes.len(), 1);
+        assert_eq!(app.themes[themes[0]].0, "Nord");
+    }
+}
+
 struct PaletteState {
     query: String,
     cursor: usize,

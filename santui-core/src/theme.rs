@@ -450,3 +450,75 @@ impl Default for Theme {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rgb_creates_correct_color() {
+        let c = rgb(0xff8800);
+        assert_eq!(c, Color::Rgb(255, 136, 0));
+    }
+
+    #[test]
+    fn rgb_black() {
+        let c = rgb(0x000000);
+        assert_eq!(c, Color::Rgb(0, 0, 0));
+    }
+
+    #[test]
+    fn rgb_white() {
+        let c = rgb(0xffffff);
+        assert_eq!(c, Color::Rgb(255, 255, 255));
+    }
+
+    #[test]
+    fn darken_reduces_brightness() {
+        let c = darken(0xffffff, 50);
+        assert_eq!(c, Color::Rgb(127, 127, 127));
+    }
+
+    #[test]
+    fn darken_full_brightness() {
+        let c = darken(0xffffff, 100);
+        assert_eq!(c, Color::Rgb(255, 255, 255));
+    }
+
+    #[test]
+    fn darken_minimum() {
+        let c = darken(0xffffff, 0);
+        assert_eq!(c, Color::Rgb(0, 0, 0));
+    }
+
+    #[test]
+    fn muted_creates_mixed_color() {
+        let c = muted(0x000000, 0xffffff);
+        assert_eq!(c, Color::Rgb(102, 102, 102));
+    }
+
+    #[test]
+    fn theme_all_returns_all_themes() {
+        let themes = Theme::all();
+        assert_eq!(themes.len(), THEMES.len());
+        for (i, (name, _)) in themes.iter().enumerate() {
+            assert_eq!(*name, THEMES[i].name);
+        }
+    }
+
+    #[test]
+    fn theme_default_is_santui() {
+        let default = Theme::default();
+        let themes = Theme::all();
+        let santui = &themes[1].1;
+        assert_eq!(default.accent, santui.accent);
+        assert_eq!(default.highlight, santui.highlight);
+        assert_eq!(default.text, santui.text);
+    }
+
+    #[test]
+    fn theme_has_background_reset() {
+        let default = Theme::default();
+        assert_eq!(default.background, Color::Reset);
+    }
+}
