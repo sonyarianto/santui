@@ -16,8 +16,6 @@ This downloads the latest release, extracts it to `%LOCALAPPDATA%\santui\current
 curl -fsSL https://santuiapp.vercel.app/install.sh | sh
 ```
 
-Downloads the latest release (with bundled libmpv) to `~/.local/share/santui/current` and adds it to your PATH. Run `santui` from any terminal.
-
 ### Linux
 
 ```bash
