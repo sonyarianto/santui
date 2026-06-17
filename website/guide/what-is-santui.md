@@ -1,6 +1,6 @@
 # What is Santui?
 
-Santui is **my terminal home base** — a daily companion TUI app that lives in your terminal, built on [Ratatui](https://ratatui.rs).
+Santui is **my terminal home base** — a daily companion TUI app that lives in your terminal.
 
 It's not a framework or library for building other apps. It's the app itself, designed to be:
 
