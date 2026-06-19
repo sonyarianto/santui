@@ -104,6 +104,12 @@ impl Mpv {
                 .or_else(|| Library::new("mpv.dll").ok())
                 .or_else(|| Library::new("libmpv.so.2").ok())
                 .or_else(|| Library::new("libmpv.so").ok())
+                // macOS Homebrew paths (Apple Silicon & Intel)
+                .or_else(|| Library::new("/opt/homebrew/lib/libmpv.2.dylib").ok())
+                .or_else(|| Library::new("/opt/homebrew/lib/libmpv.dylib").ok())
+                .or_else(|| Library::new("/usr/local/lib/libmpv.2.dylib").ok())
+                .or_else(|| Library::new("/usr/local/lib/libmpv.dylib").ok())
+                // fallback: dlopen default search path
                 .or_else(|| Library::new("libmpv.2.dylib").ok())
                 .or_else(|| Library::new("libmpv.dylib").ok())
         } {

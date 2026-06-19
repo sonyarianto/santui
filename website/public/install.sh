@@ -19,7 +19,14 @@ case "${OS}" in
         exit 1
         ;;
     esac
-    # libmpv is bundled in the release archive
+    # libmpv and all its transitive dylib deps (libavcodec, libavformat,
+    # etc.) are bundled in the release archive with @loader_path-relative
+    # paths — no Homebrew required.  The fallback in player.rs additionally
+    # checks Homebrew paths, so brew install mpv is optional but nice.
+    if ! brew list mpv 2>/dev/null >/dev/null; then
+      echo "  Tip: Install mpv for the best compatibility:"
+      echo "    brew install mpv"
+    fi
     ;;
   Linux)
     case "${ARCH}" in

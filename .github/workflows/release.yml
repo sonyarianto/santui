@@ -78,8 +78,46 @@ jobs:
           cp target/release/santui staging/
           cp target/release/santui-radio-streaming-player staging/
           cp native/radio_streaming_stations.db staging/native/
-          # bundle libmpv
-          cp /opt/homebrew/lib/libmpv.2.dylib staging/native/
+
+          # ── Bundle libmpv + all transitive dylib deps ──
+          # Homebrew dylibs embed absolute LC_LOAD_DYLIB paths pointing to
+          # /opt/homebrew/lib/ which won't exist on users without Homebrew.
+          # We recursively collect every dependency and rewrite all paths
+          # to @loader_path-relative so the entire bundle is relocatable.
+          NATIVE="staging/native"
+          cp /opt/homebrew/lib/libmpv.2.dylib "$NATIVE/"
+
+          # Recursively bundle all transitive Homebrew dylib deps.
+          # Libraries under /opt/homebrew/ or /usr/local/ are never system
+          # libraries (those live under /usr/lib/ or /System/), so we copy
+          # everything our grep matches.  No skip list needed.
+          bundle_deps() {
+            local dylib="$1"
+            local deps
+            deps="$(otool -L "$dylib" 2>/dev/null \
+              | tail -n +2 \
+              | grep -E '^[[:space:]]+/(opt/homebrew|usr/local)/lib' \
+              | awk '{print $1}' \
+              || true)"
+            for dep in $deps; do
+              local name; name="$(basename "$dep")"
+              local target="$NATIVE/$name"
+              if [ ! -f "$target" ]; then
+                cp "$dep" "$target"
+                install_name_tool -id "@loader_path/$name" "$target" 2>/dev/null || true
+                bundle_deps "$target"
+              fi
+              install_name_tool -change "$dep" "@loader_path/$name" "$dylib" 2>/dev/null || true
+            done
+          }
+
+          bundle_deps "$NATIVE/libmpv.2.dylib"
+
+          echo "=== Bundled dylibs ==="
+          ls -la "$NATIVE/"
+          echo ""
+          echo "=== libmpv.2.dylib resolved deps (post-fix) ==="
+          otool -L "$NATIVE/libmpv.2.dylib"
 
       - name: Prepare Linux artifacts
         if: matrix.os == 'ubuntu-latest'
