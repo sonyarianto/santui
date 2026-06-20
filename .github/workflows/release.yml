@@ -49,7 +49,7 @@ jobs:
         if: matrix.os == 'macos-latest'
         env:
           HOMEBREW_NO_REQUIRE_TAP_TRUST: 1
-        run: brew install mpv
+        run: brew install mpv dylibbundler
 
       - name: Build
         run: cargo build --release --workspace
@@ -80,38 +80,14 @@ jobs:
           cp native/radio_streaming_stations.db staging/native/
 
           # ── Bundle libmpv + all transitive dylib deps ──
-          # Homebrew dylibs embed absolute LC_LOAD_DYLIB paths pointing to
-          # /opt/homebrew/lib/ which won't exist on users without Homebrew.
-          # We recursively collect every dependency and rewrite all paths
-          # to @loader_path-relative so the entire bundle is relocatable.
+          # Homebrew dylibs embed absolute paths or @rpath references that
+          # won't work on user machines.  dylibbundler recursively copies
+          # every needed dylib into native/ and rewrites all LC_LOAD_DYLIB
+          # entries to @loader_path-relative so the bundle is relocatable.
+          HOMEBREW_PREFIX="$(brew --prefix)"
           NATIVE="staging/native"
-          cp /opt/homebrew/lib/libmpv.2.dylib "$NATIVE/"
-
-          # Recursively bundle all transitive Homebrew dylib deps.
-          # Libraries under /opt/homebrew/ or /usr/local/ are never system
-          # libraries (those live under /usr/lib/ or /System/), so we copy
-          # everything our grep matches.  No skip list needed.
-          bundle_deps() {
-            local dylib="$1"
-            local deps
-            deps="$(otool -L "$dylib" 2>/dev/null \
-              | tail -n +2 \
-              | grep -E '^[[:space:]]+/(opt/homebrew|usr/local)/lib' \
-              | awk '{print $1}' \
-              || true)"
-            for dep in $deps; do
-              local name; name="$(basename "$dep")"
-              local target="$NATIVE/$name"
-              if [ ! -f "$target" ]; then
-                cp "$dep" "$target"
-                install_name_tool -id "@loader_path/$name" "$target" 2>/dev/null || true
-                bundle_deps "$target"
-              fi
-              install_name_tool -change "$dep" "@loader_path/$name" "$dylib" 2>/dev/null || true
-            done
-          }
-
-          bundle_deps "$NATIVE/libmpv.2.dylib"
+          cp "$HOMEBREW_PREFIX/lib/libmpv.2.dylib" "$NATIVE/"
+          dylibbundler -of -b -x "$NATIVE/libmpv.2.dylib" -d "$NATIVE" -p "@loader_path/"
 
           echo "=== Bundled dylibs ==="
           ls -la "$NATIVE/"

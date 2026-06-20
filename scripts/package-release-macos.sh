@@ -42,35 +42,17 @@ if [ ! -f "$LIBMPV_SRC" ]; then
   exit 1
 fi
 
-# Bundle libmpv itself
+# Bundle libmpv itself + all transitive dylib deps via dylibbundler.
+# Homebrew dylibs embed absolute or @rpath LC_LOAD_DYLIB entries
+# that won't resolve on user machines.  dylibbundler recursively
+# copies every needed dylib into native/ and rewrites all paths to
+# @loader_path-relative, making the bundle relocatable.
 cp "$LIBMPV_SRC" "$NATIVE/"
-
-# ── Recursively bundle all transitive Homebrew dylib deps ──
-# Homebrew dylibs embed absolute LC_LOAD_DYLIB paths pointing to
-# $HOMEBREW_PREFIX/lib/.  We copy every dependency & rewrite its
-# path to @loader_path/<name> so the bundle is relocatable to any
-# machine (no Homebrew required).
-bundle_deps() {
-  local dylib="$1"
-  local deps
-  deps="$(otool -L "$dylib" 2>/dev/null \
-    | tail -n +2 \
-    | grep -E "^[[:space:]]+($HOMEBREW_PREFIX|/usr/local)/lib" \
-    | awk '{print $1}' \
-    || true)"
-  for dep in $deps; do
-    local name; name="$(basename "$dep")"
-    local target="$NATIVE/$name"
-    if [ ! -f "$target" ]; then
-      cp "$dep" "$target"
-      install_name_tool -id "@loader_path/$name" "$target" 2>/dev/null || true
-      bundle_deps "$target"
-    fi
-    install_name_tool -change "$dep" "@loader_path/$name" "$dylib" 2>/dev/null || true
-  done
-}
-
-bundle_deps "$NATIVE/libmpv.2.dylib"
+if ! command -v dylibbundler &>/dev/null; then
+  echo "  Installing dylibbundler …"
+  brew install dylibbundler
+fi
+dylibbundler -of -b -x "$NATIVE/libmpv.2.dylib" -d "$NATIVE" -p "@loader_path/"
 
 echo "  Collected $(ls -1 "$NATIVE"/*.dylib 2>/dev/null | wc -l | tr -d ' ') dylibs"
 echo ""
