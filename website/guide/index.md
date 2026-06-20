@@ -4,7 +4,7 @@
 
 ### Windows
 
-**npm (recommended)** — no admin, no Windows Defender issues, works everywhere:
+**npm (recommended)** — no admin, no Windows Defender issues, works everywhere. After installing, type `santui` to launch:
 
 ```bash
 npm install -g santui
@@ -21,7 +21,7 @@ This extracts to `%LOCALAPPDATA%\santui\current` and adds to your PATH.
 
 ### macOS / Linux
 
-**npm** (recommended) — works everywhere with no extra setup:
+**npm** (recommended) — works everywhere with no extra setup. After installing, type `santui` to launch:
 
 ```bash
 npm install -g santui

@@ -31,7 +31,7 @@ Plugins are **standalone binaries** distributed through the Plugin Registry. Ope
 
 ### Windows
 
-**npm** (recommended) — no admin, no Windows Defender issues, works everywhere:
+**npm** (recommended) — no admin, no Windows Defender issues, works everywhere. After installing, type `santui` to launch:
 
 ```bash
 npm install -g santui
@@ -46,7 +46,7 @@ irm https://santuiapp.vercel.app/install.ps1 | iex
 
 ### macOS / Linux
 
-**npm** (recommended) — works everywhere, no platform-specific setup:
+**npm** (recommended) — works everywhere, no platform-specific setup. After installing, type `santui` to launch:
 
 ```bash
 npm install -g santui
