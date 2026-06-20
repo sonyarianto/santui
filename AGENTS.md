@@ -22,13 +22,16 @@ Watch: `cargo watch -x "run -p santui"`
 ## Workspace
 
 ```
-santui-core/     — framework core: App, Plugin trait, event loop, palette
-santui-ipc/      — IPC protocol types + host (`IpcPluginHost`) plugin runner
-santui-auth/     — GitHub OAuth + auth handle/client
-santui-radio-streaming-player/    — radio plugin
-  └─ scraper/                     — scrape radio stations into DB
-santui/          — binary entry point
-website/         — VitePress docs site
+crates/
+├── core/          — framework: App, Plugin trait, event loop, palette
+├── ipc/           — IPC protocol types + host (`IpcPluginHost`) plugin runner
+├── auth/          — GitHub OAuth + auth handle/client
+├── registry/      — plugin registry: manifest fetch, install, config
+├── plugins/
+│   └── radio-streaming-player/   — radio plugin
+│       └── scraper/              — scrape radio stations into DB
+└── app/           — binary entry point (main.rs)
+website/           — VitePress docs site
 ```
 
 ## Key Conventions

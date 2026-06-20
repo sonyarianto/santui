@@ -4,7 +4,7 @@ version = "0.1.7"
 edition = "2021"
 
 [dependencies]
-santui-ipc = { path = "../santui-ipc", default-features = false }
+santui-ipc = { path = "../../ipc", default-features = false }
 libloading = "0.9"
 ureq = "3"
 serde = { version = "1", features = ["derive"] }

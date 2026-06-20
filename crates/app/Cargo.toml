@@ -1,0 +1,14 @@
+[package]
+name = "santui"
+version = "0.1.7"
+edition = "2021"
+
+[dependencies]
+santui-core = { path = "../core" }
+santui-ipc = { path = "../ipc" }
+santui-auth = { path = "../auth", optional = true }
+santui-registry = { path = "../registry" }
+
+[features]
+default = []
+auth = ["dep:santui-auth"]

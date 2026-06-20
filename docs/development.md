@@ -22,7 +22,11 @@ When building plugins, dev mode lets you test installation and native dependenci
 .\scripts\dev-setup.ps1 ; $env:SANTUI_DEV=1; cargo run -p santui
 ```
 
-### What dev-setup.ps1 does
+```bash
+./scripts/dev-setup.sh && SANTUI_DEV=1 cargo run -p santui
+```
+
+### What dev-setup does
 
 1. Builds the workspace (`cargo build --workspace`)
 2. Copies native assets from `native/` (e.g. `libmpv-2.dll`) into `target/debug/native/`
@@ -37,7 +41,51 @@ When `SANTUI_DEV=1` is set, the app:
 
 Native dependencies are synced from a `native/` folder adjacent to each plugin binary into `~/.santui/plugins/native/` on install and on every registry open.
 
+### Project structure
+
+```
+santui/
+├── crates/
+│   ├── core/           — framework: App, Plugin trait, event loop, palette
+│   ├── ipc/            — IPC protocol types + IpcPluginHost runner
+│   ├── auth/           — GitHub OAuth client
+│   ├── registry/       — plugin registry: manifest fetch, install, config
+│   ├── plugins/
+│   │   └── radio-streaming-player/   — radio player plugin
+│   │       └── scraper/              — radio station scraper
+│   └── app/            — binary entry point (main.rs)
+├── website/            — VitePress docs site
+├── docs/               — architecture & dev docs
+├── scripts/            — dev setup & release packaging
+├── native/             — runtime native dependencies (mpv DLLs, station DB)
+└── Cargo.toml          — workspace root
+```
+
 ## Release packaging
+
+Platform-specific scripts in `scripts/`:
+
+| Script | Platform | Format |
+|--------|----------|-------|
+| `package-release.ps1` | Windows | `.zip` |
+| `package-release-macos.sh` | macOS | `.tar.gz` |
+
+Run from the repo root:
+
+```bash
+# macOS (requires Homebrew + mpv installed)
+./scripts/package-release-macos.sh [version]
+
+# Windows (requires PowerShell)
+./scripts/package-release.ps1 [version]
+```
+
+The macOS script recursively bundles all transitive Homebrew dylib
+ dependencies (`libmpv.2.dylib`, `libavcodec`, etc.) into `native/`
+ and rewrites their `LC_LOAD_DYLIB` paths to `@loader_path`-relative
+ via `install_name_tool`, making the archive relocatable to machines
+ without Homebrew.
+
 
 Platform-specific scripts in `scripts/`:
 

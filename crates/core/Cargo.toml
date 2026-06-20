@@ -6,4 +6,4 @@ edition = "2021"
 [dependencies]
 ratatui = "0.30"
 crossterm = "0.29"
-santui-registry = { path = "../santui-registry" }
+santui-registry = { path = "../registry" }
