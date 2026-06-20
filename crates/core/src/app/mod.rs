@@ -288,6 +288,129 @@ mod tests {
     fn dim_color_indexed_passes_through() {
         assert_eq!(dim_color(Color::Indexed(7), 0.45), Color::Indexed(7));
     }
+
+    // ---- dim_color edge cases ----
+
+    #[test]
+    fn dim_color_factor_above_one_saturates_at_255() {
+        // Rust's f64→u8 cast saturates: 400.0 as u8 = 255, not 144.
+        let result = dim_color(Color::Rgb(200, 100, 50), 2.0);
+        // 200*2=400 → 255, 100*2=200, 50*2=100
+        assert_eq!(result, Color::Rgb(255, 200, 100));
+    }
+
+    #[test]
+    fn dim_color_negative_factor_saturates_to_zero() {
+        // Rust defines f64→u8 cast as saturating at 0.
+        assert_eq!(
+            dim_color(Color::Rgb(100, 150, 200), -0.5),
+            Color::Rgb(0, 0, 0)
+        );
+    }
+
+    #[test]
+    fn dim_color_tiny_factor_is_effectively_zero() {
+        // 1e-12 * 255 < 1, so all channels truncate to 0.
+        assert_eq!(
+            dim_color(Color::Rgb(200, 150, 100), 1e-12),
+            Color::Rgb(0, 0, 0)
+        );
+    }
+
+    #[test]
+    fn dim_color_nan_factor_does_not_panic() {
+        // f64::NAN * integer → NaN, (NaN) as u8 = 0 (saturating cast).
+        let result = dim_color(Color::Rgb(100, 150, 200), f64::NAN);
+        assert_eq!(result, Color::Rgb(0, 0, 0));
+    }
+
+    #[test]
+    fn dim_color_inf_factor_does_not_panic() {
+        // Rust's f64→u8 cast: ∞ saturates to 255, not 0.
+        let result = dim_color(Color::Rgb(100, 150, 200), f64::INFINITY);
+        assert_eq!(result, Color::Rgb(255, 255, 255));
+    }
+
+    #[test]
+    fn dim_color_indexed_196_passes_through() {
+        // Indexed 196 = bright red in 256-color ANSI palette
+        assert_eq!(dim_color(Color::Indexed(196), 0.45), Color::Indexed(196));
+    }
+
+    // ---- parse_hex tests ----
+
+    #[test]
+    fn parse_hex_valid_with_hash() {
+        assert_eq!(parse_hex("#ff8800"), Some(Color::Rgb(255, 136, 0)));
+    }
+
+    #[test]
+    fn parse_hex_valid_without_hash() {
+        assert_eq!(parse_hex("ff8800"), Some(Color::Rgb(255, 136, 0)));
+    }
+
+    #[test]
+    fn parse_hex_all_zeros() {
+        assert_eq!(parse_hex("#000000"), Some(Color::Rgb(0, 0, 0)));
+    }
+
+    #[test]
+    fn parse_hex_all_fs() {
+        assert_eq!(parse_hex("#ffffff"), Some(Color::Rgb(255, 255, 255)));
+    }
+
+    #[test]
+    fn parse_hex_mixed_case() {
+        assert_eq!(parse_hex("#Ff8800"), Some(Color::Rgb(255, 136, 0)));
+    }
+
+    #[test]
+    fn parse_hex_uppercase() {
+        assert_eq!(parse_hex("#FF8800"), Some(Color::Rgb(255, 136, 0)));
+    }
+
+    #[test]
+    fn parse_hex_invalid_chars_returns_none() {
+        assert_eq!(parse_hex("#gggggg"), None);
+    }
+
+    #[test]
+    fn parse_hex_too_short_returns_none() {
+        assert_eq!(parse_hex("#fff"), None);
+    }
+
+    #[test]
+    fn parse_hex_too_long_returns_none() {
+        assert_eq!(parse_hex("#ff8800ff"), None);
+    }
+
+    #[test]
+    fn parse_hex_empty_string_returns_none() {
+        assert_eq!(parse_hex(""), None);
+    }
+
+    #[test]
+    fn parse_hex_just_hash_returns_none() {
+        assert_eq!(parse_hex("#"), None);
+    }
+
+    #[test]
+    fn parse_hex_double_hash_returns_some() {
+        // trim_start_matches('#') strips ALL leading #s, so "##ff8800" → "ff8800" (len 6) → valid!
+        assert_eq!(parse_hex("##ff8800"), Some(Color::Rgb(255, 136, 0)));
+    }
+
+    #[test]
+    fn parse_hex_hash_only_returns_none() {
+        // "##" → strips both #s → "" → len 0 ≠ 6
+        assert_eq!(parse_hex("##"), None);
+    }
+
+    #[test]
+    fn parse_hex_hash_in_middle_returns_none() {
+        // "ff88#00" — no leading # to strip, len 7 ≠ 6
+        assert_eq!(parse_hex("ff88#00"), None);
+    }
 }
 
 pub struct Santui {
