@@ -71,4 +71,24 @@ if (Test-Path $exe) {
     }
 }
 
+# ── Windows Defender exclusion ──
+Write-Host "  Configuring Windows Defender exclusion ..." -ForegroundColor Cyan
+$IsAdmin = [Security.Principal.WindowsPrincipal]::new(
+    [Security.Principal.WindowsIdentity]::GetCurrent()
+).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
+if ($IsAdmin) {
+    try {
+        Add-MpPreference -ExclusionPath $BinDir -ErrorAction Stop | Out-Null
+        Write-Host "    Added exclusion: $BinDir" -ForegroundColor Green
+    } catch {
+        Write-Host "    [!] Could not add Defender exclusion: $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-Host "    Run as Administrator next time for auto-exclusion."
+    }
+} else {
+    Write-Host "    Skipped (not running as Administrator)." -ForegroundColor Yellow
+    Write-Host "    If santui is blocked, run this as Admin:" -ForegroundColor Yellow
+    Write-Host "    Add-MpPreference -ExclusionPath \"$BinDir\"" -ForegroundColor Cyan
+}
+
 Write-Host "  Run santui from any terminal."
