@@ -54,10 +54,14 @@ impl IpcPluginHost {
                 text_muted: [140, 140, 140],
                 accent: [157, 124, 216],
                 highlight: [250, 178, 131],
+                logo: [255, 185, 0],
+                background: [20, 20, 20],
+                background_panel: [20, 20, 20],
+                background_overlay: [10, 10, 10],
                 border: [250, 178, 131],
                 success: [127, 216, 143],
                 error: [224, 108, 117],
-                background_panel: [20, 20, 20],
+                inverted_text: [20, 20, 20],
             },
             pending_request: None,
         }
@@ -83,10 +87,14 @@ fn theme_to_data(theme: &Theme) -> ThemeData {
         text_muted: color_to_rgb(&theme.text_muted),
         accent: color_to_rgb(&theme.accent),
         highlight: color_to_rgb(&theme.highlight),
+        logo: color_to_rgb(&theme.logo),
+        background: color_to_rgb(&theme.background),
+        background_panel: color_to_rgb(&theme.background_panel),
+        background_overlay: color_to_rgb(&theme.background_overlay),
         border: color_to_rgb(&theme.border),
         success: color_to_rgb(&theme.success),
         error: color_to_rgb(&theme.error),
-        background_panel: color_to_rgb(&theme.background_panel),
+        inverted_text: color_to_rgb(&theme.inverted_text),
     }
 }
 

@@ -2,16 +2,15 @@ use crossterm::event::{KeyCode, KeyEvent};
 
 impl super::Santui {
     pub(super) fn handle_key(&mut self, key: KeyEvent) {
-        // Need is_some + as_mut().unwrap() because palette must be
-        // available before Enter/Esc set self.palette = None.
         #[allow(clippy::unnecessary_unwrap)]
         if self.palette.is_some() {
             let cmds = self.plugin_manager.commands();
-            let filtered = self
-                .palette
-                .as_ref()
-                .unwrap()
-                .filtered_items(&self.dynamic_items, cmds);
+            let bi = &self.app_state.builtin_items;
+            let filtered =
+                self.palette
+                    .as_ref()
+                    .unwrap()
+                    .filtered_items(bi, &self.dynamic_items, cmds);
             let palette = self.palette.as_mut().unwrap();
 
             match key.code {
@@ -56,44 +55,51 @@ impl super::Santui {
                 KeyCode::Enter => {
                     if let Some(&idx) = filtered.get(palette.cursor) {
                         match idx {
-                            super::ItemIndex::Builtin(bi) => match super::CMD_ITEMS[bi].label {
-                                "Sign in with Google" => {
-                                    if let Some(ref auth) = self.ctx.auth {
-                                        if let Ok(user) = auth.sign_in("google") {
-                                            self.plugin_manager.on_user_update_all(Some(&user));
+                            super::ItemIndex::Builtin(bi) => {
+                                let id = self.app_state.builtin_items[bi].0;
+                                match id {
+                                    super::BuiltinId::SignInGoogle => {
+                                        if let Some(ref auth) = self.auth {
+                                            if let Ok(user) = auth.sign_in("google") {
+                                                self.plugin_manager.on_user_update_all(Some(&user));
+                                                self.event_bus
+                                                    .emit(crate::event::Event::UserUpdated);
+                                            }
+                                        }
+                                    }
+                                    super::BuiltinId::SignInGitHub => {
+                                        if let Some(ref auth) = self.auth {
+                                            if let Ok(user) = auth.sign_in("github") {
+                                                self.plugin_manager.on_user_update_all(Some(&user));
+                                                self.event_bus
+                                                    .emit(crate::event::Event::UserUpdated);
+                                            }
+                                        }
+                                    }
+                                    super::BuiltinId::SignOut => {
+                                        if let Some(ref auth) = self.auth {
+                                            auth.sign_out();
+                                            self.plugin_manager.on_user_update_all(None);
                                             self.event_bus.emit(crate::event::Event::UserUpdated);
                                         }
                                     }
-                                }
-                                "Sign in with GitHub" => {
-                                    if let Some(ref auth) = self.ctx.auth {
-                                        if let Ok(user) = auth.sign_in("github") {
-                                            self.plugin_manager.on_user_update_all(Some(&user));
-                                            self.event_bus.emit(crate::event::Event::UserUpdated);
-                                        }
+                                    super::BuiltinId::SwitchTheme => {
+                                        self.app_state.theme_picker_open = true;
+                                        let tm = &mut self.theme_manager;
+                                        tm.picker_query.clear();
+                                        tm.picker_cursor = tm.current_idx;
+                                        tm.picker_scroll = 0;
+                                        tm.picker_orig_idx = tm.current_idx;
+                                    }
+                                    super::BuiltinId::About => {
+                                        self.app_state.show_about = true;
+                                    }
+                                    super::BuiltinId::PluginRegistry => {
+                                        self.open_registry();
                                     }
                                 }
-                                "Sign out" => {
-                                    if let Some(ref auth) = self.ctx.auth {
-                                        auth.sign_out();
-                                        self.plugin_manager.on_user_update_all(None);
-                                        self.event_bus.emit(crate::event::Event::UserUpdated);
-                                    }
-                                }
-                                "Switch theme" => {
-                                    let tm = &mut self.theme_manager;
-                                    tm.picker_open = true;
-                                    tm.picker_query.clear();
-                                    tm.picker_cursor = tm.current_idx;
-                                    tm.picker_scroll = 0;
-                                    tm.picker_orig_idx = tm.current_idx;
-                                }
-                                "About" => self.show_about = true,
-                                "Plugin registry" => self.open_registry(),
-                                _ => {}
-                            },
+                            }
                             super::ItemIndex::PluginCmd(pci) => {
-                                // Dispatch to the plugin's registered palette command.
                                 let (plugin_idx, local_idx, _cmd) =
                                     self.plugin_manager.commands()[pci].clone();
                                 if plugin_idx < self.plugin_manager.len() {
@@ -103,10 +109,8 @@ impl super::Santui {
                                 }
                             }
                             super::ItemIndex::Dynamic(di) => {
-                                // Launch a registry-installed plugin via factory.
                                 if let Some((_cat, id, name)) = self.dynamic_items.get(di).cloned()
                                 {
-                                    // Re-use already-running instance if one exists.
                                     if let Some(existing) = self.plugin_manager.find_by_id(&id) {
                                         self.plugin_manager.set_active(Some(existing));
                                     } else if let Some(ref reg) = self.registry {
@@ -120,8 +124,8 @@ impl super::Santui {
                                             if let Some(ref factory) = self.plugin_factory {
                                                 let plugin = factory(&id, &name, &installed.path);
                                                 let mut ctx = crate::plugin::PluginContext {
-                                                    theme: self.theme.clone(),
-                                                    auth: self.ctx.auth.clone(),
+                                                    theme: self.app_state.theme.clone(),
+                                                    auth: self.auth.clone(),
                                                 };
                                                 if let Ok(idx) = self
                                                     .plugin_manager
@@ -145,8 +149,10 @@ impl super::Santui {
             if self.palette.is_some() {
                 let (_, term_h) = crossterm::terminal::size().unwrap_or((80, 24));
                 let cmds = self.plugin_manager.commands();
+                let bi = &self.app_state.builtin_items;
                 self.palette.as_mut().unwrap().ensure_cursor_visible(
                     term_h.saturating_sub(1),
+                    bi,
                     &self.dynamic_items,
                     cmds,
                 );
@@ -154,7 +160,7 @@ impl super::Santui {
             return;
         }
 
-        if self.theme_manager.picker_open {
+        if self.app_state.theme_picker_open {
             let mut filtered = self.theme_manager.filtered();
             match key.code {
                 KeyCode::Char(c)
@@ -164,7 +170,7 @@ impl super::Santui {
                             .contains(crossterm::event::KeyModifiers::CONTROL) =>
                 {
                     self.select_theme(self.theme_manager.picker_orig_idx);
-                    self.theme_manager.picker_open = false;
+                    self.app_state.theme_picker_open = false;
                 }
                 KeyCode::Char(_) if !key.modifiers.is_empty() => {}
                 KeyCode::Char(c) => {
@@ -212,15 +218,15 @@ impl super::Santui {
                     if let Some(&idx) = filtered.get(self.theme_manager.picker_cursor) {
                         self.select_theme(idx);
                     }
-                    self.theme_manager.picker_open = false;
+                    self.app_state.theme_picker_open = false;
                 }
                 KeyCode::Esc => {
                     self.select_theme(self.theme_manager.picker_orig_idx);
-                    self.theme_manager.picker_open = false;
+                    self.app_state.theme_picker_open = false;
                 }
                 _ => {}
             }
-            if self.theme_manager.picker_open {
+            if self.app_state.theme_picker_open {
                 let (_, term_h) = crossterm::terminal::size().unwrap_or((80, 24));
                 self.theme_manager
                     .ensure_cursor_visible(term_h.saturating_sub(1));
@@ -228,18 +234,18 @@ impl super::Santui {
             return;
         }
 
-        if self.show_about {
+        if self.app_state.show_about {
             if matches!(key.code, KeyCode::Esc) {
-                self.show_about = false;
+                self.app_state.show_about = false;
             }
             return;
         }
 
         // ---- Registry screen ----
-        if self.registry_screen.open {
+        if self.app_state.registry_open {
             match key.code {
                 KeyCode::Esc => {
-                    self.registry_screen.open = false;
+                    self.app_state.registry_open = false;
                 }
                 KeyCode::Down => {
                     if let Some(ref reg) = self.registry {
@@ -311,8 +317,8 @@ impl super::Santui {
 
         match self.plugin_manager.active() {
             None => match key.code {
-                KeyCode::Char('q') => self.running = false,
-                KeyCode::Char('?') => self.show_about = true,
+                KeyCode::Char('q') => self.app_state.running = false,
+                KeyCode::Char('?') => self.app_state.show_about = true,
                 _ => {}
             },
             Some(idx) => match key.code {
@@ -320,8 +326,8 @@ impl super::Santui {
                     self.plugin_manager.on_blur(idx);
                     self.plugin_manager.set_active(None);
                 }
-                KeyCode::Char('q') => self.running = false,
-                KeyCode::Char('?') => self.show_about = true,
+                KeyCode::Char('q') => self.app_state.running = false,
+                KeyCode::Char('?') => self.app_state.show_about = true,
                 _ => {
                     self.plugin_manager.handle_key(idx, key);
                 }

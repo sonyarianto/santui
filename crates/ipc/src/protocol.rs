@@ -6,10 +6,14 @@ pub struct ThemeData {
     pub text_muted: [u8; 3],
     pub accent: [u8; 3],
     pub highlight: [u8; 3],
+    pub logo: [u8; 3],
+    pub background: [u8; 3],
+    pub background_panel: [u8; 3],
+    pub background_overlay: [u8; 3],
     pub border: [u8; 3],
     pub success: [u8; 3],
     pub error: [u8; 3],
-    pub background_panel: [u8; 3],
+    pub inverted_text: [u8; 3],
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -124,10 +128,14 @@ mod tests {
             text_muted: [140, 140, 140],
             accent: [157, 124, 216],
             highlight: [250, 178, 131],
+            logo: [255, 185, 0],
+            background: [20, 20, 20],
+            background_panel: [20, 20, 20],
+            background_overlay: [10, 10, 10],
             border: [250, 178, 131],
             success: [127, 216, 143],
             error: [224, 108, 117],
-            background_panel: [20, 20, 20],
+            inverted_text: [20, 20, 20],
         };
         let json = serde_json::to_string(&data).unwrap();
         let decoded: ThemeData = serde_json::from_str(&json).unwrap();
@@ -164,10 +172,14 @@ mod tests {
             text_muted: [200; 3],
             accent: [100; 3],
             highlight: [150; 3],
+            logo: [180; 3],
+            background: [5; 3],
+            background_panel: [10; 3],
+            background_overlay: [2; 3],
             border: [150; 3],
             success: [0; 3],
             error: [255; 3],
-            background_panel: [10; 3],
+            inverted_text: [200; 3],
         };
         let area = Area { w: 120, h: 30 };
         let msg = HostMsg::Init {
@@ -192,10 +204,14 @@ mod tests {
             text_muted: [4, 5, 6],
             accent: [7, 8, 9],
             highlight: [10, 11, 12],
-            border: [13, 14, 15],
-            success: [16, 17, 18],
-            error: [19, 20, 21],
-            background_panel: [22, 23, 24],
+            logo: [13, 14, 15],
+            background: [16, 17, 18],
+            background_panel: [19, 20, 21],
+            background_overlay: [22, 23, 24],
+            border: [25, 26, 27],
+            success: [28, 29, 30],
+            error: [31, 32, 33],
+            inverted_text: [34, 35, 36],
         };
         let area = Area { w: 80, h: 24 };
         let msgs: Vec<HostMsg> = vec![

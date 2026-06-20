@@ -4,19 +4,15 @@ use ratatui::Frame;
 /// Manages theme selection, preview, and the theme-picker UI state.
 ///
 /// Owns the full theme list, the currently selected index, and all
-/// theme-picker interaction state (query, cursor, scroll).  The parent
-/// [`Santui`](super::Santui) keeps a cached `theme: Theme` that is synced
-/// via calls to [`ThemeManager::select`] and [`ThemeManager::preview`].
+/// theme-picker interaction state (query, cursor, scroll).  The active
+/// theme value itself lives in [`AppState`](super::app_state::AppState)
+/// and is kept in sync via [`ThemeManager::select`] and [`ThemeManager::preview`].
 #[derive(Debug)]
 pub(crate) struct ThemeManager {
     /// All known themes: `(display_name, Theme)`.
     pub(super) themes: Vec<(&'static str, Theme)>,
     /// Index into `themes` for the currently applied theme.
     pub(super) current_idx: usize,
-    /// The currently applied theme (same as `themes[current_idx].1`).
-    pub(super) current: Theme,
-    /// Whether the theme picker overlay is open.
-    pub(super) picker_open: bool,
     /// Search text typed into the theme picker.
     pub(super) picker_query: String,
     /// Flat-list cursor inside the theme picker.
@@ -32,12 +28,9 @@ impl ThemeManager {
     pub(super) fn new() -> Self {
         let themes = Theme::all();
         let current_idx = 1; // "Santui"
-        let current = themes[current_idx].1.clone();
         ThemeManager {
             themes,
             current_idx,
-            current,
-            picker_open: false,
             picker_query: String::new(),
             picker_cursor: 0,
             picker_scroll: 0,
@@ -45,19 +38,22 @@ impl ThemeManager {
         }
     }
 
-    /// Apply the theme at `idx` and return a reference to the new theme.
-    pub(super) fn select(&mut self, idx: usize) -> &Theme {
+    /// Return a reference to the currently active theme value stored in
+    /// the theme list.  This is kept separate from the one in `AppState`.
+    pub(super) fn current(&self) -> &Theme {
+        &self.themes[self.current_idx].1
+    }
+
+    /// Apply the theme at `idx` and return the new theme.
+    pub(super) fn select(&mut self, idx: usize) -> Theme {
         self.current_idx = idx;
-        self.current = self.themes[idx].1.clone();
-        &self.current
+        self.themes[idx].1.clone()
     }
 
     /// Preview a theme without permanently selecting it.
-    /// Returns a reference to the previewed theme.
-    pub(super) fn preview(&mut self, idx: usize) -> &Theme {
+    pub(super) fn preview(&mut self, idx: usize) -> Theme {
         self.current_idx = idx;
-        self.current = self.themes[idx].1.clone();
-        &self.current
+        self.themes[idx].1.clone()
     }
 
     /// Return the indices of themes matching the current picker query.
@@ -86,8 +82,14 @@ impl ThemeManager {
     }
 
     /// Render the theme-picker overlay.
-    pub(super) fn render_picker(&self, f: &mut Frame, content: ratatui::layout::Rect, tick: u64) {
-        let t = &self.current;
+    pub(super) fn render_picker(
+        &self,
+        f: &mut Frame,
+        content: ratatui::layout::Rect,
+        theme: &Theme,
+        tick: u64,
+    ) {
+        let t = theme;
         let filtered = self.filtered();
         let cursor = self.picker_cursor;
 

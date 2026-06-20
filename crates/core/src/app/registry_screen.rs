@@ -7,8 +7,6 @@ use ratatui::Frame;
 /// Holds the plugin-registry screen state and rendering logic.
 #[derive(Debug)]
 pub(crate) struct RegistryScreen {
-    /// Whether the registry overlay is open.
-    pub(super) open: bool,
     /// Flat-list cursor position.
     pub(super) cursor: usize,
     /// Scroll offset (in lines).
@@ -20,7 +18,6 @@ pub(crate) struct RegistryScreen {
 impl RegistryScreen {
     pub(super) fn new() -> Self {
         RegistryScreen {
-            open: false,
             cursor: 0,
             scroll: 0,
             status: String::new(),

@@ -134,26 +134,15 @@ impl PluginManager {
     /// Process a batch of events from the EventBus.
     pub fn process_events(&mut self, events: &[Event]) {
         for event in events {
-            match event {
-                Event::ThemeChanged => {
-                    // Theme is already applied by the caller (select_theme).
-                    // We just need to notify plugins via on_theme_change.
-                    // But we don't have the theme reference here, so this is
-                    // handled by the caller emitting the event AFTER setting the theme.
-                }
-                Event::UserUpdated => {
-                    // User change is already handled by the caller (sign in/out).
-                }
-                Event::PluginMessage {
-                    from,
-                    to,
-                    action,
-                    data,
-                } => {
-                    // Forward to the target plugin.
-                    if let Some(idx) = self.find_by_id(to) {
-                        self.plugins[idx].on_plugin_message(from, action, data);
-                    }
+            if let Event::PluginMessage {
+                from,
+                to,
+                action,
+                data,
+            } = event
+            {
+                if let Some(idx) = self.find_by_id(to) {
+                    self.plugins[idx].on_plugin_message(from, action, data);
                 }
             }
         }

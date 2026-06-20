@@ -3,194 +3,166 @@
 High-level plan for making Santui's architecture scalable, maintainable, and
 plugin-friendly as the project grows.
 
+**Status legend:** ✅ implemented · ❌ not yet started
+
 ---
 
-## Phase 1 — Quick Wins (low effort, high impact)
+## Phase 1 — Quick Wins (all done ✅)
 
-### 1.1 Dynamic Command Registry
+### 1.1 Dynamic Command Registry ✅
 
-**Problem:** `CMD_ITEMS` in `palette.rs` is hardcoded. Plugins can't register
+**Problem:** `CMD_ITEMS` in `palette.rs` was hardcoded. Plugins couldn't register
 their own commands dynamically.
 
-**Solution:**
-```
-Palette
-  ├── built-in commands (hardcoded)
-  └── plugin commands (registered at init via PluginContext)
-```
+**Solution (implemented):**
+- `PluginCmdItem` type added to `santui-core`
+- `commands()` method on `Plugin` trait returns `Vec<PluginCmdItem>`
+- `PaletteWidget` renders built-in + dynamic + plugin commands side by side
 
-Plugin trait gets a new method:
-```rust
-fn commands(&self) -> Vec<Command> {
-    vec![]  // default: none
-}
-```
+**Key files:** `plugin.rs` (trait), `palette_widget.rs` (rendering), `handle_key.rs` (dispatch)
 
-Where `Command { id, name, handler }` is a new shared type in `santui-core`.
+### 1.2 Simplify Plugin Trait with Default Implementations ✅
 
-**Impact:** Low effort (~2 files). High impact — plugins can add to Ctrl+P.
+**Problem:** Plugin trait had 10 methods. Every plugin had to implement all of
+them, even if most were no-ops.
 
-### 1.2 Simplify Plugin Trait with Default Implementations
-
-**Problem:** Plugin trait has 10 methods. Every plugin must implement all of
-them, even if most are no-ops.
-
-**Solution:**
+**Solution (implemented):**
 ```rust
 pub trait Plugin {
-    fn id(&self) -> &'static str;
-    fn name(&self) -> &'static str;
+    fn id(&self) -> &str;
+    fn name(&self) -> &str;
+    fn init(&mut self, ctx: &PluginContext) -> Result<(), Box<dyn Error>>;
 
     // All optional — default no-op implementations
-    fn init(&mut self, _ctx: &PluginContext) -> Result<(), String> { Ok(()) }
-    fn handle_key(&mut self, _key: KeyEvent) -> Result<PluginAction, String>
-        { Ok(PluginAction::None) }
-    fn render(&mut self, _area: Rect, _buf: &mut Buffer) -> Result<(), String>
-        { Ok(()) }
-    fn tick(&mut self) -> Result<PluginAction, String>
-        { Ok(PluginAction::None) }
+    fn handle_key(&mut self, _key: KeyEvent) -> bool { false }
+    fn render(&self, _f: &mut Frame, _area: Rect) {}
+    fn tick(&mut self) {}
     fn on_focus(&mut self) {}
     fn on_blur(&mut self) {}
     fn on_theme_change(&mut self, _theme: &Theme) {}
-    fn status_hints(&self) -> Vec<StatusHint> { vec![] }
-    fn commands(&self) -> Vec<Command> { vec![] }  // from 1.1
+    fn on_user_update(&mut self, _user: Option<&User>) {}
+    fn status_hints(&self) -> Vec<(String, String)> { vec![] }
+    fn commands(&self) -> Vec<PluginCmdItem> { vec![] }
+    fn handle_palette_command(&mut self, _index: usize) {}
+    fn on_plugin_message(&mut self, _from: &str, _action: &str, _data: &str) {}
 }
 ```
 
-**Impact:** Low effort. Plugin code halves in size. No breaking changes.
+**Key files:** `plugin.rs`
 
-### 1.3 Extract StatusBar from Santui
+### 1.3 Extract StatusBar from Santui ✅
 
-**Problem:** `Santui` struct handles status bar rendering inline.
+**Problem:** `Santui` struct handled status bar rendering inline.
 
-**Solution:** Move status bar into its own module/file (`crates/core/src/app/status_bar.rs`).
-`Santui` just calls `StatusBar::render(&self.status_bar, area, buf)`.
+**Solution (implemented):** `StatusBar` is now its own module (`crates/core/src/app/status_bar.rs`).
+`Santui::render()` creates a `StatusBar` value and calls `render()` on it.
 
-**Impact:** Trivial. Cleaner separation.
+**Key files:** `status_bar.rs`
 
 ---
 
-## Phase 2 — Structural Improvements (moderate effort)
+## Phase 2 — Structural Improvements (all done ✅)
 
-### 2.1 PluginManager — Extract Plugin Lifecycle from Santui
+### 2.1 PluginManager — Extract Plugin Lifecycle from Santui ✅
 
-**Problem:** `Santui` owns plugin list directly — loading, spawning, IPC host
-management is all inline.
+**Problem:** `Santui` owned the plugin list directly — loading, spawning, IPC host
+management was all inline.
 
-**Solution:**
+**Solution (implemented):**
 ```
 Santui
   └── PluginManager
         ├── Vec<Box<dyn Plugin>>
-        ├── load / unload / enable / disable
-        ├── IPC host lifecycle
-        └── plugin-to-plugin event bus
+        ├── active plugin dispatch
+        └── palette-command registry
 ```
 
 `Santui` delegates to `PluginManager`:
 ```rust
-self.plugin_manager.handle_key(key)?;
-self.plugin_manager.tick()?;
-self.plugin_manager.render(area, buf)?;
+self.plugin_manager.handle_key(idx, key);
+self.plugin_manager.render(idx, f, area);
+self.plugin_manager.tick_all();
 ```
 
-**Impact:** Moderate (~3 new files). `Santui` shrinks significantly. Plugin
-lifecycle becomes testable in isolation.
+**Key files:** `plugin_manager.rs`
 
-### 2.2 Event Bus — Plugin-to-Plugin Communication
+### 2.2 Event Bus — Plugin-to-Plugin Communication ✅
 
-**Problem:** Plugins can't talk to each other. No way for one plugin to
+**Problem:** Plugins couldn't talk to each other. No way for one plugin to
 trigger action in another.
 
-**Solution:**
-```rust
-pub struct EventBus {
-    subscribers: HashMap<EventId, Vec<Box<dyn Fn(&Event)>>>,
-}
+**Solution (implemented):** Simple `EventBus` with `emit()`/`drain()` queue.
+Main loop drains events once per frame and forwards to `PluginManager::process_events()`.
+Plugin-to-plugin messages are forwarded via `on_plugin_message()`.
 
-pub enum Event {
-    StationChanged(String),
-    ThemeSwitched(String),
-    AppQuit,
-    // ...
-}
-```
+**Key files:** `event.rs`, `plugin_manager.rs` (process_events)
 
-`PluginManager` owns `EventBus`. Plugins subscribe during `init()`:
-```rust
-fn init(&mut self, ctx: &PluginContext) -> Result<(), String> {
-    ctx.event_bus.subscribe("station-changed", |event| {
-        // react
-    });
-}
-```
+### 2.3 App State — Centralized State ✅
 
-**Impact:** Moderate. Enables powerful workflows (e.g. radio player →
-lyrics plugin).
+**Problem:** State was scattered across `Santui`, plugins, and palette. No
+single source of truth. Theme was duplicated in 3 places (`Santui.theme`,
+`ThemeManager.current`, `PluginContext.theme`).
 
-### 2.3 App State — Centralized State
-
-**Problem:** State is scattered across `Santui`, plugins, and palette. No
-single source of truth.
-
-**Solution:**
+**Solution (implemented):**
 ```rust
 pub struct AppState {
+    pub running: bool,
+    pub show_about: bool,
     pub theme: Theme,
-    pub screen: Screen,
-    pub palette_visible: bool,
-    pub status_message: Option<String>,
-    // ...
+    pub theme_picker_open: bool,
+    pub registry_open: bool,
 }
 ```
 
-Passed by reference to all subsystems instead of each holding its own copy.
+- `theme` is now single-sourced in `AppState`
+- `PluginContext` is created on-the-fly during `init()`, no longer stored on `Santui`
+- Starfield animation extracted to its own `Starfield` module
+- `RegistryScreen.open` and `ThemeManager.picker_open` moved to `AppState`
 
-**Impact:** Moderate. Reduces bugs from stale/mismatched state.
+**Key files:** `app_state.rs`, `starfield.rs`
 
 ---
 
-## Phase 3 — Advanced (high effort, high reward)
+## Phase 3 — Advanced (partially done ✅ / ❌)
 
-### 3.1 Async / Non-blocking IPC
+### 3.1 Async / Non-blocking IPC ✅
 
-**Problem:** Plugin IPC is synchronous — host sends message, plugin responds
-before anything else happens. Slow plugins block the UI.
+**Problem:** Plugin IPC was synchronous — host sent message, plugin responded
+before anything else happened. Slow plugins blocked the UI.
 
-**Solution (option A — simple):**
-```
-Host sends message → continues event loop
-Plugin responds asynchronously → render cached frame
-Plugin response queued → applied on next render
-```
-
-**Solution (option B — proper):**
+**Solution (implemented — option B):**
 ```
 Event loop runs on main thread
 IPC runs on separate thread with channel
 Plugin messages queued → processed on next tick
 ```
 
-**Impact:** High effort. But unlocks non-blocking plugins (e.g. network fetch).
+A background reader thread continuously reads plugin stdout. `tick()` sends the
+message and drains pending responses without blocking. A 5-second timeout on
+`send_recv()` prevents the main thread from hanging on a crashed plugin.
 
-### 3.2 Plugin Hot-Reload
+**Key files:** `host.rs` (`spawn` creates reader thread, `drain_responses`, `recv` with timeout)
+
+### 3.2 Plugin Hot-Reload ❌
 
 **Problem:** Plugin changes require full app restart.
 
-**Solution:**
+**Planned solution:**
 ```
 File watcher (notify crate) monitors ~/.santui/plugins/
 On change: graceful shutdown → dlopen or re-spawn → init
 ```
 
-**Impact:** High effort. Great DX for plugin developers.
+**Status:** Not yet started.
 
-### 3.3 Plugin SDK / Generator
+**Key files (future):** `plugin_manager.rs` (reload method)
+
+### 3.3 Plugin SDK / Generator ❌
 
 **Problem:** Writing a plugin requires understanding IPC protocol, Plugin trait,
 registry manifest, etc.
 
-**Solution:**
+**Planned solution:**
 ```
 cargo generate --git https://github.com/sonyarianto/santui-plugin-template
 ```
@@ -198,23 +170,22 @@ cargo generate --git https://github.com/sonyarianto/santui-plugin-template
 A `cargo generate` template that scaffolds a working plugin with:
 - `Cargo.toml` with `santui-ipc` dependency
 - `main.rs` with JSON stdin/stdout loop
-- `lib.rs` with plugin logic
 - Build script that packages manifest
 
-**Impact:** Medium effort. Lowers barrier to entry significantly.
+**Status:** Not yet started.
 
 ---
 
 ## Summary
 
-| Phase | Item | Effort | Priority |
-|---|---|---|---|
-| 1.1 | Dynamic Command Registry | 🟢 Low | 🔥 High |
-| 1.2 | Simplify Plugin Trait | 🟢 Low | 🔥 High |
-| 1.3 | Extract StatusBar | 🟢 Low | 🟡 Medium |
-| 2.1 | PluginManager | 🟡 Medium | 🔥 High |
-| 2.2 | Event Bus | 🟡 Medium | 🟡 Medium |
-| 2.3 | App State | 🟡 Medium | 🟡 Medium |
-| 3.1 | Async IPC | 🔴 High | 🔵 Low (for now) |
-| 3.2 | Hot-Reload | 🔴 High | 🔵 Low (for now) |
-| 3.3 | Plugin SDK | 🟡 Medium | 🟡 Medium |
+| Phase | Item | Effort | Priority | Status |
+|---|---|---|---|---|
+| 1.1 | Dynamic Command Registry | 🟢 Low | 🔥 High | ✅ |
+| 1.2 | Simplify Plugin Trait | 🟢 Low | 🔥 High | ✅ |
+| 1.3 | Extract StatusBar | 🟢 Low | 🟡 Medium | ✅ |
+| 2.1 | PluginManager | 🟡 Medium | 🔥 High | ✅ |
+| 2.2 | Event Bus | 🟡 Medium | 🟡 Medium | ✅ |
+| 2.3 | App State | 🟡 Medium | 🟡 Medium | ✅ |
+| 3.1 | Async IPC | 🔴 High | 🔵 Low | ✅ |
+| 3.2 | Hot-Reload | 🔴 High | 🔵 Low | ❌ |
+| 3.3 | Plugin SDK | 🟡 Medium | 🟡 Medium | ❌ |

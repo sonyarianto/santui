@@ -1,3 +1,4 @@
+mod app_state;
 mod handle_key;
 mod palette;
 mod palette_widget;
@@ -5,12 +6,13 @@ mod plugin_manager;
 mod registry;
 mod registry_screen;
 mod screens;
+mod starfield;
 mod status_bar;
 mod theme_manager;
 
+use crate::auth::AuthHandle;
 use crate::config::ConfigManager;
 use crate::plugin::{Plugin, PluginContext};
-use crate::theme::Theme;
 use crossterm::event::{Event, KeyEventKind};
 use crossterm::execute;
 use crossterm::terminal::{
@@ -22,70 +24,41 @@ use ratatui::style::Color;
 use ratatui::Frame;
 use ratatui::Terminal;
 use santui_registry::Registry as PluginRegistry;
+use std::sync::Arc;
 use std::time::Duration;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-const STAR_COUNT: usize = 88;
-const SHOOTING_LIFETIME: u64 = 50;
-const SHOOTING_COOLDOWN: u64 = 180;
-const COMET_LIFETIME: u64 = 100;
-const COMET_COOLDOWN: u64 = 500;
-pub(super) struct CmdItem {
-    pub(super) category: &'static str,
-    pub(super) label: &'static str,
+
+/// Identifier for a built-in palette command.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum BuiltinId {
+    SignInGoogle,
+    SignInGitHub,
+    SignOut,
+    PluginRegistry,
+    SwitchTheme,
+    About,
 }
 
-/// Index into either the built-in CMD_ITEMS, dynamic plugin items, or plugin-registered commands.
+/// Return the canonical list of built-in command definitions.
+/// Each entry is `(id, category, label)`.
+pub(super) fn all_builtins() -> Vec<(BuiltinId, &'static str, &'static str)> {
+    vec![
+        (BuiltinId::SignInGoogle, "Auth", "Sign in with Google"),
+        (BuiltinId::SignInGitHub, "Auth", "Sign in with GitHub"),
+        (BuiltinId::SignOut, "Auth", "Sign out"),
+        (BuiltinId::PluginRegistry, "System", "Plugin registry"),
+        (BuiltinId::SwitchTheme, "System", "Switch theme"),
+        (BuiltinId::About, "System", "About"),
+    ]
+}
+
+/// Index into either built-in, dynamic (registry), or plugin-registered items.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum ItemIndex {
     Builtin(usize),
     Dynamic(usize),
     PluginCmd(usize),
-}
-
-const CMD_ITEMS: &[CmdItem] = &[
-    CmdItem {
-        category: "Auth",
-        label: "Sign in with Google",
-    },
-    CmdItem {
-        category: "Auth",
-        label: "Sign in with GitHub",
-    },
-    CmdItem {
-        category: "Auth",
-        label: "Sign out",
-    },
-    CmdItem {
-        category: "System",
-        label: "Plugin registry",
-    },
-    CmdItem {
-        category: "System",
-        label: "Switch theme",
-    },
-    CmdItem {
-        category: "System",
-        label: "About",
-    },
-];
-
-struct Star {
-    x: u16,
-    y: u16,
-    phase: u16,
-    mag: u8,
-    freq: u16,
-    tint: u8,
-}
-
-struct ShootingStar {
-    x: f64,
-    y: f64,
-    dx: f64,
-    dy: f64,
-    age: u64,
-    kind: u8,
 }
 
 const PAD_L: u16 = 2;
@@ -500,27 +473,27 @@ pub struct Santui {
     pub(super) plugin_manager: plugin_manager::PluginManager,
     /// In-app event bus for decoupled communication.
     pub(super) event_bus: crate::event::EventBus,
-    ctx: PluginContext,
+    /// Authentication handle (set by main.rs before run()).
+    pub(super) auth: Option<Arc<dyn AuthHandle>>,
+    /// Plugin registry (for fetching/installing plugins from GitHub).
     registry: Option<PluginRegistry>,
-    theme: Theme,
+    /// Centralized application state.
+    pub(super) app_state: app_state::AppState,
     /// Manages theme selection, preview, and theme-picker UI state.
     pub(super) theme_manager: theme_manager::ThemeManager,
+    /// Command palette overlay state (None = closed).
     palette: Option<palette_widget::PaletteWidget>,
     /// Registry screen state.
     pub(super) registry_screen: registry_screen::RegistryScreen,
     /// Hot-reloadable configuration manager.
     pub(super) config_manager: crate::config::ConfigManager,
-    show_about: bool,
     /// Dynamic palette items from enabled registry plugins: (category, plugin_id, name).
     pub(super) dynamic_items: Vec<(String, String, String)>,
     /// Factory to create a Box<dyn Plugin> from (id, name, binary_path).
     /// Set by main.rs before run().
     pub(super) plugin_factory: Option<crate::plugin::PluginFactory>,
-    running: bool,
-    tick: u64,
-    stars: Vec<Star>,
-    shooting: Option<ShootingStar>,
-    shooting_cooldown: u64,
+    /// Starfield background animation.
+    pub(super) starfield: starfield::Starfield,
 }
 
 impl Default for Santui {
@@ -532,56 +505,20 @@ impl Default for Santui {
 impl Santui {
     pub fn new() -> Self {
         let theme_manager = theme_manager::ThemeManager::new();
-        let theme = theme_manager.current.clone();
+        let theme = theme_manager.current().clone();
         Santui {
             plugin_manager: plugin_manager::PluginManager::new(),
             event_bus: crate::event::EventBus::new(),
-            ctx: PluginContext::new(),
+            auth: None,
             registry: None,
-            theme,
+            app_state: app_state::AppState::new(theme),
             theme_manager,
             palette: None,
             registry_screen: registry_screen::RegistryScreen::new(),
             config_manager: ConfigManager::new(std::path::PathBuf::new()),
-            show_about: false,
             dynamic_items: Vec::new(),
             plugin_factory: None,
-            running: true,
-            tick: 0,
-            stars: {
-                let mut s = Vec::with_capacity(STAR_COUNT);
-                let mut h = 0x9e3779b97f4a7c15u64;
-                for _ in 0..STAR_COUNT {
-                    h = h
-                        .wrapping_mul(0x5851f42d4c957f2d)
-                        .wrapping_add(0x14057b7ef767814f);
-                    let a = h >> 32;
-                    let b = h >> 16;
-                    let c = h;
-                    s.push(Star {
-                        x: (a % 1009) as u16,
-                        y: (b % 1009) as u16,
-                        phase: (c % 628) as u16,
-                        mag: {
-                            let m = ((c >> 8) & 0xff) as u8;
-                            if m < 100 {
-                                0
-                            } else if m < 200 {
-                                1
-                            } else if m < 240 {
-                                2
-                            } else {
-                                3
-                            }
-                        },
-                        freq: (4 + ((c >> 12) & 0x3f)) as u16,
-                        tint: (c >> 20 & 0xff) as u8,
-                    });
-                }
-                s
-            },
-            shooting: None,
-            shooting_cooldown: 0,
+            starfield: starfield::Starfield::new(),
         }
     }
 
@@ -610,69 +547,8 @@ impl Santui {
         }
     }
 
-    fn update_stars(&mut self) {
-        let n = (self.tick ^ 0xdeadbeef)
-            .wrapping_mul(1103515245)
-            .wrapping_add(12345);
-        let r = n >> 16;
-        self.shooting_cooldown = self.shooting_cooldown.saturating_sub(1);
-        let kind = if (r & 0x80) == 0 { 0 } else { 1 };
-        if self.shooting.is_none() && self.shooting_cooldown == 0 && (r & 0x3f) < 6 {
-            let (speed, max_extra) = if kind == 0 { (1.0, 1.2) } else { (0.2, 0.4) };
-            let side = r & 3;
-            let (x, y, dx, dy) = match side {
-                0 => (
-                    0.0,
-                    (r >> 2 & 0x3ff) as f64 / 1024.0,
-                    speed + ((r >> 12 & 0x7f) as f64 / 256.0) * max_extra,
-                    speed * 0.6 + ((r >> 19 & 0x7f) as f64 / 256.0) * max_extra,
-                ),
-                1 => (
-                    (r >> 2 & 0x3ff) as f64 / 1024.0,
-                    0.0,
-                    speed * 0.5 + ((r >> 12 & 0x7f) as f64 / 256.0) * max_extra,
-                    speed + ((r >> 19 & 0x7f) as f64 / 256.0) * max_extra,
-                ),
-                _ => (
-                    1.0,
-                    (r >> 2 & 0x3ff) as f64 / 1024.0,
-                    -speed - ((r >> 12 & 0x7f) as f64 / 256.0) * max_extra,
-                    speed * 0.6 + ((r >> 19 & 0x7f) as f64 / 256.0) * max_extra,
-                ),
-            };
-            self.shooting = Some(ShootingStar {
-                x,
-                y,
-                dx,
-                dy,
-                age: 0,
-                kind,
-            });
-        }
-        if let Some(ref mut s) = self.shooting {
-            let speed = if s.kind == 0 { 100.0 } else { 180.0 };
-            s.x += s.dx / speed;
-            s.y += s.dy / speed;
-            s.age += 1;
-        }
-        let shooting_expired = self.shooting.as_ref().is_some_and(|s| {
-            let max_age = if s.kind == 0 {
-                SHOOTING_LIFETIME
-            } else {
-                COMET_LIFETIME
-            };
-            s.age > max_age || s.x < -0.3 || s.x > 1.3 || s.y > 1.3
-        });
-        if shooting_expired {
-            let kind = self.shooting.as_ref().map(|s| s.kind).unwrap_or(0);
-            let cooldown = if kind == 0 {
-                SHOOTING_COOLDOWN
-            } else {
-                COMET_COOLDOWN
-            };
-            self.shooting = None;
-            self.shooting_cooldown = cooldown + (r & 0xff);
-        }
+    pub fn set_auth(&mut self, auth: Arc<dyn AuthHandle>) {
+        self.auth = Some(auth);
     }
 
     /// Set the config directory and load (or create) `config.toml`.
@@ -701,7 +577,7 @@ impl Santui {
 
         // Apply custom color overrides.
         if let Some(ref custom) = cfg.custom_theme {
-            let mut t = self.theme.clone();
+            let mut t = self.app_state.theme.clone();
             if let Some(ref v) = custom.accent {
                 if let Some(c) = parse_hex(v) {
                     t.accent = c;
@@ -762,9 +638,9 @@ impl Santui {
                     t.inverted_text = c;
                 }
             }
-            self.theme = t;
-            self.ctx.theme = self.theme.clone();
-            self.plugin_manager.on_theme_change_all(&self.theme);
+            self.app_state.theme = t;
+            self.plugin_manager
+                .on_theme_change_all(&self.app_state.theme);
             self.event_bus.emit(crate::event::Event::ThemeChanged);
         }
 
@@ -788,12 +664,15 @@ impl Santui {
         let mut terminal = Terminal::new(backend)?;
         terminal.clear()?;
 
-        self.ctx.theme = self.theme_manager.current.clone();
-        self.plugin_manager.init_all(&mut self.ctx)?;
+        let mut ctx = PluginContext {
+            theme: self.app_state.theme.clone(),
+            auth: self.auth.clone(),
+        };
+        self.plugin_manager.init_all(&mut ctx)?;
 
         let tick_rate = Duration::from_millis(100);
 
-        while self.running {
+        while self.app_state.running {
             self.plugin_manager.tick_all();
 
             // Poll for config changes (hot-reload).
@@ -806,8 +685,8 @@ impl Santui {
             let events = self.event_bus.drain();
             self.plugin_manager.process_events(&events);
 
-            self.tick = self.tick.wrapping_add(1);
-            self.update_stars();
+            self.starfield.tick = self.starfield.tick.wrapping_add(1);
+            self.starfield.update();
 
             terminal.draw(|f| self.render(f))?;
 
@@ -837,7 +716,7 @@ impl Santui {
 
         match self.plugin_manager.active() {
             None => {
-                if self.show_about {
+                if self.app_state.show_about {
                     self.render_about(f, chunks[0]);
                 } else {
                     self.render_splash(f, chunks[0]);
@@ -854,17 +733,17 @@ impl Santui {
             .map(|idx| self.plugin_manager.status_hints(idx))
             .unwrap_or_default();
         status_bar::StatusBar {
-            theme: &self.theme,
+            theme: &self.app_state.theme,
             palette_open: self.palette.is_some(),
-            theme_picker_open: self.theme_manager.picker_open,
-            about_open: self.show_about,
+            theme_picker_open: self.app_state.theme_picker_open,
+            about_open: self.app_state.show_about,
             plugin_active: self.plugin_manager.active().is_some(),
             active_plugin_hints: &hints,
         }
         .render(f, chunks[1]);
 
-        if self.palette.is_some() || self.theme_manager.picker_open {
-            let dim_bg = self.theme.background_overlay;
+        if self.palette.is_some() || self.app_state.theme_picker_open {
+            let dim_bg = self.app_state.theme.background_overlay;
             let buf = f.buffer_mut();
             // Scale both foreground AND background brightness by 45%.
             // For cells with an explicit background (e.g. the gold
@@ -895,20 +774,26 @@ impl Santui {
             pal.render(
                 f,
                 chunks[0],
-                &self.theme,
-                self.tick,
+                &self.app_state.theme,
+                self.starfield.tick,
+                &self.app_state.builtin_items,
                 &self.dynamic_items,
                 cmds,
             );
         }
 
-        if self.theme_manager.picker_open {
-            self.theme_manager.render_picker(f, chunks[0], self.tick);
+        if self.app_state.theme_picker_open {
+            self.theme_manager.render_picker(
+                f,
+                chunks[0],
+                &self.app_state.theme,
+                self.starfield.tick,
+            );
         }
 
-        if self.registry_screen.open {
+        if self.app_state.registry_open {
             self.registry_screen
-                .render(f, chunks[0], &self.theme, &self.registry);
+                .render(f, chunks[0], &self.app_state.theme, &self.registry);
         }
     }
 }

@@ -10,7 +10,7 @@ impl super::Santui {
             return;
         }
         let buf = f.buffer_mut();
-        for star in &self.stars {
+        for star in &self.starfield.stars {
             let sx = area.x
                 + (star.x as u32 * area.width as u32 / 1009)
                     .min(area.width.saturating_sub(1) as u32) as u16;
@@ -18,6 +18,7 @@ impl super::Santui {
                 + (star.y as u32 * area.height as u32 / 1009)
                     .min(area.height.saturating_sub(1) as u32) as u16;
             let cycle = self
+                .starfield
                 .tick
                 .wrapping_mul(star.freq as u64)
                 .wrapping_add(star.phase as u64)
@@ -62,7 +63,7 @@ impl super::Santui {
             cell.set_char(ch);
             cell.set_bg(Color::Reset);
         }
-        if let Some(ref s) = self.shooting {
+        if let Some(ref s) = self.starfield.shooting {
             let is_comet = s.kind == 1;
             let max_age = if is_comet { 100u64 } else { 50 };
             let life_pct = (s.age as f64 / max_age as f64).min(1.0);
@@ -149,7 +150,7 @@ impl super::Santui {
 
     pub(super) fn render_splash(&self, f: &mut Frame, area: Rect) {
         self.render_starfield(f, area);
-        let t = &self.theme;
+        let t = &self.app_state.theme;
         let ver = super::VERSION;
 
         let logo: Vec<Line> = [
@@ -193,7 +194,7 @@ impl super::Santui {
 
     pub(super) fn render_about(&self, f: &mut Frame, area: Rect) {
         self.render_starfield(f, area);
-        let t = &self.theme;
+        let t = &self.app_state.theme;
         let ver = super::VERSION;
 
         let text: Vec<Line> = [

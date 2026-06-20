@@ -33,14 +33,15 @@ impl PaletteWidget {
     /// built-in, dynamic (registry), and plugin-command categories.
     pub(super) fn filtered_items(
         &self,
+        builtin_items: &[(super::BuiltinId, String, String)],
         dynamic_items: &[(String, String, String)],
         cmds: &[(usize, usize, PluginCmdItem)],
     ) -> Vec<super::ItemIndex> {
         let q = self.query.to_lowercase();
         let mut results = Vec::new();
         // Built-in items
-        for (i, item) in super::CMD_ITEMS.iter().enumerate() {
-            if self.query.is_empty() || item.label.to_lowercase().contains(&q) {
+        for (i, (_id, _cat, label)) in builtin_items.iter().enumerate() {
+            if self.query.is_empty() || label.to_lowercase().contains(&q) {
                 results.push(super::ItemIndex::Builtin(i));
             }
         }
@@ -63,10 +64,11 @@ impl PaletteWidget {
     pub(super) fn ensure_cursor_visible(
         &mut self,
         content_h: u16,
+        builtin_items: &[(super::BuiltinId, String, String)],
         dynamic_items: &[(String, String, String)],
         cmds: &[(usize, usize, PluginCmdItem)],
     ) {
-        let filtered = self.filtered_items(dynamic_items, cmds);
+        let filtered = self.filtered_items(builtin_items, dynamic_items, cmds);
         let no_results = !self.query.is_empty() && filtered.is_empty();
         let mut line: u16 = 0;
         if no_results {
@@ -76,11 +78,11 @@ impl PaletteWidget {
         let mut first_cat = true;
         for (flat, &idx) in filtered.iter().enumerate() {
             let c = match idx {
-                super::ItemIndex::Builtin(i) => super::CMD_ITEMS[i].category,
+                super::ItemIndex::Builtin(i) => &builtin_items[i].1,
                 super::ItemIndex::Dynamic(i) => &dynamic_items[i].0,
                 super::ItemIndex::PluginCmd(i) => &cmds[i].2.category,
             };
-            if c != cat {
+            if *c != cat {
                 cat = c.to_string();
                 if !first_cat {
                     line += 1;
@@ -102,23 +104,25 @@ impl PaletteWidget {
     }
 
     /// Render the command-palette overlay.
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn render(
         &self,
         f: &mut Frame,
         content: Rect,
         theme: &Theme,
         tick: u64,
+        builtin_items: &[(super::BuiltinId, String, String)],
         dynamic_items: &[(String, String, String)],
         cmds: &[(usize, usize, PluginCmdItem)],
     ) {
-        let filtered = self.filtered_items(dynamic_items, cmds);
+        let filtered = self.filtered_items(builtin_items, dynamic_items, cmds);
 
         let mut current_cat = String::new();
         let mut cat_items: Vec<super::ItemIndex> = Vec::new();
         let mut groups: Vec<(String, Vec<super::ItemIndex>)> = Vec::new();
         for &idx in &filtered {
             let cat = match idx {
-                super::ItemIndex::Builtin(i) => super::CMD_ITEMS[i].category.to_string(),
+                super::ItemIndex::Builtin(i) => builtin_items[i].1.clone(),
                 super::ItemIndex::Dynamic(i) => dynamic_items[i].0.clone(),
                 super::ItemIndex::PluginCmd(i) => cmds[i].2.category.clone(),
             };
@@ -159,7 +163,7 @@ impl PaletteWidget {
             for &idx in items {
                 let sel = flat_idx == self.cursor;
                 let label = match idx {
-                    super::ItemIndex::Builtin(i) => super::CMD_ITEMS[i].label.to_string(),
+                    super::ItemIndex::Builtin(i) => builtin_items[i].2.clone(),
                     super::ItemIndex::Dynamic(i) => dynamic_items[i].2.clone(),
                     super::ItemIndex::PluginCmd(i) => cmds[i].2.label.clone(),
                 };
@@ -265,25 +269,35 @@ impl PaletteWidget {
 #[cfg(test)]
 mod tests {
     use super::PaletteWidget;
+    use crate::app::{all_builtins, BuiltinId, ItemIndex};
+
+    fn builtin_fixture() -> Vec<(BuiltinId, String, String)> {
+        all_builtins()
+            .into_iter()
+            .map(|(id, cat, label)| (id, cat.to_string(), label.to_string()))
+            .collect()
+    }
 
     #[test]
     fn filtered_items_empty_query_returns_all() {
         let pal = PaletteWidget::new();
-        let items = pal.filtered_items(&[], &[]);
-        assert_eq!(items.len(), super::super::CMD_ITEMS.len());
+        let bi = builtin_fixture();
+        let items = pal.filtered_items(&bi, &[], &[]);
+        assert_eq!(items.len(), bi.len());
     }
 
     #[test]
     fn filtered_items_matches_label() {
+        let bi = builtin_fixture();
         let pal = PaletteWidget {
             query: "theme".into(),
             cursor: 0,
             scroll: 0,
         };
-        let items = pal.filtered_items(&[], &[]);
+        let items = pal.filtered_items(&bi, &[], &[]);
         assert_eq!(items.len(), 1);
-        if let super::super::ItemIndex::Builtin(idx) = items[0] {
-            assert_eq!(super::super::CMD_ITEMS[idx].label, "Switch theme");
+        if let ItemIndex::Builtin(idx) = items[0] {
+            assert_eq!(bi[idx].2, "Switch theme");
         } else {
             panic!("expected Builtin item");
         }
@@ -291,23 +305,25 @@ mod tests {
 
     #[test]
     fn filtered_items_matches_case_insensitive() {
+        let bi = builtin_fixture();
         let pal = PaletteWidget {
             query: "THEME".into(),
             cursor: 0,
             scroll: 0,
         };
-        let items = pal.filtered_items(&[], &[]);
+        let items = pal.filtered_items(&bi, &[], &[]);
         assert_eq!(items.len(), 1);
     }
 
     #[test]
     fn filtered_items_no_match() {
+        let bi = builtin_fixture();
         let pal = PaletteWidget {
             query: "xyznonexistent".into(),
             cursor: 0,
             scroll: 0,
         };
-        let items = pal.filtered_items(&[], &[]);
+        let items = pal.filtered_items(&bi, &[], &[]);
         assert!(items.is_empty());
     }
 }

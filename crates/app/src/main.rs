@@ -29,7 +29,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let config = santui_auth::AuthConfig::google(client_id, client_secret);
             let auth: std::sync::Arc<dyn santui_core::AuthHandle> =
                 std::sync::Arc::new(AuthClient::new(config));
-            app.ctx.auth = Some(auth);
+            app.set_auth(auth);
         }
     }
 

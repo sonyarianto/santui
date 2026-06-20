@@ -27,8 +27,8 @@ impl Santui {
     /// If `SANTUI_DEV=1` env is set, loads a local manifest from `SANTUI_DEV_MANIFEST`
     /// (defaults to `plugins.json` in cwd) and enables dev mode (local file copy).
     pub(super) fn open_registry(&mut self) {
+        self.app_state.registry_open = true;
         let rs = &mut self.registry_screen;
-        rs.open = true;
         rs.status = "Fetching plugins…".to_string();
         rs.cursor = 0;
         rs.scroll = 0;
