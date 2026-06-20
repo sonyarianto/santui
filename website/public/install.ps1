@@ -41,9 +41,15 @@ New-Item -ItemType Directory -Path $BinDir -Force | Out-Null
 Expand-Archive -Path $Tmp -DestinationPath $BinDir -Force
 Remove-Item $Tmp -Force
 
-# ── double-unblock: catch any MOTW that Expand-Archive might re-apply ──
+# ── force unblock: remove Zone.Identifier stream directly ──
 Write-Host "  Unblocking installed binary ..."
-Get-ChildItem -LiteralPath $BinDir -Recurse -File | Unblock-File -ErrorAction SilentlyContinue
+$exe = Join-Path $BinDir "santui.exe"
+Remove-Item -Path $exe -Stream Zone.Identifier -ErrorAction SilentlyContinue
+
+# Also remove inherited MOTW from any sibling files
+Get-ChildItem -LiteralPath $BinDir -Recurse -File | ForEach-Object {
+    Remove-Item -Path $_.FullName -Stream Zone.Identifier -ErrorAction SilentlyContinue
+}
 
 # ── PATH ──
 $UserPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
@@ -55,5 +61,14 @@ if ($UserPath -notlike "*$BinDir*") {
     $env:PATH = "$env:PATH;$BinDir"
 }
 
-Write-Host "[OK] Installed to $BinDir" -ForegroundColor Green
+# ── verify file exists and has reasonable size ──
+if (Test-Path $exe) {
+    $size = (Get-Item $exe).Length
+    if ($size -gt 1mb) {
+        Write-Host "[OK] santui v0.1.8 ($([math]::Round($size / 1mb, 1)) MB)" -ForegroundColor Green
+    } else {
+        Write-Host "  [!] santui.exe seems too small ($size bytes)" -ForegroundColor Yellow
+    }
+}
+
 Write-Host "  Run santui from any terminal."
