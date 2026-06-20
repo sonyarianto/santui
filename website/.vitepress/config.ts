@@ -26,6 +26,7 @@ export default defineConfig({
             { text: 'Getting Started', link: '/guide/' },
             { text: 'Themes', link: '/guide/themes' },
             { text: 'Configuration', link: '/guide/configuration' },
+            { text: 'Plugin Development', link: '/guide/plugins' },
           ],
         },
       ],
