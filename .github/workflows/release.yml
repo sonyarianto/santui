@@ -75,50 +75,20 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          mkdir staging\native -Force
+          mkdir staging -Force
           Copy-Item "target\release\santui.exe" staging\
-          Copy-Item "target\release\santui-radio-streaming-player.exe" staging\
-          Copy-Item "native\libmpv-2.dll" "staging\native\" -ErrorAction SilentlyContinue
-          if (-not (Test-Path "staging\native\libmpv-2.dll")) {
-            Write-Host "Downloading mpv DLL..."
-            $tmp = "$env:TEMP\mpv.7z"
-            Invoke-WebRequest -Uri "${{ matrix.mpv_url }}" -OutFile $tmp -UseBasicParsing
-            7z x $tmp -o"staging\native\" "*.dll" -y | Out-Null
-            Remove-Item $tmp -Force
-          }
-          if (-not (Test-Path "staging\native\libmpv-2.dll")) {
-            Write-Error "Failed to obtain libmpv-2.dll — check native/ directory or mpv download URL"
-            exit 1
-          }
-          Copy-Item "native\radio_streaming_stations.db" "staging\native\"
 
       - name: Prepare macOS artifacts
         if: matrix.os == 'macos-latest'
         run: |
-          mkdir -p staging/native
+          mkdir -p staging
           cp target/release/santui staging/
-          cp target/release/santui-radio-streaming-player staging/
-          cp native/radio_streaming_stations.db staging/native/
-
-          # ── Bundle libmpv + all transitive dylib deps ──
-          HOMEBREW_PREFIX="$(brew --prefix)"
-          NATIVE="staging/native"
-          cp "$HOMEBREW_PREFIX/lib/libmpv.2.dylib" "$NATIVE/"
-          dylibbundler -of -b -x "$NATIVE/libmpv.2.dylib" -d "$NATIVE" -p "@loader_path/"
-
-          echo "=== Bundled dylibs ==="
-          ls -la "$NATIVE/"
-          echo ""
-          echo "=== libmpv.2.dylib resolved deps (post-fix) ==="
-          otool -L "$NATIVE/libmpv.2.dylib"
 
       - name: Prepare Linux artifacts
         if: matrix.os == 'ubuntu-latest'
         run: |
-          mkdir -p staging/native
+          mkdir -p staging
           cp target/release/santui staging/
-          cp target/release/santui-radio-streaming-player staging/
-          cp native/radio_streaming_stations.db staging/native/
 
       - name: Get version
         shell: bash
