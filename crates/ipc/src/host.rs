@@ -35,6 +35,8 @@ pub struct IpcPluginHost {
     current_area: Cell<Area>,
     theme_data: ThemeData,
     pending_request: Option<PluginRequest>,
+    /// Join handle for the background reader thread, joined on drop.
+    reader_thread: Option<thread::JoinHandle<()>>,
 }
 
 impl IpcPluginHost {
@@ -65,6 +67,7 @@ impl IpcPluginHost {
                 inverted_text: [20, 20, 20],
             },
             pending_request: None,
+            reader_thread: None,
         }
     }
 
@@ -165,36 +168,46 @@ impl IpcPluginHost {
         }
     }
 
-    /// Kill the plugin process and drop the response channel.
-    /// Used when the plugin times out or crashes.
+    /// Kill the plugin process, drop the response channel, and join the
+    /// background reader thread so no thread leaks on hot-reload.
     fn kill(&mut self) {
         if let Some(mut child) = self.process.take() {
             let _ = child.kill();
             let _ = child.wait();
         }
         self.response_rx = None;
+        if let Some(h) = self.reader_thread.take() {
+            let _ = h.join();
+        }
     }
 
     fn send_recv(&mut self, msg: &HostMsg) {
         self.send(msg);
         self.recv();
     }
+}
 
-    fn spawn_binary_name(&self) -> String {
-        let base = &self.binary_name;
-        if cfg!(windows) && !base.ends_with(".exe") {
-            format!("{}.exe", base)
-        } else {
-            base.to_string()
-        }
+impl Drop for IpcPluginHost {
+    fn drop(&mut self) {
+        self.kill();
     }
+}
 
+fn spawn_binary_name(binary_base: &str) -> String {
+    if cfg!(windows) && !binary_base.ends_with(".exe") {
+        format!("{}.exe", binary_base)
+    } else {
+        binary_base.to_string()
+    }
+}
+
+impl IpcPluginHost {
     fn spawn(&mut self) {
         let exe_dir = std::env::current_exe()
             .ok()
             .and_then(|p| p.parent().map(|d| d.to_path_buf()));
 
-        let binary_name = self.spawn_binary_name();
+        let binary_name = spawn_binary_name(&self.binary_name);
         let binary_path = exe_dir
             .as_ref()
             .map(|d| d.join(&binary_name))
@@ -215,21 +228,26 @@ impl IpcPluginHost {
                 // non-blocking — the main thread never blocks on a read.
                 if let Some(reader) = reader {
                     let (tx, rx) = mpsc::channel::<PluginMsg>();
-                    thread::spawn(move || {
-                        let mut reader = reader;
-                        let mut line = String::new();
-                        loop {
-                            line.clear();
-                            match reader.read_line(&mut line) {
-                                Ok(0) | Err(_) => break,
-                                Ok(_) => {
-                                    if let Ok(msg) = serde_json::from_str::<PluginMsg>(&line) {
-                                        let _ = tx.send(msg);
+                    let handle = thread::Builder::new()
+                        .name(format!("ipc-reader-{}", self.id))
+                        .spawn(move || {
+                            let mut reader = reader;
+                            let mut line = String::new();
+                            loop {
+                                line.clear();
+                                match reader.read_line(&mut line) {
+                                    Ok(0) | Err(_) => break,
+                                    Ok(_) => {
+                                        if let Ok(msg) = serde_json::from_str::<PluginMsg>(&line) {
+                                            let _ = tx.send(msg);
+                                        }
                                     }
                                 }
                             }
-                        }
-                    });
+                        });
+                    if let Ok(h) = handle {
+                        self.reader_thread = Some(h);
+                    }
                     self.response_rx = Some(rx);
                 }
             }
