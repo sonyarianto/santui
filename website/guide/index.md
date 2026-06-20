@@ -29,6 +29,24 @@ curl -fsSL https://santuiapp.vercel.app/install.sh | sh
 
 Downloads the latest release to `~/.local/share/santui/current` and adds it to your PATH. libmpv must be installed via your package manager — it's not bundled in the archive.
 
+## Uninstall
+
+### Windows
+
+```powershell
+irm https://santuiapp.vercel.app/uninstall.ps1 | iex
+```
+
+Removes the installation folder from `%LOCALAPPDATA%\santui` and cleans up the User PATH.
+
+### macOS / Linux
+
+```bash
+curl -fsSL https://santuiapp.vercel.app/uninstall.sh | sh
+```
+
+Removes `~/.local/share/santui` and removes the PATH entry from `.bashrc` / `.zshrc`.
+
 ## Usage
 
 Santui is keyboard-driven. Here are the keybindings:
