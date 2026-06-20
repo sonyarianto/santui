@@ -1672,6 +1672,8 @@ dependencies = [
  "crossterm",
  "ratatui",
  "santui-registry",
+ "serde",
+ "toml",
 ]
 
 [[package]]

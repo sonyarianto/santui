@@ -8,6 +8,7 @@ mod screens;
 mod status_bar;
 mod theme_manager;
 
+use crate::config::ConfigManager;
 use crate::plugin::{Plugin, PluginContext};
 use crate::theme::Theme;
 use crossterm::event::{Event, KeyEventKind};
@@ -108,6 +109,20 @@ pub(super) fn pal_w(content_w: u16) -> u16 {
 
 /// Scale the brightness of an RGB foreground color by `factor`,
 /// preserving its hue. Non-RGB colors (Reset, Indexed) pass through.
+/// Parse a hex colour string like `"#ff8800"` or `"ff8800"` into a `Color::Rgb`.
+pub(super) fn parse_hex(s: &str) -> Option<Color> {
+    let s = s.trim_start_matches('#');
+    if s.len() != 6 {
+        return None;
+    }
+    let val = u32::from_str_radix(s, 16).ok()?;
+    Some(Color::Rgb(
+        ((val >> 16) & 0xFF) as u8,
+        ((val >> 8) & 0xFF) as u8,
+        (val & 0xFF) as u8,
+    ))
+}
+
 fn dim_color(fg: Color, factor: f64) -> Color {
     match fg {
         Color::Rgb(r, g, b) => Color::Rgb(
@@ -288,6 +303,8 @@ pub struct Santui {
     palette: Option<palette_widget::PaletteWidget>,
     /// Registry screen state.
     pub(super) registry_screen: registry_screen::RegistryScreen,
+    /// Hot-reloadable configuration manager.
+    pub(super) config_manager: crate::config::ConfigManager,
     show_about: bool,
     /// Dynamic palette items from enabled registry plugins: (category, plugin_id, name).
     pub(super) dynamic_items: Vec<(String, String, String)>,
@@ -320,6 +337,7 @@ impl Santui {
             theme_manager,
             palette: None,
             registry_screen: registry_screen::RegistryScreen::new(),
+            config_manager: ConfigManager::new(std::path::PathBuf::new()),
             show_about: false,
             dynamic_items: Vec::new(),
             plugin_factory: None,
@@ -452,6 +470,102 @@ impl Santui {
         }
     }
 
+    /// Set the config directory and load (or create) `config.toml`.
+    /// Call before `run()`.
+    pub fn set_config_dir(&mut self, dir: std::path::PathBuf) {
+        self.config_manager = ConfigManager::new(dir);
+        self.apply_config();
+    }
+
+    /// Apply the loaded config (theme, custom colors) to the current app state.
+    pub(super) fn apply_config(&mut self) {
+        let cfg = self.config_manager.config().clone();
+
+        // Apply default theme if specified.
+        if let Some(ref theme_name) = cfg.theme {
+            let lower = theme_name.to_lowercase();
+            if let Some(idx) = self
+                .theme_manager
+                .themes
+                .iter()
+                .position(|(n, _)| n.to_lowercase() == lower)
+            {
+                self.select_theme(idx);
+            }
+        }
+
+        // Apply custom color overrides.
+        if let Some(ref custom) = cfg.custom_theme {
+            let mut t = self.theme.clone();
+            if let Some(ref v) = custom.accent {
+                if let Some(c) = parse_hex(v) {
+                    t.accent = c;
+                }
+            }
+            if let Some(ref v) = custom.highlight {
+                if let Some(c) = parse_hex(v) {
+                    t.highlight = c;
+                }
+            }
+            if let Some(ref v) = custom.logo {
+                if let Some(c) = parse_hex(v) {
+                    t.logo = c;
+                }
+            }
+            if let Some(ref v) = custom.text {
+                if let Some(c) = parse_hex(v) {
+                    t.text = c;
+                }
+            }
+            if let Some(ref v) = custom.text_muted {
+                if let Some(c) = parse_hex(v) {
+                    t.text_muted = c;
+                }
+            }
+            if let Some(ref v) = custom.background {
+                if let Some(c) = parse_hex(v) {
+                    t.background = c;
+                }
+            }
+            if let Some(ref v) = custom.background_panel {
+                if let Some(c) = parse_hex(v) {
+                    t.background_panel = c;
+                }
+            }
+            if let Some(ref v) = custom.background_overlay {
+                if let Some(c) = parse_hex(v) {
+                    t.background_overlay = c;
+                }
+            }
+            if let Some(ref v) = custom.border {
+                if let Some(c) = parse_hex(v) {
+                    t.border = c;
+                }
+            }
+            if let Some(ref v) = custom.success {
+                if let Some(c) = parse_hex(v) {
+                    t.success = c;
+                }
+            }
+            if let Some(ref v) = custom.error {
+                if let Some(c) = parse_hex(v) {
+                    t.error = c;
+                }
+            }
+            if let Some(ref v) = custom.inverted_text {
+                if let Some(c) = parse_hex(v) {
+                    t.inverted_text = c;
+                }
+            }
+            self.theme = t;
+            self.ctx.theme = self.theme.clone();
+            self.plugin_manager.on_theme_change_all(&self.theme);
+            self.event_bus.emit(crate::event::Event::ThemeChanged);
+        }
+
+        self.config_manager.ack();
+    }
+
     pub fn register(&mut self, plugin: Box<dyn Plugin>) {
         self.plugin_manager.register(plugin);
     }
@@ -471,6 +585,12 @@ impl Santui {
 
         while self.running {
             self.plugin_manager.tick_all();
+
+            // Poll for config changes (hot-reload).
+            self.config_manager.poll();
+            if self.config_manager.dirty {
+                self.apply_config();
+            }
 
             // Drain the event bus and forward events to the plugin manager.
             let events = self.event_bus.drain();
