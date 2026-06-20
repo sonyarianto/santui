@@ -196,9 +196,18 @@ jobs:
           for binary in target/release/santui-radio-streaming-player${{ matrix.plugin_ext }}; do
             if [ -f "$binary" ]; then
               name="$(basename "$binary")"
-              target_name="${name%.exe}-${{ matrix.target }}${{ matrix.plugin_ext }}"
+              # Strip .exe and also strip the santui- prefix so the filename
+              # matches the download_url in plugins.json and the release glob.
+              stem="${name%.exe}"
+              id="${stem#santui-}"
+              target_name="${id}-${{ matrix.target }}${{ matrix.plugin_ext }}"
               cp "$binary" "plugin-binaries/$target_name"
-              echo "Collected plugin: $target_name"
+              size="$(stat -c%s "plugin-binaries/$target_name" 2>/dev/null || stat -f%z "plugin-binaries/$target_name" 2>/dev/null)"
+              if [ -z "$size" ] || [ "$size" -eq 0 ]; then
+                echo "❌ ERROR: plugin binary $target_name has size 0 or could not read size"
+                exit 1
+              fi
+              echo "Collected plugin: $target_name ($size bytes)"
             fi
           done
 
@@ -258,6 +267,27 @@ jobs:
       - name: List all assets for release
         run: ls -la
 
+      - name: Validate asset sizes
+        run: |
+          echo "=== Checking for empty files ==="
+          has_empty=0
+          for f in santui-* plugins-*.json radio-streaming-player-*; do
+            if [ -f "$f" ]; then
+              size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null)
+              if [ "$size" -eq 0 ]; then
+                echo "❌ EMPTY: $f (0 bytes)"
+                has_empty=1
+              else
+                echo "  OK: $f ($size bytes)"
+              fi
+            fi
+          done
+          if [ "$has_empty" -eq 1 ]; then
+            echo "❌ One or more release assets are empty — aborting"
+            exit 1
+          fi
+          echo "✅ All release assets have valid sizes"
+
       - name: Create Release
         uses: softprops/action-gh-release@v3
         with:
@@ -265,4 +295,5 @@ jobs:
             santui-*
             plugins-*.json
             radio-streaming-player-*
+          fail_on_unmatched_files: false
           generate_release_notes: true
