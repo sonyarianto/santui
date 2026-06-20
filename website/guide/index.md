@@ -74,6 +74,49 @@ To get started, install the **Radio Streaming Player** plugin from the registry,
 
 > **Radio Streaming Player** requires [libmpv](https://mpv.io/installation/) for audio playback. On Windows it's bundled in the release archive; on macOS/Linux install via `apt`/`brew`/`pacman`.
 
+## Development
+
+To build Santui from source and test plugins locally without a GitHub release:
+
+### Prerequisites
+
+- [Rust](https://rustup.rs/) 1.70+
+- For the Radio Streaming Player: [libmpv](https://mpv.io/installation/) (`apt install mpv`, `brew install mpv`, or bundled on Windows)
+
+### Build & run
+
+```bash
+git clone https://github.com/sonyarianto/santui
+cd santui
+cargo build --workspace && cargo run -p santui
+```
+
+### Dev mode (test plugin registry locally)
+
+By default, the Plugin Registry fetches manifests from GitHub Releases. In development, use **dev mode** to test the full install flow without publishing anything:
+
+**Windows (PowerShell):**
+```powershell
+.\scripts\dev-setup.ps1 ; $env:SANTUI_DEV=1; cargo run -p santui
+```
+
+**macOS / Linux:**
+```bash
+./scripts/dev-setup.sh && SANTUI_DEV=1 cargo run -p santui
+```
+
+What `dev-setup` does:
+1. Builds the workspace (`cargo build --workspace`)
+2. Copies native assets into `target/debug/native/`
+3. Scans for plugin binaries and generates `plugins.json` with real SHA-256 hashes
+
+When `SANTUI_DEV=1`, the app:
+- Loads plugins from the local `plugins.json` instead of GitHub
+- Copies binaries from your build directory instead of downloading
+- Shows a `[DEV]` badge in the registry UI so you know you're in dev mode
+
+> See [`docs/development.md`](https://github.com/sonyarianto/santui/blob/main/docs/development.md) for detailed tooling info.
+
 ## Themes
 
 Press `Ctrl+P`, select **Switch theme**, and browse 38 OpenCode themes with live preview.
