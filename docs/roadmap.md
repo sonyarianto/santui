@@ -158,22 +158,26 @@ message and drains pending responses without blocking. A 5-second timeout on
 
 **Key files:** `plugin.rs` (trait method), `plugin_manager.rs` (reload_plugin, check_reloads), `host.rs` (binary_path)
 
-### 3.3 Plugin SDK / Generator ❌
+### 3.3 Plugin SDK / Generator ✅
 
 **Problem:** Writing a plugin requires understanding IPC protocol, Plugin trait,
 registry manifest, etc.
 
-**Planned solution:**
+**Solution (implemented):**
 ```
-cargo generate --git https://github.com/sonyarianto/santui-plugin-template
+cargo generate --path ./plugin-template --name my-plugin
 ```
 
-A `cargo generate` template that scaffolds a working plugin with:
+A `cargo generate` template in `plugin-template/` that scaffolds a working
+plugin with:
 - `Cargo.toml` with `santui-ipc` dependency
-- `main.rs` with JSON stdin/stdout loop
-- Build script that packages manifest
+- `main.rs` with JSON stdin/stdout loop handling every `HostMsg` variant
+- Pattern for theme-aware rendering, key dispatch, palette commands
+- Send empty response before `Init` to prevent host from hanging
 
-**Status:** Not yet started.
+**Status:** Done.
+
+**Key files:** `plugin-template/`
 
 ---
 
@@ -189,4 +193,4 @@ A `cargo generate` template that scaffolds a working plugin with:
 | 2.3 | App State | 🟡 Medium | 🟡 Medium | ✅ |
 | 3.1 | Async IPC | 🔴 High | 🔵 Low | ✅ |
 | 3.2 | Hot-Reload | 🔴 High | 🔵 Low | ✅ |
-| 3.3 | Plugin SDK | 🟡 Medium | 🟡 Medium | ❌ |
+| 3.3 | Plugin SDK | 🟡 Medium | 🟡 Medium | ✅ |

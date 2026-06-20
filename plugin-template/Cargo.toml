@@ -1,0 +1,12 @@
+[package]
+name = "{{project-name}}"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Use a path dependency when developing inside the santui workspace, or use a
+# git dependency for external projects:
+#   santui-ipc = { git = "https://github.com/sonyarianto/santui", default-features = false }
+santui-ipc = { path = "../../crates/ipc", default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
