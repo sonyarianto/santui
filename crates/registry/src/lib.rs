@@ -81,7 +81,7 @@ impl Registry {
     /// Fetch the plugin manifest from GitHub Releases.
     /// Uses `SANTUI_REPO` env or defaults to `sony-ak/santui`.
     pub fn fetch_manifest(&mut self) -> Result<(), String> {
-        let repo = std::env::var("SANTUI_REPO").unwrap_or_else(|_| "sony-ak/santui".into());
+        let repo = std::env::var("SANTUI_REPO").unwrap_or_else(|_| "sonyarianto/santui".into());
         let manifest_name = Self::manifest_filename();
 
         // Use the GitHub Releases API to get the latest release's plugins.json asset.
