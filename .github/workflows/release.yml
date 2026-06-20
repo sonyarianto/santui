@@ -43,6 +43,18 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      - name: Verify tag version matches Cargo.toml
+        if: github.event_name != 'workflow_dispatch'
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          CARGO_VERSION="$(grep '^version' santui-core/Cargo.toml | head -1 | cut -d'"' -f2)"
+          if [ "$TAG_VERSION" != "$CARGO_VERSION" ]; then
+            echo "❌ Tag v${TAG_VERSION} does not match Cargo.toml ${CARGO_VERSION}"
+            echo "   Update all Cargo.toml versions to ${TAG_VERSION} before tagging."
+            exit 1
+          fi
+          echo "✅ Tag v${TAG_VERSION} matches Cargo.toml ${CARGO_VERSION}"
+
       - name: Install Linux deps
         if: matrix.os == 'ubuntu-latest'
         run: sudo apt-get update && sudo apt-get install -y libmpv-dev
