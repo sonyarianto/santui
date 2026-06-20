@@ -88,10 +88,7 @@ async function downloadBinary() {
     }
 
     if (process.platform !== 'win32') execSync(`chmod +x '${binaryPath}'`, { stdio: 'pipe' });
-    console.error('');
-    console.error('  ✅ Santui v' + version + ' ready!');
-    console.error('  Type "santui" to launch your terminal home base.');
-    console.error('');
+    console.error('  [OK] Santui binary downloaded');
   } catch (err) {
     die(`Failed to download Santui: ${err.message}`);
   } finally {
