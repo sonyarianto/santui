@@ -1,0 +1,31 @@
+{
+  "name": "santui",
+  "version": "0.1.8",
+  "description": "Your terminal home base — a modern TUI launcher for plugins",
+  "homepage": "https://github.com/sonyarianto/santui",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sonyarianto/santui.git"
+  },
+  "bin": {
+    "santui": "./index.js"
+  },
+  "scripts": {
+    "postinstall": "node install.js"
+  },
+  "files": [
+    "index.js",
+    "install.js",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "tui",
+    "terminal",
+    "launcher",
+    "santui"
+  ]
+}
