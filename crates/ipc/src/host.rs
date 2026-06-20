@@ -11,15 +11,18 @@ use santui_core::theme::Theme;
 use santui_core::{AuthHandle, Plugin, PluginCmdItem, PluginContext};
 use std::cell::Cell;
 use std::io::{BufRead, BufReader, Write};
-use std::process::{Child, ChildStdout, Command, Stdio};
+use std::process::{Child, Command, Stdio};
+use std::sync::mpsc::{self, Receiver};
 use std::sync::Arc;
+use std::thread;
 
 pub struct IpcPluginHost {
     id: String,
     name: String,
     binary_name: String,
     process: Option<Child>,
-    reader: Option<BufReader<ChildStdout>>,
+    /// Channel receiver for reading parsed responses from a background thread.
+    response_rx: Option<Receiver<PluginMsg>>,
     cached_commands: Vec<RenderCmd>,
     cached_hints: Vec<(String, String)>,
     cached_palette_commands: Vec<(String, String)>,
@@ -36,7 +39,7 @@ impl IpcPluginHost {
             name: name.to_string(),
             binary_name: binary_base.to_string(),
             process: None,
-            reader: None,
+            response_rx: None,
             cached_commands: Vec::new(),
             cached_hints: Vec::new(),
             cached_palette_commands: Vec::new(),
@@ -109,29 +112,30 @@ impl IpcPluginHost {
     }
 
     fn recv(&mut self) {
-        if self.process.is_none() {
-            return;
-        }
-        let reader = match self.reader.as_mut() {
-            Some(r) => r,
-            None => {
-                self.process = None;
-                return;
-            }
-        };
-        let mut line = String::new();
-        match reader.read_line(&mut line) {
-            Ok(0) | Err(_) => {
-                self.process = None;
-                self.reader = None;
-            }
-            Ok(_) => {
-                if let Ok(msg) = serde_json::from_str::<PluginMsg>(&line) {
+        if let Some(ref rx) = self.response_rx {
+            match rx.recv() {
+                Ok(msg) => {
                     self.cached_commands = msg.commands;
                     self.cached_hints = msg.hints;
                     self.cached_palette_commands = msg.palette_commands;
                     self.pending_request = msg.request;
                 }
+                Err(_) => {
+                    self.process = None;
+                }
+            }
+        }
+    }
+
+    /// Non-blocking: consume all pending responses from the background reader
+    /// thread and keep only the latest cached state.
+    fn drain_responses(&mut self) {
+        if let Some(ref rx) = self.response_rx {
+            while let Ok(msg) = rx.try_recv() {
+                self.cached_commands = msg.commands;
+                self.cached_hints = msg.hints;
+                self.cached_palette_commands = msg.palette_commands;
+                self.pending_request = msg.request;
             }
         }
     }
@@ -168,8 +172,31 @@ impl IpcPluginHost {
             .spawn()
         {
             Ok(mut child) => {
-                self.reader = child.stdout.take().map(BufReader::new);
+                let reader = child.stdout.take().map(BufReader::new);
                 self.process = Some(child);
+
+                // Background thread: continuously read stdout, send parsed
+                // responses back via the channel.  This is what makes tick()
+                // non-blocking — the main thread never blocks on a read.
+                if let Some(reader) = reader {
+                    let (tx, rx) = mpsc::channel::<PluginMsg>();
+                    thread::spawn(move || {
+                        let mut reader = reader;
+                        let mut line = String::new();
+                        loop {
+                            line.clear();
+                            match reader.read_line(&mut line) {
+                                Ok(0) | Err(_) => break,
+                                Ok(_) => {
+                                    if let Ok(msg) = serde_json::from_str::<PluginMsg>(&line) {
+                                        let _ = tx.send(msg);
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    self.response_rx = Some(rx);
+                }
             }
             Err(e) => {
                 eprintln!("[santui] Failed to spawn plugin `{}`: {e}", binary_name);
@@ -270,6 +297,9 @@ impl Plugin for IpcPluginHost {
         render_commands(f, area, &self.cached_commands);
     }
 
+    /// Tick is non-blocking: send the message, then drain any pending
+    /// responses without waiting.  This keeps the UI responsive even when
+    /// a plugin is slow to process a tick.
     fn tick(&mut self) {
         if let Ok((w, h)) = terminal::size() {
             let usable = Area {
@@ -279,11 +309,14 @@ impl Plugin for IpcPluginHost {
             if usable != self.current_area.get() {
                 self.current_area.set(usable);
                 self.area = usable;
+                // Resize needs an immediate response so we know the new layout.
                 self.send_recv(&HostMsg::Resize { area: usable });
                 return;
             }
         }
-        self.send_recv(&HostMsg::Tick);
+        // Non-blocking: just send Tick and consume any ready response.
+        self.send(&HostMsg::Tick);
+        self.drain_responses();
     }
 
     fn on_focus(&mut self) {
