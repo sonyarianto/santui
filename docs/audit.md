@@ -9,15 +9,15 @@ Generated 2026-06-20 from a comprehensive codebase review.
 
 ## Critical — crash or corrupt state
 
-- [ ] **Mutex poisoning in auth** (`crates/auth/src/lib.rs:226`) — `.lock().unwrap()` panics if OAuth panics, poisoning the mutex. Every subsequent access panics.
+- [x] **Mutex poisoning in auth** (`crates/auth/src/lib.rs`) — replaced `.lock().unwrap()` with `.lock().unwrap_or_else(|e| e.into_inner())` on all 4 call sites to recover from poisoning
 
 ## High — design problems
 
 - [ ] **Santui is a god object** (`crates/core/src/app/mod.rs:514`) — 13+ fields, growing with every feature.
 - [ ] **`handle_key` is a 337-line monolith** (`crates/core/src/app/handle_key.rs:1`) — impossible to test or extend.
-- [ ] **Config parse failures are silent** (`crates/core/src/config.rs:55`) — user edits `config.toml`, parse error goes to stderr, default loads silently. No UI feedback.
+- [x] **Config parse failures are silent** (`crates/core/src/config.rs`, `crates/core/src/app/status_bar.rs`) — added `try_load_from` returning `Result`, `ConfigManager.error` field, and `StatusBar.config_error` renders the error in red on the right side of the status bar
 - [ ] **Plugin spawn failure returns `Ok(())`** (`crates/ipc/src/host.rs:236`) — dead plugin registered with no retry mechanism.
-- [ ] **Unbounded EventBus** (`crates/core/src/event.rs:26`) — `pending: Vec<Event>` grows without limit if events are emitted faster than drained.
+- [x] **Unbounded EventBus** (`crates/core/src/event.rs`) — switched internal storage to `VecDeque` with a 1024 cap; oldest event dropped when at capacity
 
 ## Medium — latent bugs & resource issues
 

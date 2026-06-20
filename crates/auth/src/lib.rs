@@ -1,13 +1,11 @@
-use oauth2::{
-    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge, RedirectUrl,
-    Scope, TokenResponse, TokenUrl,
-};
 use santui_core::auth::{AuthHandle, User};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
 use std::path::PathBuf;
 use std::sync::Mutex;
+use url::Url;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct StoredToken {
@@ -23,7 +21,7 @@ struct StoredToken {
 #[derive(Debug, Clone)]
 pub struct AuthConfig {
     pub client_id: String,
-    pub client_secret: String,
+    pub client_secret: Option<String>,
     pub auth_uri: String,
     pub token_uri: String,
     pub scopes: Vec<String>,
@@ -31,7 +29,7 @@ pub struct AuthConfig {
 }
 
 impl AuthConfig {
-    pub fn google(client_id: String, client_secret: String) -> Self {
+    pub fn google(client_id: String, client_secret: Option<String>) -> Self {
         AuthConfig {
             client_id,
             client_secret,
@@ -42,14 +40,14 @@ impl AuthConfig {
         }
     }
 
-    pub fn github(client_id: String, client_secret: String) -> Self {
+    pub fn github(client_id: String) -> Self {
         AuthConfig {
             client_id,
-            client_secret,
-            auth_uri: "https://github.com/login/oauth/authorize".into(),
+            client_secret: None,
+            auth_uri: String::new(),
             token_uri: "https://github.com/login/oauth/access_token".into(),
             scopes: vec!["read:user".into(), "user:email".into()],
-            redirect_port: 9843,
+            redirect_port: 0,
         }
     }
 }
@@ -76,50 +74,98 @@ fn open_browser(url: &str) {
     let _ = std::process::Command::new("xdg-open").arg(url).spawn();
 }
 
-fn handle_redirect(listener: TcpListener) -> Result<String, Box<dyn std::error::Error>> {
+fn handle_redirect(
+    listener: TcpListener,
+) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
     let (stream, _) = listener.accept()?;
     let mut reader = BufReader::new(&stream);
     let mut request_line = String::new();
     reader.read_line(&mut request_line)?;
 
-    let code = request_line
+    let params = request_line
         .split_whitespace()
         .nth(1)
         .and_then(|path| {
-            let path = path.trim_start_matches("/callback?");
-            for pair in path.split('&') {
-                if let Some(val) = pair.strip_prefix("code=") {
-                    return Some(val.to_string());
-                }
-            }
-            None
+            let full_url = format!("http://localhost{path}");
+            Url::parse(&full_url).ok().map(|u| {
+                u.query_pairs()
+                    .map(|(k, v)| (k.into_owned(), v.into_owned()))
+                    .collect::<HashMap<String, String>>()
+            })
         })
-        .ok_or_else(|| "No authorization code in redirect".to_string())?;
+        .ok_or_else(|| "No query parameters in redirect".to_string())?;
 
     let response =
         "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<html><body><h1>Signed in! You can close this window.</h1></body></html>";
     let mut stream = stream;
     let _ = stream.write_all(response.as_bytes());
 
-    Ok(code)
+    if let Some(err) = params.get("error") {
+        return Err(format!("OAuth error from server: {err}").into());
+    }
+
+    Ok(params)
+}
+
+#[derive(Deserialize)]
+struct DeviceCodeResponse {
+    device_code: String,
+    user_code: String,
+    #[allow(dead_code)]
+    verification_uri: String,
+    interval: Option<u64>,
+}
+
+#[derive(Deserialize)]
+struct DeviceTokenResponse {
+    access_token: Option<String>,
+    error: Option<String>,
+}
+
+fn request_device_code(
+    config: &AuthConfig,
+) -> Result<DeviceCodeResponse, Box<dyn std::error::Error>> {
+    let scope = config.scopes.join(" ");
+    let mut resp = ureq::post("https://github.com/login/device/code")
+        .header("Accept", "application/json")
+        .send_form([
+            ("client_id", config.client_id.as_str()),
+            ("scope", scope.as_str()),
+        ])?;
+    let text = resp.body_mut().read_to_string()?;
+    Ok(serde_json::from_str(&text)?)
+}
+
+fn poll_device_token(
+    config: &AuthConfig,
+    device_code: &str,
+    interval: u64,
+) -> Result<String, Box<dyn std::error::Error>> {
+    loop {
+        std::thread::sleep(std::time::Duration::from_secs(interval));
+        let mut resp = ureq::post(&config.token_uri)
+            .header("Accept", "application/json")
+            .send_form([
+                ("client_id", config.client_id.as_str()),
+                ("device_code", device_code),
+                ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
+            ])?;
+        let text = resp.body_mut().read_to_string()?;
+        let body: DeviceTokenResponse = serde_json::from_str(&text)?;
+        if let Some(token) = body.access_token {
+            return Ok(token);
+        }
+        match body.error.as_deref() {
+            Some("authorization_pending") => continue,
+            Some("slow_down") => continue,
+            Some(err) => return Err(format!("device flow error: {err}").into()),
+            None => return Err("unexpected device flow response".into()),
+        }
+    }
 }
 
 fn user_from_token(provider: &str, access_token: &str) -> Result<User, Box<dyn std::error::Error>> {
-    // Fetch user info from the provider's userinfo endpoint
     match provider {
-        "google" => {
-            let mut resp = ureq::get("https://www.googleapis.com/oauth2/v2/userinfo")
-                .header("Authorization", &format!("Bearer {access_token}"))
-                .call()?;
-            let body: serde_json::Value = serde_json::from_str(&resp.body_mut().read_to_string()?)?;
-            Ok(User {
-                id: body["id"].as_str().unwrap_or("").into(),
-                email: body["email"].as_str().unwrap_or("").into(),
-                name: body["name"].as_str().unwrap_or("").into(),
-                avatar_url: body["picture"].as_str().map(|s| s.into()),
-                provider: provider.into(),
-            })
-        }
         "github" => {
             let mut resp = ureq::get("https://api.github.com/user")
                 .header("Authorization", &format!("Bearer {access_token}"))
@@ -139,39 +185,30 @@ fn user_from_token(provider: &str, access_token: &str) -> Result<User, Box<dyn s
 }
 
 pub struct AuthClient {
-    config: AuthConfig,
+    providers: HashMap<String, AuthConfig>,
     user: Mutex<Option<User>>,
     token_path: PathBuf,
+    vercel_url: String,
 }
 
-type ConfiguredClient = oauth2::Client<
-    oauth2::StandardErrorResponse<oauth2::basic::BasicErrorResponseType>,
-    oauth2::StandardTokenResponse<oauth2::EmptyExtraTokenFields, oauth2::basic::BasicTokenType>,
-    oauth2::StandardTokenIntrospectionResponse<
-        oauth2::EmptyExtraTokenFields,
-        oauth2::basic::BasicTokenType,
-    >,
-    oauth2::StandardRevocableToken,
-    oauth2::StandardErrorResponse<oauth2::RevocationErrorResponseType>,
-    oauth2::EndpointSet,
-    oauth2::EndpointNotSet,
-    oauth2::EndpointNotSet,
-    oauth2::EndpointNotSet,
-    oauth2::EndpointSet,
->;
-
 impl AuthClient {
-    pub fn new(config: AuthConfig) -> Self {
+    pub fn new(providers: Vec<(String, AuthConfig)>) -> Self {
         let token_path = dirs::data_dir()
             .unwrap_or_else(|| PathBuf::from("."))
             .join("santui")
             .join("auth-tokens.json");
         let user = Self::load_tokens(&token_path);
         AuthClient {
-            config,
+            providers: providers.into_iter().collect(),
             user: Mutex::new(user),
             token_path,
+            vercel_url: String::new(),
         }
+    }
+
+    pub fn with_vercel(mut self, url: String) -> Self {
+        self.vercel_url = url;
+        self
     }
 
     fn load_tokens(path: &PathBuf) -> Option<User> {
@@ -199,31 +236,79 @@ impl AuthClient {
         let _ = std::fs::remove_file(&self.token_path);
     }
 
-    fn build_oauth_client(
-        &self,
-        provider: &str,
-    ) -> Result<ConfiguredClient, Box<dyn std::error::Error>> {
-        match provider {
-            "google" | "github" => {}
-            _ => return Err("unsupported provider".into()),
-        }
+    fn sign_in_google(&self) -> Result<User, Box<dyn std::error::Error>> {
+        let port = 9842;
+        let listener = TcpListener::bind(("127.0.0.1", port))?;
 
-        let client = oauth2::basic::BasicClient::new(ClientId::new(self.config.client_id.clone()))
-            .set_client_secret(ClientSecret::new(self.config.client_secret.clone()))
-            .set_auth_uri(AuthUrl::new(self.config.auth_uri.clone())?)
-            .set_token_uri(TokenUrl::new(self.config.token_uri.clone())?)
-            .set_redirect_uri(RedirectUrl::new(format!(
-                "http://127.0.0.1:{}/callback",
-                self.config.redirect_port
-            ))?);
+        let vercel = if self.vercel_url.is_empty() {
+            "https://santuiapp.vercel.app".to_string()
+        } else {
+            self.vercel_url.clone()
+        };
+        let auth_url = format!("{vercel}/api/auth/google?port={port}");
+        open_browser(&auth_url);
 
-        Ok(client)
+        let params = handle_redirect(listener)?;
+
+        let access_token = params
+            .get("access_token")
+            .ok_or_else(|| "No access_token in redirect".to_string())?;
+        let user = User {
+            id: params.get("id").cloned().unwrap_or_default(),
+            email: params.get("email").cloned().unwrap_or_default(),
+            name: params.get("name").cloned().unwrap_or_default(),
+            avatar_url: params.get("avatar_url").cloned(),
+            provider: "google".into(),
+        };
+
+        self.save_tokens(&StoredToken {
+            id: user.id.clone(),
+            email: user.email.clone(),
+            name: user.name.clone(),
+            avatar_url: user.avatar_url.clone(),
+            provider: user.provider.clone(),
+            access_token: access_token.clone(),
+            refresh_token: None,
+        });
+        *self.user.lock().unwrap_or_else(|e| e.into_inner()) = Some(user.clone());
+
+        Ok(user)
+    }
+
+    fn sign_in_github(&self) -> Result<User, Box<dyn std::error::Error>> {
+        let config = self
+            .providers
+            .get("github")
+            .ok_or_else(|| "GitHub auth not configured".to_string())?;
+
+        let device = request_device_code(config)?;
+        let user_code = &device.user_code;
+        let interval = device.interval.unwrap_or(5);
+
+        let activation_url = format!("https://github.com/login/device?user_code={user_code}");
+        open_browser(&activation_url);
+
+        let access_token = poll_device_token(config, &device.device_code, interval)?;
+        let user = user_from_token("github", &access_token)?;
+
+        self.save_tokens(&StoredToken {
+            id: user.id.clone(),
+            email: user.email.clone(),
+            name: user.name.clone(),
+            avatar_url: user.avatar_url.clone(),
+            provider: user.provider.clone(),
+            access_token,
+            refresh_token: None,
+        });
+        *self.user.lock().unwrap_or_else(|e| e.into_inner()) = Some(user.clone());
+
+        Ok(user)
     }
 }
 
 impl AuthHandle for AuthClient {
     fn current_user(&self) -> Option<User> {
-        self.user.lock().unwrap().clone()
+        self.user.lock().unwrap_or_else(|e| e.into_inner()).clone()
     }
 
     fn bearer_token(&self) -> Option<String> {
@@ -233,56 +318,15 @@ impl AuthHandle for AuthClient {
     }
 
     fn sign_in(&self, provider: &str) -> Result<User, Box<dyn std::error::Error>> {
-        let client = self.build_oauth_client(provider)?;
-        let port = self.config.redirect_port;
-
-        let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
-        let scopes: Vec<Scope> = self
-            .config
-            .scopes
-            .iter()
-            .map(|s| Scope::new(s.clone()))
-            .collect();
-
-        let mut auth_req = client.authorize_url(CsrfToken::new_random);
-        for scope in &scopes {
-            auth_req = auth_req.add_scope(scope.clone());
+        match provider {
+            "google" => self.sign_in_google(),
+            "github" => self.sign_in_github(),
+            _ => Err("unsupported provider".into()),
         }
-        let (auth_url, _csrf_token) = auth_req.set_pkce_challenge(pkce_challenge).url();
-
-        open_browser(auth_url.as_str());
-
-        let listener = TcpListener::bind(("127.0.0.1", port))?;
-        let code = handle_redirect(listener)?;
-
-        let token = client
-            .exchange_code(AuthorizationCode::new(code))
-            .set_pkce_verifier(pkce_verifier)
-            .request(&oauth2::ureq::Agent::new())?;
-
-        let access_token = token.access_token().secret().clone();
-        let refresh_token = token.refresh_token().map(|t| t.secret().clone());
-
-        let user = user_from_token(provider, &access_token)?;
-
-        let stored = StoredToken {
-            id: user.id.clone(),
-            email: user.email.clone(),
-            name: user.name.clone(),
-            avatar_url: user.avatar_url.clone(),
-            provider: user.provider.clone(),
-            access_token,
-            refresh_token,
-        };
-
-        self.save_tokens(&stored);
-        *self.user.lock().unwrap() = Some(user.clone());
-
-        Ok(user)
     }
 
     fn sign_out(&self) {
         self.clear_tokens();
-        *self.user.lock().unwrap() = None;
+        *self.user.lock().unwrap_or_else(|e| e.into_inner()) = None;
     }
 }

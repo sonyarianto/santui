@@ -48,23 +48,19 @@ impl Config {
     /// Load `config.toml` from `dir` or return a default config if the file
     /// doesn't exist.
     pub fn load_from(dir: &std::path::Path) -> Self {
+        Self::try_load_from(dir).unwrap_or_else(|_| Config::default())
+    }
+
+    /// Like `load_from`, but returns an error message instead of silently
+    /// falling back to defaults.
+    pub fn try_load_from(dir: &std::path::Path) -> Result<Self, String> {
         let path = dir.join("config.toml");
         if !path.exists() {
-            return Config::default();
+            return Err("config.toml not found".into());
         }
-        match std::fs::read_to_string(&path) {
-            Ok(content) => match toml::from_str(&content) {
-                Ok(cfg) => cfg,
-                Err(e) => {
-                    eprintln!("[santui] Failed to parse config.toml: {e}");
-                    Config::default()
-                }
-            },
-            Err(e) => {
-                eprintln!("[santui] Failed to read config.toml: {e}");
-                Config::default()
-            }
-        }
+        let content = std::fs::read_to_string(&path)
+            .map_err(|e| format!("Failed to read config.toml: {e}"))?;
+        toml::from_str(&content).map_err(|e| format!("Failed to parse config.toml: {e}"))
     }
 
     /// Write the config to `dir/config.toml`.
@@ -88,6 +84,8 @@ pub struct ConfigManager {
     last_modified: Option<SystemTime>,
     /// Set to `true` by [`poll`](ConfigManager::poll) when the file changed.
     pub dirty: bool,
+    /// Error message from the last load/parse attempt, cleared on ack.
+    error: Option<String>,
 }
 
 impl ConfigManager {
@@ -98,12 +96,16 @@ impl ConfigManager {
             .metadata()
             .ok()
             .and_then(|m| m.modified().ok());
-        let config = Config::load_from(&dir);
+        let (config, error) = match Config::try_load_from(&dir) {
+            Ok(cfg) => (cfg, None),
+            Err(e) => (Config::default(), Some(e)),
+        };
         ConfigManager {
             dir,
             config,
             last_modified,
             dirty: false,
+            error,
         }
     }
 
@@ -122,8 +124,15 @@ impl ConfigManager {
             return;
         }
         self.last_modified = Some(modified);
-        let new_config = Config::load_from(&self.dir);
-        self.config = new_config;
+        match Config::try_load_from(&self.dir) {
+            Ok(cfg) => {
+                self.config = cfg;
+                self.error = None;
+            }
+            Err(e) => {
+                self.error = Some(e);
+            }
+        }
         self.dirty = true;
     }
 
@@ -134,6 +143,11 @@ impl ConfigManager {
 
     pub fn config(&self) -> &Config {
         &self.config
+    }
+
+    /// Error message from the last failed config load/parse, if any.
+    pub fn error(&self) -> Option<&str> {
+        self.error.as_deref()
     }
 
     /// Update the `theme` field and immediately persist.

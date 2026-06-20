@@ -739,6 +739,7 @@ impl Santui {
             .active()
             .map(|idx| self.plugin_manager.status_hints(idx))
             .unwrap_or_default();
+        let current_user = self.auth.as_ref().and_then(|a| a.current_user());
         status_bar::StatusBar {
             theme: &self.app_state.theme,
             palette_open: self.palette.is_some(),
@@ -746,6 +747,8 @@ impl Santui {
             about_open: self.app_state.show_about,
             plugin_active: self.plugin_manager.active().is_some(),
             active_plugin_hints: &hints,
+            user: current_user.as_ref(),
+            config_error: self.config_manager.error(),
         }
         .render(f, chunks[1]);
 

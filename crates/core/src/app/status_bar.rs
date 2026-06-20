@@ -4,6 +4,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
 use ratatui::Frame;
 
+use crate::auth::User;
 use crate::theme::Theme;
 
 /// Standalone status-bar widget, extracted from the monolithic Santui render.
@@ -20,6 +21,10 @@ pub(super) struct StatusBar<'a> {
     pub plugin_active: bool,
     /// Key-binding hints published by the active plugin.
     pub active_plugin_hints: &'a [(String, String)],
+    /// Currently signed-in user, if any.
+    pub user: Option<&'a User>,
+    /// Config parse error to display, if any.
+    pub config_error: Option<&'a str>,
 }
 
 impl StatusBar<'_> {
@@ -84,11 +89,28 @@ impl StatusBar<'_> {
         let p = Paragraph::new(line);
         f.render_widget(p, area);
 
-        let version = Line::from(vec![
-            Span::styled("Santui ", key),
-            Span::styled(super::VERSION, dim),
-        ]);
-        let version_para = Paragraph::new(version).alignment(Alignment::Right);
-        f.render_widget(version_para, area);
+        if let Some(err) = self.config_error {
+            let err_span = Paragraph::new(Line::from(vec![Span::styled(
+                err,
+                Style::default().fg(self.theme.error),
+            )]))
+            .alignment(Alignment::Right);
+            f.render_widget(err_span, area);
+        } else {
+            let mut right_spans: Vec<Span> = Vec::new();
+            if let Some(u) = self.user {
+                let display = if !u.email.is_empty() {
+                    &u.email
+                } else {
+                    &u.name
+                };
+                right_spans.push(Span::styled(display, dim));
+                right_spans.push(Span::styled(" ", dim));
+            }
+            right_spans.push(Span::styled("Santui ", key));
+            right_spans.push(Span::styled(super::VERSION, dim));
+            let right_para = Paragraph::new(Line::from(right_spans)).alignment(Alignment::Right);
+            f.render_widget(right_para, area);
+        }
     }
 }

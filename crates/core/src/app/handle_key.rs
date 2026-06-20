@@ -60,19 +60,31 @@ impl super::Santui {
                                 match id {
                                     super::BuiltinId::SignInGoogle => {
                                         if let Some(ref auth) = self.auth {
-                                            if let Ok(user) = auth.sign_in("google") {
-                                                self.plugin_manager.on_user_update_all(Some(&user));
-                                                self.event_bus
-                                                    .emit(crate::event::Event::UserUpdated);
+                                            match auth.sign_in("google") {
+                                                Ok(user) => {
+                                                    self.plugin_manager
+                                                        .on_user_update_all(Some(&user));
+                                                    self.event_bus
+                                                        .emit(crate::event::Event::UserUpdated);
+                                                }
+                                                Err(e) => {
+                                                    eprintln!("[auth] Google sign-in error: {e}");
+                                                }
                                             }
                                         }
                                     }
                                     super::BuiltinId::SignInGitHub => {
                                         if let Some(ref auth) = self.auth {
-                                            if let Ok(user) = auth.sign_in("github") {
-                                                self.plugin_manager.on_user_update_all(Some(&user));
-                                                self.event_bus
-                                                    .emit(crate::event::Event::UserUpdated);
+                                            match auth.sign_in("github") {
+                                                Ok(user) => {
+                                                    self.plugin_manager
+                                                        .on_user_update_all(Some(&user));
+                                                    self.event_bus
+                                                        .emit(crate::event::Event::UserUpdated);
+                                                }
+                                                Err(e) => {
+                                                    eprintln!("[auth] GitHub sign-in error: {e}");
+                                                }
                                             }
                                         }
                                     }

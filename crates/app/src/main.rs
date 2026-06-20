@@ -23,14 +23,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     #[cfg(feature = "auth")]
     {
-        let client_id = std::env::var("SANTUI_GOOGLE_CLIENT_ID").unwrap_or_default();
-        let client_secret = std::env::var("SANTUI_GOOGLE_CLIENT_SECRET").unwrap_or_default();
-        if !client_id.is_empty() && !client_secret.is_empty() {
-            let config = santui_auth::AuthConfig::google(client_id, client_secret);
-            let auth: std::sync::Arc<dyn santui_core::AuthHandle> =
-                std::sync::Arc::new(AuthClient::new(config));
-            app.set_auth(auth);
+        let mut providers = Vec::new();
+
+        let github_id = std::env::var("SANTUI_GITHUB_CLIENT_ID").unwrap_or_default();
+        if !github_id.is_empty() {
+            let config = santui_auth::AuthConfig::github(github_id);
+            providers.push(("github".into(), config));
         }
+
+        let vercel_url = std::env::var("SANTUI_VERCEL_URL")
+            .unwrap_or_else(|_| "https://santuiapp.vercel.app".to_string());
+
+        let auth: std::sync::Arc<dyn santui_core::AuthHandle> =
+            std::sync::Arc::new(AuthClient::new(providers).with_vercel(vercel_url));
+        app.set_auth(auth);
     }
 
     app.run()

@@ -10,5 +10,5 @@ santui-auth = { path = "../auth", optional = true }
 santui-registry = { path = "../registry" }
 
 [features]
-default = []
+default = ["auth"]
 auth = ["dep:santui-auth"]
