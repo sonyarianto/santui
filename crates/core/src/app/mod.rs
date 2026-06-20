@@ -411,6 +411,88 @@ mod tests {
         // "ff88#00" — no leading # to strip, len 7 ≠ 6
         assert_eq!(parse_hex("ff88#00"), None);
     }
+
+    // ---- proptest: dim_color ----
+
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn dim_color_identity(
+            r in any::<u8>(),
+            g in any::<u8>(),
+            b in any::<u8>(),
+        ) {
+            let color = Color::Rgb(r, g, b);
+            prop_assert_eq!(dim_color(color, 1.0), color);
+        }
+
+        #[test]
+        fn dim_color_zero_factor_yields_black(
+            r in any::<u8>(),
+            g in any::<u8>(),
+            b in any::<u8>(),
+        ) {
+            let result = dim_color(Color::Rgb(r, g, b), 0.0);
+            prop_assert_eq!(result, Color::Rgb(0, 0, 0));
+        }
+
+        #[test]
+        fn dim_color_non_rgb_passthrough(
+            f in prop::num::f64::ANY,
+        ) {
+            // Non-RGB colours should never be modified, regardless of factor.
+            prop_assert_eq!(dim_color(Color::Reset, f), Color::Reset);
+            prop_assert_eq!(dim_color(Color::Indexed(123), f), Color::Indexed(123));
+        }
+
+        #[test]
+        fn dim_color_channel_never_exceeds_original(
+            r in any::<u8>(),
+            g in any::<u8>(),
+            b in any::<u8>(),
+            f in 0.0f64..=1.0f64,
+        ) {
+            let result = dim_color(Color::Rgb(r, g, b), f);
+            if let Color::Rgb(r2, g2, b2) = result {
+                prop_assert!(r2 <= r, "red {} > original {}", r2, r);
+                prop_assert!(g2 <= g, "green {} > original {}", g2, g);
+                prop_assert!(b2 <= b, "blue {} > original {}", b2, b);
+            } else {
+                panic!("expected Rgb, got {:?}", result);
+            }
+        }
+
+        #[test]
+        fn dim_color_hue_preserved_within_tolerance(
+            r in any::<u8>(),
+            g in any::<u8>(),
+            b in any::<u8>(),
+            f in 0.0f64..=1.0f64,
+        ) {
+            let result = dim_color(Color::Rgb(r, g, b), f);
+            if let Color::Rgb(r2, g2, b2) = result {
+                // Cross-multiplication to check channel ratios are preserved.
+                // Each channel has f64→u8 truncation error < 1, so:
+                //   |e2*r - e1*g| ≤ max(r, g)  where e1,e2 ∈ [0,1)
+                // This is a tight bound with no false negatives.
+                if r != 0 && g != 0 && r2 != 0 && g2 != 0 {
+                    let diff = (r2 as i32 * g as i32 - g2 as i32 * r as i32)
+                        .unsigned_abs();
+                    prop_assert!(diff <= r.max(g) as u32,
+                        "r:g ratio not preserved: {}:{} vs {}:{} (f={})",
+                        r, g, r2, g2, f);
+                }
+                if r != 0 && b != 0 && r2 != 0 && b2 != 0 {
+                    let diff = (r2 as i32 * b as i32 - b2 as i32 * r as i32)
+                        .unsigned_abs();
+                    prop_assert!(diff <= r.max(b) as u32,
+                        "r:b ratio not preserved: {}:{} vs {}:{} (f={})",
+                        r, b, r2, b2, f);
+                }
+            }
+        }
+    }
 }
 
 pub struct Santui {
