@@ -42,6 +42,9 @@ pub trait Plugin {
     /// Called when a palette command from this plugin is selected.
     /// `index` is the position in `commands()`.
     fn handle_palette_command(&mut self, _index: usize) {}
+
+    /// Called when a plugin-to-plugin message arrives.
+    fn on_plugin_message(&mut self, _from: &str, _action: &str, _data: &str) {}
 }
 
 pub struct PluginContext {

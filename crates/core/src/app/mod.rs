@@ -281,6 +281,8 @@ struct PaletteState {
 pub struct Santui {
     /// All plugin lifecycle management.
     pub(super) plugin_manager: plugin_manager::PluginManager,
+    /// In-app event bus for decoupled communication.
+    pub(super) event_bus: crate::event::EventBus,
     ctx: PluginContext,
     registry: Option<PluginRegistry>,
     theme: Theme,
@@ -321,6 +323,7 @@ impl Santui {
         let theme = themes[1].1.clone();
         Santui {
             plugin_manager: plugin_manager::PluginManager::new(),
+            event_bus: crate::event::EventBus::new(),
             ctx: PluginContext::new(),
             registry: None,
             theme,
@@ -487,6 +490,10 @@ impl Santui {
 
         while self.running {
             self.plugin_manager.tick_all();
+
+            // Drain the event bus and forward events to the plugin manager.
+            let events = self.event_bus.drain();
+            self.plugin_manager.process_events(&events);
 
             self.tick = self.tick.wrapping_add(1);
             self.update_stars();

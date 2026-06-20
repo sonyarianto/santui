@@ -447,6 +447,12 @@ fn main() {
                         app.handle_palette_command(index);
                         respond(&mut app);
                     }
+                    HostMsg::PluginMessage { .. } => {
+                        // Plugin-to-plugin messaging — radio player does not
+                        // participate in this yet, but we must handle the variant
+                        // to keep the match exhaustive.
+                        respond(&mut app);
+                    }
                     HostMsg::UserUpdate { user } => {
                         app.user = user;
                         app.dirty = true;

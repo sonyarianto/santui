@@ -42,16 +42,34 @@ pub struct UserData {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum HostMsg {
-    Init { theme: ThemeData, area: Area },
-    Key { key: IpcKey },
+    Init {
+        theme: ThemeData,
+        area: Area,
+    },
+    Key {
+        key: IpcKey,
+    },
     Tick,
     Focus,
     Blur,
-    ThemeChange { theme: ThemeData },
-    Resize { area: Area },
+    ThemeChange {
+        theme: ThemeData,
+    },
+    Resize {
+        area: Area,
+    },
     Shutdown,
-    UserUpdate { user: Option<UserData> },
-    PaletteCommand { index: u32 },
+    UserUpdate {
+        user: Option<UserData>,
+    },
+    PaletteCommand {
+        index: u32,
+    },
+    PluginMessage {
+        from: String,
+        action: String,
+        data: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

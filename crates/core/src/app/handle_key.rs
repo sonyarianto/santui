@@ -54,6 +54,7 @@ impl super::Santui {
                                     if let Some(ref auth) = self.ctx.auth {
                                         if let Ok(user) = auth.sign_in("google") {
                                             self.plugin_manager.on_user_update_all(Some(&user));
+                                            self.event_bus.emit(crate::event::Event::UserUpdated);
                                         }
                                     }
                                 }
@@ -61,6 +62,7 @@ impl super::Santui {
                                     if let Some(ref auth) = self.ctx.auth {
                                         if let Ok(user) = auth.sign_in("github") {
                                             self.plugin_manager.on_user_update_all(Some(&user));
+                                            self.event_bus.emit(crate::event::Event::UserUpdated);
                                         }
                                     }
                                 }
@@ -68,6 +70,7 @@ impl super::Santui {
                                     if let Some(ref auth) = self.ctx.auth {
                                         auth.sign_out();
                                         self.plugin_manager.on_user_update_all(None);
+                                        self.event_bus.emit(crate::event::Event::UserUpdated);
                                     }
                                 }
                                 "Switch theme" => {

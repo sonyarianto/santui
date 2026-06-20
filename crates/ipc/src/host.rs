@@ -323,6 +323,14 @@ impl Plugin for IpcPluginHost {
         });
     }
 
+    fn on_plugin_message(&mut self, from: &str, action: &str, data: &str) {
+        self.send_recv(&HostMsg::PluginMessage {
+            from: from.to_string(),
+            action: action.to_string(),
+            data: data.to_string(),
+        });
+    }
+
     fn status_hints(&self) -> Vec<(String, String)> {
         self.cached_hints.clone()
     }
