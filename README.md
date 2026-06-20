@@ -29,6 +29,16 @@ Plugins are **standalone binaries** distributed through the Plugin Registry. Ope
 
 ## Quick start
 
+### Windows (Scoop)
+
+```powershell
+scoop bucket add santui https://github.com/sonyarianto/scoop-santui
+scoop install santui
+santui
+```
+
+### From source
+
 ```bash
 git clone https://github.com/sonyarianto/santui
 cd santui

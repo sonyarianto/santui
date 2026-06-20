@@ -4,11 +4,21 @@
 
 ### Windows
 
+**Scoop (recommended)** — no admin required, no Windows Defender block:
+
+```powershell
+scoop bucket add santui https://github.com/sonyarianto/scoop-santui
+scoop install santui
+santui
+```
+
+**PowerShell (direct)** — downloads the latest release:
+
 ```powershell
 irm https://santuiapp.vercel.app/install.ps1 | iex
 ```
 
-This downloads the latest release, extracts it to `%LOCALAPPDATA%\santui\current`, and adds it to your PATH. Then run `santui` from any terminal.
+This extracts to `%LOCALAPPDATA%\santui\current` and adds to your PATH.
 
 ### macOS
 
