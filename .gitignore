@@ -4,3 +4,5 @@ native/*
 !native/radio_streaming_stations.db
 
 releases/
+
+scoop-santui/
