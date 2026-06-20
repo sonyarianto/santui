@@ -41,6 +41,8 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
+      - uses: Swatinem/rust-cache@v2
+
       - name: Install Linux deps
         if: matrix.os == 'ubuntu-latest'
         run: sudo apt-get update && sudo apt-get install -y libmpv-dev
@@ -68,6 +70,10 @@ jobs:
             Invoke-WebRequest -Uri "${{ matrix.mpv_url }}" -OutFile $tmp -UseBasicParsing
             7z x $tmp -o"staging\native\" "*.dll" -y | Out-Null
             Remove-Item $tmp -Force
+          }
+          if (-not (Test-Path "staging\native\libmpv-2.dll")) {
+            Write-Error "Failed to obtain libmpv-2.dll — check native/ directory or mpv download URL"
+            exit 1
           }
           Copy-Item "native\radio_streaming_stations.db" "staging\native\"
 
