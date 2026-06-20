@@ -87,6 +87,15 @@ impl super::Santui {
                                 "Plugin registry" => self.open_registry(),
                                 _ => {}
                             },
+                            super::ItemIndex::PluginCmd(pci) => {
+                                // Dispatch to the plugin's registered palette command.
+                                let (plugin_idx, local_idx, _cmd) =
+                                    self.plugin_commands[pci].clone();
+                                if plugin_idx < self.plugins.len() {
+                                    self.active_plugin = Some(plugin_idx);
+                                    self.plugins[plugin_idx].handle_palette_command(local_idx);
+                                }
+                            }
                             super::ItemIndex::Dynamic(di) => {
                                 // Launch a registry-installed plugin via factory.
                                 if let Some((_cat, id, name)) = self.dynamic_items.get(di).cloned()

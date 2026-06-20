@@ -20,6 +20,12 @@ impl super::Santui {
                 results.push(super::ItemIndex::Dynamic(i));
             }
         }
+        // Plugin-registered commands
+        for (i, (_plugin_idx, _local_idx, cmd)) in self.plugin_commands.iter().enumerate() {
+            if query.is_empty() || cmd.label.to_lowercase().contains(&q) {
+                results.push(super::ItemIndex::PluginCmd(i));
+            }
+        }
         results
     }
 
@@ -38,6 +44,7 @@ impl super::Santui {
             let c = match idx {
                 super::ItemIndex::Builtin(i) => super::CMD_ITEMS[i].category,
                 super::ItemIndex::Dynamic(i) => &self.dynamic_items[i].0,
+                super::ItemIndex::PluginCmd(i) => &self.plugin_commands[i].2.category,
             };
             if c != cat {
                 cat = c.to_string();
@@ -246,6 +253,7 @@ impl super::Santui {
             let cat = match idx {
                 super::ItemIndex::Builtin(i) => super::CMD_ITEMS[i].category.to_string(),
                 super::ItemIndex::Dynamic(i) => self.dynamic_items[i].0.clone(),
+                super::ItemIndex::PluginCmd(i) => self.plugin_commands[i].2.category.clone(),
             };
             if cat != current_cat && !cat_items.is_empty() {
                 groups.push((current_cat.clone(), std::mem::take(&mut cat_items)));
@@ -284,6 +292,7 @@ impl super::Santui {
                 let label = match idx {
                     super::ItemIndex::Builtin(i) => super::CMD_ITEMS[i].label.to_string(),
                     super::ItemIndex::Dynamic(i) => self.dynamic_items[i].2.clone(),
+                    super::ItemIndex::PluginCmd(i) => self.plugin_commands[i].2.label.clone(),
                 };
                 let style = if sel {
                     Style::default().fg(t.inverted_text).bg(t.highlight)

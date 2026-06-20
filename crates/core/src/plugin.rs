@@ -10,6 +10,13 @@ use std::sync::Arc;
 /// The binary (`santui`) sets this to `IpcPluginHost::new_boxed`.
 pub type PluginFactory = Arc<dyn Fn(&str, &str, &Path) -> Box<dyn Plugin> + Send + Sync>;
 
+/// A command that a plugin registers for the Ctrl+P palette.
+#[derive(Debug, Clone)]
+pub struct PluginCmdItem {
+    pub category: String,
+    pub label: String,
+}
+
 pub trait Plugin {
     fn id(&self) -> &str;
     fn name(&self) -> &str;
@@ -26,6 +33,13 @@ pub trait Plugin {
     fn status_hints(&self) -> Vec<(String, String)> {
         vec![]
     }
+    /// Palette commands that this plugin registers (category, label).
+    fn commands(&self) -> Vec<PluginCmdItem> {
+        vec![]
+    }
+    /// Called when a palette command from this plugin is selected.
+    /// `index` is the position in `commands()`.
+    fn handle_palette_command(&mut self, _index: usize) {}
 }
 
 pub struct PluginContext {

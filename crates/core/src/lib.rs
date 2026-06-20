@@ -5,5 +5,5 @@ pub mod theme;
 
 pub use app::Santui;
 pub use auth::{AuthHandle, User};
-pub use plugin::{Plugin, PluginContext};
+pub use plugin::{Plugin, PluginCmdItem, PluginContext};
 pub use theme::Theme;

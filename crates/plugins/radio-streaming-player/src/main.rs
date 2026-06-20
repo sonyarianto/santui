@@ -169,6 +169,32 @@ impl App {
         self.tx_msg = Some(tx_msg);
     }
 
+    fn handle_palette_command(&mut self, index: u32) {
+        match index {
+            0 => {
+                // "Search stations" — enter search mode
+                self.state.search_mode = true;
+                self.state.query.clear();
+                self.state.filtered = (0..self.state.stations.len()).collect();
+                self.state.selected = 0;
+                self.state.scroll = 0;
+                self.dirty = true;
+            }
+            1 => {
+                // "Reload stations" — reload from DB
+                let new_stations = crate::stations::reload();
+                let count = new_stations.len();
+                self.state.stations = new_stations;
+                self.state.set_query(String::new());
+                self.state.selected = 0;
+                self.state.scroll = 0;
+                self.state.scan_msg = Some(format!("Reloaded {count} stations from DB"));
+                self.dirty = true;
+            }
+            _ => {}
+        }
+    }
+
     fn handle_key(&mut self, key: IpcKey) {
         self.state.scan_msg = None;
         self.dirty = true;
@@ -352,10 +378,18 @@ impl App {
     }
 }
 
+fn palette_commands() -> Vec<(String, String)> {
+    vec![
+        ("Radio".into(), "Search stations".into()),
+        ("Radio".into(), "Reload stations".into()),
+    ]
+}
+
 fn respond(app: &mut App) {
     let msg = PluginMsg {
         commands: app.render(),
         hints: app.status_hints(),
+        palette_commands: palette_commands(),
         request: None,
     };
     let json = serde_json::to_string(&msg).expect("PluginMsg serialization");
@@ -407,6 +441,10 @@ fn main() {
                     HostMsg::Resize { area } => {
                         app.area = area;
                         app.dirty = true;
+                        respond(&mut app);
+                    }
+                    HostMsg::PaletteCommand { index } => {
+                        app.handle_palette_command(index);
                         respond(&mut app);
                     }
                     HostMsg::UserUpdate { user } => {

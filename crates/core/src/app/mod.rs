@@ -3,7 +3,7 @@ mod palette;
 mod registry;
 mod screens;
 
-use crate::plugin::{Plugin, PluginContext};
+use crate::plugin::{Plugin, PluginCmdItem, PluginContext};
 use crate::theme::Theme;
 use crossterm::event::{Event, KeyEventKind};
 use crossterm::execute;
@@ -24,17 +24,17 @@ const SHOOTING_LIFETIME: u64 = 50;
 const SHOOTING_COOLDOWN: u64 = 180;
 const COMET_LIFETIME: u64 = 100;
 const COMET_COOLDOWN: u64 = 500;
-
 pub(super) struct CmdItem {
     pub(super) category: &'static str,
     pub(super) label: &'static str,
 }
 
-/// Index into either the built-in CMD_ITEMS or dynamic plugin items.
+/// Index into either the built-in CMD_ITEMS, dynamic plugin items, or plugin-registered commands.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum ItemIndex {
     Builtin(usize),
     Dynamic(usize),
+    PluginCmd(usize),
 }
 
 const CMD_ITEMS: &[CmdItem] = &[
@@ -293,6 +293,8 @@ pub struct Santui {
     registry_status: String,
     /// Dynamic palette items from enabled registry plugins: (category, plugin_id, name).
     pub(super) dynamic_items: Vec<(String, String, String)>,
+    /// Palette commands registered by plugins: (plugin_idx, local_cmd_idx, PluginCmdItem).
+    pub(super) plugin_commands: Vec<(usize, usize, PluginCmdItem)>,
     /// Factory to create a Box<dyn Plugin> from (id, name, binary_path).
     /// Set by main.rs before run().
     pub(super) plugin_factory: Option<crate::plugin::PluginFactory>,
@@ -333,6 +335,7 @@ impl Santui {
             registry_scroll: 0,
             registry_status: String::new(),
             dynamic_items: Vec::new(),
+            plugin_commands: Vec::new(),
             plugin_factory: None,
             theme_picker_query: String::new(),
             theme_picker_cursor: 0,
@@ -374,6 +377,17 @@ impl Santui {
             },
             shooting: None,
             shooting_cooldown: 0,
+        }
+    }
+
+    /// Rebuild palette commands from all loaded plugins.
+    /// Call this after adding a plugin or when plugins change.
+    pub(super) fn refresh_plugin_commands(&mut self) {
+        self.plugin_commands.clear();
+        for (i, plugin) in self.plugins.iter().enumerate() {
+            for (local_idx, cmd) in plugin.commands().into_iter().enumerate() {
+                self.plugin_commands.push((i, local_idx, cmd));
+            }
         }
     }
 
@@ -483,6 +497,7 @@ impl Santui {
         for p in &mut self.plugins {
             p.init(&mut self.ctx)?;
         }
+        self.refresh_plugin_commands();
 
         let tick_rate = Duration::from_millis(100);
 

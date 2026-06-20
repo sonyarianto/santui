@@ -51,6 +51,7 @@ pub enum HostMsg {
     Resize { area: Area },
     Shutdown,
     UserUpdate { user: Option<UserData> },
+    PaletteCommand { index: u32 },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -81,6 +82,8 @@ pub enum PluginRequest {
 pub struct PluginMsg {
     pub commands: Vec<RenderCmd>,
     pub hints: Vec<(String, String)>,
+    #[serde(default)]
+    pub palette_commands: Vec<(String, String)>,
     #[serde(default)]
     pub request: Option<PluginRequest>,
 }
@@ -258,6 +261,7 @@ mod tests {
                 h: 10,
             }],
             hints: vec![("key".into(), "desc".into())],
+            palette_commands: vec![],
             request: None,
         };
         let json = serde_json::to_string(&msg).unwrap();
@@ -272,6 +276,7 @@ mod tests {
         let msg = PluginMsg {
             commands: vec![],
             hints: vec![],
+            palette_commands: vec![],
             request: Some(PluginRequest::SignIn {
                 provider: "google".into(),
             }),

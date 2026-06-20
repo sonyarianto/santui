@@ -8,7 +8,7 @@ use ratatui::layout::Rect;
 use ratatui::Frame;
 use santui_core::auth::User;
 use santui_core::theme::Theme;
-use santui_core::{AuthHandle, Plugin, PluginContext};
+use santui_core::{AuthHandle, Plugin, PluginCmdItem, PluginContext};
 use std::cell::Cell;
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Child, ChildStdout, Command, Stdio};
@@ -22,6 +22,7 @@ pub struct IpcPluginHost {
     reader: Option<BufReader<ChildStdout>>,
     cached_commands: Vec<RenderCmd>,
     cached_hints: Vec<(String, String)>,
+    cached_palette_commands: Vec<(String, String)>,
     area: Area,
     current_area: Cell<Area>,
     theme_data: ThemeData,
@@ -38,6 +39,7 @@ impl IpcPluginHost {
             reader: None,
             cached_commands: Vec::new(),
             cached_hints: Vec::new(),
+            cached_palette_commands: Vec::new(),
             area: Area { w: 80, h: 24 },
             current_area: Cell::new(Area { w: 80, h: 24 }),
             theme_data: ThemeData {
@@ -127,6 +129,7 @@ impl IpcPluginHost {
                 if let Ok(msg) = serde_json::from_str::<PluginMsg>(&line) {
                     self.cached_commands = msg.commands;
                     self.cached_hints = msg.hints;
+                    self.cached_palette_commands = msg.palette_commands;
                     self.pending_request = msg.request;
                 }
             }
@@ -301,6 +304,22 @@ impl Plugin for IpcPluginHost {
     fn on_user_update(&mut self, user: Option<&User>) {
         self.send_recv(&HostMsg::UserUpdate {
             user: user.map(user_to_data),
+        });
+    }
+
+    fn commands(&self) -> Vec<PluginCmdItem> {
+        self.cached_palette_commands
+            .iter()
+            .map(|(cat, label)| PluginCmdItem {
+                category: cat.clone(),
+                label: label.clone(),
+            })
+            .collect()
+    }
+
+    fn handle_palette_command(&mut self, index: usize) {
+        self.send_recv(&HostMsg::PaletteCommand {
+            index: index as u32,
         });
     }
 
