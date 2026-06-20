@@ -1,5 +1,6 @@
 mod handle_key;
 mod palette;
+mod registry;
 mod screens;
 
 use crate::plugin::{Plugin, PluginContext};
@@ -14,6 +15,7 @@ use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::Color;
 use ratatui::Frame;
 use ratatui::Terminal;
+use santui_registry::Registry as PluginRegistry;
 use std::time::Duration;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -23,16 +25,19 @@ const SHOOTING_COOLDOWN: u64 = 180;
 const COMET_LIFETIME: u64 = 100;
 const COMET_COOLDOWN: u64 = 500;
 
-struct CmdItem {
-    category: &'static str,
-    label: &'static str,
+pub(super) struct CmdItem {
+    pub(super) category: &'static str,
+    pub(super) label: &'static str,
+}
+
+/// Index into either the built-in CMD_ITEMS or dynamic plugin items.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum ItemIndex {
+    Builtin(usize),
+    Dynamic(usize),
 }
 
 const CMD_ITEMS: &[CmdItem] = &[
-    CmdItem {
-        category: "Modules",
-        label: "Radio Streaming Player",
-    },
     CmdItem {
         category: "Auth",
         label: "Sign in with Google",
@@ -52,6 +57,10 @@ const CMD_ITEMS: &[CmdItem] = &[
     CmdItem {
         category: "System",
         label: "About",
+    },
+    CmdItem {
+        category: "System",
+        label: "Plugin Registry",
     },
 ];
 
@@ -80,16 +89,16 @@ const HEADER_H: u16 = 4;
 const PAL_MIN_W: u16 = 30;
 const PAL_IDEAL_W: u16 = 60;
 
-fn pal_w(content_w: u16) -> u16 {
+pub(super) fn max_list_h(content_h: u16) -> u16 {
+    (content_h / 2).saturating_sub(6).max(3)
+}
+
+pub(super) fn pal_w(content_w: u16) -> u16 {
     let max = content_w.saturating_sub(2);
     if max < PAL_MIN_W {
         return max;
     }
     max.clamp(PAL_MIN_W, PAL_IDEAL_W)
-}
-
-fn max_list_h(content_h: u16) -> u16 {
-    (content_h / 2).saturating_sub(6).max(3)
 }
 
 /// Scale the brightness of an RGB foreground color by `factor`,
@@ -270,6 +279,7 @@ struct PaletteState {
 pub struct Santui {
     plugins: Vec<Box<dyn Plugin>>,
     ctx: PluginContext,
+    registry: Option<PluginRegistry>,
     theme: Theme,
     themes: Vec<(&'static str, Theme)>,
     theme_idx: usize,
@@ -277,6 +287,15 @@ pub struct Santui {
     palette: Option<PaletteState>,
     show_about: bool,
     show_theme_picker: bool,
+    show_registry: bool,
+    registry_cursor: usize,
+    registry_scroll: u16,
+    registry_status: String,
+    /// Dynamic palette items from enabled registry plugins: (category, plugin_id, name).
+    pub(super) dynamic_items: Vec<(String, String, String)>,
+    /// Factory to create a Box<dyn Plugin> from (id, name, binary_path).
+    /// Set by main.rs before run().
+    pub(super) plugin_factory: Option<crate::plugin::PluginFactory>,
     theme_picker_query: String,
     theme_picker_cursor: usize,
     theme_picker_scroll: u16,
@@ -301,6 +320,7 @@ impl Santui {
         Santui {
             plugins: Vec::new(),
             ctx: PluginContext::new(),
+            registry: None,
             theme,
             themes,
             theme_idx: 1,
@@ -308,6 +328,12 @@ impl Santui {
             palette: None,
             show_about: false,
             show_theme_picker: false,
+            show_registry: false,
+            registry_cursor: 0,
+            registry_scroll: 0,
+            registry_status: String::new(),
+            dynamic_items: Vec::new(),
+            plugin_factory: None,
             theme_picker_query: String::new(),
             theme_picker_cursor: 0,
             theme_picker_scroll: 0,
@@ -348,6 +374,31 @@ impl Santui {
             },
             shooting: None,
             shooting_cooldown: 0,
+        }
+    }
+
+    /// Rebuild dynamic palette items from the plugin registry.
+    /// Call this whenever a plugin is installed or toggled.
+    pub(super) fn refresh_dynamic_items(&mut self) {
+        self.dynamic_items.clear();
+        if let Some(ref reg) = self.registry {
+            for plugin in &reg.available {
+                let enabled = reg.installed.iter().any(|p| {
+                    p.path
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .map(|s| s.trim_end_matches(".exe"))
+                        == Some(&plugin.id)
+                        && p.enabled
+                });
+                if enabled {
+                    self.dynamic_items.push((
+                        "Modules".into(),
+                        plugin.id.clone(),
+                        plugin.name.clone(),
+                    ));
+                }
+            }
         }
     }
 
@@ -517,6 +568,10 @@ impl Santui {
 
         if self.show_theme_picker {
             self.render_theme_picker(f, chunks[0]);
+        }
+
+        if self.show_registry {
+            self.render_registry(f, chunks[0]);
         }
     }
 }

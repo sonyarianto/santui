@@ -1,3 +1,3 @@
 [workspace]
-members = ["santui-core", "santui-ipc", "santui-auth", "santui-radio-streaming-player", "santui-radio-streaming-player/scraper", "santui"]
+members = ["santui-core", "santui-ipc", "santui-auth", "santui-registry", "santui-radio-streaming-player", "santui-radio-streaming-player/scraper", "santui"]
 resolver = "2"

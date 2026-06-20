@@ -5,17 +5,22 @@ use ratatui::widgets::{Clear, Paragraph};
 use ratatui::Frame;
 
 impl super::Santui {
-    pub(super) fn filtered_items(&self, query: &str) -> Vec<usize> {
-        if query.is_empty() {
-            return (0..super::CMD_ITEMS.len()).collect();
-        }
+    pub(super) fn filtered_items(&self, query: &str) -> Vec<super::ItemIndex> {
         let q = query.to_lowercase();
-        super::CMD_ITEMS
-            .iter()
-            .enumerate()
-            .filter(|(_, item)| item.label.to_lowercase().contains(&q))
-            .map(|(i, _)| i)
-            .collect()
+        let mut results = Vec::new();
+        // Built-in items
+        for (i, item) in super::CMD_ITEMS.iter().enumerate() {
+            if query.is_empty() || item.label.to_lowercase().contains(&q) {
+                results.push(super::ItemIndex::Builtin(i));
+            }
+        }
+        // Dynamic (registry) items
+        for (i, (_cat, _id, name)) in self.dynamic_items.iter().enumerate() {
+            if query.is_empty() || name.to_lowercase().contains(&q) {
+                results.push(super::ItemIndex::Dynamic(i));
+            }
+        }
+        results
     }
 
     pub(super) fn ensure_cursor_visible(&mut self, content_h: u16) {
@@ -30,7 +35,10 @@ impl super::Santui {
         let mut cat = String::new();
         let mut first_cat = true;
         for (flat, &idx) in filtered.iter().enumerate() {
-            let c = super::CMD_ITEMS[idx].category;
+            let c = match idx {
+                super::ItemIndex::Builtin(i) => super::CMD_ITEMS[i].category,
+                super::ItemIndex::Dynamic(i) => &self.dynamic_items[i].0,
+            };
             if c != cat {
                 cat = c.to_string();
                 if !first_cat {
@@ -231,13 +239,16 @@ impl super::Santui {
         let cursor = self.palette.as_ref().map_or(0, |p| p.cursor);
         let scroll = self.palette.as_ref().map_or(0, |p| p.scroll);
 
-        let mut current_cat = "";
-        let mut cat_items: Vec<usize> = Vec::new();
-        let mut groups: Vec<(&str, Vec<usize>)> = Vec::new();
+        let mut current_cat = String::new();
+        let mut cat_items: Vec<super::ItemIndex> = Vec::new();
+        let mut groups: Vec<(String, Vec<super::ItemIndex>)> = Vec::new();
         for &idx in &filtered {
-            let cat = super::CMD_ITEMS[idx].category;
+            let cat = match idx {
+                super::ItemIndex::Builtin(i) => super::CMD_ITEMS[i].category.to_string(),
+                super::ItemIndex::Dynamic(i) => self.dynamic_items[i].0.clone(),
+            };
             if cat != current_cat && !cat_items.is_empty() {
-                groups.push((current_cat, std::mem::take(&mut cat_items)));
+                groups.push((current_cat.clone(), std::mem::take(&mut cat_items)));
             }
             current_cat = cat;
             cat_items.push(idx);
@@ -270,14 +281,17 @@ impl super::Santui {
             )));
             for &idx in items {
                 let sel = flat_idx == cursor;
-                let item = &super::CMD_ITEMS[idx];
+                let label = match idx {
+                    super::ItemIndex::Builtin(i) => super::CMD_ITEMS[i].label.to_string(),
+                    super::ItemIndex::Dynamic(i) => self.dynamic_items[i].2.clone(),
+                };
                 let style = if sel {
                     Style::default().fg(t.inverted_text).bg(t.highlight)
                 } else {
                     Style::default().fg(t.text)
                 };
                 list_lines.push(Line::from(Span::styled(
-                    format!("{:<width$}", item.label, width = inner_w as usize),
+                    format!("{:<width$}", label, width = inner_w as usize),
                     style,
                 )));
                 flat_idx += 1;
@@ -381,18 +395,19 @@ mod tests {
     #[test]
     fn filtered_items_matches_label() {
         let app = Santui::new();
-        let items = app.filtered_items("radio");
+        let items = app.filtered_items("theme");
         assert_eq!(items.len(), 1);
-        assert_eq!(
-            super::super::CMD_ITEMS[items[0]].label,
-            "Radio Streaming Player"
-        );
+        if let super::super::ItemIndex::Builtin(idx) = items[0] {
+            assert_eq!(super::super::CMD_ITEMS[idx].label, "Switch theme");
+        } else {
+            panic!("expected Builtin item");
+        }
     }
 
     #[test]
     fn filtered_items_matches_case_insensitive() {
         let app = Santui::new();
-        let items = app.filtered_items("RADIO");
+        let items = app.filtered_items("THEME");
         assert_eq!(items.len(), 1);
     }
 

@@ -15,9 +15,9 @@ use std::process::{Child, ChildStdout, Command, Stdio};
 use std::sync::Arc;
 
 pub struct IpcPluginHost {
-    id: &'static str,
-    name: &'static str,
-    binary_name: &'static str,
+    id: String,
+    name: String,
+    binary_name: String,
     process: Option<Child>,
     reader: Option<BufReader<ChildStdout>>,
     cached_commands: Vec<RenderCmd>,
@@ -29,11 +29,11 @@ pub struct IpcPluginHost {
 }
 
 impl IpcPluginHost {
-    pub fn new(id: &'static str, name: &'static str, binary_base: &'static str) -> Self {
+    pub fn new(id: &str, name: &str, binary_base: &str) -> Self {
         IpcPluginHost {
-            id,
-            name,
-            binary_name: binary_base,
+            id: id.to_string(),
+            name: name.to_string(),
+            binary_name: binary_base.to_string(),
             process: None,
             reader: None,
             cached_commands: Vec::new(),
@@ -52,6 +52,12 @@ impl IpcPluginHost {
             },
             pending_request: None,
         }
+    }
+
+    /// Convenience: create a boxed Plugin via the factory.
+    pub fn new_boxed(id: &str, name: &str, path: &std::path::Path) -> Box<dyn Plugin> {
+        let binary = path.to_string_lossy().to_string();
+        Box::new(IpcPluginHost::new(id, name, &binary))
     }
 }
 
@@ -133,7 +139,7 @@ impl IpcPluginHost {
     }
 
     fn spawn_binary_name(&self) -> String {
-        let base = self.binary_name;
+        let base = &self.binary_name;
         if cfg!(windows) && !base.ends_with(".exe") {
             format!("{}.exe", base)
         } else {
@@ -201,12 +207,12 @@ impl IpcPluginHost {
 }
 
 impl Plugin for IpcPluginHost {
-    fn id(&self) -> &'static str {
-        self.id
+    fn id(&self) -> &str {
+        &self.id
     }
 
     fn name(&self) -> &str {
-        self.name
+        &self.name
     }
 
     fn init(&mut self, ctx: &mut PluginContext) -> Result<(), Box<dyn std::error::Error>> {

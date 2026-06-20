@@ -1,7 +1,5 @@
 use santui_core::Santui;
-
-#[cfg(feature = "radio-streaming-player")]
-use santui_ipc::IpcPluginHost;
+use std::path::PathBuf;
 
 #[cfg(feature = "auth")]
 use santui_auth::AuthClient;
@@ -9,23 +7,29 @@ use santui_auth::AuthClient;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = Santui::new();
 
+    // Initialize plugin registry (stores config + downloaded plugins in ~/.santui).
+    let registry_dir = {
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .unwrap_or_else(|_| ".".into());
+        PathBuf::from(home).join(".santui")
+    };
+    app.set_registry_dir(registry_dir);
+
+    // Set plugin factory: uses IpcPluginHost for IPC-based plugin binaries.
+    app.set_plugin_factory(std::sync::Arc::new(santui_ipc::IpcPluginHost::new_boxed));
+
     #[cfg(feature = "auth")]
     {
         let client_id = std::env::var("SANTUI_GOOGLE_CLIENT_ID").unwrap_or_default();
         let client_secret = std::env::var("SANTUI_GOOGLE_CLIENT_SECRET").unwrap_or_default();
         if !client_id.is_empty() && !client_secret.is_empty() {
             let config = santui_auth::AuthConfig::google(client_id, client_secret);
-            let auth: Arc<dyn santui_core::AuthHandle> = Arc::new(AuthClient::new(config));
+            let auth: std::sync::Arc<dyn santui_core::AuthHandle> =
+                std::sync::Arc::new(AuthClient::new(config));
             app.ctx.auth = Some(auth);
         }
     }
-
-    #[cfg(feature = "radio-streaming-player")]
-    app.register(Box::new(IpcPluginHost::new(
-        "santui-radio-streaming-player",
-        "Radio Streaming Player",
-        "santui-radio-streaming-player",
-    )));
 
     app.run()
 }

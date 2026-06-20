@@ -48,52 +48,79 @@ impl super::Santui {
                 }
                 KeyCode::Enter => {
                     if let Some(&idx) = filtered.get(palette.cursor) {
-                        match super::CMD_ITEMS[idx].label {
-                            "Radio Streaming Player" if !self.plugins.is_empty() => {
-                                self.plugins[0].on_focus();
-                                self.active_plugin = Some(0);
-                            }
-                            "Sign in with Google" => {
-                                if let Some(ref auth) = self.ctx.auth {
-                                    match auth.sign_in("google") {
-                                        Ok(user) => {
+                        match idx {
+                            super::ItemIndex::Builtin(bi) => match super::CMD_ITEMS[bi].label {
+                                "Sign in with Google" => {
+                                    if let Some(ref auth) = self.ctx.auth {
+                                        if let Ok(user) = auth.sign_in("google") {
                                             for p in &mut self.plugins {
                                                 p.on_user_update(Some(&user));
                                             }
                                         }
-                                        Err(e) => eprintln!("[santui] Sign-in failed: {e}"),
                                     }
                                 }
-                            }
-                            "Sign in with GitHub" => {
-                                if let Some(ref auth) = self.ctx.auth {
-                                    match auth.sign_in("github") {
-                                        Ok(user) => {
+                                "Sign in with GitHub" => {
+                                    if let Some(ref auth) = self.ctx.auth {
+                                        if let Ok(user) = auth.sign_in("github") {
                                             for p in &mut self.plugins {
                                                 p.on_user_update(Some(&user));
                                             }
                                         }
-                                        Err(e) => eprintln!("[santui] Sign-in failed: {e}"),
+                                    }
+                                }
+                                "Sign out" => {
+                                    if let Some(ref auth) = self.ctx.auth {
+                                        auth.sign_out();
+                                        for p in &mut self.plugins {
+                                            p.on_user_update(None);
+                                        }
+                                    }
+                                }
+                                "Switch theme" => {
+                                    self.show_theme_picker = true;
+                                    self.theme_picker_query.clear();
+                                    self.theme_picker_cursor = self.theme_idx;
+                                    self.theme_picker_scroll = 0;
+                                    self.theme_picker_orig_idx = self.theme_idx;
+                                }
+                                "About" => self.show_about = true,
+                                "Plugin Registry" => self.open_registry(),
+                                _ => {}
+                            },
+                            super::ItemIndex::Dynamic(di) => {
+                                // Launch a registry-installed plugin via factory.
+                                if let Some((_cat, id, name)) = self.dynamic_items.get(di).cloned()
+                                {
+                                    // Re-use already-running instance if one exists.
+                                    if let Some(existing) =
+                                        self.plugins.iter().position(|p| p.id() == id)
+                                    {
+                                        self.active_plugin = Some(existing);
+                                    } else if let Some(ref reg) = self.registry {
+                                        if let Some(installed) = reg.installed.iter().find(|p| {
+                                            p.path
+                                                .file_stem()
+                                                .and_then(|s| s.to_str())
+                                                .map(|s| s.trim_end_matches(".exe"))
+                                                == Some(id.as_str())
+                                        }) {
+                                            if let Some(ref factory) = self.plugin_factory {
+                                                let mut plugin =
+                                                    factory(&id, &name, &installed.path);
+                                                let mut ctx = crate::plugin::PluginContext {
+                                                    theme: self.theme.clone(),
+                                                    auth: self.ctx.auth.clone(),
+                                                };
+                                                if plugin.init(&mut ctx).is_ok() {
+                                                    let idx = self.plugins.len();
+                                                    self.plugins.push(plugin);
+                                                    self.active_plugin = Some(idx);
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
-                            "Sign out" => {
-                                if let Some(ref auth) = self.ctx.auth {
-                                    auth.sign_out();
-                                    for p in &mut self.plugins {
-                                        p.on_user_update(None);
-                                    }
-                                }
-                            }
-                            "Switch theme" => {
-                                self.show_theme_picker = true;
-                                self.theme_picker_query.clear();
-                                self.theme_picker_cursor = self.theme_idx;
-                                self.theme_picker_scroll = 0;
-                                self.theme_picker_orig_idx = self.theme_idx;
-                            }
-                            "About" => self.show_about = true,
-                            _ => {}
                         }
                     }
                     self.palette = None;
@@ -188,8 +215,74 @@ impl super::Santui {
             return;
         }
 
+        // ---- Registry screen ----
+        if self.show_registry {
+            match key.code {
+                KeyCode::Esc => {
+                    self.show_registry = false;
+                }
+                KeyCode::Down => {
+                    if let Some(ref reg) = self.registry {
+                        if !reg.available.is_empty() {
+                            let max = reg.available.len().saturating_sub(1);
+                            self.registry_cursor = (self.registry_cursor + 1).min(max);
+                            self.ensure_registry_scroll_visible();
+                        }
+                    }
+                }
+                KeyCode::Up => {
+                    if self.registry_cursor > 0 {
+                        self.registry_cursor -= 1;
+                    }
+                    self.ensure_registry_scroll_visible();
+                }
+                KeyCode::Enter => {
+                    // Toggle install/enable/disable
+                    let plugin = self
+                        .registry
+                        .as_ref()
+                        .and_then(|reg| reg.available.get(self.registry_cursor).cloned());
+                    if let Some(plugin) = plugin {
+                        if let Some(ref mut reg) = self.registry {
+                            let installed_idx = reg.installed.iter().position(|p| {
+                                p.path
+                                    .file_stem()
+                                    .and_then(|s| s.to_str())
+                                    .map(|s| s.trim_end_matches(".exe"))
+                                    == Some(&plugin.id)
+                            });
+                            if let Some(idx) = installed_idx {
+                                let current = reg.installed[idx].enabled;
+                                let _ = reg.set_enabled(idx, !current);
+                                self.registry_status = if !current {
+                                    format!("{} enabled", plugin.name)
+                                } else {
+                                    format!("{} disabled", plugin.name)
+                                };
+                            } else {
+                                self.registry_status = format!("Downloading {}…", plugin.name);
+                                match reg.install(&plugin) {
+                                    Ok(()) => {
+                                        self.registry_status =
+                                            format!("{} installed and enabled", plugin.name);
+                                    }
+                                    Err(e) => {
+                                        self.registry_status = format!("Error: {e}");
+                                    }
+                                }
+                            }
+                            self.refresh_dynamic_items();
+                        }
+                    }
+                }
+                _ => {}
+            }
+            return;
+        }
+
         if matches!(key.code, KeyCode::Char('p') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL))
         {
+            // Reset palette to include dynamic items from registry plugins
             self.palette = Some(super::PaletteState {
                 query: String::new(),
                 cursor: 0,
