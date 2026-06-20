@@ -1,5 +1,8 @@
+use std::path::Path;
+use std::time::SystemTime;
+
 use crate::event::Event;
-use crate::plugin::{Plugin, PluginCmdItem, PluginContext};
+use crate::plugin::{Plugin, PluginCmdItem, PluginContext, PluginFactory};
 use crate::theme::Theme;
 use crossterm::event::KeyEvent;
 use ratatui::layout::Rect;
@@ -13,6 +16,11 @@ pub(crate) struct PluginManager {
     active_idx: Option<usize>,
     /// Global index → (plugin_index, local_command_index, command).
     plugin_commands: Vec<(usize, usize, PluginCmdItem)>,
+    /// Factory for recreating plugins during hot-reload.
+    plugin_factory: Option<PluginFactory>,
+    /// Last known modification times for each plugin's binary, parallel to
+    /// `plugins`.  `None` for in-process plugins or when stat failed.
+    mtimes: Vec<Option<SystemTime>>,
 }
 
 impl PluginManager {
@@ -21,7 +29,14 @@ impl PluginManager {
             plugins: Vec::new(),
             active_idx: None,
             plugin_commands: Vec::new(),
+            plugin_factory: None,
+            mtimes: Vec::new(),
         }
+    }
+
+    /// Store the plugin factory so we can recreate plugins during hot-reload.
+    pub fn set_factory(&mut self, factory: PluginFactory) {
+        self.plugin_factory = Some(factory);
     }
 
     // ------------------------------------------------------------------
@@ -29,6 +44,7 @@ impl PluginManager {
     // ------------------------------------------------------------------
 
     pub fn register(&mut self, plugin: Box<dyn Plugin>) {
+        self.mtimes.push(stat_mtime(plugin.binary_path()));
         self.plugins.push(plugin);
     }
 
@@ -58,6 +74,7 @@ impl PluginManager {
     ) -> Result<usize, Box<dyn std::error::Error>> {
         plugin.init(ctx)?;
         let idx = self.plugins.len();
+        self.mtimes.push(stat_mtime(plugin.binary_path()));
         self.plugins.push(plugin);
         Ok(idx)
     }
@@ -122,6 +139,64 @@ impl PluginManager {
     }
 
     // ------------------------------------------------------------------
+    // Hot-reload
+    // ------------------------------------------------------------------
+
+    /// Check every plugin's binary mtime and reload any that have changed.
+    /// Called once per frame from the event loop.
+    pub fn check_reloads(&mut self, ctx: &mut PluginContext) {
+        for idx in 0..self.plugins.len() {
+            if let Err(e) = self.reload_plugin(idx, ctx) {
+                let name = self.plugins[idx].name().to_string();
+                eprintln!("[santui] Failed to reload plugin `{name}`: {e}");
+            }
+        }
+    }
+
+    /// Reload the plugin at `idx` if its binary has changed on disk.
+    /// In-process plugins (no binary path) are skipped.
+    fn reload_plugin(
+        &mut self,
+        idx: usize,
+        ctx: &mut PluginContext,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let path = match self.plugins[idx].binary_path() {
+            Some(p) => p.to_path_buf(),
+            None => return Ok(()),
+        };
+
+        let factory = match self.plugin_factory.as_ref() {
+            Some(f) => f,
+            None => return Ok(()),
+        };
+
+        let current_mtime = stat_mtime(Some(&path));
+        let stored = self.mtimes.get(idx).copied().flatten();
+
+        if current_mtime == stored {
+            return Ok(());
+        }
+
+        // Binary changed — recreate the plugin.
+        let id = self.plugins[idx].id().to_string();
+        let name = self.plugins[idx].name().to_string();
+
+        let mut new_plugin = factory(&id, &name, &path);
+        new_plugin.init(ctx)?;
+
+        // Update stored mtime *before* replacing so a second consecutive poll
+        // doesn't trigger another reload.
+        if idx < self.mtimes.len() {
+            self.mtimes[idx] = current_mtime;
+        }
+
+        self.plugins[idx] = new_plugin;
+        self.refresh_commands();
+
+        Ok(())
+    }
+
+    // ------------------------------------------------------------------
     // Broadcasts
     // ------------------------------------------------------------------
 
@@ -176,4 +251,10 @@ impl Default for PluginManager {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Helper: resolve `SystemTime` from an optional path.
+fn stat_mtime(path: Option<&Path>) -> Option<SystemTime> {
+    path.and_then(|p| std::fs::metadata(p).ok())
+        .and_then(|m| m.modified().ok())
 }

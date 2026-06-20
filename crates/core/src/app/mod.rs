@@ -681,6 +681,13 @@ impl Santui {
                 self.apply_config();
             }
 
+            // Check for plugin binary updates (hot-reload).
+            let mut ctx = PluginContext {
+                theme: self.app_state.theme.clone(),
+                auth: self.auth.clone(),
+            };
+            self.plugin_manager.check_reloads(&mut ctx);
+
             // Drain the event bus and forward events to the plugin manager.
             let events = self.event_bus.drain();
             self.plugin_manager.process_events(&events);

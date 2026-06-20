@@ -11,6 +11,7 @@ use santui_core::theme::Theme;
 use santui_core::{AuthHandle, Plugin, PluginCmdItem, PluginContext};
 use std::cell::Cell;
 use std::io::{BufRead, BufReader, Write};
+use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc::{self, Receiver};
 use std::sync::Arc;
@@ -396,6 +397,10 @@ impl Plugin for IpcPluginHost {
             action: action.to_string(),
             data: data.to_string(),
         });
+    }
+
+    fn binary_path(&self) -> Option<&Path> {
+        Some(Path::new(&self.binary_name))
     }
 
     fn status_hints(&self) -> Vec<(String, String)> {

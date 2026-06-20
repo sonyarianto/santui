@@ -45,6 +45,13 @@ pub trait Plugin {
 
     /// Called when a plugin-to-plugin message arrives.
     fn on_plugin_message(&mut self, _from: &str, _action: &str, _data: &str) {}
+
+    /// Return the filesystem path to this plugin's binary, if it runs as an
+    /// external process.  `None` for in-process plugins.  Used by the hot-reload
+    /// mechanism to detect when the binary has been updated on disk.
+    fn binary_path(&self) -> Option<&Path> {
+        None
+    }
 }
 
 pub struct PluginContext {

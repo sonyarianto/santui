@@ -11,8 +11,10 @@ impl Santui {
     }
 
     /// Set the plugin factory (called from main.rs before run()).
+    /// Also forwards to `PluginManager` so it can recreate plugins during hot-reload.
     pub fn set_plugin_factory(&mut self, factory: PluginFactory) {
-        self.plugin_factory = Some(factory);
+        self.plugin_factory = Some(factory.clone());
+        self.plugin_manager.set_factory(factory);
     }
 
     pub(super) fn ensure_registry_scroll_visible(&mut self) {

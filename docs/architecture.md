@@ -76,7 +76,7 @@ santui.exe (host)
 | **Plugin comms** | `EventBus` with `emit`/`drain` | 2.2 ✅ |
 | **App state** | Centralized in `AppState` struct (`crates/core/src/app/app_state.rs`) | 2.3 ✅ |
 | **IPC** | Async background reader thread, non-blocking `tick()` | 3.1 ✅ |
-| **Plugin reload** | Restart required | 3.2 ❌ |
+| **Plugin reload** | Binary mtime polling + re-spawn via factory | 3.2 ✅ |
 | **Plugin SDK** | Manual setup | 3.3 ❌ |
 
 See [`docs/roadmap.md`](roadmap.md) for details on remaining phases.

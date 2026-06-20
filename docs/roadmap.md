@@ -143,19 +143,20 @@ message and drains pending responses without blocking. A 5-second timeout on
 
 **Key files:** `host.rs` (`spawn` creates reader thread, `drain_responses`, `recv` with timeout)
 
-### 3.2 Plugin Hot-Reload ❌
+### 3.2 Plugin Hot-Reload ✅
 
 **Problem:** Plugin changes require full app restart.
 
-**Planned solution:**
-```
-File watcher (notify crate) monitors ~/.santui/plugins/
-On change: graceful shutdown → dlopen or re-spawn → init
-```
+**Solution (implemented):**
+- `Plugin::binary_path()` returns the filesystem path to the plugin's binary
+- `PluginManager` polls binary mtimes once per frame in the event loop
+- When a binary changes, `PluginManager::reload_plugin()` recreates the plugin via
+  the factory, calls `init()` with current context, then swaps in the new instance
+- Old `IpcPluginHost` is dropped, which kills the stale child process and its
+  background reader thread
+- In-process plugins (no binary path) are skipped
 
-**Status:** Not yet started.
-
-**Key files (future):** `plugin_manager.rs` (reload method)
+**Key files:** `plugin.rs` (trait method), `plugin_manager.rs` (reload_plugin, check_reloads), `host.rs` (binary_path)
 
 ### 3.3 Plugin SDK / Generator ❌
 
@@ -187,5 +188,5 @@ A `cargo generate` template that scaffolds a working plugin with:
 | 2.2 | Event Bus | 🟡 Medium | 🟡 Medium | ✅ |
 | 2.3 | App State | 🟡 Medium | 🟡 Medium | ✅ |
 | 3.1 | Async IPC | 🔴 High | 🔵 Low | ✅ |
-| 3.2 | Hot-Reload | 🔴 High | 🔵 Low | ❌ |
+| 3.2 | Hot-Reload | 🔴 High | 🔵 Low | ✅ |
 | 3.3 | Plugin SDK | 🟡 Medium | 🟡 Medium | ❌ |
