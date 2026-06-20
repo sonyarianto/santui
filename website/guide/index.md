@@ -4,15 +4,14 @@
 
 ### Windows
 
-**Scoop (recommended)** — no admin required, no Windows Defender block:
+**npm (recommended)** — no admin, no Windows Defender issues, works everywhere:
 
-```powershell
-scoop bucket add santui https://github.com/sonyarianto/scoop-santui
-scoop install santui
+```bash
+npm install -g santui
 santui
 ```
 
-**PowerShell (fallback)** — ⚠️ Windows may block the downloaded binary. Prefer Scoop above.
+**PowerShell** — ⚠️ Windows may block the downloaded binary:
 
 ```powershell
 irm https://santuiapp.vercel.app/install.ps1 | iex

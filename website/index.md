@@ -25,16 +25,15 @@ features:
 
 ## Install
 
-### Windows (recommended)
+### Windows
 
-**Scoop** — no admin required, no Windows Defender issues:
-```powershell
-scoop bucket add santui https://github.com/sonyarianto/scoop-santui
-scoop install santui
+**npm** (recommended) — no admin, no Windows Defender issues, works everywhere:
+```bash
+npm install -g santui
 santui
 ```
 
-**PowerShell (fallback)** — ⚠️ Windows may block the downloaded binary:
+**PowerShell** — ⚠️ Windows may block the downloaded binary:
 ```powershell
 irm https://santuiapp.vercel.app/install.ps1 | iex
 ```
