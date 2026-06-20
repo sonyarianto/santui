@@ -313,5 +313,5 @@ SCOOP_JSON
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add bucket/santui.json
           git commit -m "chore: update to v${VERSION}"
-          git push origin HEAD:master
+          git push origin HEAD:main
           echo "✅ Scoop bucket updated to v${VERSION}"
