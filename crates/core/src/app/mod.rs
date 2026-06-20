@@ -2,6 +2,7 @@ mod handle_key;
 mod palette;
 mod registry;
 mod screens;
+mod status_bar;
 
 use crate::plugin::{Plugin, PluginCmdItem, PluginContext};
 use crate::theme::Theme;
@@ -548,7 +549,19 @@ impl Santui {
             }
         }
 
-        self.render_status_bar(f, chunks[1]);
+        let hints = self
+            .active_plugin
+            .map(|idx| self.plugins[idx].status_hints())
+            .unwrap_or_default();
+        status_bar::StatusBar {
+            theme: &self.theme,
+            palette_open: self.palette.is_some(),
+            theme_picker_open: self.show_theme_picker,
+            about_open: self.show_about,
+            plugin_active: self.active_plugin.is_some(),
+            active_plugin_hints: &hints,
+        }
+        .render(f, chunks[1]);
 
         if self.palette.is_some() || self.show_theme_picker {
             let dim_bg = self.theme.background_overlay;
