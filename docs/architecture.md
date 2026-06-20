@@ -1,6 +1,8 @@
 # Santui Architecture
 
-## Core
+## Current Architecture
+
+### Core
 
 - **Santui** — main app struct; owns plugin list, palette state, event loop, theme system
 - **Plugin trait** — each plugin implements `id`, `name`, `init`, `handle_key`, `render`, `tick`, `on_focus`/`on_blur`, `on_theme_change`, `status_hints`, `on_user_update`
@@ -9,9 +11,9 @@
 - **About screen** — shown on `?` key; uses `render_about()`
 - **Status bar** — rendered at bottom; shows key hints per context
 
-## IPC Plugin Architecture
+### IPC Plugin Architecture
 
-Plugins can run as separate processes via `IpcPluginHost`, which implements the `Plugin` trait and communicates over JSON lines on stdin/stdout:
+Plugins run as separate processes via `IpcPluginHost`, which implements the `Plugin` trait and communicates over JSON lines on stdin/stdout:
 
 ```
 santui.exe (host)
@@ -29,17 +31,50 @@ santui.exe (host)
 - Render commands (`Text`, `Clear`) are cached on the host and composited into the ratatui buffer each frame — no IPC round-trip on every frame.
 - To write a new plugin: create a binary crate depending on `santui-ipc` (protocol types only, no ratatui), implement stdin/stdout JSON loop, then add it to the plugin registry manifest for distribution (see `plugins.json` format in `crates/registry/src/lib.rs`). Plugins are discovered through the registry, installed to `~/.santui/plugins/`, and spawned on demand via the `PluginFactory` set in `main.rs`.
 
-## Plugin Registry
+### Plugin Registry
 
 Plugins are managed at runtime through the plugin registry (opened via `Ctrl+P` > "Plugin registry"). The registry fetches a manifest from GitHub Releases (or a local file in dev mode), presents available plugins, and handles install/enable/disable. Installed plugin binaries live in `~/.santui/plugins/` and are launched via `IpcPluginHost` when the user selects them from the palette.
 
 At build time, `cargo build --workspace` produces all workspace binaries including `santui.exe` (host) and any plugin binaries. For production packaging, see `scripts/package-release.ps1` (Windows) or `scripts/package-release-macos.sh` (macOS), which bundle the host binary, plugins, and native dependencies.
 
-## Theme
+### Theme
 
 `crates/core/src/theme.rs` defines `Theme` struct with ~10 semantic color keys + all 38 OpenCode themes (from `THEMES` const array). `Default` = Santui (dark neutral `0x141414`, yellow primary `0xffb900`). Passed to plugins via `PluginContext.theme` during `init()`. Plugins override `on_theme_change()` to react to runtime theme switches. `Theme::all()` returns `Vec<(&'static str, Theme)>` for the picker. `text_muted` is computed as 60/40 blend of neutral/ink.
 
-### Semantic colors
+#### Semantic colors
 
 - Accent: `Color::Rgb(157, 124, 216)` (#9d7cd8 purple)
 - Highlight bar: `Color::Rgb(250, 178, 131)` (#fab283 OpenCode primary)
+
+## Target Architecture (from roadmap)
+
+The goal is to evolve toward a more modular architecture where `Santui`
+delegates subsystems to dedicated managers:
+
+```
+santui.exe (host)
+  ├── AppState              ← centralized state (theme, screen, status)
+  ├── Palette                ← dynamic command registry (built-in + plugin)
+  ├── PluginManager          ← plugin lifecycle, IPC, event bus
+  │    ├── Vec<Box<dyn Plugin>>
+  │    ├── IpcPluginHost
+  │    └── EventBus           ← plugin-to-plugin messaging
+  ├── StatusBar              ← extracted to own module
+  ├── Theme                  ← semantic colors
+  ├── About screen
+  └── Event loop            ← delegates to subsystems
+```
+
+| Component | Current | Target | Phase |
+|---|---|---|---|
+| **Command Palette** | Hardcoded `CMD_ITEMS` | Dynamic registry — plugins register commands | 1.1 |
+| **Plugin trait** | 10 methods, all required | Default implementations — only `id`+`name` required | 1.2 |
+| **Status bar** | Inline in `Santui` | Own module `status_bar.rs` | 1.3 |
+| **Plugin lifecycle** | Inline in `Santui` | `PluginManager` struct | 2.1 |
+| **Plugin comms** | None | `EventBus` for plugin-to-plugin | 2.2 |
+| **App state** | Scattered | Centralized `AppState` struct | 2.3 |
+| **IPC** | Synchronous | Async / non-blocking | 3.1 |
+| **Plugin reload** | Restart required | Hot-reload via file watcher | 3.2 |
+| **Plugin SDK** | Manual setup | `cargo generate` template | 3.3 |
+
+See [`docs/roadmap.md`](roadmap.md) for detailed implementation phases.
