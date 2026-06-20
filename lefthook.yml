@@ -8,6 +8,3 @@ pre-commit:
     clippy:
       run: cargo clippy --workspace -- -D warnings
       glob: "*.rs"
-    check:
-      run: cargo check --workspace
-      glob: "*.rs"
