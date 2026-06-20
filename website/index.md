@@ -39,12 +39,19 @@ irm https://santuiapp.vercel.app/install.ps1 | iex
 ```
 
 ### macOS / Linux
-```bash
-# macOS
-curl -fsSL https://santuiapp.vercel.app/install.sh | sh
 
-# Linux — install libmpv first
-sudo apt install mpv  # Debian/Ubuntu
-sudo dnf install mpv  # Fedora
+**npm** (recommended) — works everywhere, no platform-specific setup:
+```bash
+npm install -g santui
+santui
+```
+
+**Install script** — downloads binary to `~/.local/share/santui/current`:
+```bash
 curl -fsSL https://santuiapp.vercel.app/install.sh | sh
 ```
+
+> **Linux:** Install [libmpv](https://mpv.io/installation/) for the Radio Streaming Player:
+> `sudo apt install mpv` / `sudo dnf install mpv` / `sudo pacman -S mpv`
+>
+> **Prerequisite:** The npm method requires [Node.js](https://nodejs.org/).

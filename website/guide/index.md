@@ -19,42 +19,49 @@ irm https://santuiapp.vercel.app/install.ps1 | iex
 
 This extracts to `%LOCALAPPDATA%\santui\current` and adds to your PATH.
 
-### macOS
+### macOS / Linux
+
+**npm** (recommended) — works everywhere with no extra setup:
+
+```bash
+npm install -g santui
+santui
+```
+
+**Install script** — downloads binary to `~/.local/share/santui/current` and adds it to your PATH:
 
 ```bash
 curl -fsSL https://santuiapp.vercel.app/install.sh | sh
 ```
 
-### Linux
+> **Linux users:** Install [libmpv](https://mpv.io/installation/) for the Radio Streaming Player:
+> ```bash
+> sudo apt install mpv      # Debian / Ubuntu / Pop!_OS
+> sudo dnf install mpv      # Fedora
+> sudo pacman -S mpv        # Arch
+> ```
 
-```bash
-# Install libmpv first
-sudo apt install mpv      # Debian / Ubuntu / Pop!_OS
-sudo dnf install mpv      # Fedora
-sudo pacman -S mpv        # Arch
-
-curl -fsSL https://santuiapp.vercel.app/install.sh | sh
-```
-
-Downloads the latest release to `~/.local/share/santui/current` and adds it to your PATH. libmpv must be installed via your package manager — it's not bundled in the archive.
+> **Note:** The npm method requires [Node.js](https://nodejs.org/) to be installed. No plugins included — install them from the Plugin Registry after launching.
 
 ## Uninstall
 
 ### Windows
 
-```powershell
-irm https://santuiapp.vercel.app/uninstall.ps1 | iex
-```
+| Method | Command |
+|---|---|
+| **npm** | `npm uninstall -g santui` |
+| **PowerShell** | `irm https://santuiapp.vercel.app/uninstall.ps1 \| iex` |
 
-Removes the installation folder from `%LOCALAPPDATA%\santui` and cleans up the User PATH.
+Both remove Santui from your system. The npm method also removes the `santui` command from PATH automatically.
 
 ### macOS / Linux
 
-```bash
-curl -fsSL https://santuiapp.vercel.app/uninstall.sh | sh
-```
+| Method | Command |
+|---|---|
+| **npm** | `npm uninstall -g santui` |
+| **install script** | `curl -fsSL https://santuiapp.vercel.app/uninstall.sh \| sh` |
 
-Removes `~/.local/share/santui` and removes the PATH entry from `.bashrc` / `.zshrc`.
+Both remove Santui from `~/.local/share/santui` and clean up PATH entries.
 
 ## Usage
 

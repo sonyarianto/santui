@@ -46,9 +46,20 @@ irm https://santuiapp.vercel.app/install.ps1 | iex
 
 ### macOS / Linux
 
+**npm** (recommended) — works everywhere, no platform-specific setup:
+
+```bash
+npm install -g santui
+santui
+```
+
+**Install script** — downloads binary to `~/.local/share/santui/current`:
+
 ```bash
 curl -fsSL https://santuiapp.vercel.app/install.sh | sh
 ```
+
+> **Prerequisite:** The npm method requires [Node.js](https://nodejs.org/).
 
 ### From source
 
