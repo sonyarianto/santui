@@ -30,6 +30,10 @@ $Tmp = Join-Path ([System.IO.Path]::GetTempPath()) "santui-$([System.IO.Path]::G
 Write-Host "  Downloading $ZipUrl ..."
 Invoke-WebRequest -Uri $ZipUrl -OutFile $Tmp -UseBasicParsing
 
+# ── unblock ZIP first so MOTW doesn't propagate to extracted files ──
+Write-Host "  Unblocking downloaded archive ..."
+Unblock-File -Path $Tmp
+
 # ── extract ──
 Write-Host "  Extracting ..."
 if (Test-Path $BinDir) { Remove-Item $BinDir -Recurse -Force }
@@ -37,9 +41,9 @@ New-Item -ItemType Directory -Path $BinDir -Force | Out-Null
 Expand-Archive -Path $Tmp -DestinationPath $BinDir -Force
 Remove-Item $Tmp -Force
 
-# ── unblock (Mark-of-the-Web) ──
-Write-Host "  Unblocking downloaded binaries ..."
-Get-ChildItem -LiteralPath $BinDir -Recurse -File | Unblock-File
+# ── double-unblock: catch any MOTW that Expand-Archive might re-apply ──
+Write-Host "  Unblocking installed binary ..."
+Get-ChildItem -LiteralPath $BinDir -Recurse -File | Unblock-File -ErrorAction SilentlyContinue
 
 # ── PATH ──
 $UserPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
