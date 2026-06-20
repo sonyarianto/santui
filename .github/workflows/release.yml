@@ -141,7 +141,8 @@ jobs:
 
           foreach ($p in $pluginNames) {
             $filename = "$($p.id)-$target$ext"
-            $binPath = "target\release\$($p.id)$ext"
+            # Binary in target/release/ uses santui- prefix (e.g. santui-radio-streaming-player.exe)
+            $binPath = "target\release\santui-$($p.id)$ext"
             if (Test-Path $binPath) {
               $sha = (Get-FileHash -Algorithm SHA256 $binPath).Hash.ToLower()
               $size = (Get-Item $binPath).Length
