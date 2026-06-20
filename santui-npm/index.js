@@ -7,7 +7,7 @@ const https = require('https');
 const http = require('http');
 
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
-const appVersion = pkg.santuiVersion || pkg.version;
+const version = pkg.version;
 const repo = 'sonyarianto/santui';
 const binaryName = process.platform === 'win32' ? 'santui.exe' : 'santui';
 const binaryPath = path.join(__dirname, binaryName);
@@ -50,9 +50,9 @@ function die(msg) { console.error(msg); process.exit(1); }
 async function downloadBinary() {
   const target = getTarget();
   const ext = getArchiveExt();
-  const archiveUrl = `https://github.com/${repo}/releases/download/v${appVersion}/santui-${target}.${ext}`;
+  const archiveUrl = `https://github.com/${repo}/releases/download/v${version}/santui-${target}.${ext}`;
 
-  console.error(`Downloading Santui v${appVersion} (${target})...`);
+  console.error(`Downloading Santui v${version} (${target})...`);
   console.error(`  ${archiveUrl}`);
 
   const tmpDir = fs.mkdtempSync(path.join(__dirname, 'tmp-'));
