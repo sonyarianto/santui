@@ -236,23 +236,24 @@ impl super::Santui {
         }
 
         // ---- Registry screen ----
-        if self.show_registry {
+        if self.registry_screen.open {
             match key.code {
                 KeyCode::Esc => {
-                    self.show_registry = false;
+                    self.registry_screen.open = false;
                 }
                 KeyCode::Down => {
                     if let Some(ref reg) = self.registry {
                         if !reg.available.is_empty() {
                             let max = reg.available.len().saturating_sub(1);
-                            self.registry_cursor = (self.registry_cursor + 1).min(max);
+                            self.registry_screen.cursor =
+                                (self.registry_screen.cursor + 1).min(max);
                             self.ensure_registry_scroll_visible();
                         }
                     }
                 }
                 KeyCode::Up => {
-                    if self.registry_cursor > 0 {
-                        self.registry_cursor -= 1;
+                    if self.registry_screen.cursor > 0 {
+                        self.registry_screen.cursor -= 1;
                     }
                     self.ensure_registry_scroll_visible();
                 }
@@ -261,7 +262,7 @@ impl super::Santui {
                     let plugin = self
                         .registry
                         .as_ref()
-                        .and_then(|reg| reg.available.get(self.registry_cursor).cloned());
+                        .and_then(|reg| reg.available.get(self.registry_screen.cursor).cloned());
                     if let Some(plugin) = plugin {
                         if let Some(ref mut reg) = self.registry {
                             let installed_idx = reg.installed.iter().position(|p| {
@@ -274,20 +275,21 @@ impl super::Santui {
                             if let Some(idx) = installed_idx {
                                 let current = reg.installed[idx].enabled;
                                 let _ = reg.set_enabled(idx, !current);
-                                self.registry_status = if !current {
+                                self.registry_screen.status = if !current {
                                     format!("{} enabled", plugin.name)
                                 } else {
                                     format!("{} disabled", plugin.name)
                                 };
                             } else {
-                                self.registry_status = format!("Downloading {}…", plugin.name);
+                                self.registry_screen.status =
+                                    format!("Downloading {}…", plugin.name);
                                 match reg.install(&plugin) {
                                     Ok(()) => {
-                                        self.registry_status =
+                                        self.registry_screen.status =
                                             format!("{} installed and enabled", plugin.name);
                                     }
                                     Err(e) => {
-                                        self.registry_status = format!("Error: {e}");
+                                        self.registry_screen.status = format!("Error: {e}");
                                     }
                                 }
                             }

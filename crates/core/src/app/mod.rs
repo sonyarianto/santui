@@ -3,6 +3,7 @@ mod palette;
 mod palette_widget;
 mod plugin_manager;
 mod registry;
+mod registry_screen;
 mod screens;
 mod status_bar;
 mod theme_manager;
@@ -285,11 +286,9 @@ pub struct Santui {
     /// Manages theme selection, preview, and theme-picker UI state.
     pub(super) theme_manager: theme_manager::ThemeManager,
     palette: Option<palette_widget::PaletteWidget>,
+    /// Registry screen state.
+    pub(super) registry_screen: registry_screen::RegistryScreen,
     show_about: bool,
-    show_registry: bool,
-    registry_cursor: usize,
-    registry_scroll: u16,
-    registry_status: String,
     /// Dynamic palette items from enabled registry plugins: (category, plugin_id, name).
     pub(super) dynamic_items: Vec<(String, String, String)>,
     /// Factory to create a Box<dyn Plugin> from (id, name, binary_path).
@@ -320,11 +319,8 @@ impl Santui {
             theme,
             theme_manager,
             palette: None,
+            registry_screen: registry_screen::RegistryScreen::new(),
             show_about: false,
-            show_registry: false,
-            registry_cursor: 0,
-            registry_scroll: 0,
-            registry_status: String::new(),
             dynamic_items: Vec::new(),
             plugin_factory: None,
             running: true,
@@ -580,8 +576,9 @@ impl Santui {
             self.theme_manager.render_picker(f, chunks[0], self.tick);
         }
 
-        if self.show_registry {
-            self.render_registry(f, chunks[0]);
+        if self.registry_screen.open {
+            self.registry_screen
+                .render(f, chunks[0], &self.theme, &self.registry);
         }
     }
 }
