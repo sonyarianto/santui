@@ -4,6 +4,7 @@ mod plugin_manager;
 mod registry;
 mod screens;
 mod status_bar;
+mod theme_manager;
 
 use crate::plugin::{Plugin, PluginContext};
 use crate::theme::Theme;
@@ -177,22 +178,22 @@ mod tests {
     #[test]
     fn filtered_themes_empty_query_returns_all() {
         let app = Santui::new();
-        let themes = app.filtered_themes();
-        assert_eq!(themes.len(), app.themes.len());
+        let themes = app.theme_manager.filtered();
+        assert_eq!(themes.len(), app.theme_manager.themes.len());
     }
 
     #[test]
     fn filtered_themes_matches_partial() {
         let mut app = Santui::new();
-        app.theme_picker_query = "cat".into();
-        let themes = app.filtered_themes();
+        app.theme_manager.picker_query = "cat".into();
+        let themes = app.theme_manager.filtered();
         assert!(themes.len() >= 3);
         for &i in &themes {
-            let name = app.themes[i].0.to_lowercase();
+            let name = app.theme_manager.themes[i].0.to_lowercase();
             assert!(
                 name.contains("cat"),
                 "expected '{}' to contain 'cat'",
-                app.themes[i].0
+                app.theme_manager.themes[i].0
             );
         }
     }
@@ -200,18 +201,18 @@ mod tests {
     #[test]
     fn filtered_themes_no_match() {
         let mut app = Santui::new();
-        app.theme_picker_query = "xyznonexistent".into();
-        let themes = app.filtered_themes();
+        app.theme_manager.picker_query = "xyznonexistent".into();
+        let themes = app.theme_manager.filtered();
         assert!(themes.is_empty());
     }
 
     #[test]
     fn filtered_themes_case_insensitive() {
         let mut app = Santui::new();
-        app.theme_picker_query = "NORD".into();
-        let themes = app.filtered_themes();
+        app.theme_manager.picker_query = "NORD".into();
+        let themes = app.theme_manager.filtered();
         assert_eq!(themes.len(), 1);
-        assert_eq!(app.themes[themes[0]].0, "Nord");
+        assert_eq!(app.theme_manager.themes[themes[0]].0, "Nord");
     }
 
     // ---- dim_color tests ----
@@ -286,11 +287,10 @@ pub struct Santui {
     ctx: PluginContext,
     registry: Option<PluginRegistry>,
     theme: Theme,
-    themes: Vec<(&'static str, Theme)>,
-    theme_idx: usize,
+    /// Manages theme selection, preview, and theme-picker UI state.
+    pub(super) theme_manager: theme_manager::ThemeManager,
     palette: Option<PaletteState>,
     show_about: bool,
-    show_theme_picker: bool,
     show_registry: bool,
     registry_cursor: usize,
     registry_scroll: u16,
@@ -300,10 +300,6 @@ pub struct Santui {
     /// Factory to create a Box<dyn Plugin> from (id, name, binary_path).
     /// Set by main.rs before run().
     pub(super) plugin_factory: Option<crate::plugin::PluginFactory>,
-    theme_picker_query: String,
-    theme_picker_cursor: usize,
-    theme_picker_scroll: u16,
-    theme_picker_orig_idx: usize,
     running: bool,
     tick: u64,
     stars: Vec<Star>,
@@ -319,29 +315,23 @@ impl Default for Santui {
 
 impl Santui {
     pub fn new() -> Self {
-        let themes = Theme::all();
-        let theme = themes[1].1.clone();
+        let theme_manager = theme_manager::ThemeManager::new();
+        let theme = theme_manager.current.clone();
         Santui {
             plugin_manager: plugin_manager::PluginManager::new(),
             event_bus: crate::event::EventBus::new(),
             ctx: PluginContext::new(),
             registry: None,
             theme,
-            themes,
-            theme_idx: 1,
+            theme_manager,
             palette: None,
             show_about: false,
-            show_theme_picker: false,
             show_registry: false,
             registry_cursor: 0,
             registry_scroll: 0,
             registry_status: String::new(),
             dynamic_items: Vec::new(),
             plugin_factory: None,
-            theme_picker_query: String::new(),
-            theme_picker_cursor: 0,
-            theme_picker_scroll: 0,
-            theme_picker_orig_idx: 0,
             running: true,
             tick: 0,
             stars: {
@@ -483,7 +473,7 @@ impl Santui {
         let mut terminal = Terminal::new(backend)?;
         terminal.clear()?;
 
-        self.ctx.theme = self.theme.clone();
+        self.ctx.theme = self.theme_manager.current.clone();
         self.plugin_manager.init_all(&mut self.ctx)?;
 
         let tick_rate = Duration::from_millis(100);
@@ -545,14 +535,14 @@ impl Santui {
         status_bar::StatusBar {
             theme: &self.theme,
             palette_open: self.palette.is_some(),
-            theme_picker_open: self.show_theme_picker,
+            theme_picker_open: self.theme_manager.picker_open,
             about_open: self.show_about,
             plugin_active: self.plugin_manager.active().is_some(),
             active_plugin_hints: &hints,
         }
         .render(f, chunks[1]);
 
-        if self.palette.is_some() || self.show_theme_picker {
+        if self.palette.is_some() || self.theme_manager.picker_open {
             let dim_bg = self.theme.background_overlay;
             let buf = f.buffer_mut();
             // Scale both foreground AND background brightness by 45%.
@@ -583,8 +573,8 @@ impl Santui {
             self.render_palette(f, chunks[0]);
         }
 
-        if self.show_theme_picker {
-            self.render_theme_picker(f, chunks[0]);
+        if self.theme_manager.picker_open {
+            self.theme_manager.render_picker(f, chunks[0], self.tick);
         }
 
         if self.show_registry {

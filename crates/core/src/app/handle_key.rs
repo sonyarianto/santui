@@ -74,11 +74,12 @@ impl super::Santui {
                                     }
                                 }
                                 "Switch theme" => {
-                                    self.show_theme_picker = true;
-                                    self.theme_picker_query.clear();
-                                    self.theme_picker_cursor = self.theme_idx;
-                                    self.theme_picker_scroll = 0;
-                                    self.theme_picker_orig_idx = self.theme_idx;
+                                    let tm = &mut self.theme_manager;
+                                    tm.picker_open = true;
+                                    tm.picker_query.clear();
+                                    tm.picker_cursor = tm.current_idx;
+                                    tm.picker_scroll = 0;
+                                    tm.picker_orig_idx = tm.current_idx;
                                 }
                                 "About" => self.show_about = true,
                                 "Plugin registry" => self.open_registry(),
@@ -141,8 +142,8 @@ impl super::Santui {
             return;
         }
 
-        if self.show_theme_picker {
-            let mut filtered = self.filtered_themes();
+        if self.theme_manager.picker_open {
+            let mut filtered = self.theme_manager.filtered();
             match key.code {
                 KeyCode::Char(c)
                     if c == 'p'
@@ -150,65 +151,67 @@ impl super::Santui {
                             .modifiers
                             .contains(crossterm::event::KeyModifiers::CONTROL) =>
                 {
-                    self.select_theme(self.theme_picker_orig_idx);
-                    self.show_theme_picker = false;
+                    self.select_theme(self.theme_manager.picker_orig_idx);
+                    self.theme_manager.picker_open = false;
                 }
                 KeyCode::Char(_) if !key.modifiers.is_empty() => {}
                 KeyCode::Char(c) => {
-                    self.theme_picker_query.push(c);
-                    self.theme_picker_cursor = 0;
+                    self.theme_manager.picker_query.push(c);
+                    self.theme_manager.picker_cursor = 0;
                     if let Some(&idx) = filtered.first() {
                         self.preview_theme(idx);
                     }
                 }
                 KeyCode::Backspace => {
-                    self.theme_picker_query.pop();
-                    self.theme_picker_cursor = 0;
-                    filtered = self.filtered_themes();
+                    self.theme_manager.picker_query.pop();
+                    self.theme_manager.picker_cursor = 0;
+                    filtered = self.theme_manager.filtered();
                     if let Some(&idx) = filtered.first() {
                         self.preview_theme(idx);
                     }
                 }
                 KeyCode::Up => {
                     if !filtered.is_empty() {
-                        self.theme_picker_cursor = if self.theme_picker_cursor == 0 {
+                        self.theme_manager.picker_cursor = if self.theme_manager.picker_cursor == 0
+                        {
                             filtered.len() - 1
                         } else {
-                            self.theme_picker_cursor - 1
+                            self.theme_manager.picker_cursor - 1
                         };
-                        if let Some(&idx) = filtered.get(self.theme_picker_cursor) {
+                        if let Some(&idx) = filtered.get(self.theme_manager.picker_cursor) {
                             self.preview_theme(idx);
                         }
                     }
                 }
                 KeyCode::Down => {
                     if !filtered.is_empty() {
-                        self.theme_picker_cursor = if self.theme_picker_cursor + 1 >= filtered.len()
-                        {
-                            0
-                        } else {
-                            self.theme_picker_cursor + 1
-                        };
-                        if let Some(&idx) = filtered.get(self.theme_picker_cursor) {
+                        self.theme_manager.picker_cursor =
+                            if self.theme_manager.picker_cursor + 1 >= filtered.len() {
+                                0
+                            } else {
+                                self.theme_manager.picker_cursor + 1
+                            };
+                        if let Some(&idx) = filtered.get(self.theme_manager.picker_cursor) {
                             self.preview_theme(idx);
                         }
                     }
                 }
                 KeyCode::Enter => {
-                    if let Some(&idx) = filtered.get(self.theme_picker_cursor) {
+                    if let Some(&idx) = filtered.get(self.theme_manager.picker_cursor) {
                         self.select_theme(idx);
                     }
-                    self.show_theme_picker = false;
+                    self.theme_manager.picker_open = false;
                 }
                 KeyCode::Esc => {
-                    self.select_theme(self.theme_picker_orig_idx);
-                    self.show_theme_picker = false;
+                    self.select_theme(self.theme_manager.picker_orig_idx);
+                    self.theme_manager.picker_open = false;
                 }
                 _ => {}
             }
-            if self.show_theme_picker {
+            if self.theme_manager.picker_open {
                 let (_, term_h) = crossterm::terminal::size().unwrap_or((80, 24));
-                self.ensure_theme_cursor_visible(term_h.saturating_sub(1));
+                self.theme_manager
+                    .ensure_cursor_visible(term_h.saturating_sub(1));
             }
             return;
         }
