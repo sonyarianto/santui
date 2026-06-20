@@ -5,11 +5,11 @@ Generated 2026-06-20 from a comprehensive codebase review.
 ## Fixed
 
 - [x] **Thread leak on plugin hot-reload** (`crates/ipc/src/host.rs`) — background reader thread handle was discarded; now joined in `kill()` and `Drop`
+- [x] **No graceful plugin shutdown** (`crates/core/src/plugin.rs`, `crates/ipc/src/host.rs`) — `shutdown()` added to `Plugin` trait; `IpcPluginHost` sends `Shutdown` + waits 1s before kill; called on hot-reload
 
 ## Critical — crash or corrupt state
 
 - [ ] **Mutex poisoning in auth** (`crates/auth/src/lib.rs:226`) — `.lock().unwrap()` panics if OAuth panics, poisoning the mutex. Every subsequent access panics.
-- [ ] **No graceful plugin shutdown** — `Plugin` trait has no `shutdown()` or `cleanup()` method. IPC plugins get SIGKILL with no chance to flush state.
 
 ## High — design problems
 

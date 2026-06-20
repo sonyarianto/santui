@@ -417,6 +417,13 @@ impl Plugin for IpcPluginHost {
         });
     }
 
+    fn shutdown(&mut self) {
+        self.send(&HostMsg::Shutdown);
+        if let Some(ref rx) = self.response_rx {
+            let _ = rx.recv_timeout(Duration::from_secs(1));
+        }
+    }
+
     fn binary_path(&self) -> Option<&Path> {
         Some(Path::new(&self.binary_name))
     }

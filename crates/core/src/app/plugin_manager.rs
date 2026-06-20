@@ -190,6 +190,8 @@ impl PluginManager {
             self.mtimes[idx] = current_mtime;
         }
 
+        // Gracefully shut down the old plugin before dropping it.
+        self.plugins[idx].shutdown();
         self.plugins[idx] = new_plugin;
         self.refresh_commands();
 
