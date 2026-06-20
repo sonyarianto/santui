@@ -53,27 +53,21 @@ impl super::Santui {
                                 "Sign in with Google" => {
                                     if let Some(ref auth) = self.ctx.auth {
                                         if let Ok(user) = auth.sign_in("google") {
-                                            for p in &mut self.plugins {
-                                                p.on_user_update(Some(&user));
-                                            }
+                                            self.plugin_manager.on_user_update_all(Some(&user));
                                         }
                                     }
                                 }
                                 "Sign in with GitHub" => {
                                     if let Some(ref auth) = self.ctx.auth {
                                         if let Ok(user) = auth.sign_in("github") {
-                                            for p in &mut self.plugins {
-                                                p.on_user_update(Some(&user));
-                                            }
+                                            self.plugin_manager.on_user_update_all(Some(&user));
                                         }
                                     }
                                 }
                                 "Sign out" => {
                                     if let Some(ref auth) = self.ctx.auth {
                                         auth.sign_out();
-                                        for p in &mut self.plugins {
-                                            p.on_user_update(None);
-                                        }
+                                        self.plugin_manager.on_user_update_all(None);
                                     }
                                 }
                                 "Switch theme" => {
@@ -90,10 +84,11 @@ impl super::Santui {
                             super::ItemIndex::PluginCmd(pci) => {
                                 // Dispatch to the plugin's registered palette command.
                                 let (plugin_idx, local_idx, _cmd) =
-                                    self.plugin_commands[pci].clone();
-                                if plugin_idx < self.plugins.len() {
-                                    self.active_plugin = Some(plugin_idx);
-                                    self.plugins[plugin_idx].handle_palette_command(local_idx);
+                                    self.plugin_manager.commands()[pci].clone();
+                                if plugin_idx < self.plugin_manager.len() {
+                                    self.plugin_manager.set_active(Some(plugin_idx));
+                                    self.plugin_manager
+                                        .handle_palette_command(plugin_idx, local_idx);
                                 }
                             }
                             super::ItemIndex::Dynamic(di) => {
@@ -101,10 +96,8 @@ impl super::Santui {
                                 if let Some((_cat, id, name)) = self.dynamic_items.get(di).cloned()
                                 {
                                     // Re-use already-running instance if one exists.
-                                    if let Some(existing) =
-                                        self.plugins.iter().position(|p| p.id() == id)
-                                    {
-                                        self.active_plugin = Some(existing);
+                                    if let Some(existing) = self.plugin_manager.find_by_id(&id) {
+                                        self.plugin_manager.set_active(Some(existing));
                                     } else if let Some(ref reg) = self.registry {
                                         if let Some(installed) = reg.installed.iter().find(|p| {
                                             p.path
@@ -114,16 +107,16 @@ impl super::Santui {
                                                 == Some(id.as_str())
                                         }) {
                                             if let Some(ref factory) = self.plugin_factory {
-                                                let mut plugin =
-                                                    factory(&id, &name, &installed.path);
+                                                let plugin = factory(&id, &name, &installed.path);
                                                 let mut ctx = crate::plugin::PluginContext {
                                                     theme: self.theme.clone(),
                                                     auth: self.ctx.auth.clone(),
                                                 };
-                                                if plugin.init(&mut ctx).is_ok() {
-                                                    let idx = self.plugins.len();
-                                                    self.plugins.push(plugin);
-                                                    self.active_plugin = Some(idx);
+                                                if let Ok(idx) = self
+                                                    .plugin_manager
+                                                    .push_and_init(plugin, &mut ctx)
+                                                {
+                                                    self.plugin_manager.set_active(Some(idx));
                                                 }
                                             }
                                         }
@@ -300,7 +293,7 @@ impl super::Santui {
             return;
         }
 
-        match self.active_plugin {
+        match self.plugin_manager.active() {
             None => match key.code {
                 KeyCode::Char('q') => self.running = false,
                 KeyCode::Char('?') => self.show_about = true,
@@ -308,13 +301,13 @@ impl super::Santui {
             },
             Some(idx) => match key.code {
                 KeyCode::Esc => {
-                    self.plugins[idx].on_blur();
-                    self.active_plugin = None;
+                    self.plugin_manager.on_blur(idx);
+                    self.plugin_manager.set_active(None);
                 }
                 KeyCode::Char('q') => self.running = false,
                 KeyCode::Char('?') => self.show_about = true,
                 _ => {
-                    self.plugins[idx].handle_key(key);
+                    self.plugin_manager.handle_key(idx, key);
                 }
             },
         }

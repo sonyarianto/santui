@@ -1,10 +1,11 @@
 mod handle_key;
 mod palette;
+mod plugin_manager;
 mod registry;
 mod screens;
 mod status_bar;
 
-use crate::plugin::{Plugin, PluginCmdItem, PluginContext};
+use crate::plugin::{Plugin, PluginContext};
 use crate::theme::Theme;
 use crossterm::event::{Event, KeyEventKind};
 use crossterm::execute;
@@ -278,13 +279,13 @@ struct PaletteState {
 }
 
 pub struct Santui {
-    plugins: Vec<Box<dyn Plugin>>,
+    /// All plugin lifecycle management.
+    pub(super) plugin_manager: plugin_manager::PluginManager,
     ctx: PluginContext,
     registry: Option<PluginRegistry>,
     theme: Theme,
     themes: Vec<(&'static str, Theme)>,
     theme_idx: usize,
-    active_plugin: Option<usize>,
     palette: Option<PaletteState>,
     show_about: bool,
     show_theme_picker: bool,
@@ -294,8 +295,6 @@ pub struct Santui {
     registry_status: String,
     /// Dynamic palette items from enabled registry plugins: (category, plugin_id, name).
     pub(super) dynamic_items: Vec<(String, String, String)>,
-    /// Palette commands registered by plugins: (plugin_idx, local_cmd_idx, PluginCmdItem).
-    pub(super) plugin_commands: Vec<(usize, usize, PluginCmdItem)>,
     /// Factory to create a Box<dyn Plugin> from (id, name, binary_path).
     /// Set by main.rs before run().
     pub(super) plugin_factory: Option<crate::plugin::PluginFactory>,
@@ -321,13 +320,12 @@ impl Santui {
         let themes = Theme::all();
         let theme = themes[1].1.clone();
         Santui {
-            plugins: Vec::new(),
+            plugin_manager: plugin_manager::PluginManager::new(),
             ctx: PluginContext::new(),
             registry: None,
             theme,
             themes,
             theme_idx: 1,
-            active_plugin: None,
             palette: None,
             show_about: false,
             show_theme_picker: false,
@@ -336,7 +334,6 @@ impl Santui {
             registry_scroll: 0,
             registry_status: String::new(),
             dynamic_items: Vec::new(),
-            plugin_commands: Vec::new(),
             plugin_factory: None,
             theme_picker_query: String::new(),
             theme_picker_cursor: 0,
@@ -378,17 +375,6 @@ impl Santui {
             },
             shooting: None,
             shooting_cooldown: 0,
-        }
-    }
-
-    /// Rebuild palette commands from all loaded plugins.
-    /// Call this after adding a plugin or when plugins change.
-    pub(super) fn refresh_plugin_commands(&mut self) {
-        self.plugin_commands.clear();
-        for (i, plugin) in self.plugins.iter().enumerate() {
-            for (local_idx, cmd) in plugin.commands().into_iter().enumerate() {
-                self.plugin_commands.push((i, local_idx, cmd));
-            }
         }
     }
 
@@ -483,7 +469,7 @@ impl Santui {
     }
 
     pub fn register(&mut self, plugin: Box<dyn Plugin>) {
-        self.plugins.push(plugin);
+        self.plugin_manager.register(plugin);
     }
 
     pub fn run(&mut self) -> Result<(), Box<dyn std::error::Error>> {
@@ -495,17 +481,12 @@ impl Santui {
         terminal.clear()?;
 
         self.ctx.theme = self.theme.clone();
-        for p in &mut self.plugins {
-            p.init(&mut self.ctx)?;
-        }
-        self.refresh_plugin_commands();
+        self.plugin_manager.init_all(&mut self.ctx)?;
 
         let tick_rate = Duration::from_millis(100);
 
         while self.running {
-            for p in &mut self.plugins {
-                p.tick();
-            }
+            self.plugin_manager.tick_all();
 
             self.tick = self.tick.wrapping_add(1);
             self.update_stars();
@@ -536,7 +517,7 @@ impl Santui {
             .constraints([Constraint::Min(0), Constraint::Length(1)])
             .split(area);
 
-        match self.active_plugin {
+        match self.plugin_manager.active() {
             None => {
                 if self.show_about {
                     self.render_about(f, chunks[0]);
@@ -545,20 +526,21 @@ impl Santui {
                 }
             }
             Some(idx) => {
-                self.plugins[idx].render(f, chunks[0]);
+                self.plugin_manager.render(idx, f, chunks[0]);
             }
         }
 
         let hints = self
-            .active_plugin
-            .map(|idx| self.plugins[idx].status_hints())
+            .plugin_manager
+            .active()
+            .map(|idx| self.plugin_manager.status_hints(idx))
             .unwrap_or_default();
         status_bar::StatusBar {
             theme: &self.theme,
             palette_open: self.palette.is_some(),
             theme_picker_open: self.show_theme_picker,
             about_open: self.show_about,
-            plugin_active: self.active_plugin.is_some(),
+            plugin_active: self.plugin_manager.active().is_some(),
             active_plugin_hints: &hints,
         }
         .render(f, chunks[1]);

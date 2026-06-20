@@ -21,7 +21,8 @@ impl super::Santui {
             }
         }
         // Plugin-registered commands
-        for (i, (_plugin_idx, _local_idx, cmd)) in self.plugin_commands.iter().enumerate() {
+        let cmds = self.plugin_manager.commands();
+        for (i, (_plugin_idx, _local_idx, cmd)) in cmds.iter().enumerate() {
             if query.is_empty() || cmd.label.to_lowercase().contains(&q) {
                 results.push(super::ItemIndex::PluginCmd(i));
             }
@@ -40,11 +41,12 @@ impl super::Santui {
         }
         let mut cat = String::new();
         let mut first_cat = true;
+        let cmds = self.plugin_manager.commands();
         for (flat, &idx) in filtered.iter().enumerate() {
             let c = match idx {
                 super::ItemIndex::Builtin(i) => super::CMD_ITEMS[i].category,
                 super::ItemIndex::Dynamic(i) => &self.dynamic_items[i].0,
-                super::ItemIndex::PluginCmd(i) => &self.plugin_commands[i].2.category,
+                super::ItemIndex::PluginCmd(i) => &cmds[i].2.category,
             };
             if c != cat {
                 cat = c.to_string();
@@ -95,9 +97,7 @@ impl super::Santui {
         self.theme_idx = idx;
         self.theme = self.themes[idx].1.clone();
         self.ctx.theme = self.theme.clone();
-        for p in &mut self.plugins {
-            p.on_theme_change(&self.theme);
-        }
+        self.plugin_manager.on_theme_change_all(&self.theme);
     }
 
     pub(super) fn preview_theme(&mut self, idx: usize) {
@@ -249,11 +249,12 @@ impl super::Santui {
         let mut current_cat = String::new();
         let mut cat_items: Vec<super::ItemIndex> = Vec::new();
         let mut groups: Vec<(String, Vec<super::ItemIndex>)> = Vec::new();
+        let cmds = self.plugin_manager.commands();
         for &idx in &filtered {
             let cat = match idx {
                 super::ItemIndex::Builtin(i) => super::CMD_ITEMS[i].category.to_string(),
                 super::ItemIndex::Dynamic(i) => self.dynamic_items[i].0.clone(),
-                super::ItemIndex::PluginCmd(i) => self.plugin_commands[i].2.category.clone(),
+                super::ItemIndex::PluginCmd(i) => cmds[i].2.category.clone(),
             };
             if cat != current_cat && !cat_items.is_empty() {
                 groups.push((current_cat.clone(), std::mem::take(&mut cat_items)));
@@ -292,7 +293,7 @@ impl super::Santui {
                 let label = match idx {
                     super::ItemIndex::Builtin(i) => super::CMD_ITEMS[i].label.to_string(),
                     super::ItemIndex::Dynamic(i) => self.dynamic_items[i].2.clone(),
-                    super::ItemIndex::PluginCmd(i) => self.plugin_commands[i].2.label.clone(),
+                    super::ItemIndex::PluginCmd(i) => cmds[i].2.label.clone(),
                 };
                 let style = if sel {
                     Style::default().fg(t.inverted_text).bg(t.highlight)
