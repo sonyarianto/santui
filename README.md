@@ -29,12 +29,26 @@ Plugins are **standalone binaries** distributed through the Plugin Registry. Ope
 
 ## Quick start
 
-### Windows (Scoop)
+### Windows (recommended)
+
+**Scoop** — no admin required, no Windows Defender issues:
 
 ```powershell
 scoop bucket add santui https://github.com/sonyarianto/scoop-santui
 scoop install santui
 santui
+```
+
+**PowerShell (fallback)** — ⚠️ Windows may block the downloaded binary:
+
+```powershell
+irm https://santuiapp.vercel.app/install.ps1 | iex
+```
+
+### macOS / Linux
+
+```bash
+curl -fsSL https://santuiapp.vercel.app/install.sh | sh
 ```
 
 ### From source

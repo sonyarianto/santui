@@ -12,7 +12,7 @@ scoop install santui
 santui
 ```
 
-**PowerShell (direct)** — downloads the latest release:
+**PowerShell (fallback)** — ⚠️ Windows may block the downloaded binary. Prefer Scoop above.
 
 ```powershell
 irm https://santuiapp.vercel.app/install.ps1 | iex
