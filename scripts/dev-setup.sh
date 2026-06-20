@@ -46,7 +46,7 @@ for bin in "$OUTDIR"/santui-*.exe "$OUTDIR"/santui-*; do
 
     echo "  [OK] $id  ($size bytes, sha256=$hash)"
     PLUGINS+=("$(cat << JSON
-{"id":"$id","name":"Radio Streaming Player","description":"Listen to 50,000+ radio stations","version":"0.2.0","download_url":"target/debug/$name","sha256":"$hash","size":$size}
+{"id":"$id","name":"Radio Streaming Player","description":"Listen to 50,000+ radio stations","version":"0.2.1","download_url":"target/debug/$name","sha256":"$hash","size":$size}
 JSON
 )")
 done
