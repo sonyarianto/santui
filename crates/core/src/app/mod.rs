@@ -566,6 +566,11 @@ impl Santui {
         self.config_manager.ack();
     }
 
+    /// Get the currently selected theme name.
+    pub fn current_theme_name(&self) -> &'static str {
+        self.theme_manager.themes[self.theme_manager.current_idx].0
+    }
+
     pub fn register(&mut self, plugin: Box<dyn Plugin>) {
         self.plugin_manager.register(plugin);
     }
