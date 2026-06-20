@@ -1,5 +1,6 @@
 mod handle_key;
 mod palette;
+mod palette_widget;
 mod plugin_manager;
 mod registry;
 mod screens;
@@ -273,12 +274,6 @@ mod tests {
     }
 }
 
-struct PaletteState {
-    query: String,
-    cursor: usize,
-    scroll: u16,
-}
-
 pub struct Santui {
     /// All plugin lifecycle management.
     pub(super) plugin_manager: plugin_manager::PluginManager,
@@ -289,7 +284,7 @@ pub struct Santui {
     theme: Theme,
     /// Manages theme selection, preview, and theme-picker UI state.
     pub(super) theme_manager: theme_manager::ThemeManager,
-    palette: Option<PaletteState>,
+    palette: Option<palette_widget::PaletteWidget>,
     show_about: bool,
     show_registry: bool,
     registry_cursor: usize,
@@ -569,8 +564,16 @@ impl Santui {
             }
         }
 
-        if self.palette.is_some() {
-            self.render_palette(f, chunks[0]);
+        if let Some(ref pal) = self.palette {
+            let cmds = self.plugin_manager.commands();
+            pal.render(
+                f,
+                chunks[0],
+                &self.theme,
+                self.tick,
+                &self.dynamic_items,
+                cmds,
+            );
         }
 
         if self.theme_manager.picker_open {

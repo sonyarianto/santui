@@ -2,9 +2,16 @@ use crossterm::event::{KeyCode, KeyEvent};
 
 impl super::Santui {
     pub(super) fn handle_key(&mut self, key: KeyEvent) {
+        // Need is_some + as_mut().unwrap() because palette must be
+        // available before Enter/Esc set self.palette = None.
+        #[allow(clippy::unnecessary_unwrap)]
         if self.palette.is_some() {
-            let query = &self.palette.as_ref().unwrap().query;
-            let filtered = self.filtered_items(query);
+            let cmds = self.plugin_manager.commands();
+            let filtered = self
+                .palette
+                .as_ref()
+                .unwrap()
+                .filtered_items(&self.dynamic_items, cmds);
             let palette = self.palette.as_mut().unwrap();
 
             match key.code {
@@ -137,7 +144,12 @@ impl super::Santui {
 
             if self.palette.is_some() {
                 let (_, term_h) = crossterm::terminal::size().unwrap_or((80, 24));
-                self.ensure_cursor_visible(term_h.saturating_sub(1));
+                let cmds = self.plugin_manager.commands();
+                self.palette.as_mut().unwrap().ensure_cursor_visible(
+                    term_h.saturating_sub(1),
+                    &self.dynamic_items,
+                    cmds,
+                );
             }
             return;
         }
@@ -290,12 +302,8 @@ impl super::Santui {
 
         if matches!(key.code, KeyCode::Char('p') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL))
         {
-            // Reset palette to include dynamic items from registry plugins
-            self.palette = Some(super::PaletteState {
-                query: String::new(),
-                cursor: 0,
-                scroll: 0,
-            });
+            // Open the command palette
+            self.palette = Some(super::palette_widget::PaletteWidget::new());
             return;
         }
 
