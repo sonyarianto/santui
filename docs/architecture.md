@@ -27,27 +27,13 @@ santui.exe (host)
 - Host owns all ratatui/TUI rendering; plugin is headless with its own native deps (e.g. libmpv).
 - Plugin responds synchronously to every host message with a full render command list (`Vec<RenderCmd>`).
 - Render commands (`Text`, `Clear`) are cached on the host and composited into the ratatui buffer each frame — no IPC round-trip on every frame.
-- To write a new plugin: create a binary crate depending on `santui-ipc` (protocol types only, no ratatui), implement stdin/stdout JSON loop, register it in `santui/src/main.rs` via `IpcPluginHost::new("id", "name", "binary-name")`.
+- To write a new plugin: create a binary crate depending on `santui-ipc` (protocol types only, no ratatui), implement stdin/stdout JSON loop, then add it to the plugin registry manifest for distribution (see `plugins.json` format in `santui-registry/src/lib.rs`). Plugins are discovered through the registry, installed to `~/.santui/plugins/`, and spawned on demand via the `PluginFactory` set in `main.rs`.
 
-## Default Plugins & Feature Flags
+## Plugin Registry
 
-The radio streaming player ships as a **default plugin** — it's enabled via the `radio-streaming-player` feature in `santui/Cargo.toml`:
+Plugins are managed at runtime through the plugin registry (opened via `Ctrl+P` > "Plugin registry"). The registry fetches a manifest from GitHub Releases (or a local file in dev mode), presents available plugins, and handles install/enable/disable. Installed plugin binaries live in `~/.santui/plugins/` and are launched via `IpcPluginHost` when the user selects them from the palette.
 
-```toml
-[features]
-default = ["radio-streaming-player"]
-radio-streaming-player = []
-```
-
-At build time, `cargo build --workspace` produces two binaries: `santui.exe` (host) and `santui-radio-streaming-player.exe` (plugin). The host spawns the plugin from the same directory at runtime, so packaging is just copying both `.exe` files side by side (along with any native DLLs like `libmpv-2.dll`).
-
-To **opt out** of the radio player, build with `--no-default-features`:
-
-```bash
-cargo build --workspace --no-default-features
-```
-
-This omits the `IpcPluginHost` registration in `main.rs`, and the plugin binary won't be compiled (it's a workspace member regardless, but the feature gate controls the runtime registration).
+At build time, `cargo build --workspace` produces all workspace binaries including `santui.exe` (host) and any plugin binaries. For production packaging, see `scripts/package-release.ps1` (Windows) or `scripts/package-release-macos.sh` (macOS), which bundle the host binary, plugins, and native dependencies.
 
 ## Theme
 

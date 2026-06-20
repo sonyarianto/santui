@@ -23,16 +23,19 @@ jobs:
             archive: zip
             mpv_url: https://github.com/shinchiro/mpv-winbuild-cmake/releases/download/20260610/mpv-dev-x86_64-20260610-git-304426c.7z
             mpv_dll: libmpv-2.dll
+            plugin_ext: .exe
 
           - os: macos-latest
             target: aarch64-apple-darwin
             ext: ''
             archive: tar.gz
+            plugin_ext: ''
 
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             ext: ''
             archive: tar.gz
+            plugin_ext: ''
 
     runs-on: ${{ matrix.os }}
 
@@ -98,10 +101,6 @@ jobs:
           cp native/radio_streaming_stations.db staging/native/
 
           # ── Bundle libmpv + all transitive dylib deps ──
-          # Homebrew dylibs embed absolute paths or @rpath references that
-          # won't work on user machines.  dylibbundler recursively copies
-          # every needed dylib into native/ and rewrites all LC_LOAD_DYLIB
-          # entries to @loader_path-relative so the bundle is relocatable.
           HOMEBREW_PREFIX="$(brew --prefix)"
           NATIVE="staging/native"
           cp "$HOMEBREW_PREFIX/lib/libmpv.2.dylib" "$NATIVE/"
@@ -120,7 +119,88 @@ jobs:
           cp target/release/santui staging/
           cp target/release/santui-radio-streaming-player staging/
           cp native/radio_streaming_stations.db staging/native/
-          # libmpv not bundled on Linux — use system package manager
+
+      - name: Get version
+        shell: bash
+        run: |
+          VERSION="$(grep '^version' santui-core/Cargo.toml | head -1 | cut -d'"' -f2)"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Generate plugins.json (PowerShell)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $version = "$env:VERSION"
+          $target = "${{ matrix.target }}"
+          $ext = "${{ matrix.plugin_ext }}"
+          $plugins = @()
+
+          $pluginNames = @(
+            @{id="radio-streaming-player"; name="Radio Streaming Player"; desc="Listen to 50,000+ radio stations"}
+          )
+
+          foreach ($p in $pluginNames) {
+            $filename = "$($p.id)-$target$ext"
+            $binPath = "target\release\$($p.id)$ext"
+            if (Test-Path $binPath) {
+              $sha = (Get-FileHash -Algorithm SHA256 $binPath).Hash.ToLower()
+              $size = (Get-Item $binPath).Length
+              $plugins += [PSCustomObject]@{
+                id = $p.id
+                name = $p.name
+                description = $p.desc
+                version = $version
+                download_url = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/$filename"
+                sha256 = $sha
+                size = $size
+              }
+            }
+          }
+
+          $plugins | ConvertTo-Json | Out-File -Encoding utf8 "plugins-$target.json"
+          Write-Host "Generated plugins-$target.json with $($plugins.Count) plugin(s)"
+
+      - name: Generate plugins.json (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          VERSION="${{ env.VERSION }}"
+          TARGET="${{ matrix.target }}"
+          EXT="${{ matrix.plugin_ext }}"
+          REPO="${{ github.repository }}"
+          TAG="${{ github.ref_name }}"
+          BINARY="target/release/santui-radio-streaming-player${EXT}"
+
+          # Portable SHA256: works on Linux (sha256sum) and macOS (shasum -a 256)
+          SHA256="$(sha256sum "$BINARY" 2>/dev/null | cut -d' ' -f1 || shasum -a 256 "$BINARY" 2>/dev/null | cut -d' ' -f1)"
+          SIZE="$(stat -c%s "$BINARY" 2>/dev/null || stat -f%z "$BINARY" 2>/dev/null)"
+
+          cat > "plugins-${TARGET}.json" << JSON
+          [
+            {
+              "id": "radio-streaming-player",
+              "name": "Radio Streaming Player",
+              "description": "Listen to 50,000+ radio stations",
+              "version": "${VERSION}",
+              "download_url": "https://github.com/${REPO}/releases/download/${TAG}/radio-streaming-player-${TARGET}${EXT}",
+              "sha256": "${SHA256}",
+              "size": ${SIZE}
+            }
+          ]
+          JSON
+          echo "Generated plugins-${TARGET}.json"
+
+      - name: Collect plugin binaries for upload
+        shell: bash
+        run: |
+          mkdir -p plugin-binaries
+          for binary in target/release/santui-radio-streaming-player${{ matrix.plugin_ext }}; do
+            if [ -f "$binary" ]; then
+              name="$(basename "$binary")"
+              target_name="${name%.exe}-${{ matrix.target }}${{ matrix.plugin_ext }}"
+              cp "$binary" "plugin-binaries/$target_name"
+              echo "Collected plugin: $target_name"
+            fi
+          done
 
       - name: Package Windows
         if: matrix.os == 'windows-latest'
@@ -134,11 +214,23 @@ jobs:
         run: |
           tar czf "santui-${{ matrix.target }}.tar.gz" -C staging .
 
-      - name: Upload artifact
+      - name: Upload artifact (main archive)
         uses: actions/upload-artifact@v7
         with:
           name: santui-${{ matrix.target }}
           path: santui-${{ matrix.target }}.${{ matrix.archive }}
+
+      - name: Upload artifact (plugins.json)
+        uses: actions/upload-artifact@v7
+        with:
+          name: plugins-${{ matrix.target }}
+          path: plugins-${{ matrix.target }}.json
+
+      - name: Upload artifact (plugin binaries)
+        uses: actions/upload-artifact@v7
+        with:
+          name: plugin-binaries-${{ matrix.target }}
+          path: plugin-binaries/
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -153,8 +245,24 @@ jobs:
           pattern: santui-*
           merge-multiple: true
 
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: plugins-*
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: plugin-binaries-*
+          merge-multiple: true
+
+      - name: List all assets for release
+        run: ls -la
+
       - name: Create Release
         uses: softprops/action-gh-release@v3
         with:
-          files: santui-*
+          files: |
+            santui-*
+            plugins-*.json
+            radio-streaming-player-*
           generate_release_notes: true

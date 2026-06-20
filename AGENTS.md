@@ -13,6 +13,10 @@ cargo test --workspace   # run tests
 
 Run: `cargo build --workspace && cargo run -p santui` or `.\target\debug\santui.exe`
 
+Dev mode (plugin registry + native deps):
+  - Windows: `.\scripts\dev-setup.ps1 ; $env:SANTUI_DEV=1; cargo run -p santui`
+  - macOS/Linux: `./scripts/dev-setup.sh && SANTUI_DEV=1 cargo run -p santui`
+
 Watch: `cargo watch -x "run -p santui"`
 
 ## Workspace

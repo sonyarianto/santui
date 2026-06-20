@@ -84,7 +84,7 @@ impl super::Santui {
                                     self.theme_picker_orig_idx = self.theme_idx;
                                 }
                                 "About" => self.show_about = true,
-                                "Plugin Registry" => self.open_registry(),
+                                "Plugin registry" => self.open_registry(),
                                 _ => {}
                             },
                             super::ItemIndex::Dynamic(di) => {

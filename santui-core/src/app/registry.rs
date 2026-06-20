@@ -34,20 +34,42 @@ impl Santui {
         }
     }
     /// Fetch plugin manifest and prepare the registry screen.
+    /// If `SANTUI_DEV=1` env is set, loads a local manifest from `SANTUI_DEV_MANIFEST`
+    /// (defaults to `plugins.json` in cwd) and enables dev mode (local file copy).
     pub(super) fn open_registry(&mut self) {
         self.show_registry = true;
         self.registry_status = "Fetching plugins…".to_string();
         self.registry_cursor = 0;
         self.registry_scroll = 0;
 
-        // Try to fetch manifest in a blocking manner (the event loop is sync).
         if let Some(ref mut reg) = self.registry {
-            match reg.fetch_manifest() {
-                Ok(()) => {
-                    self.registry_status = reg.status.clone();
+            // Check if we're in dev mode.
+            if std::env::var("SANTUI_DEV").as_deref() == Ok("1") {
+                reg.set_dev_mode(true);
+                let manifest_path = std::env::var("SANTUI_DEV_MANIFEST")
+                    .map(PathBuf::from)
+                    .unwrap_or_else(|_| PathBuf::from("plugins.json"));
+                self.registry_status = format!("[DEV] Loading {}…", manifest_path.display());
+                match reg.load_local_manifest(&manifest_path) {
+                    Ok(()) => {
+                        if let Err(e) = reg.sync_all_native_deps() {
+                            self.registry_status = format!("[DEV] Warning: {e}");
+                        } else {
+                            self.registry_status = reg.status.clone();
+                        }
+                    }
+                    Err(e) => {
+                        self.registry_status = format!("[DEV] Error: {e}");
+                    }
                 }
-                Err(e) => {
-                    self.registry_status = format!("Error: {e}");
+            } else {
+                match reg.fetch_manifest() {
+                    Ok(()) => {
+                        self.registry_status = reg.status.clone();
+                    }
+                    Err(e) => {
+                        self.registry_status = format!("Error: {e}");
+                    }
                 }
             }
         }
@@ -87,7 +109,7 @@ impl Santui {
         // Title
         let pad_w = inner_w.saturating_sub(12);
         let mut title_spans = vec![Span::styled(
-            "Plugin Registry",
+            "Plugin registry",
             Style::default().fg(t.text).add_modifier(Modifier::BOLD),
         )];
         if pad_w > 0 {
@@ -146,7 +168,7 @@ impl Santui {
                     } else {
                         "    "
                     };
-                    let prefix = if hovered { " ▸ " } else { "   " };
+                    let prefix = "   ";
                     let text_fg = if hovered { t.inverted_text } else { t.text };
                     let mut style = Style::default().fg(text_fg);
                     if hovered {

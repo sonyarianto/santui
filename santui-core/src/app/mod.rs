@@ -52,15 +52,15 @@ const CMD_ITEMS: &[CmdItem] = &[
     },
     CmdItem {
         category: "System",
+        label: "Plugin registry",
+    },
+    CmdItem {
+        category: "System",
         label: "Switch theme",
     },
     CmdItem {
         category: "System",
         label: "About",
-    },
-    CmdItem {
-        category: "System",
-        label: "Plugin Registry",
     },
 ];
 

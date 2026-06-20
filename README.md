@@ -17,7 +17,7 @@ cd santui
 cargo build --workspace && cargo run -p santui
 ```
 
-Requires Rust 1.70+ and [libmpv](https://mpv.io/installation/).
+Requires Rust 1.70+. The radio streaming player plugin requires [libmpv](https://mpv.io/installation/) (bundled in Windows release archives; install via `apt`/`brew`/`scoop` on other platforms).
 
 ## Documentation
 
