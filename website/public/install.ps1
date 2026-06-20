@@ -37,6 +37,10 @@ New-Item -ItemType Directory -Path $BinDir -Force | Out-Null
 Expand-Archive -Path $Tmp -DestinationPath $BinDir -Force
 Remove-Item $Tmp -Force
 
+# ── unblock (Mark-of-the-Web) ──
+Write-Host "  Unblocking downloaded binaries ..."
+Get-ChildItem -LiteralPath $BinDir -Recurse -File | Unblock-File
+
 # ── PATH ──
 $UserPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
 if ($UserPath -notlike "*$BinDir*") {
