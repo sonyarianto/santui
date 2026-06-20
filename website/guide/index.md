@@ -56,30 +56,23 @@ Santui is keyboard-driven. Here are the keybindings:
 | `?` | About screen |
 | `Ctrl+P` | Command palette |
 | `↑` / `↓` | Navigate lists |
-| `Enter` | Select / play station |
+| `Enter` | Select item |
 | `Esc` | Back / close panel |
 
-## Radio Player
+## Plugin Registry
 
-Browse and stream internet radio stations:
+Plugins extend Santui with new capabilities. Open `Ctrl+P` → **Plugin registry** to see what's available.
 
-- **Browse** — filtered by genre or country
-- **Search** — type to filter by name, country, or genre
-- **Play** — press Enter to start streaming
-- **Volume** — `+` / `-` to adjust
-- **Reload** — press `r` to reload stations from the database
+From the registry you can:
 
-Stations are pre-populated in the bundled database — ready to use out of the box.
+- **Browse** available plugins with descriptions and version info
+- **Install** — download and set up a plugin with one Enter press
+- **Enable / Disable** — toggle plugins on and off
+- **Installed plugins** appear in your command palette under the **Modules** category
 
-## Updating Stations
+To get started, install the **Radio Streaming Player** plugin from the registry, enable it, then open `Ctrl+P` and select it to start browsing thousands of radio stations.
 
-To refresh or expand the station database, run the scraper:
-
-```bash
-cargo run -p santui-radio-streaming-scraper
-```
-
-This fetches currently-playing stations from onlineradiobox.com and inserts them into the local SQLite database at `%APPDATA%\santui\radio_streaming_stations.db`.
+> **Radio Streaming Player** requires [libmpv](https://mpv.io/installation/) for audio playback. On Windows it's bundled in the release archive; on macOS/Linux install via `apt`/`brew`/`pacman`.
 
 ## Themes
 
