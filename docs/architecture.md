@@ -77,6 +77,6 @@ santui.exe (host)
 | **App state** | Centralized in `AppState` struct (`crates/core/src/app/app_state.rs`) | 2.3 ✅ |
 | **IPC** | Async background reader thread, non-blocking `tick()` | 3.1 ✅ |
 | **Plugin reload** | Binary mtime polling + re-spawn via factory | 3.2 ✅ |
-| **Plugin SDK** | `cargo generate` template in `plugin-template/` | 3.3 ✅ |
+| **Plugin SDK** | `cargo generate` template in `templates/plugin/` | 3.3 ✅ |
 
 See [`docs/roadmap.md`](roadmap.md) for details on remaining phases.

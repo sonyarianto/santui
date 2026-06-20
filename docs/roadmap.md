@@ -165,10 +165,10 @@ registry manifest, etc.
 
 **Solution (implemented):**
 ```
-cargo generate --path ./plugin-template --name my-plugin
+cargo generate --path ./templates/plugin --name my-plugin
 ```
 
-A `cargo generate` template in `plugin-template/` that scaffolds a working
+A `cargo generate` template in `templates/plugin/` that scaffolds a working
 plugin with:
 - `Cargo.toml` with `santui-ipc` dependency
 - `main.rs` with JSON stdin/stdout loop handling every `HostMsg` variant
@@ -177,7 +177,7 @@ plugin with:
 
 **Status:** Done.
 
-**Key files:** `plugin-template/`
+**Key files:** `templates/plugin/`
 
 ---
 
