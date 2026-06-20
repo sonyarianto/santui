@@ -136,10 +136,32 @@ impl ConfigManager {
         &self.config
     }
 
-    /// Convenience: update the `theme` field and immediately persist.
-    /// Syncs `last_modified` so the next `poll()` won't re-detect our write.
+    /// Update the `theme` field and immediately persist.
+    /// When selecting a built-in theme, custom overrides are cleared so they
+    /// don't leak into the newly chosen theme.
     pub fn save_theme(&mut self, theme_name: &str) {
         self.config.theme = Some(theme_name.to_string());
+        self.config.custom_theme = None;
+        self.persist();
+    }
+
+    /// Set custom theme colour overrides in config and persist.
+    pub fn save_custom_theme(&mut self, colors: CustomThemeColors) {
+        self.config.custom_theme = Some(colors);
+        self.persist();
+    }
+
+    /// Remove custom theme colour overrides from config and persist.
+    pub fn clear_custom_theme(&mut self) {
+        if self.config.custom_theme.is_some() {
+            self.config.custom_theme = None;
+            self.persist();
+        }
+    }
+
+    /// Write the in-memory config to disk and sync the modification timestamp
+    /// so the next `poll()` doesn't re-detect our own write.
+    fn persist(&mut self) {
         if let Err(e) = self.config.save_to(&self.dir) {
             eprintln!("[santui] Failed to save config: {e}");
             return;
