@@ -31,7 +31,7 @@ foreach ($bin in $pluginBinaries) {
     $plugins += @{
         id            = $id
         name          = "Radio Streaming Player"
-        description   = "Listen to 50,000+ radio stations"
+        description   = "Listen to thousands of radio stations worldwide"
         version       = "0.2.1"
         download_url  = "target/debug/$($bin.Name)"
         sha256        = $hash
