@@ -8,8 +8,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  MPV_VERSION: 20260610
-  MPV_SHA: 304426c
 
 jobs:
   build:
@@ -21,8 +19,6 @@ jobs:
             target: x86_64-pc-windows-msvc
             ext: .exe
             archive: zip
-            mpv_url: https://github.com/shinchiro/mpv-winbuild-cmake/releases/download/20260610/mpv-dev-x86_64-20260610-git-304426c.7z
-            mpv_dll: libmpv-2.dll
             plugin_ext: .exe
 
           - os: macos-latest
@@ -57,16 +53,6 @@ jobs:
             exit 1
           fi
           echo "✅ Tag v${TAG_VERSION} matches Cargo.toml ${CARGO_VERSION}"
-
-      - name: Install Linux deps
-        if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get update && sudo apt-get install -y libmpv-dev
-
-      - name: Install macOS deps
-        if: matrix.os == 'macos-latest'
-        env:
-          HOMEBREW_NO_REQUIRE_TAP_TRUST: 1
-        run: brew install mpv dylibbundler
 
       - name: Build
         run: cargo build --release --workspace
