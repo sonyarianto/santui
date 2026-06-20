@@ -135,4 +135,20 @@ impl ConfigManager {
     pub fn config(&self) -> &Config {
         &self.config
     }
+
+    /// Convenience: update the `theme` field and immediately persist.
+    /// Syncs `last_modified` so the next `poll()` won't re-detect our write.
+    pub fn save_theme(&mut self, theme_name: &str) {
+        self.config.theme = Some(theme_name.to_string());
+        if let Err(e) = self.config.save_to(&self.dir) {
+            eprintln!("[santui] Failed to save config: {e}");
+            return;
+        }
+        self.last_modified = self
+            .dir
+            .join("config.toml")
+            .metadata()
+            .ok()
+            .and_then(|m| m.modified().ok());
+    }
 }

@@ -4,6 +4,9 @@ impl super::Santui {
         self.ctx.theme = self.theme.clone();
         self.plugin_manager.on_theme_change_all(&self.theme);
         self.event_bus.emit(crate::event::Event::ThemeChanged);
+        // Persist the chosen theme to config.toml so it survives restarts.
+        let name = self.theme_manager.themes[idx].0;
+        self.config_manager.save_theme(name);
     }
 
     pub(super) fn preview_theme(&mut self, idx: usize) {
