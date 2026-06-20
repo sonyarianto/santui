@@ -44,7 +44,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Verify tag version matches Cargo.toml
-        if: github.event_name != 'workflow_dispatch'
+        if: github.event_name != 'workflow_dispatch' && matrix.os == 'ubuntu-latest'
         run: |
           TAG_VERSION="${GITHUB_REF_NAME#v}"
           CARGO_VERSION="$(grep '^version' santui-core/Cargo.toml | head -1 | cut -d'"' -f2)"
