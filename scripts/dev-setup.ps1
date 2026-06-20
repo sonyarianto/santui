@@ -32,7 +32,7 @@ foreach ($bin in $pluginBinaries) {
         id            = $id
         name          = "Radio Streaming Player"
         description   = "Listen to 50,000+ radio stations"
-        version       = "0.1.9"
+        version       = "0.2.0"
         download_url  = "target/debug/$($bin.Name)"
         sha256        = $hash
         size          = $bin.Length
