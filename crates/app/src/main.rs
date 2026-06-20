@@ -14,7 +14,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .unwrap_or_else(|_| ".".into());
         PathBuf::from(home).join(".santui")
     };
+    let config_dir = registry_dir.clone();
     app.set_registry_dir(registry_dir);
+    app.set_config_dir(config_dir);
 
     // Set plugin factory: uses IpcPluginHost for IPC-based plugin binaries.
     app.set_plugin_factory(std::sync::Arc::new(santui_ipc::IpcPluginHost::new_boxed));
