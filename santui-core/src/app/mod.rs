@@ -11,6 +11,7 @@ use crossterm::terminal::{
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::layout::{Constraint, Direction, Layout};
+use ratatui::style::Color;
 use ratatui::Frame;
 use ratatui::Terminal;
 use std::time::Duration;
@@ -89,6 +90,19 @@ fn pal_w(content_w: u16) -> u16 {
 
 fn max_list_h(content_h: u16) -> u16 {
     (content_h / 2).saturating_sub(6).max(3)
+}
+
+/// Scale the brightness of an RGB foreground color by `factor`,
+/// preserving its hue. Non-RGB colors (Reset, Indexed) pass through.
+fn dim_color(fg: Color, factor: f64) -> Color {
+    match fg {
+        Color::Rgb(r, g, b) => Color::Rgb(
+            (r as f64 * factor) as u8,
+            (g as f64 * factor) as u8,
+            (b as f64 * factor) as u8,
+        ),
+        _ => fg,
+    }
 }
 
 #[cfg(test)]
@@ -187,6 +201,63 @@ mod tests {
         let themes = app.filtered_themes();
         assert_eq!(themes.len(), 1);
         assert_eq!(app.themes[themes[0]].0, "Nord");
+    }
+
+    // ---- dim_color tests ----
+
+    #[test]
+    fn dim_color_black_stays_black() {
+        assert_eq!(dim_color(Color::Rgb(0, 0, 0), 0.45), Color::Rgb(0, 0, 0));
+    }
+
+    #[test]
+    fn dim_color_white_becomes_gray() {
+        assert_eq!(
+            dim_color(Color::Rgb(255, 255, 255), 0.45),
+            Color::Rgb(114, 114, 114)
+        );
+    }
+
+    #[test]
+    fn dim_color_gold_becomes_dim_gold() {
+        // Gold RGB(255, 185, 0) × 0.45 = (114, 83, 0)
+        assert_eq!(
+            dim_color(Color::Rgb(255, 185, 0), 0.45),
+            Color::Rgb(114, 83, 0)
+        );
+    }
+
+    #[test]
+    fn dim_color_full_factor_returns_original() {
+        assert_eq!(
+            dim_color(Color::Rgb(123, 200, 50), 1.0),
+            Color::Rgb(123, 200, 50)
+        );
+    }
+
+    #[test]
+    fn dim_color_zero_factor_returns_black() {
+        assert_eq!(
+            dim_color(Color::Rgb(100, 150, 200), 0.0),
+            Color::Rgb(0, 0, 0)
+        );
+    }
+
+    #[test]
+    fn dim_color_preserves_hue() {
+        // Dimming preserves the ratio between channels
+        let dimmed = dim_color(Color::Rgb(200, 100, 50), 0.5);
+        assert_eq!(dimmed, Color::Rgb(100, 50, 25));
+    }
+
+    #[test]
+    fn dim_color_reset_passes_through() {
+        assert_eq!(dim_color(Color::Reset, 0.45), Color::Reset);
+    }
+
+    #[test]
+    fn dim_color_indexed_passes_through() {
+        assert_eq!(dim_color(Color::Indexed(7), 0.45), Color::Indexed(7));
     }
 }
 
@@ -416,11 +487,24 @@ impl Santui {
         if self.palette.is_some() || self.show_theme_picker {
             let dim_bg = self.theme.background_overlay;
             let buf = f.buffer_mut();
+            // Scale both foreground AND background brightness by 45%.
+            // For cells with an explicit background (e.g. the gold
+            // highlight on the selected radio station), dimming both
+            // preserves the contrast ratio — the text stays readable.
+            // Cells without an explicit bg fall back to dim_bg.
+            const DIM: f64 = 0.45;
             for y in area.top()..area.bottom() {
                 for x in area.left()..area.right() {
                     if let Some(cell) = buf.cell_mut((x, y)) {
                         let mut style = cell.style();
-                        style.bg = Some(dim_bg);
+                        if let Some(fg) = style.fg {
+                            style.fg = Some(dim_color(fg, DIM));
+                        }
+                        if let Some(bg) = style.bg {
+                            style.bg = Some(dim_color(bg, DIM));
+                        } else {
+                            style.bg = Some(dim_bg);
+                        }
                         cell.set_style(style);
                     }
                 }
