@@ -22,6 +22,7 @@ enum MpvCmd {
     LoadUrl(String),
     Stop,
     SetVolume(i64),
+    Quit,
 }
 
 struct App {
@@ -31,6 +32,7 @@ struct App {
     tx_cmd: Option<mpsc::Sender<MpvCmd>>,
     rx_msg: Option<mpsc::Receiver<MpvMsg>>,
     tx_msg: Option<mpsc::Sender<MpvMsg>>,
+    mpv_thread: Option<thread::JoinHandle<()>>,
     init_error: Option<String>,
     dirty: bool,
     cached_commands: Vec<RenderCmd>,
@@ -66,6 +68,7 @@ impl App {
             tx_cmd: None,
             rx_msg: None,
             tx_msg: None,
+            mpv_thread: None,
             init_error: None,
             dirty: true,
             cached_commands: Vec::new(),
@@ -100,7 +103,7 @@ impl App {
 
         let tx_msg_mpv = tx_msg.clone();
 
-        thread::spawn(move || {
+        let handle = thread::spawn(move || {
             loop {
                 let ev = mpv.wait_event_raw(0.1);
                 if let Some(ev) = ev {
@@ -162,11 +165,17 @@ impl App {
                         MpvCmd::SetVolume(v) => {
                             let _ = mpv.set_volume(v);
                         }
+                        MpvCmd::Quit => {
+                            mpv.destroy();
+                            return;
+                        }
                     }
                 }
             }
             mpv.destroy();
         });
+
+        self.mpv_thread = Some(handle);
 
         self.tx_cmd = Some(tx_cmd);
         self.rx_msg = Some(rx_msg);
@@ -344,6 +353,15 @@ impl App {
         self.dirty = changed;
     }
 
+    fn handle_shutdown(&mut self) {
+        if let Some(ref tx) = self.tx_cmd {
+            let _ = tx.send(MpvCmd::Quit);
+        }
+        if let Some(handle) = self.mpv_thread.take() {
+            let _ = handle.join();
+        }
+    }
+
     fn status_hints(&self) -> Vec<(String, String)> {
         if self.state.search_mode {
             return vec![
@@ -462,7 +480,10 @@ fn main() {
                         app.dirty = true;
                         respond(&mut app);
                     }
-                    HostMsg::Shutdown => break,
+                    HostMsg::Shutdown => {
+                        app.handle_shutdown();
+                        break;
+                    }
                 }
             }
         }
