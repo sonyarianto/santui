@@ -84,24 +84,50 @@ impl Registry {
     }
 
     /// Fetch the plugin manifest from GitHub Releases.
-    /// Uses `SANTUI_REPO` env or defaults to `sony-ak/santui`.
+    /// Uses `SANTUI_REPO` env or defaults to `sonyarianto/santui`.
+    ///
+    /// Tries the direct release download URL first (no rate limit), then
+    /// falls back to the GitHub API if the file is not found at that path.
     pub fn fetch_manifest(&mut self) -> Result<(), String> {
         let repo = std::env::var("SANTUI_REPO").unwrap_or_else(|_| "sonyarianto/santui".into());
         let manifest_name = Self::manifest_filename();
+        let base_url = format!("https://github.com/{repo}/releases/latest/download");
 
-        // Use the GitHub Releases API to get the latest release's plugins.json asset.
+        // Try direct download URLs first (no rate limit).
+        let names_to_try = [&manifest_name as &str, "plugins.json"];
+        let mut last_err = String::new();
+        for name in &names_to_try {
+            let url = format!("{base_url}/{name}");
+            match ureq::get(&url).call() {
+                Ok(resp) => {
+                    let body = resp
+                        .into_body()
+                        .read_to_string()
+                        .map_err(|e| format!("Failed to read manifest: {e}"))?;
+                    self.available =
+                        parse_manifest(&body).map_err(|e| format!("Invalid manifest JSON: {e}"))?;
+                    self.fetched = true;
+                    self.status = format!("{} plugin(s) available", self.available.len());
+                    return Ok(());
+                }
+                Err(e) => last_err = format!("{name}: {e}"),
+            }
+        }
+
+        // Fallback: GitHub Releases API (subject to rate limiting).
         let api_url = format!("https://api.github.com/repos/{repo}/releases/latest");
         let resp = ureq::get(&api_url)
             .header("User-Agent", "santui")
             .call()
-            .map_err(|e| format!("Failed to fetch release: {e}"))?;
+            .map_err(|e| {
+                format!("Failed to fetch release (direct download also failed: {last_err}): {e}")
+            })?;
 
         let body = resp
             .into_body()
             .read_to_string()
             .map_err(|e| format!("Failed to read response: {e}"))?;
 
-        // The release JSON has an `assets` array. Find the platform-specific manifest.
         let release: serde_json::Value =
             serde_json::from_str(&body).map_err(|e| format!("Invalid JSON: {e}"))?;
 
@@ -123,7 +149,6 @@ impl Registry {
             .as_str()
             .ok_or_else(|| "Missing download_url".to_string())?;
 
-        // Download and parse the manifest.
         let manifest_resp = ureq::get(download_url)
             .header("User-Agent", "santui")
             .call()
@@ -134,8 +159,8 @@ impl Registry {
             .read_to_string()
             .map_err(|e| format!("Failed to read manifest: {e}"))?;
 
-        self.available = serde_json::from_str(&manifest_body)
-            .map_err(|e| format!("Invalid manifest JSON: {e}"))?;
+        self.available =
+            parse_manifest(&manifest_body).map_err(|e| format!("Invalid manifest JSON: {e}"))?;
         self.fetched = true;
         self.status = format!("{} plugin(s) available", self.available.len());
         Ok(())
@@ -232,7 +257,7 @@ impl Registry {
         let text = std::fs::read_to_string(path)
             .map_err(|e| format!("Failed to read local manifest: {e}"))?;
         self.available =
-            serde_json::from_str(&text).map_err(|e| format!("Invalid manifest JSON: {e}"))?;
+            parse_manifest(&text).map_err(|e| format!("Invalid manifest JSON: {e}"))?;
         self.fetched = true;
         self.status = format!("[DEV] {} plugin(s) available", self.available.len());
         Ok(())
@@ -253,6 +278,31 @@ impl Registry {
         };
         cfg.save(&self.config_path)
     }
+}
+
+/// Parse a manifest JSON that may be either an array or a single object.
+///
+/// Some releases (notably from the PowerShell CI step) may produce a bare
+/// object instead of a single-element array due to a `ConvertTo-Json` bug.
+fn parse_manifest(text: &str) -> Result<Vec<PluginManifest>, String> {
+    // Fast path: try array first.
+    if let Ok(v) = serde_json::from_str::<Vec<PluginManifest>>(text) {
+        return Ok(v);
+    }
+
+    // Fallback: single PluginManifest object (PowerShell single-element bug).
+    if let Ok(m) = serde_json::from_str::<PluginManifest>(text) {
+        return Ok(vec![m]);
+    }
+
+    // Last resort: object wrapping a "plugins" key.
+    #[derive(serde::Deserialize)]
+    struct Wrapper {
+        plugins: Vec<PluginManifest>,
+    }
+    let w: Wrapper = serde_json::from_str(text)
+        .map_err(|e| format!("expected array, object, or {{plugins: […]}}: {e}"))?;
+    Ok(w.plugins)
 }
 
 /// Return the filename for a plugin binary on the current platform.

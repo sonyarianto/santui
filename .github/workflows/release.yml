@@ -114,7 +114,7 @@ jobs:
             }
           }
 
-          $plugins | ConvertTo-Json | Out-File -Encoding utf8 "plugins-$target.json"
+          $plugins | ConvertTo-Json -AsArray | Out-File -Encoding utf8 "plugins-$target.json"
           Write-Host "Generated plugins-$target.json with $($plugins.Count) plugin(s)"
 
       - name: Generate plugins.json (Unix)
