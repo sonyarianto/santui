@@ -3,7 +3,7 @@ layout: home
 
 hero:
   name: Santui
-  tagline: My terminal home base
+  tagline: Your terminal home base
   actions:
     - theme: brand
       text: Get Started
