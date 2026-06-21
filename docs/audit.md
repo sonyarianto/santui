@@ -14,7 +14,7 @@ Generated 2026-06-20 from a comprehensive codebase review.
 ## High — design problems
 
 - [ ] **Santui is a god object** (`crates/core/src/app/mod.rs:514`) — 13+ fields, growing with every feature.
-- [ ] **`handle_key` is a 337-line monolith** (`crates/core/src/app/handle_key.rs:1`) — impossible to test or extend.
+- [x] **`handle_key` is a 337-line monolith** (`crates/core/src/app/handle_key.rs:1`) — split into 6 focused per-state handlers (`handle_key_palette`, `execute_palette_selection`, `handle_key_theme_picker`, `handle_key_about`, `handle_key_registry`, `handle_key_normal`).
 - [x] **Config parse failures are silent** (`crates/core/src/config.rs`, `crates/core/src/app/status_bar.rs`) — added `try_load_from` returning `Result`, `ConfigManager.error` field, and `StatusBar.config_error` renders the error in red on the right side of the status bar
 - [x] **Plugin spawn failure returns `Ok(())`** (`crates/ipc/src/host.rs:236`) — `spawn()` now returns `Result`; `init()` propagates the error; dead plugins are never registered.
 - [x] **Unbounded EventBus** (`crates/core/src/event.rs`) — switched internal storage to `VecDeque` with a 1024 cap; oldest event dropped when at capacity
