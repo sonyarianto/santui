@@ -51,7 +51,4 @@ santui
 curl -fsSL https://santuiapp.vercel.app/install.sh | sh
 ```
 
-> **Linux:** Install [libmpv](https://mpv.io/installation/) for the Radio Streaming Player:
-> `sudo apt install mpv` / `sudo dnf install mpv` / `sudo pacman -S mpv`
->
 > **Prerequisite:** The npm method requires [Node.js](https://nodejs.org/).

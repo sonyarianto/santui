@@ -201,6 +201,8 @@ hints: vec![
 ],
 ```
 
+> **Radio Streaming Player** requires [libmpv](https://mpv.io/installation/) for audio playback. On Windows it's bundled in the release archive; on macOS/Linux install via `apt`/`brew`/`pacman`.
+
 ## Next steps
 
 - Browse the [IPC protocol source](https://github.com/sonyarianto/santui/blob/main/crates/ipc/src/protocol.rs) for the full type definitions
