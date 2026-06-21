@@ -77,6 +77,17 @@ fn open_browser(url: &str) {
     let _ = std::process::Command::new("xdg-open").arg(url).spawn();
 }
 
+fn bind_with_fallback() -> Result<(TcpListener, u16), Box<dyn std::error::Error>> {
+    for port in 9842..9850 {
+        if let Ok(listener) = TcpListener::bind(("127.0.0.1", port)) {
+            return Ok((listener, port));
+        }
+    }
+    let listener = TcpListener::bind(("127.0.0.1", 0))?;
+    let port = listener.local_addr()?.port();
+    Ok((listener, port))
+}
+
 fn handle_redirect(
     listener: TcpListener,
 ) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
@@ -241,20 +252,19 @@ impl AuthClient {
         pending: &Arc<Mutex<Option<Result<User, String>>>>,
         auth_msg: &Arc<Mutex<Option<String>>>,
     ) {
-        let port = 9842;
-        let listener = match TcpListener::bind(("127.0.0.1", port)) {
-            Ok(l) => l,
+        let vercel = if vercel_url.is_empty() {
+            "https://santuiapp.vercel.app".to_string()
+        } else {
+            vercel_url.to_string()
+        };
+
+        let (listener, port) = match bind_with_fallback() {
+            Ok(v) => v,
             Err(e) => {
                 *pending.lock().unwrap_or_else(|e| e.into_inner()) = Some(Err(e.to_string()));
                 *auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = None;
                 return;
             }
-        };
-
-        let vercel = if vercel_url.is_empty() {
-            "https://santuiapp.vercel.app".to_string()
-        } else {
-            vercel_url.to_string()
         };
         let auth_url = format!("{vercel}/api/auth/google?port={port}");
         *auth_msg.lock().unwrap_or_else(|e| e.into_inner()) =
