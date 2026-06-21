@@ -1,7 +1,7 @@
 # Santui
 
 [![MIT License](https://img.shields.io/github/license/sonyarianto/santui)](LICENSE)
-[![CI](https://github.com/sonyarianto/santui/actions/workflows/release.yml/badge.svg)](https://github.com/sonyarianto/santui/actions)
+[![CI](https://github.com/sonyarianto/santui/actions/workflows/ci.yml/badge.svg)](https://github.com/sonyarianto/santui/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/santui)](https://www.npmjs.com/package/santui)
 [![Downloads](https://img.shields.io/npm/dm/santui)](https://www.npmjs.com/package/santui)
 
