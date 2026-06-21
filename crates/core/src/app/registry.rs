@@ -21,5 +21,7 @@ impl Santui {
     pub(super) fn open_registry(&mut self) {
         self.app_state.registry_open = true;
         self.registry_controller.open();
+        self.plugin_manager
+            .refresh_dynamic_items(self.registry_controller.registry_ref());
     }
 }

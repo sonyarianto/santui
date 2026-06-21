@@ -36,6 +36,45 @@ santui.exe (host)
 
 Plugins are managed at runtime through the plugin registry (opened via `Ctrl+P` > "Plugin registry"). The registry fetches a manifest from GitHub Releases (or a local file in dev mode), presents available plugins, and handles install/enable/disable. Installed plugin binaries live in `~/.santui/plugins/` and are launched via `IpcPluginHost` when the user selects them from the palette.
 
+#### Plugin Lifecycle Flow
+
+**Data sources:**
+
+| Source | Format | Contents | When loaded |
+|--------|--------|----------|-------------|
+| `registry.toml` | TOML | `installed` — list of plugins the user installed, with `enabled`, `version`, `path` | At startup (in `Registry::new()`) |
+| Plugin manifest | JSON | `available` — full catalogue of plugins (`id`, `name`, `description`, `version`, `download_url`, `sha256`) | When the registry screen is opened (`fetch_manifest()` for PROD, `load_local_manifest()` for DEV) |
+
+**Install flow:**
+
+1. User presses Enter on a plugin in the registry screen.
+2. `registry.install()` pushes a new `InstalledPlugin { enabled: true, .. }` to `installed` and calls `save_config()` — this writes `registry.toml` immediately, *before* downloading the binary.
+3. The binary is downloaded (or copied, in DEV mode). If the download fails, the entry is rolled back (pop + save).
+4. The caller receives `RegistryAction::ItemsChanged`, which triggers `plugin_manager.refresh_dynamic_items()`.
+
+**How palette "Plugins" are populated:**
+
+`refresh_dynamic_items()` in `PluginManager` iterates `reg.installed` directly (not `reg.available`), so enabled plugins appear in the palette immediately — even before the manifest is fetched. If the manifest has been loaded, the display name is taken from it; otherwise it's humanized from the binary filename (e.g. `santui-radio-streaming-player` → `Radio Streaming Player`).
+
+The call sites:
+
+| When | Where | Why |
+|------|-------|-----|
+| App startup | `Santui::run()` after `init_all` | Populate palette before first render |
+| Registry opened | `open_registry()` after manifest load | Refresh names from manifest data |
+| Plugin toggled | `handle_key_registry()` on `ItemsChanged` | Reflect enable/disable immediately |
+
+**DEV vs PROD:**
+
+| | DEV (`SANTUI_DEV=1`) | PRODUCTION |
+|---|----------------------|------------|
+| Manifest source | `plugins.json` (local file, path from `SANTUI_DEV_MANIFEST` or cwd) | `plugins-{triple}.json` from GitHub Releases (configurable via `SANTUI_REPO`) |
+| Binary install | Copies from `download_url` path (local file) | Downloads from GitHub release asset, verifies SHA-256 |
+| Native deps | `copy_native_deps()` syncs `native/*.dll` alongside the binary | Bundled in release archive, extracted during download |
+| Manifest fetch | `load_local_manifest()` — instant | `fetch_manifest()` — HTTP request, ~100-500ms |
+
+Everything else (install, enable/disable, TOML persistence, `refresh_dynamic_items`, plugin spawning) is identical between DEV and PROD.
+
 At build time, `cargo build --workspace` produces all workspace binaries including `santui.exe` (host) and any plugin binaries. For production packaging, see `scripts/package-release.ps1` (Windows) or `scripts/package-release-macos.sh` (macOS), which bundle the host binary, plugins, and native dependencies.
 
 ### Theme

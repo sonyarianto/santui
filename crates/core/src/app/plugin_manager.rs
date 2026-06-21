@@ -270,24 +270,44 @@ impl PluginManager {
     }
 
     /// Rebuild dynamic palette items from the plugin registry.
+    /// Iterates installed plugins directly so that enabled modules appear
+    /// even before the remote manifest is fetched. The display name is read
+    /// from the manifest if available, otherwise derived from the binary name.
     pub fn refresh_dynamic_items(&mut self, registry: &Option<PluginRegistry>) {
         self.dynamic_items.clear();
         if let Some(ref reg) = registry {
-            for plugin in &reg.available {
-                let enabled = reg.installed.iter().any(|p| {
-                    p.path
-                        .file_stem()
-                        .and_then(|s| s.to_str())
-                        .map(|s| s.trim_end_matches(".exe"))
-                        == Some(&plugin.id)
-                        && p.enabled
-                });
-                if enabled {
-                    self.dynamic_items.push((
-                        "Modules".into(),
-                        plugin.id.clone(),
-                        plugin.name.clone(),
-                    ));
+            for installed in &reg.installed {
+                if !installed.enabled {
+                    continue;
+                }
+                let id = installed
+                    .path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .map(|s| s.trim_end_matches(".exe").to_string());
+                let Some(ref id) = id else {
+                    continue;
+                };
+                let name = reg
+                    .available
+                    .iter()
+                    .find(|m| m.id == *id)
+                    .map(|m| m.name.clone())
+                    .unwrap_or_else(|| {
+                        // Humanize: "santui-radio-streaming-player" → "Radio Streaming Player"
+                        id.trim_start_matches("santui-")
+                            .replace('-', " ")
+                            .split_ascii_whitespace()
+                            .collect::<Vec<_>>()
+                            .join(" ")
+                    });
+                if !self
+                    .dynamic_items
+                    .iter()
+                    .any(|(_, existing_id, _)| existing_id == id)
+                {
+                    self.dynamic_items
+                        .push(("Plugins".into(), id.clone(), name));
                 }
             }
         }

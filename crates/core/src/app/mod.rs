@@ -644,6 +644,10 @@ impl Santui {
         };
         self.plugin_manager.init_all(&mut ctx)?;
 
+        // Populate palette "Plugins" category from registry installed plugins.
+        self.plugin_manager
+            .refresh_dynamic_items(self.registry_controller.registry_ref());
+
         while self.app_state.running {
             self.plugin_manager.tick_all();
 
