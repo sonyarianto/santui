@@ -109,8 +109,8 @@ impl StatusBar<'_> {
             let mut right_spans: Vec<Span> = Vec::new();
             if let Some(u) = self.user {
                 let provider_prefix = match u.provider.as_str() {
-                    "github" => "GitHub:",
-                    "google" => "Google:",
+                    "github" => "github:",
+                    "google" => "google:",
                     _ => "",
                 };
                 let display = if !u.email.is_empty() {
