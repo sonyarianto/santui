@@ -381,6 +381,10 @@ fn fetch_country_http(url_code: &str) -> Result<Vec<(String, String)>, String> {
 }
 
 fn main() {
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))
+        .format_timestamp(None)
+        .format_target(false)
+        .init();
     println!("Radio Station Scraper");
     let num_workers: usize = std::thread::available_parallelism()
         .map(|n| n.get())
@@ -395,7 +399,7 @@ fn main() {
     let conn = match open_db() {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("Failed to open database: {e}");
+            log::error!("Failed to open database: {e}");
             std::process::exit(1);
         }
     };
@@ -447,7 +451,7 @@ fn main() {
                             let _ = tx.send((iso_code.to_string(), url_code.to_string(), stations));
                         }
                         Err(e) => {
-                            eprintln!("  \u{26a0}\u{fe0f}  {url_code}: {e}");
+                            log::warn!("  \u{26a0}\u{fe0f}  {url_code}: {e}");
                         }
                     }
                 }
@@ -474,7 +478,7 @@ fn main() {
                         }
                     }
                     Err(e) => {
-                        eprintln!("  \u{26a0}\u{fe0f}  insert error for {name}: {e}");
+                        log::error!("  \u{26a0}\u{fe0f}  insert error for {name}: {e}");
                     }
                 }
             }

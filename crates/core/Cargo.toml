@@ -12,6 +12,7 @@ crossterm = "0.29"
 santui-registry = { path = "../registry", version = "0.2.7" }
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
+log = { workspace = true }
 
 [dev-dependencies]
 proptest = "1"

@@ -230,31 +230,56 @@ impl AuthClient {
         })
     }
 
-    fn save_tokens(&self, stored: &StoredToken) {
-        save_tokens_to_path(&self.token_path, stored);
-    }
-
     fn clear_tokens(&self) {
         let _ = std::fs::remove_file(&self.token_path);
     }
 
-    fn sign_in_google(&self) -> Result<User, Box<dyn std::error::Error>> {
+    fn run_google_redirect_flow(
+        vercel_url: &str,
+        token_path: &PathBuf,
+        user_lock: &Arc<Mutex<Option<User>>>,
+        pending: &Arc<Mutex<Option<Result<User, String>>>>,
+        auth_msg: &Arc<Mutex<Option<String>>>,
+    ) {
         let port = 9842;
-        let listener = TcpListener::bind(("127.0.0.1", port))?;
+        let listener = match TcpListener::bind(("127.0.0.1", port)) {
+            Ok(l) => l,
+            Err(e) => {
+                *pending.lock().unwrap_or_else(|e| e.into_inner()) = Some(Err(e.to_string()));
+                *auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = None;
+                return;
+            }
+        };
 
-        let vercel = if self.vercel_url.is_empty() {
+        let vercel = if vercel_url.is_empty() {
             "https://santuiapp.vercel.app".to_string()
         } else {
-            self.vercel_url.clone()
+            vercel_url.to_string()
         };
         let auth_url = format!("{vercel}/api/auth/google?port={port}");
+        *auth_msg.lock().unwrap_or_else(|e| e.into_inner()) =
+            Some("Google: waiting for browser…".into());
         open_browser(&auth_url);
 
-        let params = handle_redirect(listener)?;
+        let params = match handle_redirect(listener) {
+            Ok(p) => p,
+            Err(e) => {
+                *pending.lock().unwrap_or_else(|e| e.into_inner()) = Some(Err(e.to_string()));
+                *auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = None;
+                return;
+            }
+        };
 
-        let access_token = params
-            .get("access_token")
-            .ok_or_else(|| "No access_token in redirect".to_string())?;
+        let access_token = match params.get("access_token") {
+            Some(t) => t.clone(),
+            None => {
+                *pending.lock().unwrap_or_else(|e| e.into_inner()) =
+                    Some(Err("No access_token in redirect".into()));
+                *auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = None;
+                return;
+            }
+        };
+
         let user = User {
             id: params.get("id").cloned().unwrap_or_default(),
             email: params.get("email").cloned().unwrap_or_default(),
@@ -263,18 +288,64 @@ impl AuthClient {
             provider: "google".into(),
         };
 
-        self.save_tokens(&StoredToken {
+        let stored = StoredToken {
             id: user.id.clone(),
             email: user.email.clone(),
             name: user.name.clone(),
             avatar_url: user.avatar_url.clone(),
             provider: user.provider.clone(),
-            access_token: access_token.clone(),
+            access_token,
             refresh_token: None,
-        });
-        *self.user.lock().unwrap_or_else(|e| e.into_inner()) = Some(user.clone());
+        };
+        save_tokens_to_path(token_path, &stored);
+        *user_lock.lock().unwrap_or_else(|e| e.into_inner()) = Some(user.clone());
+        *auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = None;
+        *pending.lock().unwrap_or_else(|e| e.into_inner()) = Some(Ok(user));
+    }
 
-        Ok(user)
+    fn sign_in_google(&self) -> Result<User, Box<dyn std::error::Error>> {
+        let vercel_url = self.vercel_url.clone();
+        Self::run_google_redirect_flow(
+            &vercel_url,
+            &self.token_path,
+            &self.user,
+            &self.pending_sign_in,
+            &self.auth_msg,
+        );
+
+        // Block until the flow completes
+        loop {
+            if let Some(result) = self
+                .pending_sign_in
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .take()
+            {
+                *self.auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = None;
+                return result.map_err(|e| e.into());
+            }
+            thread::sleep(Duration::from_millis(100));
+        }
+    }
+
+    fn start_sign_in_google(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let vercel_url = self.vercel_url.clone();
+        let token_path = self.token_path.clone();
+        let user_lock = Arc::clone(&self.user);
+        let pending = Arc::clone(&self.pending_sign_in);
+        let auth_msg = Arc::clone(&self.auth_msg);
+
+        thread::spawn(move || {
+            Self::run_google_redirect_flow(
+                &vercel_url,
+                &token_path,
+                &user_lock,
+                &pending,
+                &auth_msg,
+            );
+        });
+
+        Ok(())
     }
 
     fn run_github_device_flow(
@@ -412,6 +483,7 @@ impl AuthHandle for AuthClient {
     fn start_sign_in(&self, provider: &str) -> Result<(), Box<dyn std::error::Error>> {
         match provider {
             "github" => self.start_sign_in_github(),
+            "google" => self.start_sign_in_google(),
             _ => Err("unsupported provider".into()),
         }
     }

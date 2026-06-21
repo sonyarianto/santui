@@ -177,7 +177,7 @@ impl ConfigManager {
     /// so the next `poll()` doesn't re-detect our own write.
     fn persist(&mut self) {
         if let Err(e) = self.config.save_to(&self.dir) {
-            eprintln!("[santui] Failed to save config: {e}");
+            log::error!("[santui] Failed to save config: {e}");
             return;
         }
         self.last_modified = self

@@ -148,7 +148,7 @@ impl PluginManager {
         for idx in 0..self.plugins.len() {
             if let Err(e) = self.reload_plugin(idx, ctx) {
                 let name = self.plugins[idx].name().to_string();
-                eprintln!("[santui] Failed to reload plugin `{name}`: {e}");
+                log::error!("[santui] Failed to reload plugin `{name}`: {e}");
             }
         }
     }

@@ -90,7 +90,7 @@ impl App {
         };
 
         for w in &warns {
-            eprintln!("  ⚠️  {w}");
+            log::warn!("  ⚠️  {w}");
         }
 
         let _ = mpv.observe_property(0, "metadata");
@@ -421,6 +421,10 @@ fn respond(app: &mut App) {
 }
 
 fn main() {
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))
+        .format_timestamp(None)
+        .format_target(false)
+        .init();
     let mut reader = BufReader::new(std::io::stdin().lock());
 
     let mut app = App::new();
@@ -434,7 +438,7 @@ fn main() {
                 let msg: HostMsg = match serde_json::from_str(&line) {
                     Ok(m) => m,
                     Err(e) => {
-                        eprintln!("[radio] parse error: {e}: {line}");
+                        log::error!("[radio] parse error: {e}: {line}");
                         continue;
                     }
                 };

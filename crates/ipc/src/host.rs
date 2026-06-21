@@ -254,7 +254,7 @@ impl IpcPluginHost {
                         });
                     }
                     Err(e) => {
-                        eprintln!("[santui] Sign-in failed: {e}");
+                        log::error!("[santui] Sign-in failed: {e}");
                         self.send_recv(&HostMsg::UserUpdate { user: None });
                     }
                 }

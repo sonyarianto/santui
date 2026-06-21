@@ -23,7 +23,7 @@ Generated 2026-06-20 from a comprehensive codebase review.
 
 - [x] **IPC blocks main thread up to 5 seconds** (`crates/ipc/src/host.rs:130`) — `send_recv` now non-blocking; all calls use `send` + `drain_responses`; the UI never waits for a plugin response.
 - [x] **GitHub OAuth blocks main thread** (`crates/auth/src/lib.rs:235`) — GitHub device flow now runs on background thread; TUI stays responsive; code shown in status bar
-- [ ] **Google OAuth blocks main thread** (`crates/auth/src/lib.rs:240`) — Google redirect flow still blocks the TUI while waiting for localhost callback
+- [x] **Google OAuth blocks main thread** (`crates/auth/src/lib.rs:240`) — Google redirect flow now runs on background thread via `start_sign_in("google")`; TUI stays responsive; status bar shows "Google: waiting for browser…"
 - [x] **Registry file-write crash loses state** (`crates/registry/src/lib.rs:141`) — config saved *before* binary download; push to installed list first, save, then write binary. On error, entry is rolled back.
 - [x] **`Box::leak` in mpv FFI** (`crates/plugins/radio-streaming-player/src/player.rs:123`) — replaced `Box::leak` with `Box::new`; function table is now dropped when `Mpv` is dropped.
 - [x] **Unsafe Send+Sync impls without safety docs** (`crates/plugins/radio-streaming-player/src/player.rs:68-69`) — added safety justification comment for `unsafe impl Send/Sync` on `Mpv`.
@@ -33,7 +33,7 @@ Generated 2026-06-20 from a comprehensive codebase review.
 
 ## Low — polish
 
-- [ ] No structured logging (all `eprintln!`)
+- [x] No structured logging (all `eprintln!`) — replaced with `log::error!`/`log::warn!`; `env_logger` initialized in all 3 binaries with default level `warn`; set `RUST_LOG=debug` for verbose output
 - [ ] Themes are compile-time const array — no user-defined or runtime-loaded themes
 - [ ] No security/capability model between plugins
 - [ ] OAuth redirect ports (9842/9843) are hardcoded with no fallback

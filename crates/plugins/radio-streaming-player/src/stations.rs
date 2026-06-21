@@ -12,7 +12,7 @@ pub fn load() -> Vec<Station> {
     match crate::database::open() {
         Ok(conn) => crate::database::load_all(&conn).unwrap_or_default(),
         Err(e) => {
-            eprintln!("  ⚠️  SQLite unavailable ({e})");
+            log::warn!("  ⚠️  SQLite unavailable ({e})");
             Vec::new()
         }
     }

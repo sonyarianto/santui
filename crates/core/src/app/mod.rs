@@ -701,7 +701,7 @@ impl Santui {
                             self.event_bus.emit(crate::event::Event::UserUpdated);
                         }
                         Err(e) => {
-                            eprintln!("[auth] background sign-in error: {e}");
+                            log::error!("[auth] background sign-in error: {e}");
                         }
                     }
                 }

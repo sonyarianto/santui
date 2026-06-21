@@ -5,6 +5,10 @@ use std::path::PathBuf;
 use santui_auth::AuthClient;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))
+        .format_timestamp(None)
+        .format_target(false)
+        .init();
     let mut app = Santui::new();
 
     // Initialize plugin registry (stores config + downloaded plugins in ~/.santui).
