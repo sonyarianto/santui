@@ -96,17 +96,41 @@ impl super::Santui {
             ])
             .collect::<Vec<_>>();
 
+        // ── Carousel bar ──
+        let carousel = self.plugin_manager.carousel_items();
+        let carousel_lines: Vec<Line> = if carousel.is_empty() {
+            vec![]
+        } else if let Some(sel) = self.app_state.home_selected {
+            let item = &carousel[sel];
+            let label = format!(" ◀ {} ▶ ", item.name);
+            let styled = Line::from(Span::styled(label, Style::default().fg(t.accent)));
+            vec![styled]
+        } else {
+            let hint = Line::from(Span::styled(
+                " ← →  to browse plugins    ENTER  to open",
+                Style::default().fg(t.text_muted),
+            ));
+            vec![hint]
+        };
+
+        let carousel_h = if carousel_lines.is_empty() { 0 } else { 2 };
         let vert = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
                 Constraint::Fill(1),
                 Constraint::Length(8),
+                Constraint::Length(carousel_h),
                 Constraint::Fill(1),
             ])
             .split(area);
 
         let p = Paragraph::new(logo).alignment(Alignment::Center);
         f.render_widget(p, vert[1]);
+
+        if !carousel_lines.is_empty() {
+            let p = Paragraph::new(carousel_lines).alignment(Alignment::Center);
+            f.render_widget(p, vert[2]);
+        }
     }
 
     pub(super) fn render_about(&self, f: &mut Frame, area: Rect) {

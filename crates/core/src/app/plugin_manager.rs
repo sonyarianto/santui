@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
@@ -371,6 +372,50 @@ impl PluginManager {
 impl Default for PluginManager {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// An item in the home-screen carousel.
+/// Represents a plugin that is either already loaded or available in the registry.
+#[derive(Debug, Clone)]
+pub struct CarouselItem {
+    pub id: String,
+    pub name: String,
+    /// Index into `self.plugins` if the plugin is already loaded.
+    pub plugin_idx: Option<usize>,
+}
+
+impl PluginManager {
+    /// Build a unified carousel list from loaded plugins + enabled registry items.
+    ///
+    /// Order:
+    /// 1. All currently loaded plugins (in registration order).
+    /// 2. Enabled registry plugins whose id is not already loaded (deduplicated).
+    pub fn carousel_items(&self) -> Vec<CarouselItem> {
+        let mut items: Vec<CarouselItem> = self
+            .plugins
+            .iter()
+            .enumerate()
+            .map(|(i, p)| CarouselItem {
+                id: p.id().to_string(),
+                name: p.name().to_string(),
+                plugin_idx: Some(i),
+            })
+            .collect();
+
+        // Append registry items that aren't already loaded.
+        let loaded_ids: HashSet<&str> = self.plugins.iter().map(|p| p.id()).collect();
+        for (_, id, name) in &self.dynamic_items {
+            if !loaded_ids.contains(id.as_str()) {
+                items.push(CarouselItem {
+                    id: id.clone(),
+                    name: name.clone(),
+                    plugin_idx: None,
+                });
+            }
+        }
+
+        items
     }
 }
 

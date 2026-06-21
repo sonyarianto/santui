@@ -115,6 +115,43 @@ impl super::Santui {
         }
     }
 
+    fn activate_carousel_item(&mut self, ci: usize) {
+        let carousel = self.plugin_manager.carousel_items();
+        let Some(item) = carousel.get(ci) else {
+            return;
+        };
+
+        if let Some(plugin_idx) = item.plugin_idx {
+            // Plugin is already loaded — just activate it.
+            self.plugin_manager.set_active(Some(plugin_idx));
+        } else if let Some(cfg) = santui_registry::config::RegistryConfig::load(
+            &self.plugin_manager.data_dir().join("registry.toml"),
+        ) {
+            // Look up the binary path in registry.toml and spawn the plugin.
+            if let Some(installed) = cfg.plugins.iter().find(|p| {
+                p.path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .map(|s| s.trim_end_matches(".exe"))
+                    == Some(item.id.as_str())
+            }) {
+                let mut ctx = crate::plugin::PluginContext {
+                    theme: self.app_state.theme.clone(),
+                    auth: self.auth.clone(),
+                    data_dir: self.plugin_manager.data_dir().to_path_buf(),
+                };
+                if let Ok(idx) = self.plugin_manager.spawn_and_init(
+                    &item.id,
+                    &item.name,
+                    &installed.path,
+                    &mut ctx,
+                ) {
+                    self.plugin_manager.set_active(Some(idx));
+                }
+            }
+        }
+    }
+
     fn handle_key_theme_picker(&mut self, key: KeyEvent) {
         let mut filtered = self.theme_manager.filtered();
         match key.code {
@@ -204,12 +241,48 @@ impl super::Santui {
             None => match key.code {
                 KeyCode::Char('q') => self.app_state.running = false,
                 KeyCode::Char('?') => self.app_state.show_about = true,
+                KeyCode::Right | KeyCode::Char('l') => {
+                    let carousel = self.plugin_manager.carousel_items();
+                    let n = carousel.len();
+                    if n == 0 {
+                        return;
+                    }
+                    self.app_state.home_selected = Some(match self.app_state.home_selected {
+                        None => 0,
+                        Some(i) if i + 1 >= n => {
+                            self.app_state.home_selected = None;
+                            return;
+                        }
+                        Some(i) => i + 1,
+                    });
+                }
+                KeyCode::Left | KeyCode::Char('h') => {
+                    let carousel = self.plugin_manager.carousel_items();
+                    let n = carousel.len();
+                    if n == 0 {
+                        return;
+                    }
+                    self.app_state.home_selected = Some(match self.app_state.home_selected {
+                        None => n - 1,
+                        Some(0) => {
+                            self.app_state.home_selected = None;
+                            return;
+                        }
+                        Some(i) => i - 1,
+                    });
+                }
+                KeyCode::Enter => {
+                    if let Some(ci) = self.app_state.home_selected {
+                        self.activate_carousel_item(ci);
+                    }
+                }
                 _ => {}
             },
             Some(idx) => match key.code {
                 KeyCode::Esc => {
                     self.plugin_manager.on_blur(idx);
                     self.plugin_manager.set_active(None);
+                    self.app_state.home_selected = None;
                 }
                 KeyCode::Char('q') => self.app_state.running = false,
                 KeyCode::Char('?') => self.app_state.show_about = true,

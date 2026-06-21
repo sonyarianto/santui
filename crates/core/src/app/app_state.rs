@@ -17,6 +17,9 @@ pub struct AppState {
     pub theme_picker_open: bool,
     /// Built-in palette commands: `(id, category, label)`.
     pub builtin_items: Vec<(super::BuiltinId, String, String)>,
+    /// Index into `PluginManager::carousel_items()` for the home screen carousel.
+    /// `None` means no plugin is selected (bare home screen).
+    pub home_selected: Option<usize>,
 }
 
 impl AppState {
@@ -31,6 +34,7 @@ impl AppState {
             theme,
             theme_picker_open: false,
             builtin_items,
+            home_selected: None,
         }
     }
 
