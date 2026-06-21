@@ -37,7 +37,7 @@ Generated 2026-06-20 from a comprehensive codebase review.
 - [ ] Themes are compile-time const array — no user-defined or runtime-loaded themes
 - [ ] No security/capability model between plugins
 - [x] OAuth redirect ports (9842/9843) are hardcoded with no fallback — `bind_with_fallback()` tries 9842…9849, then OS-assigned (port 0); actual port is sent to Vercel
-- [ ] EventBus is single-consumer — adding an event logger requires modifying core code
+- [x] EventBus is single-consumer — adding an event logger requires modifying core code — now supports read-only subscribers via `EventBus::subscribe(Box<dyn FnMut(&Event) + Send>)`
 - [x] Tick rate (100ms) is hardcoded, not user-configurable — now a `Duration` field on `Santui` with `set_tick_rate()` setter; default 100ms
 - [x] Star count (88) is hardcoded, not adaptive to terminal resolution — now computed from `(width * height) / 50` (clamped 20-200); resized after terminal init in `run()`
 - [x] Platform manifest filenames hardcoded via cfg checks — `manifest_filename()` now uses `std::env::consts::{OS, ARCH}` instead of `cfg!` chains
