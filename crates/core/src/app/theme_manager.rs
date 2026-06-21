@@ -1,5 +1,6 @@
-use crate::theme::Theme;
+use crate::theme::{self, Theme};
 use ratatui::Frame;
+use std::path::Path;
 
 /// Manages theme selection, preview, and the theme-picker UI state.
 ///
@@ -10,7 +11,7 @@ use ratatui::Frame;
 #[derive(Debug)]
 pub(crate) struct ThemeManager {
     /// All known themes: `(display_name, Theme)`.
-    pub(super) themes: Vec<(&'static str, Theme)>,
+    pub(super) themes: Vec<(String, Theme)>,
     /// Index into `themes` for the currently applied theme.
     pub(super) current_idx: usize,
     /// Search text typed into the theme picker.
@@ -26,7 +27,10 @@ pub(crate) struct ThemeManager {
 
 impl ThemeManager {
     pub(super) fn new() -> Self {
-        let themes = Theme::all();
+        let themes: Vec<(String, Theme)> = Theme::all()
+            .into_iter()
+            .map(|(n, t)| (n.to_string(), t))
+            .collect();
         let current_idx = 1; // "Santui"
         ThemeManager {
             themes,
@@ -54,6 +58,28 @@ impl ThemeManager {
     pub(super) fn preview(&mut self, idx: usize) -> Theme {
         self.current_idx = idx;
         self.themes[idx].1.clone()
+    }
+
+    /// Load user-defined themes from `config_dir/themes/` and merge them into
+    /// the theme list.  User themes with the same name as a built-in theme
+    /// replace it; new names are appended.
+    pub(super) fn load_user_themes(&mut self, config_dir: &Path) {
+        let user = theme::load_user_themes(config_dir);
+        if user.is_empty() {
+            return;
+        }
+        for (name, theme) in user {
+            let lower = name.to_lowercase();
+            if let Some(idx) = self
+                .themes
+                .iter()
+                .position(|(n, _)| n.to_lowercase() == lower)
+            {
+                self.themes[idx] = (name, theme);
+            } else {
+                self.themes.push((name, theme));
+            }
+        }
     }
 
     /// Return the indices of themes matching the current picker query.

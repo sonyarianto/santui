@@ -1,4 +1,5 @@
 use ratatui::style::Color;
+use serde::Deserialize;
 
 fn rgb(hex: u32) -> Color {
     Color::Rgb(
@@ -57,6 +58,95 @@ struct ThemeDef {
     accent: u32,
     success: u32,
     error: u32,
+}
+
+/// Raw theme definition as stored in a user's `.toml` file.
+#[derive(Deserialize)]
+struct ThemeDefRaw {
+    neutral: String,
+    ink: String,
+    primary: String,
+    accent: String,
+    success: String,
+    error: String,
+}
+
+/// Load user-defined themes from `config_dir/themes/*.toml`.
+/// Returns `(filename_stem, Theme)` pairs.  The caller is responsible
+/// for merging these into the main theme list.
+pub fn load_user_themes(config_dir: &std::path::Path) -> Vec<(String, Theme)> {
+    let themes_dir = config_dir.join("themes");
+    if !themes_dir.is_dir() {
+        return Vec::new();
+    }
+    let mut themes = Vec::new();
+    let Ok(entries) = std::fs::read_dir(&themes_dir) else {
+        return themes;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("toml") {
+            continue;
+        }
+        let name = match path.file_stem().and_then(|s| s.to_str()) {
+            Some(n) => n.to_string(),
+            None => continue,
+        };
+        let data = match std::fs::read_to_string(&path) {
+            Ok(d) => d,
+            Err(_) => continue,
+        };
+        let raw: ThemeDefRaw = match toml::from_str(&data) {
+            Ok(r) => r,
+            Err(_) => continue,
+        };
+        let parse = |s: &str| -> Option<u32> {
+            let s = s.trim_start_matches('#');
+            u32::from_str_radix(s, 16).ok()
+        };
+        let neutral = match parse(&raw.neutral) {
+            Some(v) => v,
+            None => continue,
+        };
+        let ink = match parse(&raw.ink) {
+            Some(v) => v,
+            None => continue,
+        };
+        let primary = match parse(&raw.primary) {
+            Some(v) => v,
+            None => continue,
+        };
+        let accent = match parse(&raw.accent) {
+            Some(v) => v,
+            None => continue,
+        };
+        let success = match parse(&raw.success) {
+            Some(v) => v,
+            None => continue,
+        };
+        let error = match parse(&raw.error) {
+            Some(v) => v,
+            None => continue,
+        };
+        themes.push((
+            name,
+            Theme {
+                accent: rgb(accent),
+                highlight: rgb(primary),
+                logo: rgb(primary),
+                text: rgb(ink),
+                text_muted: muted(neutral, ink),
+                background: Color::Reset,
+                background_panel: rgb(neutral),
+                background_overlay: darken(neutral, 40),
+                border: rgb(primary),
+                success: rgb(success),
+                error: rgb(error),
+                inverted_text: rgb(neutral),
+            },
+        ));
+    }
+    themes
 }
 
 const THEMES: &[ThemeDef] = &[

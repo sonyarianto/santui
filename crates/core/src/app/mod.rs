@@ -563,7 +563,8 @@ impl Santui {
     /// Set the config directory and load (or create) `config.toml`.
     /// Call before `run()`.
     pub fn set_config_dir(&mut self, dir: std::path::PathBuf) {
-        self.config_manager = ConfigManager::new(dir);
+        self.config_manager = ConfigManager::new(dir.clone());
+        self.theme_manager.load_user_themes(&dir);
         self.apply_config();
     }
 
@@ -657,8 +658,8 @@ impl Santui {
     }
 
     /// Get the currently selected theme name.
-    pub fn current_theme_name(&self) -> &'static str {
-        self.theme_manager.themes[self.theme_manager.current_idx].0
+    pub fn current_theme_name(&self) -> &str {
+        &self.theme_manager.themes[self.theme_manager.current_idx].0
     }
 
     pub fn register(&mut self, plugin: Box<dyn Plugin>) {

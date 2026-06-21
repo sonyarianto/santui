@@ -34,7 +34,7 @@ Generated 2026-06-20 from a comprehensive codebase review.
 ## Low — polish
 
 - [x] No structured logging (all `eprintln!`) — replaced with `log::error!`/`log::warn!`; `env_logger` initialized in all 3 binaries with default level `warn`; set `RUST_LOG=debug` for verbose output
-- [ ] Themes are compile-time const array — no user-defined or runtime-loaded themes
+- [x] Themes are compile-time const array — no user-defined or runtime-loaded themes — `config_dir/themes/*.toml` files are now loaded and merged into the theme list; user themes override built-ins by name
 - [ ] No security/capability model between plugins
 - [x] OAuth redirect ports (9842/9843) are hardcoded with no fallback — `bind_with_fallback()` tries 9842…9849, then OS-assigned (port 0); actual port is sent to Vercel
 - [x] EventBus is single-consumer — adding an event logger requires modifying core code — now supports read-only subscribers via `EventBus::subscribe(Box<dyn FnMut(&Event) + Send>)`

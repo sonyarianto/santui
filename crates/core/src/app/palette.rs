@@ -5,7 +5,7 @@ impl super::Santui {
             .on_theme_change_all(&self.app_state.theme);
         self.event_bus.emit(crate::event::Event::ThemeChanged);
         // Persist the chosen theme to config.toml so it survives restarts.
-        let name = self.theme_manager.themes[idx].0;
+        let name = &self.theme_manager.themes[idx].0;
         self.config_manager.save_theme(name);
     }
 
