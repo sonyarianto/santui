@@ -1,5 +1,7 @@
 # Santui
 
+[![MIT License](https://img.shields.io/github/license/sonyarianto/santui)](LICENSE)
+
 Your terminal home base.
 
 Santui is a keyboard-driven TUI app that lives in your terminal. Think of it as a **launcher for plugins** — the core is lightweight, and everything extra comes through the Plugin Registry.
