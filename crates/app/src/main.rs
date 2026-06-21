@@ -25,11 +25,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let mut providers = Vec::new();
 
-        let github_id = std::env::var("SANTUI_GITHUB_CLIENT_ID").unwrap_or_default();
-        if !github_id.is_empty() {
-            let config = santui_auth::AuthConfig::github(github_id);
-            providers.push(("github".into(), config));
-        }
+        let github_id = std::env::var("SANTUI_GITHUB_CLIENT_ID")
+            .unwrap_or_else(|_| "Ov23liQ8S6DliNvkWmoB".into());
+        let config = santui_auth::AuthConfig::github(github_id);
+        providers.push(("github".into(), config));
 
         let vercel_url = std::env::var("SANTUI_VERCEL_URL")
             .unwrap_or_else(|_| "https://santuiapp.vercel.app".to_string());

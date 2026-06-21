@@ -75,16 +75,8 @@ impl super::Santui {
                                     }
                                     super::BuiltinId::SignInGitHub => {
                                         if let Some(ref auth) = self.auth {
-                                            match auth.sign_in("github") {
-                                                Ok(user) => {
-                                                    self.plugin_manager
-                                                        .on_user_update_all(Some(&user));
-                                                    self.event_bus
-                                                        .emit(crate::event::Event::UserUpdated);
-                                                }
-                                                Err(e) => {
-                                                    eprintln!("[auth] GitHub sign-in error: {e}");
-                                                }
+                                            if let Err(e) = auth.start_sign_in("github") {
+                                                eprintln!("[auth] GitHub sign-in error: {e}");
                                             }
                                         }
                                     }

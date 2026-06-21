@@ -11,5 +11,10 @@ pub trait AuthHandle: Send + Sync {
     fn current_user(&self) -> Option<User>;
     fn bearer_token(&self) -> Option<String>;
     fn sign_in(&self, provider: &str) -> Result<User, Box<dyn std::error::Error>>;
+
+    /// Start a non-blocking sign-in. Returns immediately.
+    /// Call `drain_pending_sign_in` periodically to get the result.
+    fn start_sign_in(&self, provider: &str) -> Result<(), Box<dyn std::error::Error>>;
+    fn drain_pending_sign_in(&self) -> Option<Result<User, Box<dyn std::error::Error>>>;
     fn sign_out(&self);
 }

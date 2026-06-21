@@ -692,6 +692,21 @@ impl Santui {
             let events = self.event_bus.drain();
             self.plugin_manager.process_events(&events);
 
+            // Check for pending non-blocking sign-in results.
+            if let Some(ref auth) = self.auth {
+                if let Some(result) = auth.drain_pending_sign_in() {
+                    match result {
+                        Ok(user) => {
+                            self.plugin_manager.on_user_update_all(Some(&user));
+                            self.event_bus.emit(crate::event::Event::UserUpdated);
+                        }
+                        Err(e) => {
+                            eprintln!("[auth] background sign-in error: {e}");
+                        }
+                    }
+                }
+            }
+
             self.starfield.tick = self.starfield.tick.wrapping_add(1);
             self.starfield.update();
 

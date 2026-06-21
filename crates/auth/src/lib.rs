@@ -4,7 +4,9 @@ use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::Mutex;
+use std::thread;
 use std::time::Duration;
 use url::Url;
 
@@ -187,7 +189,8 @@ fn user_from_token(provider: &str, access_token: &str) -> Result<User, Box<dyn s
 
 pub struct AuthClient {
     providers: HashMap<String, AuthConfig>,
-    user: Mutex<Option<User>>,
+    user: Arc<Mutex<Option<User>>>,
+    pending_sign_in: Arc<Mutex<Option<Result<User, String>>>>,
     token_path: PathBuf,
     vercel_url: String,
 }
@@ -201,7 +204,8 @@ impl AuthClient {
         let user = Self::load_tokens(&token_path);
         AuthClient {
             providers: providers.into_iter().collect(),
-            user: Mutex::new(user),
+            user: Arc::new(Mutex::new(user)),
+            pending_sign_in: Arc::new(Mutex::new(None)),
             token_path,
             vercel_url: String::new(),
         }
@@ -225,12 +229,7 @@ impl AuthClient {
     }
 
     fn save_tokens(&self, stored: &StoredToken) {
-        if let Some(parent) = self.token_path.parent() {
-            let _ = std::fs::create_dir_all(parent);
-        }
-        if let Ok(data) = serde_json::to_string_pretty(stored) {
-            let _ = std::fs::write(&self.token_path, data);
-        }
+        save_tokens_to_path(&self.token_path, stored);
     }
 
     fn clear_tokens(&self) {
@@ -276,23 +275,41 @@ impl AuthClient {
         Ok(user)
     }
 
-    fn sign_in_github(&self) -> Result<User, Box<dyn std::error::Error>> {
-        let config = self
-            .providers
-            .get("github")
-            .ok_or_else(|| "GitHub auth not configured".to_string())?;
-
-        let device = request_device_code(config)?;
-        let user_code = &device.user_code;
+    fn run_github_device_flow(
+        config: &AuthConfig,
+        token_path: &PathBuf,
+        user_lock: &Arc<Mutex<Option<User>>>,
+        pending: &Arc<Mutex<Option<Result<User, String>>>>,
+    ) {
+        let device = match request_device_code(config) {
+            Ok(d) => d,
+            Err(e) => {
+                *pending.lock().unwrap_or_else(|e| e.into_inner()) = Some(Err(e.to_string()));
+                return;
+            }
+        };
+        let user_code = device.user_code.clone();
         let interval = device.interval.unwrap_or(5);
-
         let activation_url = format!("https://github.com/login/device?user_code={user_code}");
         open_browser(&activation_url);
 
-        let access_token = poll_device_token(config, &device.device_code, interval)?;
-        let user = user_from_token("github", &access_token)?;
+        let access_token = match poll_device_token(config, &device.device_code, interval) {
+            Ok(t) => t,
+            Err(e) => {
+                *pending.lock().unwrap_or_else(|e| e.into_inner()) = Some(Err(e.to_string()));
+                return;
+            }
+        };
 
-        self.save_tokens(&StoredToken {
+        let user = match user_from_token("github", &access_token) {
+            Ok(u) => u,
+            Err(e) => {
+                *pending.lock().unwrap_or_else(|e| e.into_inner()) = Some(Err(e.to_string()));
+                return;
+            }
+        };
+
+        let stored = StoredToken {
             id: user.id.clone(),
             email: user.email.clone(),
             name: user.name.clone(),
@@ -300,10 +317,59 @@ impl AuthClient {
             provider: user.provider.clone(),
             access_token,
             refresh_token: None,
-        });
-        *self.user.lock().unwrap_or_else(|e| e.into_inner()) = Some(user.clone());
+        };
+        save_tokens_to_path(token_path, &stored);
+        *user_lock.lock().unwrap_or_else(|e| e.into_inner()) = Some(user.clone());
+        *pending.lock().unwrap_or_else(|e| e.into_inner()) = Some(Ok(user));
+    }
 
-        Ok(user)
+    fn sign_in_github(&self) -> Result<User, Box<dyn std::error::Error>> {
+        let config = self
+            .providers
+            .get("github")
+            .ok_or_else(|| "GitHub auth not configured".to_string())?;
+
+        let clone = config.clone();
+        Self::run_github_device_flow(&clone, &self.token_path, &self.user, &self.pending_sign_in);
+
+        // Block until the flow completes (read from pending)
+        loop {
+            if let Some(result) = self
+                .pending_sign_in
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .take()
+            {
+                return result.map_err(|e| e.into());
+            }
+            thread::sleep(Duration::from_millis(100));
+        }
+    }
+
+    fn start_sign_in_github(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let config = self
+            .providers
+            .get("github")
+            .ok_or_else(|| "GitHub auth not configured".to_string())?
+            .clone();
+        let token_path = self.token_path.clone();
+        let user_lock = Arc::clone(&self.user);
+        let pending = Arc::clone(&self.pending_sign_in);
+
+        thread::spawn(move || {
+            Self::run_github_device_flow(&config, &token_path, &user_lock, &pending);
+        });
+
+        Ok(())
+    }
+}
+
+fn save_tokens_to_path(token_path: &PathBuf, stored: &StoredToken) {
+    if let Some(parent) = token_path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    if let Ok(data) = serde_json::to_string_pretty(stored) {
+        let _ = std::fs::write(token_path, data);
     }
 }
 
@@ -324,6 +390,21 @@ impl AuthHandle for AuthClient {
             "github" => self.sign_in_github(),
             _ => Err("unsupported provider".into()),
         }
+    }
+
+    fn start_sign_in(&self, provider: &str) -> Result<(), Box<dyn std::error::Error>> {
+        match provider {
+            "github" => self.start_sign_in_github(),
+            _ => Err("unsupported provider".into()),
+        }
+    }
+
+    fn drain_pending_sign_in(&self) -> Option<Result<User, Box<dyn std::error::Error>>> {
+        let mut guard = self
+            .pending_sign_in
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        guard.take().map(|r| r.map_err(|e| e.into()))
     }
 
     fn sign_out(&self) {
