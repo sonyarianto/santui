@@ -65,17 +65,14 @@ impl Registry {
     }
 
     /// Return the platform-specific manifest filename (e.g. `plugins-x86_64-pc-windows-msvc.json`).
-    fn manifest_filename() -> &'static str {
-        if cfg!(all(target_os = "windows", target_arch = "x86_64")) {
-            "plugins-x86_64-pc-windows-msvc.json"
-        } else if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
-            "plugins-aarch64-apple-darwin.json"
-        } else if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
-            "plugins-x86_64-unknown-linux-gnu.json"
-        } else {
-            // Fallback — try the generic name.
-            "plugins.json"
-        }
+    fn manifest_filename() -> String {
+        let triple = match (std::env::consts::OS, std::env::consts::ARCH) {
+            ("windows", "x86_64") => "x86_64-pc-windows-msvc",
+            ("macos", "aarch64") => "aarch64-apple-darwin",
+            ("linux", "x86_64") => "x86_64-unknown-linux-gnu",
+            _ => return "plugins.json".into(),
+        };
+        format!("plugins-{triple}.json")
     }
 
     /// Fetch the plugin manifest from GitHub Releases.
@@ -106,7 +103,7 @@ impl Registry {
 
         let plugin_asset = assets
             .iter()
-            .find(|a| a["name"].as_str() == Some(manifest_name))
+            .find(|a| a["name"].as_str() == Some(&manifest_name))
             .or_else(|| {
                 assets
                     .iter()
