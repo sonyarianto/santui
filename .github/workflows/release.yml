@@ -302,9 +302,12 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
-          for crate in registry core ipc auth app; do
+          # registry → core → ipc → auth → app (santui-app is just "santui")
+          for crate in registry core ipc auth; do
             echo "» Publishing santui-$crate …"
             cargo publish -p "santui-$crate"
             sleep 60
           done
+          echo "» Publishing santui …"
+          cargo publish -p santui
 
