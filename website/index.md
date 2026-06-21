@@ -13,8 +13,8 @@ hero:
       link: https://github.com/sonyarianto/santui
 
 features:
-  - title: Internet Radio Player
-    details: Browse stations by country, search, and stream internet radio via the built-in audio plugin with libmpv.
+  - title: OAuth Sign-in
+    details: Sign in with Google or GitHub directly from the terminal. Secure token exchange keeps credentials safe on the server.
   - title: 38 Built-in Themes
     details: Switch between any OpenCode theme at runtime via the command palette. Live preview before you commit.
   - title: Command Palette
