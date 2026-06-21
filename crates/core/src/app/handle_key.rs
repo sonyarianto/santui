@@ -88,7 +88,7 @@ impl super::Santui {
                 {
                     if let Some(existing) = self.plugin_manager.find_by_id(&id) {
                         self.plugin_manager.set_active(Some(existing));
-                    } else if let Some(ref reg) = self.registry {
+                    } else if let Some(ref reg) = *self.registry_controller.registry_ref() {
                         if let Some(installed) = reg.installed.iter().find(|p| {
                             p.path
                                 .file_stem()
@@ -193,64 +193,15 @@ impl super::Santui {
     }
 
     fn handle_key_registry(&mut self, key: KeyEvent) {
-        match key.code {
-            KeyCode::Esc => {
+        match self.registry_controller.handle_key(key) {
+            super::registry_controller::RegistryAction::Close => {
                 self.app_state.registry_open = false;
             }
-            KeyCode::Down => {
-                if let Some(ref reg) = self.registry {
-                    if !reg.available.is_empty() {
-                        let max = reg.available.len().saturating_sub(1);
-                        self.registry_screen.cursor = (self.registry_screen.cursor + 1).min(max);
-                        self.ensure_registry_scroll_visible();
-                    }
-                }
+            super::registry_controller::RegistryAction::ItemsChanged => {
+                self.plugin_manager
+                    .refresh_dynamic_items(self.registry_controller.registry_ref());
             }
-            KeyCode::Up => {
-                if self.registry_screen.cursor > 0 {
-                    self.registry_screen.cursor -= 1;
-                }
-                self.ensure_registry_scroll_visible();
-            }
-            KeyCode::Enter => {
-                let plugin = self
-                    .registry
-                    .as_ref()
-                    .and_then(|reg| reg.available.get(self.registry_screen.cursor).cloned());
-                if let Some(plugin) = plugin {
-                    if let Some(ref mut reg) = self.registry {
-                        let installed_idx = reg.installed.iter().position(|p| {
-                            p.path
-                                .file_stem()
-                                .and_then(|s| s.to_str())
-                                .map(|s| s.trim_end_matches(".exe"))
-                                == Some(&plugin.id)
-                        });
-                        if let Some(idx) = installed_idx {
-                            let current = reg.installed[idx].enabled;
-                            let _ = reg.set_enabled(idx, !current);
-                            self.registry_screen.status = if !current {
-                                format!("{} enabled", plugin.name)
-                            } else {
-                                format!("{} disabled", plugin.name)
-                            };
-                        } else {
-                            self.registry_screen.status = format!("Downloading {}…", plugin.name);
-                            match reg.install(&plugin) {
-                                Ok(()) => {
-                                    self.registry_screen.status =
-                                        format!("{} installed and enabled", plugin.name);
-                                }
-                                Err(e) => {
-                                    self.registry_screen.status = format!("Error: {e}");
-                                }
-                            }
-                        }
-                        self.plugin_manager.refresh_dynamic_items(&self.registry);
-                    }
-                }
-            }
-            _ => {}
+            super::registry_controller::RegistryAction::None => {}
         }
     }
 

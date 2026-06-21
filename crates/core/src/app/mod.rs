@@ -5,6 +5,7 @@ mod palette_controller;
 mod palette_widget;
 mod plugin_manager;
 mod registry;
+mod registry_controller;
 mod registry_screen;
 mod screens;
 mod starfield;
@@ -24,7 +25,6 @@ use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::Color;
 use ratatui::Frame;
 use ratatui::Terminal;
-use santui_registry::Registry as PluginRegistry;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -476,16 +476,14 @@ pub struct Santui {
     pub(super) event_bus: crate::event::EventBus,
     /// Authentication handle (set by main.rs before run()).
     pub(super) auth: Option<Arc<dyn AuthHandle>>,
-    /// Plugin registry (for fetching/installing plugins from GitHub).
-    registry: Option<PluginRegistry>,
+    /// Plugin registry overlay state and key handling.
+    registry_controller: registry_controller::RegistryController,
     /// Centralized application state.
     pub(super) app_state: app_state::AppState,
     /// Manages theme selection, preview, and theme-picker UI state.
     pub(super) theme_manager: theme_manager::ThemeManager,
     /// Command palette overlay state and key handling.
     palette_controller: palette_controller::PaletteController,
-    /// Registry screen state.
-    pub(super) registry_screen: registry_screen::RegistryScreen,
     /// Hot-reloadable configuration manager.
     pub(super) config_manager: crate::config::ConfigManager,
     /// Factory to create a Box<dyn Plugin> from (id, name, binary_path).
@@ -511,11 +509,10 @@ impl Santui {
             plugin_manager: plugin_manager::PluginManager::new(),
             event_bus: crate::event::EventBus::new(),
             auth: None,
-            registry: None,
             app_state: app_state::AppState::new(theme),
             theme_manager,
             palette_controller: palette_controller::PaletteController::new(),
-            registry_screen: registry_screen::RegistryScreen::new(),
+            registry_controller: registry_controller::RegistryController::new(),
             config_manager: ConfigManager::new(std::path::PathBuf::new()),
             plugin_factory: None,
             starfield: starfield::Starfield::new(),
@@ -804,8 +801,8 @@ impl Santui {
         }
 
         if self.app_state.registry_open {
-            self.registry_screen
-                .render(f, chunks[0], &self.app_state.theme, &self.registry);
+            self.registry_controller
+                .render(f, chunks[0], &self.app_state.theme);
         }
     }
 }
