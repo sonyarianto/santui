@@ -202,7 +202,7 @@ fn spawn_binary_name(binary_base: &str) -> String {
 }
 
 impl IpcPluginHost {
-    fn spawn(&mut self) {
+    fn spawn(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let exe_dir = std::env::current_exe()
             .ok()
             .and_then(|p| p.parent().map(|d| d.to_path_buf()));
@@ -213,49 +213,49 @@ impl IpcPluginHost {
             .map(|d| d.join(&binary_name))
             .unwrap_or_else(|| std::path::PathBuf::from(&binary_name));
 
-        match Command::new(&binary_path)
+        let mut child = Command::new(&binary_path)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
             .spawn()
-        {
-            Ok(mut child) => {
-                let reader = child.stdout.take().map(BufReader::new);
-                self.process = Some(child);
+            .map_err(|e| {
+                format!(
+                    "Failed to spawn plugin `{}`: {e}\n  → Run `cargo build --workspace` to build all plugins",
+                    binary_name
+                )
+            })?;
 
-                // Background thread: continuously read stdout, send parsed
-                // responses back via the channel.  This is what makes tick()
-                // non-blocking — the main thread never blocks on a read.
-                if let Some(reader) = reader {
-                    let (tx, rx) = mpsc::channel::<PluginMsg>();
-                    let handle = thread::Builder::new()
-                        .name(format!("ipc-reader-{}", self.id))
-                        .spawn(move || {
-                            let mut reader = reader;
-                            let mut line = String::new();
-                            loop {
-                                line.clear();
-                                match reader.read_line(&mut line) {
-                                    Ok(0) | Err(_) => break,
-                                    Ok(_) => {
-                                        if let Ok(msg) = serde_json::from_str::<PluginMsg>(&line) {
-                                            let _ = tx.send(msg);
-                                        }
-                                    }
+        let reader = child.stdout.take().map(BufReader::new);
+        self.process = Some(child);
+
+        // Background thread: continuously read stdout, send parsed
+        // responses back via the channel.  This is what makes tick()
+        // non-blocking — the main thread never blocks on a read.
+        if let Some(reader) = reader {
+            let (tx, rx) = mpsc::channel::<PluginMsg>();
+            let handle = thread::Builder::new()
+                .name(format!("ipc-reader-{}", self.id))
+                .spawn(move || {
+                    let mut reader = reader;
+                    let mut line = String::new();
+                    loop {
+                        line.clear();
+                        match reader.read_line(&mut line) {
+                            Ok(0) | Err(_) => break,
+                            Ok(_) => {
+                                if let Ok(msg) = serde_json::from_str::<PluginMsg>(&line) {
+                                    let _ = tx.send(msg);
                                 }
                             }
-                        });
-                    if let Ok(h) = handle {
-                        self.reader_thread = Some(h);
+                        }
                     }
-                    self.response_rx = Some(rx);
-                }
+                });
+            if let Ok(h) = handle {
+                self.reader_thread = Some(h);
             }
-            Err(e) => {
-                eprintln!("[santui] Failed to spawn plugin `{}`: {e}", binary_name);
-                eprintln!("[santui]   → Run `cargo build --workspace` to build all plugins");
-            }
+            self.response_rx = Some(rx);
         }
+        Ok(())
     }
 
     /// Process any pending request from the plugin.
@@ -307,7 +307,7 @@ impl Plugin for IpcPluginHost {
             };
             self.current_area.set(self.area);
         }
-        self.spawn();
+        self.spawn()?;
 
         let msg = HostMsg::Init {
             theme: self.theme_data.clone(),
