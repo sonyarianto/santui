@@ -21,7 +21,7 @@ Generated 2026-06-20 from a comprehensive codebase review.
 
 ## Medium — latent bugs & resource issues
 
-- [ ] **IPC blocks main thread up to 5 seconds** (`crates/ipc/src/host.rs:130`) — `recv_timeout(5s)` freezes the UI during blocking operations.
+- [x] **IPC blocks main thread up to 5 seconds** (`crates/ipc/src/host.rs:130`) — `send_recv` now non-blocking; all calls use `send` + `drain_responses`; the UI never waits for a plugin response.
 - [x] **GitHub OAuth blocks main thread** (`crates/auth/src/lib.rs:235`) — GitHub device flow now runs on background thread; TUI stays responsive; code shown in status bar
 - [ ] **Google OAuth blocks main thread** (`crates/auth/src/lib.rs:240`) — Google redirect flow still blocks the TUI while waiting for localhost callback
 - [x] **Registry file-write crash loses state** (`crates/registry/src/lib.rs:141`) — config saved *before* binary download; push to installed list first, save, then write binary. On error, entry is rolled back.

@@ -18,9 +18,6 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
-/// How long to wait for a plugin response before considering it dead.
-const IPC_TIMEOUT: Duration = Duration::from_secs(5);
-
 pub struct IpcPluginHost {
     id: String,
     name: String,
@@ -127,34 +124,6 @@ impl IpcPluginHost {
         let _ = stdin.flush();
     }
 
-    /// Block up to `IPC_TIMEOUT` waiting for a plugin response.
-    /// If the plugin doesn't respond in time we kill it so the main
-    /// thread can never hang forever on a crashed child process.
-    fn recv(&mut self) {
-        if let Some(ref rx) = self.response_rx {
-            match rx.recv_timeout(IPC_TIMEOUT) {
-                Ok(msg) => {
-                    self.cached_commands = msg.commands;
-                    self.cached_hints = msg.hints;
-                    self.cached_palette_commands = msg.palette_commands;
-                    self.pending_request = msg.request;
-                }
-                Err(mpsc::RecvTimeoutError::Timeout) => {
-                    eprintln!(
-                        "[santui] Plugin `{}` didn\'t respond within {}.{}s — killing",
-                        self.name,
-                        IPC_TIMEOUT.as_secs(),
-                        IPC_TIMEOUT.subsec_millis(),
-                    );
-                    self.kill();
-                }
-                Err(mpsc::RecvTimeoutError::Disconnected) => {
-                    self.process = None;
-                }
-            }
-        }
-    }
-
     /// Non-blocking: consume all pending responses from the background reader
     /// thread and keep only the latest cached state.
     fn drain_responses(&mut self) {
@@ -165,6 +134,13 @@ impl IpcPluginHost {
                 self.cached_palette_commands = msg.palette_commands;
                 self.pending_request = msg.request;
             }
+        }
+    }
+
+    /// Block briefly for one response (used during shutdown only).
+    fn recv_shutdown(&mut self) {
+        if let Some(ref rx) = self.response_rx {
+            let _ = rx.recv_timeout(Duration::from_secs(1));
         }
     }
 
@@ -183,7 +159,7 @@ impl IpcPluginHost {
 
     fn send_recv(&mut self, msg: &HostMsg) {
         self.send(msg);
-        self.recv();
+        self.drain_responses();
     }
 }
 
@@ -362,7 +338,6 @@ impl Plugin for IpcPluginHost {
             if usable != self.current_area.get() {
                 self.current_area.set(usable);
                 self.area = usable;
-                // Resize needs an immediate response so we know the new layout.
                 self.send_recv(&HostMsg::Resize { area: usable });
                 return;
             }
@@ -419,9 +394,7 @@ impl Plugin for IpcPluginHost {
 
     fn shutdown(&mut self) {
         self.send(&HostMsg::Shutdown);
-        if let Some(ref rx) = self.response_rx {
-            let _ = rx.recv_timeout(Duration::from_secs(1));
-        }
+        self.recv_shutdown();
     }
 
     fn binary_path(&self) -> Option<&Path> {
