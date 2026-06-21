@@ -1,17 +1,17 @@
 [package]
 name = "santui"
-version = "0.2.10"
+version = "0.2.11"
 edition = "2021"
 description = "Santui — keyboard-driven TUI plugin launcher with OAuth sign-in"
 license = "MIT"
 repository = "https://github.com/sonyarianto/santui"
 
 [dependencies]
-santui-core = { path = "../core", version = "0.2.10" }
-santui-ipc = { path = "../ipc", version = "0.2.10" }
-santui-auth = { path = "../auth", version = "0.2.10", optional = true }
-santui-registry = { path = "../registry", version = "0.2.10" }
-santui-db = { path = "../db", version = "0.2.10" }
+santui-core = { path = "../core", version = "0.2.11" }
+santui-ipc = { path = "../ipc", version = "0.2.11" }
+santui-auth = { path = "../auth", version = "0.2.11", optional = true }
+santui-registry = { path = "../registry", version = "0.2.11" }
+santui-db = { path = "../db", version = "0.2.11" }
 log = { workspace = true }
 env_logger = { workspace = true }
 
