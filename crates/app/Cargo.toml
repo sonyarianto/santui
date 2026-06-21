@@ -1,13 +1,13 @@
 [package]
 name = "santui"
-version = "0.2.4"
+version = "0.2.5"
 edition = "2021"
 
 [dependencies]
-santui-core = { path = "../core", version = "0.2.4" }
-santui-ipc = { path = "../ipc", version = "0.2.4" }
-santui-auth = { path = "../auth", version = "0.2.4", optional = true }
-santui-registry = { path = "../registry", version = "0.2.4" }
+santui-core = { path = "../core", version = "0.2.5" }
+santui-ipc = { path = "../ipc", version = "0.2.5" }
+santui-auth = { path = "../auth", version = "0.2.5", optional = true }
+santui-registry = { path = "../registry", version = "0.2.5" }
 
 [features]
 default = ["auth"]

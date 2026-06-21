@@ -1,6 +1,6 @@
 [package]
 name = "santui-ipc"
-version = "0.2.4"
+version = "0.2.5"
 edition = "2021"
 
 [features]
@@ -8,7 +8,7 @@ default = ["host"]
 host = ["dep:santui-core", "dep:ratatui", "dep:crossterm"]
 
 [dependencies]
-santui-core = { path = "../core", version = "0.2.4", optional = true }
+santui-core = { path = "../core", version = "0.2.5", optional = true }
 ratatui = { version = "0.30", optional = true }
 crossterm = { version = "0.29", optional = true }
 serde = { version = "1", features = ["derive"] }

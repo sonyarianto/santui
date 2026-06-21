@@ -1,10 +1,10 @@
 [package]
 name = "santui-auth"
-version = "0.2.4"
+version = "0.2.5"
 edition = "2021"
 
 [dependencies]
-santui-core = { path = "../core", version = "0.2.4" }
+santui-core = { path = "../core", version = "0.2.5" }
 ureq = "3"
 url = "2"
 serde = { version = "1", features = ["derive"] }
