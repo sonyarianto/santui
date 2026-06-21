@@ -16,5 +16,7 @@ pub trait AuthHandle: Send + Sync {
     /// Call `drain_pending_sign_in` periodically to get the result.
     fn start_sign_in(&self, provider: &str) -> Result<(), Box<dyn std::error::Error>>;
     fn drain_pending_sign_in(&self) -> Option<Result<User, Box<dyn std::error::Error>>>;
+    /// A user-facing message about an ongoing auth flow (e.g. "Enter code XXXXX").
+    fn auth_message(&self) -> Option<String>;
     fn sign_out(&self);
 }

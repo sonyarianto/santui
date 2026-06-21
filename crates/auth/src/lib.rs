@@ -191,6 +191,7 @@ pub struct AuthClient {
     providers: HashMap<String, AuthConfig>,
     user: Arc<Mutex<Option<User>>>,
     pending_sign_in: Arc<Mutex<Option<Result<User, String>>>>,
+    auth_msg: Arc<Mutex<Option<String>>>,
     token_path: PathBuf,
     vercel_url: String,
 }
@@ -206,6 +207,7 @@ impl AuthClient {
             providers: providers.into_iter().collect(),
             user: Arc::new(Mutex::new(user)),
             pending_sign_in: Arc::new(Mutex::new(None)),
+            auth_msg: Arc::new(Mutex::new(None)),
             token_path,
             vercel_url: String::new(),
         }
@@ -280,23 +282,29 @@ impl AuthClient {
         token_path: &PathBuf,
         user_lock: &Arc<Mutex<Option<User>>>,
         pending: &Arc<Mutex<Option<Result<User, String>>>>,
+        auth_msg: &Arc<Mutex<Option<String>>>,
     ) {
         let device = match request_device_code(config) {
             Ok(d) => d,
             Err(e) => {
                 *pending.lock().unwrap_or_else(|e| e.into_inner()) = Some(Err(e.to_string()));
+                *auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = None;
                 return;
             }
         };
         let user_code = device.user_code.clone();
         let interval = device.interval.unwrap_or(5);
         let activation_url = format!("https://github.com/login/device?user_code={user_code}");
+        *auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = Some(format!(
+            "GitHub: enter code {user_code} at github.com/login/device"
+        ));
         open_browser(&activation_url);
 
         let access_token = match poll_device_token(config, &device.device_code, interval) {
             Ok(t) => t,
             Err(e) => {
                 *pending.lock().unwrap_or_else(|e| e.into_inner()) = Some(Err(e.to_string()));
+                *auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = None;
                 return;
             }
         };
@@ -305,6 +313,7 @@ impl AuthClient {
             Ok(u) => u,
             Err(e) => {
                 *pending.lock().unwrap_or_else(|e| e.into_inner()) = Some(Err(e.to_string()));
+                *auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = None;
                 return;
             }
         };
@@ -320,6 +329,7 @@ impl AuthClient {
         };
         save_tokens_to_path(token_path, &stored);
         *user_lock.lock().unwrap_or_else(|e| e.into_inner()) = Some(user.clone());
+        *auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = None;
         *pending.lock().unwrap_or_else(|e| e.into_inner()) = Some(Ok(user));
     }
 
@@ -330,7 +340,13 @@ impl AuthClient {
             .ok_or_else(|| "GitHub auth not configured".to_string())?;
 
         let clone = config.clone();
-        Self::run_github_device_flow(&clone, &self.token_path, &self.user, &self.pending_sign_in);
+        Self::run_github_device_flow(
+            &clone,
+            &self.token_path,
+            &self.user,
+            &self.pending_sign_in,
+            &self.auth_msg,
+        );
 
         // Block until the flow completes (read from pending)
         loop {
@@ -355,9 +371,10 @@ impl AuthClient {
         let token_path = self.token_path.clone();
         let user_lock = Arc::clone(&self.user);
         let pending = Arc::clone(&self.pending_sign_in);
+        let msg = Arc::clone(&self.auth_msg);
 
         thread::spawn(move || {
-            Self::run_github_device_flow(&config, &token_path, &user_lock, &pending);
+            Self::run_github_device_flow(&config, &token_path, &user_lock, &pending, &msg);
         });
 
         Ok(())
@@ -407,8 +424,16 @@ impl AuthHandle for AuthClient {
         guard.take().map(|r| r.map_err(|e| e.into()))
     }
 
+    fn auth_message(&self) -> Option<String> {
+        self.auth_msg
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
+    }
+
     fn sign_out(&self) {
         self.clear_tokens();
+        *self.auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = None;
         *self.user.lock().unwrap_or_else(|e| e.into_inner()) = None;
     }
 }

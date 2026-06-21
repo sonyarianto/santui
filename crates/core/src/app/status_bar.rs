@@ -25,6 +25,8 @@ pub(super) struct StatusBar<'a> {
     pub user: Option<&'a User>,
     /// Config parse error to display, if any.
     pub config_error: Option<&'a str>,
+    /// Auth flow message (e.g. "GitHub: enter code ABCD-1234").
+    pub auth_message: Option<&'a str>,
 }
 
 impl StatusBar<'_> {
@@ -96,15 +98,27 @@ impl StatusBar<'_> {
             )]))
             .alignment(Alignment::Right);
             f.render_widget(err_span, area);
+        } else if let Some(msg) = self.auth_message {
+            let msg_span = Paragraph::new(Line::from(vec![Span::styled(
+                msg,
+                Style::default().fg(self.theme.accent),
+            )]))
+            .alignment(Alignment::Right);
+            f.render_widget(msg_span, area);
         } else {
             let mut right_spans: Vec<Span> = Vec::new();
             if let Some(u) = self.user {
+                let provider_prefix = match u.provider.as_str() {
+                    "github" => "GitHub:",
+                    "google" => "Google:",
+                    _ => "",
+                };
                 let display = if !u.email.is_empty() {
                     &u.email
                 } else {
                     &u.name
                 };
-                right_spans.push(Span::styled(display, dim));
+                right_spans.push(Span::styled(format!("{provider_prefix}{display}"), dim));
                 right_spans.push(Span::styled(" ", dim));
             }
             right_spans.push(Span::styled("Santui ", key));
