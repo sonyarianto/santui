@@ -29,6 +29,10 @@ pub struct IpcPluginHost {
     cached_hints: Vec<(String, String)>,
     cached_palette_commands: Vec<(String, String)>,
     area: Area,
+    /// Cached terminal area, updated from `render()` which takes `&self`.
+    /// `Cell` is safe here because `IpcPluginHost` is !Sync — it's owned by a
+    /// single-threaded `Vec<Box<dyn Plugin>>` in `PluginManager`. Never shared
+    /// across threads.
     current_area: Cell<Area>,
     theme_data: ThemeData,
     pending_request: Option<PluginRequest>,
