@@ -280,31 +280,46 @@ impl PluginManager {
                 if !installed.enabled {
                     continue;
                 }
-                let id = installed
-                    .path
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .map(|s| s.trim_end_matches(".exe").to_string());
-                let Some(ref id) = id else {
-                    continue;
+                let id = if !installed.id.is_empty() {
+                    installed.id.clone()
+                } else {
+                    match installed
+                        .path
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .map(|s| s.trim_end_matches(".exe").to_string())
+                    {
+                        Some(id) => id,
+                        None => continue,
+                    }
                 };
-                let name = reg
-                    .available
-                    .iter()
-                    .find(|m| m.id == *id)
-                    .map(|m| m.name.clone())
-                    .unwrap_or_else(|| {
-                        // Humanize: "santui-radio-streaming-player" → "Radio Streaming Player"
-                        id.trim_start_matches("santui-")
-                            .replace('-', " ")
-                            .split_ascii_whitespace()
-                            .collect::<Vec<_>>()
-                            .join(" ")
-                    });
+                let name = if !installed.name.is_empty() {
+                    installed.name.clone()
+                } else {
+                    reg.available
+                        .iter()
+                        .find(|m| m.id == *id)
+                        .map(|m| m.name.clone())
+                        .unwrap_or_else(|| {
+                            // Humanize: "santui-radio-streaming-player" → "Radio Streaming Player"
+                            id.trim_start_matches("santui-")
+                                .replace('-', " ")
+                                .split_ascii_whitespace()
+                                .map(|w| {
+                                    let mut c = w.chars();
+                                    match c.next() {
+                                        None => String::new(),
+                                        Some(f) => f.to_uppercase().to_string() + c.as_str(),
+                                    }
+                                })
+                                .collect::<Vec<_>>()
+                                .join(" ")
+                        })
+                };
                 if !self
                     .dynamic_items
                     .iter()
-                    .any(|(_, existing_id, _)| existing_id == id)
+                    .any(|(_, existing_id, _)| *existing_id == id)
                 {
                     self.dynamic_items
                         .push(("Plugins".into(), id.clone(), name));

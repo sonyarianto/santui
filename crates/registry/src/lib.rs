@@ -27,6 +27,14 @@ pub struct InstalledPlugin {
     pub enabled: bool,
     pub version: String,
     pub path: PathBuf,
+    /// Plugin identifier (e.g. "santui-radio-streaming-player").
+    /// Persisted so the palette can show the plugin before the manifest is fetched.
+    #[serde(default)]
+    pub id: String,
+    /// Human-readable display name (e.g. "Radio Streaming Player").
+    /// Persisted so the palette can show the plugin before the manifest is fetched.
+    #[serde(default)]
+    pub name: String,
 }
 
 /// Top-level state: fetched manifest + local installed set.
@@ -147,6 +155,8 @@ impl Registry {
             enabled: true,
             version: manifest.version.clone(),
             path: target_path.clone(),
+            id: manifest.id.clone(),
+            name: manifest.name.clone(),
         });
         self.save_config()?;
 
