@@ -57,6 +57,11 @@ cd website && npm run build # static build
 # IMPORTANT: Every inter-crate path dependency must also have a version
 # field matching the new version, e.g.:
 #   santui-core = { path = "../core", version = "x.y.z" }
+#
+# Also update website version strings (grep for the old version):
+#   website/.vitepress/config.ts      — nav link + footer
+#   website/public/install.ps1        — banner text
+#   website/index.md                  — tagline (if changed)
 git add -A && git commit -m "chore: bump version to x.y.z"
 git tag vx.y.z && git push --tags
 # CI builds binaries, creates GitHub Release, publishes to npm and crates.io
