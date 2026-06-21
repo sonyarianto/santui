@@ -73,7 +73,7 @@ impl IpcPluginHost {
     }
 
     /// Convenience: create a boxed Plugin via the factory.
-    pub fn new_boxed(id: &str, name: &str, path: &std::path::Path) -> Box<dyn Plugin> {
+    pub fn new_boxed(id: &str, name: &str, path: &std::path::Path) -> Box<dyn Plugin + Send> {
         let binary = path.to_string_lossy().to_string();
         Box::new(IpcPluginHost::new(id, name, &binary))
     }

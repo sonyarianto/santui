@@ -41,4 +41,4 @@ Generated 2026-06-20 from a comprehensive codebase review.
 - [x] Tick rate (100ms) is hardcoded, not user-configurable — now a `Duration` field on `Santui` with `set_tick_rate()` setter; default 100ms
 - [x] Star count (88) is hardcoded, not adaptive to terminal resolution — now computed from `(width * height) / 50` (clamped 20-200); resized after terminal init in `run()`
 - [x] Platform manifest filenames hardcoded via cfg checks — `manifest_filename()` now uses `std::env::consts::{OS, ARCH}` instead of `cfg!` chains
-- [ ] `Plugin` trait doesn't require `Send` or `Sync`, preventing future parallel execution
+- [x] `Plugin` trait doesn't require `Send` or `Sync`, preventing future parallel execution — `trait Plugin: Send`; all `Box<dyn Plugin>` → `Box<dyn Plugin + Send>`; `IpcPluginHost` and `MockPlugin` are already Send

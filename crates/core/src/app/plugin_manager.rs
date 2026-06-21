@@ -7,12 +7,13 @@ use crate::theme::Theme;
 use crossterm::event::KeyEvent;
 use ratatui::layout::Rect;
 use ratatui::Frame;
+use santui_registry::Registry as PluginRegistry;
 
 /// Manages the lifecycle, dispatch, and palette-command registry for all
 /// loaded plugins.  Extracted from the monolithic `Santui` struct so that
 /// Santui itself only owns a single `PluginManager` field.
 pub(crate) struct PluginManager {
-    plugins: Vec<Box<dyn Plugin>>,
+    plugins: Vec<Box<dyn Plugin + Send>>,
     active_idx: Option<usize>,
     /// Global index → (plugin_index, local_command_index, command).
     plugin_commands: Vec<(usize, usize, PluginCmdItem)>,
@@ -21,6 +22,8 @@ pub(crate) struct PluginManager {
     /// Last known modification times for each plugin's binary, parallel to
     /// `plugins`.  `None` for in-process plugins or when stat failed.
     mtimes: Vec<Option<SystemTime>>,
+    /// Dynamic palette items from enabled registry plugins: (category, plugin_id, name).
+    dynamic_items: Vec<(String, String, String)>,
 }
 
 impl PluginManager {
@@ -31,6 +34,7 @@ impl PluginManager {
             plugin_commands: Vec::new(),
             plugin_factory: None,
             mtimes: Vec::new(),
+            dynamic_items: Vec::new(),
         }
     }
 
@@ -43,7 +47,7 @@ impl PluginManager {
     // Registration & lifecycle
     // ------------------------------------------------------------------
 
-    pub fn register(&mut self, plugin: Box<dyn Plugin>) {
+    pub fn register(&mut self, plugin: Box<dyn Plugin + Send>) {
         self.mtimes.push(stat_mtime(plugin.binary_path()));
         self.plugins.push(plugin);
     }
@@ -69,7 +73,7 @@ impl PluginManager {
     /// Register a plugin, initialise it, and return its index.
     pub fn push_and_init(
         &mut self,
-        mut plugin: Box<dyn Plugin>,
+        mut plugin: Box<dyn Plugin + Send>,
         ctx: &mut PluginContext,
     ) -> Result<usize, Box<dyn std::error::Error>> {
         plugin.init(ctx)?;
@@ -244,6 +248,34 @@ impl PluginManager {
         for (i, plugin) in self.plugins.iter().enumerate() {
             for (local_idx, cmd) in plugin.commands().into_iter().enumerate() {
                 self.plugin_commands.push((i, local_idx, cmd));
+            }
+        }
+    }
+
+    pub fn dynamic_items(&self) -> &[(String, String, String)] {
+        &self.dynamic_items
+    }
+
+    /// Rebuild dynamic palette items from the plugin registry.
+    pub fn refresh_dynamic_items(&mut self, registry: &Option<PluginRegistry>) {
+        self.dynamic_items.clear();
+        if let Some(ref reg) = registry {
+            for plugin in &reg.available {
+                let enabled = reg.installed.iter().any(|p| {
+                    p.path
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .map(|s| s.trim_end_matches(".exe"))
+                        == Some(&plugin.id)
+                        && p.enabled
+                });
+                if enabled {
+                    self.dynamic_items.push((
+                        "Modules".into(),
+                        plugin.id.clone(),
+                        plugin.name.clone(),
+                    ));
+                }
             }
         }
     }

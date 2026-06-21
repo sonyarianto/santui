@@ -2,7 +2,7 @@ use crossterm::event::{KeyCode, KeyEvent};
 
 impl super::Santui {
     pub(super) fn handle_key(&mut self, key: KeyEvent) {
-        if self.palette.is_some() {
+        if self.palette_controller.is_open() {
             return self.handle_key_palette(key);
         }
         if self.app_state.theme_picker_open {
@@ -20,79 +20,16 @@ impl super::Santui {
     fn handle_key_palette(&mut self, key: KeyEvent) {
         let cmds = self.plugin_manager.commands();
         let bi = &self.app_state.builtin_items;
-        let filtered = self
-            .palette
-            .as_ref()
-            .map(|p| p.filtered_items(bi, &self.dynamic_items, cmds))
-            .unwrap_or_default();
-
-        match key.code {
-            KeyCode::Char(c)
-                if c == 'p'
-                    && key
-                        .modifiers
-                        .contains(crossterm::event::KeyModifiers::CONTROL) =>
-            {
-                self.palette = None;
-                return;
-            }
-            KeyCode::Char(_c) if !key.modifiers.is_empty() => {}
-            KeyCode::Char(c) => {
-                if let Some(ref mut p) = self.palette {
-                    p.query.push(c);
-                    p.cursor = 0;
-                    p.scroll = 0;
-                }
-            }
-            KeyCode::Backspace => {
-                if let Some(ref mut p) = self.palette {
-                    p.query.pop();
-                    p.cursor = 0;
-                    p.scroll = 0;
-                }
-            }
-            KeyCode::Up => {
-                if !filtered.is_empty() {
-                    if let Some(ref mut p) = self.palette {
-                        p.cursor = if p.cursor == 0 {
-                            filtered.len() - 1
-                        } else {
-                            p.cursor - 1
-                        };
-                    }
-                }
-            }
-            KeyCode::Down => {
-                if !filtered.is_empty() {
-                    if let Some(ref mut p) = self.palette {
-                        p.cursor = if p.cursor + 1 >= filtered.len() {
-                            0
-                        } else {
-                            p.cursor + 1
-                        };
-                    }
-                }
-            }
-            KeyCode::Enter => {
-                let cursor = self.palette.as_ref().map(|p| p.cursor).unwrap_or(0);
-                if let Some(&idx) = filtered.get(cursor) {
-                    self.execute_palette_selection(idx);
-                }
-                self.palette = None;
-                return;
-            }
-            KeyCode::Esc => {
-                self.palette = None;
-                return;
-            }
-            _ => {}
-        }
-
-        if let Some(ref mut p) = self.palette {
-            let (_, term_h) = crossterm::terminal::size().unwrap_or((80, 24));
-            let cmds = self.plugin_manager.commands();
-            let bi = &self.app_state.builtin_items;
-            p.ensure_cursor_visible(term_h.saturating_sub(1), bi, &self.dynamic_items, cmds);
+        let (_, term_h) = crossterm::terminal::size().unwrap_or((80, 24));
+        let action = self.palette_controller.handle_key(
+            key,
+            term_h,
+            bi,
+            self.plugin_manager.dynamic_items(),
+            cmds,
+        );
+        if let super::palette_controller::PaletteAction::Execute(idx) = action {
+            self.execute_palette_selection(idx);
         }
     }
 
@@ -147,7 +84,8 @@ impl super::Santui {
                 }
             }
             super::ItemIndex::Dynamic(di) => {
-                if let Some((_cat, id, name)) = self.dynamic_items.get(di).cloned() {
+                if let Some((_cat, id, name)) = self.plugin_manager.dynamic_items().get(di).cloned()
+                {
                     if let Some(existing) = self.plugin_manager.find_by_id(&id) {
                         self.plugin_manager.set_active(Some(existing));
                     } else if let Some(ref reg) = self.registry {
@@ -308,7 +246,7 @@ impl super::Santui {
                                 }
                             }
                         }
-                        self.refresh_dynamic_items();
+                        self.plugin_manager.refresh_dynamic_items(&self.registry);
                     }
                 }
             }
@@ -319,7 +257,7 @@ impl super::Santui {
     fn handle_key_normal(&mut self, key: KeyEvent) {
         if matches!(key.code, KeyCode::Char('p') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL))
         {
-            self.palette = Some(super::palette_widget::PaletteWidget::new());
+            self.palette_controller.open();
             return;
         }
 

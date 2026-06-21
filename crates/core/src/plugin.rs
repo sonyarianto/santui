@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 /// Factory that creates a `Box<dyn Plugin>` from an id, name, and binary path.
 /// The binary (`santui`) sets this to `IpcPluginHost::new_boxed`.
-pub type PluginFactory = Arc<dyn Fn(&str, &str, &Path) -> Box<dyn Plugin> + Send + Sync>;
+pub type PluginFactory = Arc<dyn Fn(&str, &str, &Path) -> Box<dyn Plugin + Send> + Send + Sync>;
 
 /// A command that a plugin registers for the Ctrl+P palette.
 #[derive(Debug, Clone)]
@@ -17,7 +17,7 @@ pub struct PluginCmdItem {
     pub label: String,
 }
 
-pub trait Plugin {
+pub trait Plugin: Send {
     fn id(&self) -> &str;
     fn name(&self) -> &str;
     fn init(&mut self, ctx: &mut PluginContext) -> Result<(), Box<dyn std::error::Error>>;

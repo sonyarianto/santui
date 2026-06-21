@@ -1,6 +1,7 @@
 mod app_state;
 mod handle_key;
 mod palette;
+mod palette_controller;
 mod palette_widget;
 mod plugin_manager;
 mod registry;
@@ -481,14 +482,12 @@ pub struct Santui {
     pub(super) app_state: app_state::AppState,
     /// Manages theme selection, preview, and theme-picker UI state.
     pub(super) theme_manager: theme_manager::ThemeManager,
-    /// Command palette overlay state (None = closed).
-    palette: Option<palette_widget::PaletteWidget>,
+    /// Command palette overlay state and key handling.
+    palette_controller: palette_controller::PaletteController,
     /// Registry screen state.
     pub(super) registry_screen: registry_screen::RegistryScreen,
     /// Hot-reloadable configuration manager.
     pub(super) config_manager: crate::config::ConfigManager,
-    /// Dynamic palette items from enabled registry plugins: (category, plugin_id, name).
-    pub(super) dynamic_items: Vec<(String, String, String)>,
     /// Factory to create a Box<dyn Plugin> from (id, name, binary_path).
     /// Set by main.rs before run().
     pub(super) plugin_factory: Option<crate::plugin::PluginFactory>,
@@ -515,10 +514,9 @@ impl Santui {
             registry: None,
             app_state: app_state::AppState::new(theme),
             theme_manager,
-            palette: None,
+            palette_controller: palette_controller::PaletteController::new(),
             registry_screen: registry_screen::RegistryScreen::new(),
             config_manager: ConfigManager::new(std::path::PathBuf::new()),
-            dynamic_items: Vec::new(),
             plugin_factory: None,
             starfield: starfield::Starfield::new(),
             tick_rate: Duration::from_millis(100),
@@ -529,31 +527,6 @@ impl Santui {
     /// Lower values = smoother animation but more CPU.
     pub fn set_tick_rate(&mut self, duration: Duration) {
         self.tick_rate = duration;
-    }
-
-    /// Rebuild dynamic palette items from the plugin registry.
-    /// Call this whenever a plugin is installed or toggled.
-    pub(super) fn refresh_dynamic_items(&mut self) {
-        self.dynamic_items.clear();
-        if let Some(ref reg) = self.registry {
-            for plugin in &reg.available {
-                let enabled = reg.installed.iter().any(|p| {
-                    p.path
-                        .file_stem()
-                        .and_then(|s| s.to_str())
-                        .map(|s| s.trim_end_matches(".exe"))
-                        == Some(&plugin.id)
-                        && p.enabled
-                });
-                if enabled {
-                    self.dynamic_items.push((
-                        "Modules".into(),
-                        plugin.id.clone(),
-                        plugin.name.clone(),
-                    ));
-                }
-            }
-        }
     }
 
     pub fn set_auth(&mut self, auth: Arc<dyn AuthHandle>) {
@@ -662,7 +635,7 @@ impl Santui {
         &self.theme_manager.themes[self.theme_manager.current_idx].0
     }
 
-    pub fn register(&mut self, plugin: Box<dyn Plugin>) {
+    pub fn register(&mut self, plugin: Box<dyn Plugin + Send>) {
         self.plugin_manager.register(plugin);
     }
 
@@ -770,7 +743,7 @@ impl Santui {
         let auth_message = self.auth.as_ref().and_then(|a| a.auth_message());
         status_bar::StatusBar {
             theme: &self.app_state.theme,
-            palette_open: self.palette.is_some(),
+            palette_open: self.palette_controller.is_open(),
             theme_picker_open: self.app_state.theme_picker_open,
             about_open: self.app_state.show_about,
             plugin_active: self.plugin_manager.active().is_some(),
@@ -781,7 +754,7 @@ impl Santui {
         }
         .render(f, chunks[1]);
 
-        if self.palette.is_some() || self.app_state.theme_picker_open {
+        if self.palette_controller.is_open() || self.app_state.theme_picker_open {
             let dim_bg = self.app_state.theme.background_overlay;
             let buf = f.buffer_mut();
             // Scale both foreground AND background brightness by 45%.
@@ -808,15 +781,15 @@ impl Santui {
             }
         }
 
-        if let Some(ref pal) = self.palette {
+        if self.palette_controller.is_open() {
             let cmds = self.plugin_manager.commands();
-            pal.render(
+            self.palette_controller.render(
                 f,
                 chunks[0],
                 &self.app_state.theme,
                 self.starfield.tick,
                 &self.app_state.builtin_items,
-                &self.dynamic_items,
+                self.plugin_manager.dynamic_items(),
                 cmds,
             );
         }
