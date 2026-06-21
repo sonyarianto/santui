@@ -1,6 +1,6 @@
 [package]
 name = "santui-registry"
-version = "0.2.8"
+version = "0.2.9"
 edition = "2021"
 description = "Santui plugin registry — manifest fetch, install, config management"
 license = "MIT"

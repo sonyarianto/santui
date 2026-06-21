@@ -22,7 +22,7 @@ Resolved items moved to [audit-history.md](audit-history.md).
 
 - [ ] **No `deny.toml` or clippy lint config** — no automated enforcement of `unsafe` usage, duplicate dependencies, or advisory checks.
 
-- [x] **Scraper crate version drift** — `0.2.5` vs workspace `0.2.7`. (`crates/plugins/radio-streaming-player/scraper/Cargo.toml:3`) — fixed in v0.2.8
+- [x] **Scraper crate version drift** — `0.2.5` vs workspace `0.2.7`. (`crates/plugins/radio-streaming-player/scraper/Cargo.toml:3`) — fixed in v0.2.9
 
 - [ ] **`serde` duplicated across workspace** — declared both as path dep and workspace dep in multiple crates.
 
