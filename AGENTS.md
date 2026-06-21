@@ -53,13 +53,18 @@ cd website && npm run build # static build
 ```bash
 # Update version in all Cargo.toml files + packages/npm/package.json
 # They must all match (CI verifies against crates/core/Cargo.toml)
+#
+# IMPORTANT: Every inter-crate path dependency must also have a version
+# field matching the new version, e.g.:
+#   santui-core = { path = "../core", version = "x.y.z" }
 git add -A && git commit -m "chore: bump version to x.y.z"
 git tag vx.y.z && git push --tags
-# CI builds binaries, creates GitHub Release, and publishes to npm
+# CI builds binaries, creates GitHub Release, publishes to npm and crates.io
 ```
 
 Prerequisites:
 - `NPM_TOKEN` secret set in GitHub repo Settings → Secrets → Actions
+- `CARGO_REGISTRY_TOKEN` secret set in GitHub repo Settings → Secrets → Actions
 
 ## Docs Index
 
