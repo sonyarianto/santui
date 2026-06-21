@@ -86,7 +86,7 @@ impl super::Santui {
             .into_iter()
             .chain([
                 Line::from(Span::styled(
-                    "my terminal home base",
+                    "your terminal home base",
                     Style::default().fg(t.text_muted),
                 )),
                 Line::from(Span::styled(
@@ -130,7 +130,7 @@ impl super::Santui {
             .into_iter()
             .chain([
                 Line::from(Span::styled(
-                    "my terminal home base",
+                    "your terminal home base",
                     Style::default().fg(t.text_muted),
                 )),
                 Line::from(Span::styled(
@@ -138,7 +138,7 @@ impl super::Santui {
                     Style::default().fg(t.text_muted),
                 )),
                 Line::from(""),
-                Line::from("Copyright \u{00a9} Sony AK  <sony@sony-ak.com>"),
+                Line::from("Copyright \u{00a9} Sony AK https://github.com/sonyarianto"),
                 Line::from(""),
                 Line::from(Span::styled(
                     "https://santuiapp.vercel.app",
