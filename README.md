@@ -1,6 +1,9 @@
 # Santui
 
 [![MIT License](https://img.shields.io/github/license/sonyarianto/santui)](LICENSE)
+[![CI](https://github.com/sonyarianto/santui/actions/workflows/release.yml/badge.svg)](https://github.com/sonyarianto/santui/actions)
+[![npm](https://img.shields.io/npm/v/santui)](https://www.npmjs.com/package/santui)
+[![Downloads](https://img.shields.io/npm/dm/santui)](https://www.npmjs.com/package/santui)
 
 Your terminal home base.
 
