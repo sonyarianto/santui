@@ -4,10 +4,10 @@ version = "0.2.4"
 edition = "2021"
 
 [dependencies]
-santui-core = { path = "../core" }
-santui-ipc = { path = "../ipc" }
-santui-auth = { path = "../auth", optional = true }
-santui-registry = { path = "../registry" }
+santui-core = { path = "../core", version = "0.2.4" }
+santui-ipc = { path = "../ipc", version = "0.2.4" }
+santui-auth = { path = "../auth", version = "0.2.4", optional = true }
+santui-registry = { path = "../registry", version = "0.2.4" }
 
 [features]
 default = ["auth"]

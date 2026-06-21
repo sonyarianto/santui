@@ -4,7 +4,7 @@ version = "0.2.4"
 edition = "2021"
 
 [dependencies]
-santui-core = { path = "../core" }
+santui-core = { path = "../core", version = "0.2.4" }
 ureq = "3"
 url = "2"
 serde = { version = "1", features = ["derive"] }
