@@ -22,12 +22,13 @@ Generated 2026-06-20 from a comprehensive codebase review.
 ## Medium — latent bugs & resource issues
 
 - [ ] **IPC blocks main thread up to 5 seconds** (`crates/ipc/src/host.rs:130`) — `recv_timeout(5s)` freezes the UI during blocking operations.
-- [ ] **OAuth blocks main thread indefinitely** (`crates/auth/src/lib.rs:235`) — no timeout if browser doesn't open or user doesn't complete the flow.
+- [x] **GitHub OAuth blocks main thread** (`crates/auth/src/lib.rs:235`) — GitHub device flow now runs on background thread; TUI stays responsive; code shown in status bar
+- [ ] **Google OAuth blocks main thread** (`crates/auth/src/lib.rs:240`) — Google redirect flow still blocks the TUI while waiting for localhost callback
 - [ ] **Registry file-write crash loses state** (`crates/registry/src/lib.rs:141`) — binary written to disk but config.toml not saved before crash. Plugin exists but is unknown on restart.
 - [ ] **`Box::leak` in mpv FFI** (`crates/plugins/radio-streaming-player/src/player.rs:123`) — undocumented memory leak of function pointer table.
 - [ ] **Unsafe Send+Sync impls without safety docs** (`crates/plugins/radio-streaming-player/src/player.rs:68-69`) — `unsafe impl Send/Sync for Mpv` lacks justification.
 - [ ] **Cell<Area> interior mutability** (`crates/ipc/src/host.rs:35`) — works because single-threaded, but `Cell` is `!Sync`. Would be a data race if rendering or plugin comms ever moved to separate threads.
-- [ ] **`handle_key` calls blocking OAuth on main thread** (`crates/core/src/app/handle_key.rs:62`) — sign-in flow freezes UI.
+- [x] **`handle_key` calls blocking GitHub OAuth on main thread** (`crates/core/src/app/handle_key.rs:62`) — switched to non-blocking `start_sign_in()` for GitHub; Google sign-in still blocks but is faster (redirect-based).
 - [ ] **Radio plugin thread leak** (`crates/plugins/radio-streaming-player/src/main.rs:103`) — mpv event thread is never joined.
 
 ## Low — polish
