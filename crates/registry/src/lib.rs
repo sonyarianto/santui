@@ -138,29 +138,37 @@ impl Registry {
 
     /// Download and install a plugin from the manifest.
     /// In dev mode, copies the binary locally instead of HTTP download.
+    /// Config is persisted *before* the binary write so a crash mid-install
+    /// leaves a recoverable entry rather than a zombie binary.
     pub fn install(&mut self, manifest: &PluginManifest) -> Result<(), String> {
         std::fs::create_dir_all(&self.plugins_dir)
             .map_err(|e| format!("Failed to create plugins dir: {e}"))?;
 
         let target_path = self.plugins_dir.join(plugin_filename(&manifest.id));
 
-        if self.dev_mode {
-            // In dev mode, the download_url points to a local file path.
-            let src = Path::new(&manifest.download_url);
-            std::fs::copy(src, &target_path)
-                .map_err(|e| format!("Failed to copy plugin binary from {}: {e}", src.display()))?;
-
-            self.copy_native_deps(src)?;
-        } else {
-            download_plugin(&manifest.download_url, &manifest.sha256, &target_path)?;
-        }
-
         self.installed.push(InstalledPlugin {
             enabled: true,
             version: manifest.version.clone(),
-            path: target_path,
+            path: target_path.clone(),
         });
         self.save_config()?;
+
+        let result = if self.dev_mode {
+            let src = Path::new(&manifest.download_url);
+            std::fs::copy(src, &target_path)
+                .map_err(|e| format!("Failed to copy plugin binary from {}: {e}", src.display()))?;
+            self.copy_native_deps(src)?;
+            Ok(())
+        } else {
+            download_plugin(&manifest.download_url, &manifest.sha256, &target_path)
+        };
+
+        if let Err(e) = result {
+            self.installed.pop();
+            self.save_config()?;
+            return Err(e);
+        }
+
         Ok(())
     }
 

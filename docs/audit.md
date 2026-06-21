@@ -24,7 +24,7 @@ Generated 2026-06-20 from a comprehensive codebase review.
 - [ ] **IPC blocks main thread up to 5 seconds** (`crates/ipc/src/host.rs:130`) — `recv_timeout(5s)` freezes the UI during blocking operations.
 - [x] **GitHub OAuth blocks main thread** (`crates/auth/src/lib.rs:235`) — GitHub device flow now runs on background thread; TUI stays responsive; code shown in status bar
 - [ ] **Google OAuth blocks main thread** (`crates/auth/src/lib.rs:240`) — Google redirect flow still blocks the TUI while waiting for localhost callback
-- [ ] **Registry file-write crash loses state** (`crates/registry/src/lib.rs:141`) — binary written to disk but config.toml not saved before crash. Plugin exists but is unknown on restart.
+- [x] **Registry file-write crash loses state** (`crates/registry/src/lib.rs:141`) — config saved *before* binary download; push to installed list first, save, then write binary. On error, entry is rolled back.
 - [ ] **`Box::leak` in mpv FFI** (`crates/plugins/radio-streaming-player/src/player.rs:123`) — undocumented memory leak of function pointer table.
 - [ ] **Unsafe Send+Sync impls without safety docs** (`crates/plugins/radio-streaming-player/src/player.rs:68-69`) — `unsafe impl Send/Sync for Mpv` lacks justification.
 - [ ] **Cell<Area> interior mutability** (`crates/ipc/src/host.rs:35`) — works because single-threaded, but `Cell` is `!Sync`. Would be a data race if rendering or plugin comms ever moved to separate threads.
