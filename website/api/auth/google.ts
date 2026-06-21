@@ -6,8 +6,8 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function page(title: string, body: string, redirect: string): string {
-  return `<!DOCTYPE html>
+function html(title: string, body: string, redirect: string): Response {
+  const doc = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -24,6 +24,10 @@ function page(title: string, body: string, redirect: string): string {
   </script>
 </body>
 </html>`;
+  return new Response(doc, {
+    status: 200,
+    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+  });
 }
 
 export async function GET(request: Request): Promise<Response> {
@@ -42,17 +46,14 @@ export async function GET(request: Request): Promise<Response> {
   const redirectUri = `${BASE}/api/auth/google`;
 
   if (!CLIENT_ID || !CLIENT_SECRET) {
-    return new Response(
-      page(
-        'Not Configured',
-        `<div class="text-red-400 mb-4">
-          <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
-          <h1 class="text-2xl font-bold mb-2">Server Not Configured</h1>
-        </div>
-        <p class="text-gray-300 text-sm">Set <code class="text-yellow-400">GOOGLE_CLIENT_ID</code> and <code class="text-yellow-400">GOOGLE_CLIENT_SECRET</code> on Vercel.</p>`,
-        `http://127.0.0.1:${port}/callback?error=server_not_configured`,
-      ),
-      { status: 200, headers: { 'Content-Type': 'text/html' } },
+    return html(
+      'Not Configured',
+      `<div class="text-red-400 mb-4">
+        <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
+        <h1 class="text-2xl font-bold mb-2">Server Not Configured</h1>
+      </div>
+      <p class="text-gray-300 text-sm">Set <code class="text-yellow-400">GOOGLE_CLIENT_ID</code> and <code class="text-yellow-400">GOOGLE_CLIENT_SECRET</code> on Vercel.</p>`,
+      `http://127.0.0.1:${port}/callback?error=server_not_configured`,
     );
   }
 
@@ -84,33 +85,27 @@ export async function GET(request: Request): Promise<Response> {
     });
     tokens = await tokenResp.json();
   } catch (err) {
-    return new Response(
-      page(
-        'Token Exchange Failed',
-        `<div class="text-red-400 mb-4">
-          <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
-          <h1 class="text-2xl font-bold mb-2">Sign In Failed</h1>
-        </div>
-        <p class="text-gray-300 text-sm">Could not complete the sign-in process. Please try again.</p>`,
-        `http://127.0.0.1:${port}/callback?error=token_exchange_failed`,
-      ),
-      { status: 200, headers: { 'Content-Type': 'text/html' } },
+    return html(
+      'Token Exchange Failed',
+      `<div class="text-red-400 mb-4">
+        <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
+        <h1 class="text-2xl font-bold mb-2">Sign In Failed</h1>
+      </div>
+      <p class="text-gray-300 text-sm">Could not complete the sign-in process. Please try again.</p>`,
+      `http://127.0.0.1:${port}/callback?error=token_exchange_failed`,
     );
   }
 
   const accessToken = tokens.access_token;
   if (!accessToken || typeof accessToken !== 'string') {
-    return new Response(
-      page(
-        'No Access Token',
-        `<div class="text-red-400 mb-4">
-          <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
-          <h1 class="text-2xl font-bold mb-2">Sign In Failed</h1>
-        </div>
-        <p class="text-gray-300 text-sm">No access token was returned by Google. Please try again.</p>`,
-        `http://127.0.0.1:${port}/callback?error=no_access_token`,
-      ),
-      { status: 200, headers: { 'Content-Type': 'text/html' } },
+    return html(
+      'No Access Token',
+      `<div class="text-red-400 mb-4">
+        <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
+        <h1 class="text-2xl font-bold mb-2">Sign In Failed</h1>
+      </div>
+      <p class="text-gray-300 text-sm">No access token was returned by Google. Please try again.</p>`,
+      `http://127.0.0.1:${port}/callback?error=no_access_token`,
     );
   }
 
@@ -138,19 +133,17 @@ export async function GET(request: Request): Promise<Response> {
   const userName = String(user.name ?? user.email ?? 'User');
   const userEmail = String(user.email ?? '');
 
-  return new Response(
-    page(
-      'Signed In',
-      `<div class="text-emerald-400 mb-4">
-        <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        <h1 class="text-2xl font-bold mb-1">Signed In!</h1>
-        <p class="text-gray-400 text-sm">You can close this window.</p>
-      </div>
-      ${avatar ? `<img src="${avatar}" alt="" class="w-16 h-16 rounded-full mx-auto mb-3 border-2 border-white/20">` : ''}
-      <p class="text-white font-semibold text-lg">${escapeHtml(userName)}</p>
-      ${userEmail ? `<p class="text-gray-400 text-sm">${escapeHtml(userEmail)}</p>` : ''}
-      <div class="mt-6 text-gray-500 text-xs">Redirecting back to Santui...</div>`,
+  return html(
+    'Signed In',
+    `<div class="text-emerald-400 mb-4">
+      <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <h1 class="text-2xl font-bold mb-1">Signed In!</h1>
+      <p class="text-gray-400 text-sm">You can close this window.</p>
+    </div>
+    ${avatar ? `<img src="${avatar}" alt="" class="w-16 h-16 rounded-full mx-auto mb-3 border-2 border-white/20">` : ''}
+    <p class="text-white font-semibold text-lg">${escapeHtml(userName)}</p>
+    ${userEmail ? `<p class="text-gray-400 text-sm">${escapeHtml(userEmail)}</p>` : ''}
+    <div class="mt-6 text-gray-500 text-xs">Redirecting back to Santui...</div>`,
     localUrl,
-  ),
-);
+  );
 }

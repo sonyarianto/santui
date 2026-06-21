@@ -5,6 +5,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
 use std::path::PathBuf;
 use std::sync::Mutex;
+use std::time::Duration;
 use url::Url;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -78,6 +79,7 @@ fn handle_redirect(
     listener: TcpListener,
 ) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
     let (stream, _) = listener.accept()?;
+    stream.set_read_timeout(Some(Duration::from_secs(120)))?;
     let mut reader = BufReader::new(&stream);
     let mut request_line = String::new();
     reader.read_line(&mut request_line)?;
