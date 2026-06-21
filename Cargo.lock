@@ -1806,6 +1806,7 @@ dependencies = [
  "log",
  "santui-auth",
  "santui-core",
+ "santui-db",
  "santui-ipc",
  "santui-registry",
 ]

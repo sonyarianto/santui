@@ -11,6 +11,7 @@ santui-core = { path = "../core", version = "0.2.7" }
 santui-ipc = { path = "../ipc", version = "0.2.7" }
 santui-auth = { path = "../auth", version = "0.2.7", optional = true }
 santui-registry = { path = "../registry", version = "0.2.7" }
+santui-db = { path = "../db", version = "0.2.7" }
 log = { workspace = true }
 env_logger = { workspace = true }
 

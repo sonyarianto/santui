@@ -1,4 +1,5 @@
 use santui_core::Santui;
+use santui_db::open_db;
 use std::path::PathBuf;
 
 #[cfg(feature = "auth")]
@@ -10,6 +11,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .format_target(false)
         .init();
     let mut app = Santui::new();
+
+    // Initialize local database (per-user key-value storage for plugins).
+    let _db = open_db()?;
 
     // Initialize plugin registry (stores config + downloaded plugins in ~/.santui).
     let registry_dir = {
