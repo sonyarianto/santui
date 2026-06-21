@@ -215,16 +215,21 @@ impl PluginManager {
     /// Process a batch of events from the EventBus.
     pub fn process_events(&mut self, events: &[Event]) {
         for event in events {
-            if let Event::PluginMessage {
-                from,
-                to,
-                action,
-                data,
-            } = event
-            {
-                if let Some(idx) = self.find_by_id(to) {
-                    self.plugins[idx].on_plugin_message(from, action, data);
+            match event {
+                Event::PluginMessage {
+                    from,
+                    to,
+                    action,
+                    data,
+                } => {
+                    if let Some(idx) = self.find_by_id(to) {
+                        self.plugins[idx].on_plugin_message(from, action, data);
+                    }
                 }
+                Event::ThemeChanged(theme) => {
+                    self.on_theme_change_all(theme);
+                }
+                Event::UserUpdated => {}
             }
         }
     }

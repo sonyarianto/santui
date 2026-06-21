@@ -1,4 +1,5 @@
 use santui_core::event::{Event, EventBus};
+use santui_core::Theme;
 
 #[test]
 fn event_bus_new_is_empty() {
@@ -10,19 +11,21 @@ fn event_bus_new_is_empty() {
 #[test]
 fn event_bus_emit_and_drain() {
     let mut bus = EventBus::new();
-    bus.emit(Event::ThemeChanged);
+    let theme = Theme::default();
+    bus.emit(Event::ThemeChanged(theme.clone()));
     bus.emit(Event::UserUpdated);
 
     let events = bus.drain();
     assert_eq!(events.len(), 2);
-    assert_eq!(events[0], Event::ThemeChanged);
+    assert_eq!(events[0], Event::ThemeChanged(theme));
     assert_eq!(events[1], Event::UserUpdated);
 }
 
 #[test]
 fn event_bus_drain_clears_queue() {
     let mut bus = EventBus::new();
-    bus.emit(Event::ThemeChanged);
+    let theme = Theme::default();
+    bus.emit(Event::ThemeChanged(theme.clone()));
 
     let _ = bus.drain();
     let remaining = bus.drain();

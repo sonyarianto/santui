@@ -34,7 +34,7 @@ fn muted(neutral: u32, ink: u32) -> Color {
     Color::Rgb(r, g, b)
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Theme {
     pub accent: Color,
     pub highlight: Color,

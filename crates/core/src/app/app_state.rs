@@ -1,3 +1,4 @@
+use crate::event::Event;
 use crate::theme::Theme;
 
 /// Centralized application state.
@@ -33,6 +34,16 @@ impl AppState {
             theme_picker_open: false,
             registry_open: false,
             builtin_items,
+        }
+    }
+
+    /// Process a batch of events from the EventBus.
+    /// Updates internal state in response to theme changes.
+    pub fn process_events(&mut self, events: &[Event]) {
+        for event in events {
+            if let Event::ThemeChanged(theme) = event {
+                self.theme = theme.clone();
+            }
         }
     }
 }

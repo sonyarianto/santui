@@ -618,10 +618,7 @@ impl Santui {
                     t.inverted_text = c;
                 }
             }
-            self.app_state.theme = t;
-            self.plugin_manager
-                .on_theme_change_all(&self.app_state.theme);
-            self.event_bus.emit(crate::event::Event::ThemeChanged);
+            self.event_bus.emit(crate::event::Event::ThemeChanged(t));
         }
 
         self.config_manager.ack();
@@ -670,8 +667,9 @@ impl Santui {
             };
             self.plugin_manager.check_reloads(&mut ctx);
 
-            // Drain the event bus and forward events to the plugin manager.
+            // Drain the event bus and forward events to subsystems.
             let events = self.event_bus.drain();
+            self.app_state.process_events(&events);
             self.plugin_manager.process_events(&events);
 
             // Check for pending non-blocking sign-in results.
