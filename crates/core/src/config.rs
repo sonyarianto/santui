@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 
 /// Top-level Santui configuration, deserialized from `config.toml`.
 #[derive(Debug, Clone, Default, serde::Deserialize, serde::Serialize)]
@@ -86,6 +86,8 @@ pub struct ConfigManager {
     pub dirty: bool,
     /// Error message from the last load/parse attempt, cleared on ack.
     error: Option<String>,
+    /// Main loop tick rate (how often the UI refreshes and polls for input).
+    tick_rate: Duration,
 }
 
 impl ConfigManager {
@@ -106,6 +108,7 @@ impl ConfigManager {
             last_modified,
             dirty: false,
             error,
+            tick_rate: Duration::from_millis(100),
         }
     }
 
@@ -163,6 +166,14 @@ impl ConfigManager {
     pub fn save_custom_theme(&mut self, colors: CustomThemeColors) {
         self.config.custom_theme = Some(colors);
         self.persist();
+    }
+
+    pub fn tick_rate(&self) -> Duration {
+        self.tick_rate
+    }
+
+    pub fn set_tick_rate(&mut self, duration: Duration) {
+        self.tick_rate = duration;
     }
 
     /// Remove custom theme colour overrides from config and persist.
