@@ -38,7 +38,7 @@ Generated 2026-06-20 from a comprehensive codebase review.
 - [ ] No security/capability model between plugins
 - [ ] OAuth redirect ports (9842/9843) are hardcoded with no fallback
 - [ ] EventBus is single-consumer — adding an event logger requires modifying core code
-- [ ] Tick rate (100ms) is hardcoded, not user-configurable
+- [x] Tick rate (100ms) is hardcoded, not user-configurable — now a `Duration` field on `Santui` with `set_tick_rate()` setter; default 100ms
 - [ ] Star count (88) is hardcoded, not adaptive to terminal resolution
 - [ ] Platform manifest filenames hardcoded via cfg checks
 - [ ] `Plugin` trait doesn't require `Send` or `Sync`, preventing future parallel execution

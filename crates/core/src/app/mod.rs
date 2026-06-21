@@ -494,6 +494,8 @@ pub struct Santui {
     pub(super) plugin_factory: Option<crate::plugin::PluginFactory>,
     /// Starfield background animation.
     pub(super) starfield: starfield::Starfield,
+    /// Main loop tick rate (how often the UI refreshes and polls for input).
+    tick_rate: Duration,
 }
 
 impl Default for Santui {
@@ -519,7 +521,14 @@ impl Santui {
             dynamic_items: Vec::new(),
             plugin_factory: None,
             starfield: starfield::Starfield::new(),
+            tick_rate: Duration::from_millis(100),
         }
+    }
+
+    /// Set the main loop tick rate (default 100ms).
+    /// Lower values = smoother animation but more CPU.
+    pub fn set_tick_rate(&mut self, duration: Duration) {
+        self.tick_rate = duration;
     }
 
     /// Rebuild dynamic palette items from the plugin registry.
@@ -670,8 +679,6 @@ impl Santui {
         };
         self.plugin_manager.init_all(&mut ctx)?;
 
-        let tick_rate = Duration::from_millis(100);
-
         while self.app_state.running {
             self.plugin_manager.tick_all();
 
@@ -712,7 +719,7 @@ impl Santui {
 
             terminal.draw(|f| self.render(f))?;
 
-            if crossterm::event::poll(tick_rate)? {
+            if crossterm::event::poll(self.tick_rate)? {
                 if let Event::Key(key) = crossterm::event::read()? {
                     if key.kind != KeyEventKind::Press {
                         continue;
