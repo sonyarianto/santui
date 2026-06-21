@@ -1,10 +1,9 @@
-name: Build and Release
+name: Release
 
 on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
@@ -12,246 +11,109 @@ env:
 jobs:
   build:
     strategy:
-      fail-fast: false
       matrix:
         include:
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            ext: .exe
-            archive: zip
-            plugin_ext: .exe
-
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            ext: ''
-            archive: tar.gz
-            plugin_ext: ''
-
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            ext: ''
-            archive: tar.gz
-            plugin_ext: ''
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
 
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
-      - uses: Swatinem/rust-cache@v2
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
 
-      - name: Verify tag version matches Cargo.toml
-        if: github.event_name != 'workflow_dispatch' && matrix.os == 'ubuntu-latest'
-        run: |
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
-          CARGO_VERSION="$(grep '^version' crates/core/Cargo.toml | head -1 | cut -d'"' -f2)"
-          if [ "$TAG_VERSION" != "$CARGO_VERSION" ]; then
-            echo "❌ Tag v${TAG_VERSION} does not match Cargo.toml ${CARGO_VERSION}"
-            echo "   Update all Cargo.toml versions to ${TAG_VERSION} before tagging."
-            exit 1
-          fi
-          echo "✅ Tag v${TAG_VERSION} matches Cargo.toml ${CARGO_VERSION}"
-
-      - name: Build
+      - name: Build release binaries
         run: cargo build --release --workspace
 
-      - name: Prepare Windows artifacts
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          mkdir staging -Force
-          Copy-Item "target\release\santui.exe" staging\
-
-      - name: Prepare macOS artifacts
+      - name: Install dylibbundler (macOS)
         if: matrix.os == 'macos-latest'
-        run: |
-          mkdir -p staging
-          cp target/release/santui staging/
+        run: brew install dylibbundler
 
-      - name: Prepare Linux artifacts
+      - name: Package (Linux)
         if: matrix.os == 'ubuntu-latest'
-        run: |
-          mkdir -p staging
-          cp target/release/santui staging/
+        run: bash scripts/package-release-linux.sh "${GITHUB_REF_NAME#v}"
 
-      - name: Get version
-        shell: bash
-        run: |
-          VERSION="$(grep '^version' crates/core/Cargo.toml | head -1 | cut -d'"' -f2)"
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-
-      - name: Generate plugins.json (PowerShell)
+      - name: Package (Windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh
-        run: |
-          $version = "$env:VERSION"
-          $target = "${{ matrix.target }}"
-          $ext = "${{ matrix.plugin_ext }}"
-          $plugins = @()
+        run: .\scripts\package-release.ps1 "$($env:GITHUB_REF_NAME -replace '^v','')"
 
-          $pluginNames = @(
-            @{id="radio-streaming-player"; name="Radio Streaming Player"; desc="Listen to thousands of radio stations worldwide"}
-          )
+      - name: Package (macOS)
+        if: matrix.os == 'macos-latest'
+        run: bash scripts/package-release-macos.sh "${GITHUB_REF_NAME#v}"
 
-          foreach ($p in $pluginNames) {
-            $filename = "$($p.id)-$target$ext"
-            # Binary in target/release/ uses santui- prefix (e.g. santui-radio-streaming-player.exe)
-            $binPath = "target\release\santui-$($p.id)$ext"
-            if (Test-Path $binPath) {
-              $sha = (Get-FileHash -Algorithm SHA256 $binPath).Hash.ToLower()
-              $size = (Get-Item $binPath).Length
-              $plugins += [PSCustomObject]@{
-                id = $p.id
-                name = $p.name
-                description = $p.desc
-                version = $version
-                download_url = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/$filename"
-                sha256 = $sha
-                size = $size
-              }
-            }
-          }
-
-          $plugins | ConvertTo-Json | Out-File -Encoding utf8 "plugins-$target.json"
-          Write-Host "Generated plugins-$target.json with $($plugins.Count) plugin(s)"
-
-      - name: Generate plugins.json (Unix)
-        if: matrix.os != 'windows-latest'
-        run: |
-          VERSION="${{ env.VERSION }}"
-          TARGET="${{ matrix.target }}"
-          EXT="${{ matrix.plugin_ext }}"
-          REPO="${{ github.repository }}"
-          TAG="${{ github.ref_name }}"
-          BINARY="target/release/santui-radio-streaming-player${EXT}"
-
-          # Portable SHA256: works on Linux (sha256sum) and macOS (shasum -a 256)
-          SHA256="$(sha256sum "$BINARY" 2>/dev/null | cut -d' ' -f1 || shasum -a 256 "$BINARY" 2>/dev/null | cut -d' ' -f1)"
-          SIZE="$(stat -c%s "$BINARY" 2>/dev/null || stat -f%z "$BINARY" 2>/dev/null)"
-
-          cat > "plugins-${TARGET}.json" << JSON
-          [
-            {
-              "id": "radio-streaming-player",
-              "name": "Radio Streaming Player",
-              "description": "Listen to thousands of radio stations worldwide",
-              "version": "${VERSION}",
-              "download_url": "https://github.com/${REPO}/releases/download/${TAG}/radio-streaming-player-${TARGET}${EXT}",
-              "sha256": "${SHA256}",
-              "size": ${SIZE}
-            }
-          ]
-          JSON
-          echo "Generated plugins-${TARGET}.json"
-
-      - name: Collect plugin binaries for upload
+      - name: Determine archive extension
+        id: ext
         shell: bash
         run: |
-          mkdir -p plugin-binaries
-          for binary in target/release/santui-radio-streaming-player${{ matrix.plugin_ext }}; do
-            if [ -f "$binary" ]; then
-              name="$(basename "$binary")"
-              # Strip .exe and also strip the santui- prefix so the filename
-              # matches the download_url in plugins.json and the release glob.
-              stem="${name%.exe}"
-              id="${stem#santui-}"
-              target_name="${id}-${{ matrix.target }}${{ matrix.plugin_ext }}"
-              cp "$binary" "plugin-binaries/$target_name"
-              size="$(stat -c%s "plugin-binaries/$target_name" 2>/dev/null || stat -f%z "plugin-binaries/$target_name" 2>/dev/null)"
-              if [ -z "$size" ] || [ "$size" -eq 0 ]; then
-                echo "❌ ERROR: plugin binary $target_name has size 0 or could not read size"
-                exit 1
-              fi
-              echo "Collected plugin: $target_name ($size bytes)"
-            fi
-          done
+          ext="tar.gz"
+          [ "${{ matrix.os }}" = "windows-latest" ] && ext="zip"
+          echo "ext=$ext" >> "$GITHUB_OUTPUT"
+          echo "name=santui-${{ matrix.target }}.$ext" >> "$GITHUB_OUTPUT"
 
-      - name: Package Windows
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          Add-Type -Assembly System.IO.Compression.FileSystem
-          [System.IO.Compression.ZipFile]::CreateFromDirectory("staging", "santui-${{ matrix.target }}.zip")
-
-      - name: Package Unix
-        if: matrix.os != 'windows-latest'
-        run: |
-          tar czf "santui-${{ matrix.target }}.tar.gz" -C staging .
-
-      - name: Upload artifact (main archive)
-        uses: actions/upload-artifact@v7
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: santui-${{ matrix.target }}
-          path: santui-${{ matrix.target }}.${{ matrix.archive }}
-
-      - name: Upload artifact (plugins.json)
-        uses: actions/upload-artifact@v7
-        with:
-          name: plugins-${{ matrix.target }}
-          path: plugins-${{ matrix.target }}.json
-
-      - name: Upload artifact (plugin binaries)
-        uses: actions/upload-artifact@v7
-        with:
-          name: plugin-binaries-${{ matrix.target }}
-          path: plugin-binaries/
+          name: ${{ steps.ext.outputs.name }}
+          path: releases/${{ steps.ext.outputs.name }}
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
         with:
-          pattern: santui-*
-          merge-multiple: true
+          path: artifacts
 
-      - uses: actions/download-artifact@v8
-        with:
-          pattern: plugins-*
-          merge-multiple: true
-
-      - uses: actions/download-artifact@v8
-        with:
-          pattern: plugin-binaries-*
-          merge-multiple: true
-
-      - name: List all assets for release
-        run: ls -la
-
-      - name: Validate asset sizes
-        run: |
-          echo "=== Checking for empty files ==="
-          has_empty=0
-          for f in santui-* plugins-*.json radio-streaming-player-*; do
-            if [ -f "$f" ]; then
-              size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null)
-              if [ "$size" -eq 0 ]; then
-                echo "❌ EMPTY: $f (0 bytes)"
-                has_empty=1
-              else
-                echo "  OK: $f ($size bytes)"
-              fi
-            fi
-          done
-          if [ "$has_empty" -eq 1 ]; then
-            echo "❌ One or more release assets are empty — aborting"
-            exit 1
-          fi
-          echo "✅ All release assets have valid sizes"
+      - name: List artifacts
+        run: find artifacts -type f
 
       - name: Create Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@v2
         with:
-          files: |
-            santui-*
-            plugins-*.json
-            radio-streaming-player-*
-          fail_on_unmatched_files: false
+          files: artifacts/**/*
           generate_release_notes: true
 
+  publish-npm:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      - name: Set package version from tag
+        working-directory: packages/npm
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          npm version "$VER" --no-git-tag-version
+
+      - name: Publish to npm
+        working-directory: packages/npm
+        run: npm publish --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
