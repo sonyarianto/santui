@@ -1,8 +1,7 @@
-mod config;
+pub mod config;
 mod download;
 
-use config::RegistryConfig;
-use download::download_plugin;
+pub use download::download_plugin;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -58,7 +57,7 @@ impl Registry {
     pub fn new(base_dir: PathBuf) -> Self {
         let plugins_dir = base_dir.join("plugins");
         let config_path = base_dir.join("registry.toml");
-        let installed = RegistryConfig::load(&config_path)
+        let installed = config::RegistryConfig::load(&config_path)
             .map(|cfg| cfg.plugins)
             .unwrap_or_default();
         Registry {
@@ -99,9 +98,9 @@ impl Registry {
         for name in &names_to_try {
             let url = format!("{base_url}/{name}");
             match ureq::get(&url).call() {
-                Ok(resp) => {
+                Ok(mut resp) => {
                     let body = resp
-                        .into_body()
+                        .body_mut()
                         .read_to_string()
                         .map_err(|e| format!("Failed to read manifest: {e}"))?;
                     self.available =
@@ -116,7 +115,7 @@ impl Registry {
 
         // Fallback: GitHub Releases API (subject to rate limiting).
         let api_url = format!("https://api.github.com/repos/{repo}/releases/latest");
-        let resp = ureq::get(&api_url)
+        let mut resp = ureq::get(&api_url)
             .header("User-Agent", "santui")
             .call()
             .map_err(|e| {
@@ -124,7 +123,7 @@ impl Registry {
             })?;
 
         let body = resp
-            .into_body()
+            .body_mut()
             .read_to_string()
             .map_err(|e| format!("Failed to read response: {e}"))?;
 
@@ -149,13 +148,13 @@ impl Registry {
             .as_str()
             .ok_or_else(|| "Missing download_url".to_string())?;
 
-        let manifest_resp = ureq::get(download_url)
+        let mut manifest_resp = ureq::get(download_url)
             .header("User-Agent", "santui")
             .call()
             .map_err(|e| format!("Failed to fetch manifest: {e}"))?;
 
         let manifest_body = manifest_resp
-            .into_body()
+            .body_mut()
             .read_to_string()
             .map_err(|e| format!("Failed to read manifest: {e}"))?;
 
@@ -166,11 +165,15 @@ impl Registry {
         Ok(())
     }
 
-    /// Download and install a plugin from the manifest.
-    /// In dev mode, copies the binary locally instead of HTTP download.
+    /// Download and install a plugin from the manifest (blocking).
+    /// Reports progress via `on_progress(downloaded, total)`.
     /// Config is persisted *before* the binary write so a crash mid-install
     /// leaves a recoverable entry rather than a zombie binary.
-    pub fn install(&mut self, manifest: &PluginManifest) -> Result<(), String> {
+    pub fn install(
+        &mut self,
+        manifest: &PluginManifest,
+        on_progress: &dyn Fn(u64, u64),
+    ) -> Result<(), String> {
         std::fs::create_dir_all(&self.plugins_dir)
             .map_err(|e| format!("Failed to create plugins dir: {e}"))?;
 
@@ -192,7 +195,12 @@ impl Registry {
             self.copy_native_deps(src)?;
             Ok(())
         } else {
-            download_plugin(&manifest.download_url, &manifest.sha256, &target_path)
+            download_plugin(
+                &manifest.download_url,
+                &manifest.sha256,
+                &target_path,
+                on_progress,
+            )
         };
 
         if let Err(e) = result {
@@ -272,8 +280,26 @@ impl Registry {
         Ok(())
     }
 
-    fn save_config(&self) -> Result<(), String> {
-        let cfg = RegistryConfig {
+    /// Add a newly installed plugin entry and persist config.
+    pub fn add_installed(
+        &mut self,
+        id: &str,
+        name: &str,
+        version: &str,
+        target_path: PathBuf,
+    ) -> Result<(), String> {
+        self.installed.push(InstalledPlugin {
+            enabled: true,
+            version: version.to_string(),
+            path: target_path,
+            id: id.to_string(),
+            name: name.to_string(),
+        });
+        self.save_config()
+    }
+
+    pub fn save_config(&self) -> Result<(), String> {
+        let cfg = config::RegistryConfig {
             plugins: self.installed.clone(),
         };
         cfg.save(&self.config_path)
@@ -306,7 +332,7 @@ fn parse_manifest(text: &str) -> Result<Vec<PluginManifest>, String> {
 }
 
 /// Return the filename for a plugin binary on the current platform.
-pub(crate) fn plugin_filename(id: &str) -> String {
+pub fn plugin_filename(id: &str) -> String {
     if cfg!(target_os = "windows") {
         format!("{id}.exe")
     } else {

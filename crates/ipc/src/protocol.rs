@@ -49,6 +49,9 @@ pub enum HostMsg {
     Init {
         theme: ThemeData,
         area: Area,
+        /// Path to the santui config directory (~/.santui).
+        /// Used by the registry plugin for filesystem operations.
+        data_dir: String,
     },
     Key {
         key: IpcKey,
@@ -92,12 +95,33 @@ pub enum RenderCmd {
         w: u16,
         h: u16,
     },
+    /// Fill a rectangle with a background color.
+    Rect {
+        x: u16,
+        y: u16,
+        w: u16,
+        h: u16,
+        bg: [u8; 3],
+    },
+    /// Draw a box border around a rectangle using box-drawing characters.
+    Border {
+        x: u16,
+        y: u16,
+        w: u16,
+        h: u16,
+        fg: [u8; 3],
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PluginRequest {
-    SignIn { provider: String },
+    SignIn {
+        provider: String,
+    },
     SignOut,
+    /// Signal that the registry plugin has modified the installed plugin list.
+    /// The host should re-read `registry.toml` and refresh the palette.
+    PluginsChanged,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -185,11 +209,14 @@ mod tests {
         let msg = HostMsg::Init {
             theme: theme.clone(),
             area,
+            data_dir: "/tmp/.santui".into(),
         };
         let json = serde_json::to_string(&msg).unwrap();
         let decoded: HostMsg = serde_json::from_str(&json).unwrap();
         match decoded {
-            HostMsg::Init { theme: t, area: a } => {
+            HostMsg::Init {
+                theme: t, area: a, ..
+            } => {
                 assert_eq!(t.text, theme.text);
                 assert_eq!(a, area);
             }
@@ -218,6 +245,7 @@ mod tests {
             HostMsg::Init {
                 theme: theme.clone(),
                 area,
+                data_dir: "/tmp/.santui".into(),
             },
             HostMsg::Key {
                 key: IpcKey::Char('q'),
@@ -275,6 +303,20 @@ mod tests {
                 fg: None,
                 bg: Some([0, 0, 0]),
                 bold: false,
+            },
+            RenderCmd::Rect {
+                x: 1,
+                y: 1,
+                w: 10,
+                h: 5,
+                bg: [20, 20, 20],
+            },
+            RenderCmd::Border {
+                x: 0,
+                y: 0,
+                w: 60,
+                h: 20,
+                fg: [250, 178, 131],
             },
         ];
         for cmd in cmds {

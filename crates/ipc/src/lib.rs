@@ -1,4 +1,5 @@
 pub mod protocol;
+pub mod ui;
 
 #[cfg(feature = "host")]
 pub mod host;

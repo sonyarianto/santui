@@ -39,6 +39,44 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                 }
                 buf.set_string(cx, cy, text, style);
             }
+            RenderCmd::Rect { x, y, w, h, bg } => {
+                let cx = area.x.saturating_add(*x);
+                let cy = area.y.saturating_add(*y);
+                let cw = (*w).min(buf.area().width.saturating_sub(cx));
+                let ch = (*h).min(buf.area().height.saturating_sub(cy));
+                let bg_style = Style::reset().bg(Color::Rgb(bg[0], bg[1], bg[2]));
+                let fill = " ".repeat(cw as usize);
+                for row in cy..cy.saturating_add(ch) {
+                    buf.set_string(cx, row, &fill, bg_style);
+                }
+            }
+            RenderCmd::Border { x, y, w, h, fg } => {
+                let cx = area.x.saturating_add(*x);
+                let cy = area.y.saturating_add(*y);
+                let max_w = buf.area().width;
+                let max_h = buf.area().height;
+                let bw = (*w).min(max_w.saturating_sub(cx));
+                let bh = (*h).min(max_h.saturating_sub(cy));
+                if bw < 2 || bh < 2 {
+                    return;
+                }
+                let fg_style = Style::reset().fg(Color::Rgb(fg[0], fg[1], fg[2]));
+                let inner_w = bw.saturating_sub(2) as usize;
+
+                // Top: ┌───┐
+                let top = format!("┌{}┐", "─".repeat(inner_w));
+                buf.set_string(cx, cy, &top, fg_style);
+
+                // Sides: │    │
+                for row in (cy + 1)..(cy + bh - 1) {
+                    buf.set_string(cx, row, "│", fg_style);
+                    buf.set_string(cx + bw - 1, row, "│", fg_style);
+                }
+
+                // Bottom: └───┘
+                let bottom = format!("└{}┘", "─".repeat(inner_w));
+                buf.set_string(cx, cy + bh - 1, &bottom, fg_style);
+            }
         }
     }
 }

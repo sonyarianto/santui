@@ -3,18 +3,38 @@ use std::io::Read;
 use std::path::Path;
 
 /// Download a file from `url`, verify its SHA-256 matches `expected_hex`,
-/// and write it to `dest`. Returns an error on mismatch or I/O failure.
-pub(super) fn download_plugin(url: &str, expected_hex: &str, dest: &Path) -> Result<(), String> {
+/// and write it to `dest`. Reports progress via `on_progress(downloaded, total)`.
+pub fn download_plugin(
+    url: &str,
+    expected_hex: &str,
+    dest: &Path,
+    on_progress: &dyn Fn(u64, u64),
+) -> Result<(), String> {
     let resp = ureq::get(url)
         .header("User-Agent", "santui")
         .call()
         .map_err(|e| format!("Download failed: {e}"))?;
 
+    let total = resp
+        .headers()
+        .get("Content-Length")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.parse::<u64>().ok())
+        .unwrap_or(0);
+
+    let mut reader = resp.into_body().into_reader();
     let mut body = Vec::new();
-    resp.into_body()
-        .as_reader()
-        .read_to_end(&mut body)
-        .map_err(|e| format!("Read response: {e}"))?;
+    let mut buf = [0u8; 8192];
+    loop {
+        let n = reader
+            .read(&mut buf)
+            .map_err(|e| format!("Read response: {e}"))?;
+        if n == 0 {
+            break;
+        }
+        body.extend_from_slice(&buf[..n]);
+        on_progress(body.len() as u64, total);
+    }
 
     // SHA-256 verification.
     let mut hasher = Sha256::new();

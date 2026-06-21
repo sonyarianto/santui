@@ -1,12 +1,13 @@
 use crate::plugin::PluginFactory;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use super::Santui;
 
 impl Santui {
-    /// Set the registry directory (called from main.rs before run()).
-    pub fn set_registry_dir(&mut self, dir: PathBuf) {
-        self.registry_controller.set_dir(dir);
+    /// Set the santui data directory (e.g. `~/.santui`).
+    /// Called from main.rs before `run()`.
+    pub fn set_data_dir(&mut self, dir: PathBuf) {
+        self.plugin_manager.set_data_dir(dir);
     }
 
     /// Set the plugin factory (called from main.rs before run()).
@@ -15,13 +16,10 @@ impl Santui {
         self.plugin_manager.set_factory(factory);
     }
 
-    /// Fetch plugin manifest and prepare the registry screen.
-    /// If `SANTUI_DEV=1` env is set, loads a local manifest from `SANTUI_DEV_MANIFEST`
-    /// (defaults to `plugins.json` in cwd) and enables dev mode (local file copy).
-    pub(super) fn open_registry(&mut self) {
-        self.app_state.registry_open = true;
-        self.registry_controller.open();
-        self.plugin_manager
-            .refresh_dynamic_items(self.registry_controller.registry_ref());
+    /// Register a default plugin (bundled with santui, e.g. the registry plugin).
+    /// The plugin is created via the factory and registered without initialising.
+    /// It will be initialised during `init_all` in `run()`.
+    pub fn register_default_plugin(&mut self, id: &str, name: &str, path: &Path) {
+        self.plugin_manager.register_new(id, name, path);
     }
 }

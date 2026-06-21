@@ -15,8 +15,6 @@ pub struct AppState {
     pub theme: Theme,
     /// Whether the theme picker overlay is open.
     pub theme_picker_open: bool,
-    /// Whether the plugin registry overlay is open.
-    pub registry_open: bool,
     /// Built-in palette commands: `(id, category, label)`.
     pub builtin_items: Vec<(super::BuiltinId, String, String)>,
 }
@@ -32,7 +30,6 @@ impl AppState {
             show_about: false,
             theme,
             theme_picker_open: false,
-            registry_open: false,
             builtin_items,
         }
     }

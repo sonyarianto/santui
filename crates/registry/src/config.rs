@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(super) struct RegistryConfig {
+pub struct RegistryConfig {
     pub plugins: Vec<InstalledPlugin>,
 }
 

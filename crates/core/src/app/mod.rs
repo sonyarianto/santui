@@ -5,8 +5,6 @@ mod palette_controller;
 mod palette_widget;
 mod plugin_manager;
 mod registry;
-mod registry_controller;
-mod registry_screen;
 mod screens;
 mod starfield;
 mod status_bar;
@@ -36,7 +34,6 @@ pub(super) enum BuiltinId {
     SignInGoogle,
     SignInGitHub,
     SignOut,
-    PluginRegistry,
     SwitchTheme,
     About,
 }
@@ -48,7 +45,6 @@ pub(super) fn all_builtins() -> Vec<(BuiltinId, &'static str, &'static str)> {
         (BuiltinId::SignInGoogle, "Auth", "Sign in with Google"),
         (BuiltinId::SignInGitHub, "Auth", "Sign in with GitHub"),
         (BuiltinId::SignOut, "Auth", "Sign out"),
-        (BuiltinId::PluginRegistry, "System", "Plugin registry"),
         (BuiltinId::SwitchTheme, "System", "Switch theme"),
         (BuiltinId::About, "System", "About"),
     ]
@@ -476,8 +472,6 @@ pub struct Santui {
     pub(super) event_bus: crate::event::EventBus,
     /// Authentication handle (set by main.rs before run()).
     pub(super) auth: Option<Arc<dyn AuthHandle>>,
-    /// Plugin registry overlay state and key handling.
-    registry_controller: registry_controller::RegistryController,
     /// Centralized application state.
     pub(super) app_state: app_state::AppState,
     /// Manages theme selection, preview, and theme-picker UI state.
@@ -507,7 +501,6 @@ impl Santui {
             app_state: app_state::AppState::new(theme),
             theme_manager,
             palette_controller: palette_controller::PaletteController::new(),
-            registry_controller: registry_controller::RegistryController::new(),
             config_manager: ConfigManager::new(std::path::PathBuf::new()),
             starfield: starfield::Starfield::new(),
         }
@@ -641,12 +634,12 @@ impl Santui {
         let mut ctx = PluginContext {
             theme: self.app_state.theme.clone(),
             auth: self.auth.clone(),
+            data_dir: self.plugin_manager.data_dir().to_path_buf(),
         };
         self.plugin_manager.init_all(&mut ctx)?;
 
-        // Populate palette "Plugins" category from registry installed plugins.
-        self.plugin_manager
-            .refresh_dynamic_items(self.registry_controller.registry_ref());
+        // Populate palette "Plugins" category from registry.toml.
+        self.plugin_manager.read_registry_installed();
 
         while self.app_state.running {
             self.plugin_manager.tick_all();
@@ -661,8 +654,12 @@ impl Santui {
             let mut ctx = PluginContext {
                 theme: self.app_state.theme.clone(),
                 auth: self.auth.clone(),
+                data_dir: self.plugin_manager.data_dir().to_path_buf(),
             };
             self.plugin_manager.check_reloads(&mut ctx);
+
+            // Poll registry.toml for changes (registry plugin writes it).
+            self.plugin_manager.poll_registry_installed();
 
             // Drain the event bus and forward events to subsystems.
             let events = self.event_bus.drain();
@@ -793,11 +790,6 @@ impl Santui {
                 &self.app_state.theme,
                 self.starfield.tick,
             );
-        }
-
-        if self.app_state.registry_open {
-            self.registry_controller
-                .render(f, chunks[0], &self.app_state.theme);
         }
     }
 }

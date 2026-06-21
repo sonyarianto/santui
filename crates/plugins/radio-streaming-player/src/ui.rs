@@ -1,75 +1,6 @@
 use crate::state::{PlayState, RadioState};
 use santui_ipc::protocol::{RenderCmd, ThemeData};
-
-fn draw_panel(
-    cmds: &mut Vec<RenderCmd>,
-    theme: &ThemeData,
-    x: u16,
-    y: u16,
-    w: u16,
-    h: u16,
-    title: &str,
-) {
-    if w < 3 || h < 2 {
-        return;
-    }
-
-    let fill_w = w.saturating_sub(1);
-    for row in y..(y + h) {
-        cmds.push(RenderCmd::Text {
-            x,
-            y: row,
-            text: "┃".into(),
-            fg: Some(theme.border),
-            bg: None,
-            bold: false,
-        });
-        cmds.push(RenderCmd::Text {
-            x: x + 1,
-            y: row,
-            text: " ".repeat(fill_w as usize),
-            fg: None,
-            bg: Some(theme.background_panel),
-            bold: false,
-        });
-    }
-
-    cmds.push(RenderCmd::Text {
-        x: x + 2,
-        y,
-        text: title.trim().into(),
-        fg: Some(theme.text),
-        bg: Some(theme.background_panel),
-        bold: true,
-    });
-}
-
-fn text_at(
-    cmds: &mut Vec<RenderCmd>,
-    x: u16,
-    y: u16,
-    text: &str,
-    fg: [u8; 3],
-    bg: [u8; 3],
-    max_w: u16,
-) {
-    let max = max_w as usize;
-    let display = if text.len() > max && max > 1 {
-        let mut t = text.chars().take(max.saturating_sub(1)).collect::<String>();
-        t.push('…');
-        t
-    } else {
-        format!("{:<width$}", text, width = max)
-    };
-    cmds.push(RenderCmd::Text {
-        x,
-        y,
-        text: display,
-        fg: Some(fg),
-        bg: Some(bg),
-        bold: false,
-    });
-}
+use santui_ipc::ui;
 
 pub fn render_ui(
     state: &RadioState,
@@ -113,7 +44,7 @@ pub fn render_ui(
     .min(area_h.saturating_sub(GAP + 3));
 
     // ---- Left panel: station list ----
-    draw_panel(&mut cmds, theme, 0, 0, left_w, area_h, "Stations");
+    ui::draw_panel(&mut cmds, theme, 0, 0, left_w, area_h, "Stations");
 
     let inner_x = 2u16;
     let inner_w = left_w.saturating_sub(3);
@@ -249,7 +180,7 @@ pub fn render_ui(
     }
 
     // ---- Right panel: Now Playing ----
-    draw_panel(
+    ui::draw_panel(
         &mut cmds,
         theme,
         left_w + GAP,
@@ -264,7 +195,7 @@ pub fn render_ui(
 
     match &state.play_state {
         PlayState::Stopped => {
-            text_at(
+            ui::text_at(
                 &mut cmds,
                 r_inner_x,
                 2,
@@ -275,7 +206,7 @@ pub fn render_ui(
             );
         }
         PlayState::Playing(station_name) => {
-            text_at(
+            ui::text_at(
                 &mut cmds,
                 r_inner_x,
                 2,
@@ -290,7 +221,7 @@ pub fn render_ui(
             } else {
                 &state.song_title
             };
-            text_at(
+            ui::text_at(
                 &mut cmds,
                 r_inner_x,
                 3,
@@ -302,7 +233,7 @@ pub fn render_ui(
 
             if let Some(ref info) = state.track_info {
                 if let Some(ref artist) = info.artist {
-                    text_at(
+                    ui::text_at(
                         &mut cmds,
                         r_inner_x,
                         4,
@@ -315,7 +246,7 @@ pub fn render_ui(
             }
         }
         PlayState::Error(e) => {
-            text_at(
+            ui::text_at(
                 &mut cmds,
                 r_inner_x,
                 2,
@@ -324,7 +255,7 @@ pub fn render_ui(
                 theme.background_panel,
                 r_inner_w,
             );
-            text_at(
+            ui::text_at(
                 &mut cmds,
                 r_inner_x,
                 3,
@@ -340,7 +271,7 @@ pub fn render_ui(
     let gauge_y = info_h + GAP;
     let gauge_h = 4u16;
     if gauge_y + gauge_h <= area_h {
-        draw_panel(
+        ui::draw_panel(
             &mut cmds,
             theme,
             left_w + GAP,

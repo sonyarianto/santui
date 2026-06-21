@@ -57,6 +57,21 @@ impl PaletteWidget {
                 results.push(super::ItemIndex::PluginCmd(i));
             }
         }
+        // Sort by category so items with the same category are grouped
+        // together regardless of source (builtin, dynamic, plugin command).
+        results.sort_by(|a, b| {
+            let cat_a = match a {
+                super::ItemIndex::Builtin(i) => &builtin_items[*i].1,
+                super::ItemIndex::Dynamic(i) => &dynamic_items[*i].0,
+                super::ItemIndex::PluginCmd(i) => &cmds[*i].2.category,
+            };
+            let cat_b = match b {
+                super::ItemIndex::Builtin(i) => &builtin_items[*i].1,
+                super::ItemIndex::Dynamic(i) => &dynamic_items[*i].0,
+                super::ItemIndex::PluginCmd(i) => &cmds[*i].2.category,
+            };
+            cat_a.cmp(cat_b)
+        });
         results
     }
 

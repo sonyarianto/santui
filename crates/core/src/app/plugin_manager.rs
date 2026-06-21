@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use crate::event::Event;
@@ -7,7 +7,6 @@ use crate::theme::Theme;
 use crossterm::event::KeyEvent;
 use ratatui::layout::Rect;
 use ratatui::Frame;
-use santui_registry::Registry as PluginRegistry;
 
 /// Manages the lifecycle, dispatch, and palette-command registry for all
 /// loaded plugins.  Extracted from the monolithic `Santui` struct so that
@@ -24,6 +23,10 @@ pub(crate) struct PluginManager {
     mtimes: Vec<Option<SystemTime>>,
     /// Dynamic palette items from enabled registry plugins: (category, plugin_id, name).
     dynamic_items: Vec<(String, String, String)>,
+    /// Santui data directory (~/.santui). Set from main.rs.
+    data_dir: PathBuf,
+    /// Last mtime of registry.toml, used for change detection.
+    registry_mtime: Option<SystemTime>,
 }
 
 impl PluginManager {
@@ -35,7 +38,19 @@ impl PluginManager {
             plugin_factory: None,
             mtimes: Vec::new(),
             dynamic_items: Vec::new(),
+            data_dir: PathBuf::new(),
+            registry_mtime: None,
         }
+    }
+
+    /// Store the santui data directory (~/.santui).
+    pub fn set_data_dir(&mut self, dir: PathBuf) {
+        self.data_dir = dir;
+    }
+
+    /// Get the santui data directory.
+    pub fn data_dir(&self) -> &Path {
+        &self.data_dir
     }
 
     /// Store the plugin factory so we can recreate plugins during hot-reload.
@@ -50,6 +65,15 @@ impl PluginManager {
     pub fn register(&mut self, plugin: Box<dyn Plugin + Send>) {
         self.mtimes.push(stat_mtime(plugin.binary_path()));
         self.plugins.push(plugin);
+    }
+
+    /// Create and register a plugin from the factory without initialising it.
+    /// The plugin will be initialised during the next `init_all` call.
+    pub fn register_new(&mut self, id: &str, name: &str, path: &Path) {
+        if let Some(ref factory) = self.plugin_factory {
+            let plugin = factory(id, name, path);
+            self.register(plugin);
+        }
     }
 
     pub fn len(&self) -> usize {
@@ -269,14 +293,34 @@ impl PluginManager {
         &self.dynamic_items
     }
 
-    /// Rebuild dynamic palette items from the plugin registry.
-    /// Iterates installed plugins directly so that enabled modules appear
-    /// even before the remote manifest is fetched. The display name is read
-    /// from the manifest if available, otherwise derived from the binary name.
-    pub fn refresh_dynamic_items(&mut self, registry: &Option<PluginRegistry>) {
-        self.dynamic_items.clear();
-        if let Some(ref reg) = registry {
-            for installed in &reg.installed {
+    /// Poll `registry.toml` for changes and update dynamic palette items.
+    /// Called once per frame. Returns true if items changed.
+    pub fn poll_registry_installed(&mut self) -> bool {
+        let path = self.data_dir.join("registry.toml");
+        let current_mtime = match std::fs::metadata(&path) {
+            Ok(m) => m.modified().ok(),
+            Err(_) => {
+                self.dynamic_items.clear();
+                return false;
+            }
+        };
+
+        if current_mtime == self.registry_mtime {
+            return false;
+        }
+        self.registry_mtime = current_mtime;
+        self.read_registry_installed()
+    }
+
+    /// Re-read `registry.toml` and rebuild `dynamic_items`.
+    /// Returns true if items changed.
+    pub fn read_registry_installed(&mut self) -> bool {
+        let path = self.data_dir.join("registry.toml");
+        let cfg = santui_registry::config::RegistryConfig::load(&path);
+        let old = std::mem::take(&mut self.dynamic_items);
+
+        if let Some(cfg) = cfg {
+            for installed in &cfg.plugins {
                 if !installed.enabled {
                     continue;
                 }
@@ -296,25 +340,18 @@ impl PluginManager {
                 let name = if !installed.name.is_empty() {
                     installed.name.clone()
                 } else {
-                    reg.available
-                        .iter()
-                        .find(|m| m.id == *id)
-                        .map(|m| m.name.clone())
-                        .unwrap_or_else(|| {
-                            // Humanize: "santui-radio-streaming-player" → "Radio Streaming Player"
-                            id.trim_start_matches("santui-")
-                                .replace('-', " ")
-                                .split_ascii_whitespace()
-                                .map(|w| {
-                                    let mut c = w.chars();
-                                    match c.next() {
-                                        None => String::new(),
-                                        Some(f) => f.to_uppercase().to_string() + c.as_str(),
-                                    }
-                                })
-                                .collect::<Vec<_>>()
-                                .join(" ")
+                    id.trim_start_matches("santui-")
+                        .replace('-', " ")
+                        .split_ascii_whitespace()
+                        .map(|w| {
+                            let mut c = w.chars();
+                            match c.next() {
+                                None => String::new(),
+                                Some(f) => f.to_uppercase().to_string() + c.as_str(),
+                            }
                         })
+                        .collect::<Vec<_>>()
+                        .join(" ")
                 };
                 if !self
                     .dynamic_items
@@ -326,6 +363,8 @@ impl PluginManager {
                 }
             }
         }
+
+        self.dynamic_items != old
     }
 }
 

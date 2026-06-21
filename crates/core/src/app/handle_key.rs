@@ -11,9 +11,6 @@ impl super::Santui {
         if self.app_state.show_about {
             return self.handle_key_about(key);
         }
-        if self.app_state.registry_open {
-            return self.handle_key_registry(key);
-        }
         self.handle_key_normal(key);
     }
 
@@ -70,9 +67,6 @@ impl super::Santui {
                     super::BuiltinId::About => {
                         self.app_state.show_about = true;
                     }
-                    super::BuiltinId::PluginRegistry => {
-                        self.open_registry();
-                    }
                 }
             }
             super::ItemIndex::PluginCmd(pci) => {
@@ -88,25 +82,31 @@ impl super::Santui {
                 {
                     if let Some(existing) = self.plugin_manager.find_by_id(&id) {
                         self.plugin_manager.set_active(Some(existing));
-                    } else if let Some(ref reg) = *self.registry_controller.registry_ref() {
-                        if let Some(installed) = reg.installed.iter().find(|p| {
-                            p.path
-                                .file_stem()
-                                .and_then(|s| s.to_str())
-                                .map(|s| s.trim_end_matches(".exe"))
-                                == Some(id.as_str())
-                        }) {
-                            let mut ctx = crate::plugin::PluginContext {
-                                theme: self.app_state.theme.clone(),
-                                auth: self.auth.clone(),
-                            };
-                            if let Ok(idx) = self.plugin_manager.spawn_and_init(
-                                &id,
-                                &name,
-                                &installed.path,
-                                &mut ctx,
-                            ) {
-                                self.plugin_manager.set_active(Some(idx));
+                    } else {
+                        // Plugin not loaded yet — read its binary path from registry.toml.
+                        let cfg_path = self.plugin_manager.data_dir().join("registry.toml");
+                        if let Some(cfg) = santui_registry::config::RegistryConfig::load(&cfg_path)
+                        {
+                            if let Some(installed) = cfg.plugins.iter().find(|p| {
+                                p.path
+                                    .file_stem()
+                                    .and_then(|s| s.to_str())
+                                    .map(|s| s.trim_end_matches(".exe"))
+                                    == Some(id.as_str())
+                            }) {
+                                let mut ctx = crate::plugin::PluginContext {
+                                    theme: self.app_state.theme.clone(),
+                                    auth: self.auth.clone(),
+                                    data_dir: self.plugin_manager.data_dir().to_path_buf(),
+                                };
+                                if let Ok(idx) = self.plugin_manager.spawn_and_init(
+                                    &id,
+                                    &name,
+                                    &installed.path,
+                                    &mut ctx,
+                                ) {
+                                    self.plugin_manager.set_active(Some(idx));
+                                }
                             }
                         }
                     }
@@ -190,19 +190,6 @@ impl super::Santui {
     fn handle_key_about(&mut self, key: KeyEvent) {
         if matches!(key.code, KeyCode::Esc) {
             self.app_state.show_about = false;
-        }
-    }
-
-    fn handle_key_registry(&mut self, key: KeyEvent) {
-        match self.registry_controller.handle_key(key) {
-            super::registry_controller::RegistryAction::Close => {
-                self.app_state.registry_open = false;
-            }
-            super::registry_controller::RegistryAction::ItemsChanged => {
-                self.plugin_manager
-                    .refresh_dynamic_items(self.registry_controller.registry_ref());
-            }
-            super::registry_controller::RegistryAction::None => {}
         }
     }
 

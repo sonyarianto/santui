@@ -3,7 +3,7 @@ use crate::theme::Theme;
 use crossterm::event::KeyEvent;
 use ratatui::layout::Rect;
 use ratatui::Frame;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 /// Factory that creates a `Box<dyn Plugin>` from an id, name, and binary path.
@@ -63,6 +63,10 @@ pub trait Plugin: Send {
 pub struct PluginContext {
     pub theme: Theme,
     pub auth: Option<Arc<dyn AuthHandle>>,
+    /// Santui data directory (e.g. `~/.santui`). Plugins can use this
+    /// for persistent storage. The registry plugin uses it to find
+    /// installed plugins and `registry.toml`.
+    pub data_dir: PathBuf,
 }
 
 impl PluginContext {
@@ -70,6 +74,7 @@ impl PluginContext {
         PluginContext {
             theme: Theme::default(),
             auth: None,
+            data_dir: PathBuf::new(),
         }
     }
 }

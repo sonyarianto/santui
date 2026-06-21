@@ -1,6 +1,7 @@
+use std::path::PathBuf;
+
 use santui_core::Santui;
 use santui_db::open_db;
-use std::path::PathBuf;
 
 #[cfg(feature = "auth")]
 use santui_auth::AuthClient;
@@ -15,19 +16,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize local database (per-user key-value storage for plugins).
     let _db = open_db()?;
 
-    // Initialize plugin registry (stores config + downloaded plugins in ~/.santui).
-    let registry_dir = {
+    // Initialize santui data directory (~/.santui).
+    let data_dir = {
         let home = std::env::var("HOME")
             .or_else(|_| std::env::var("USERPROFILE"))
             .unwrap_or_else(|_| ".".into());
         PathBuf::from(home).join(".santui")
     };
-    let config_dir = registry_dir.clone();
-    app.set_registry_dir(registry_dir);
+    let config_dir = data_dir.clone();
+    app.set_data_dir(data_dir);
     app.set_config_dir(config_dir);
 
     // Set plugin factory: uses IpcPluginHost for IPC-based plugin binaries.
     app.set_plugin_factory(std::sync::Arc::new(santui_ipc::IpcPluginHost::new_boxed));
+
+    // Register the registry plugin (always bundled with santui).
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()));
+    let registry_bin = exe_dir
+        .as_ref()
+        .map(|d| {
+            if cfg!(windows) {
+                d.join("santui-registry-plugin.exe")
+            } else {
+                d.join("santui-registry-plugin")
+            }
+        })
+        .unwrap_or_else(|| PathBuf::from("santui-registry-plugin"));
+    app.register_default_plugin("plugin-registry", "Plugin Registry", &registry_bin);
 
     #[cfg(feature = "auth")]
     {

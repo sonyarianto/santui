@@ -11,7 +11,7 @@ use santui_core::theme::Theme;
 use santui_core::{AuthHandle, Plugin, PluginCmdItem, PluginContext};
 use std::cell::Cell;
 use std::io::{BufRead, BufReader, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc::{self, Receiver};
 use std::sync::Arc;
@@ -22,6 +22,7 @@ pub struct IpcPluginHost {
     id: String,
     name: String,
     binary_name: String,
+    data_dir: PathBuf,
     process: Option<Child>,
     /// Channel receiver for reading parsed responses from a background thread.
     response_rx: Option<Receiver<PluginMsg>>,
@@ -46,6 +47,7 @@ impl IpcPluginHost {
             id: id.to_string(),
             name: name.to_string(),
             binary_name: binary_base.to_string(),
+            data_dir: PathBuf::new(),
             process: None,
             response_rx: None,
             cached_commands: Vec::new(),
@@ -165,6 +167,23 @@ impl IpcPluginHost {
         self.send(msg);
         self.drain_responses();
     }
+
+    /// Send a message and block briefly for one response.
+    /// Used during `init()` so the first PluginMsg (with palette_commands)
+    /// is guaranteed to be cached before the host calls refresh_commands().
+    fn send_recv_blocking(&mut self, msg: &HostMsg) {
+        self.send(msg);
+        if let Some(ref rx) = self.response_rx {
+            if let Ok(resp) = rx.recv_timeout(Duration::from_millis(500)) {
+                self.cached_commands = resp.commands;
+                self.cached_hints = resp.hints;
+                self.cached_palette_commands = resp.palette_commands;
+                self.pending_request = resp.request;
+            }
+        }
+        // Drain any additional responses that piled up.
+        self.drain_responses();
+    }
 }
 
 impl Drop for IpcPluginHost {
@@ -265,6 +284,11 @@ impl IpcPluginHost {
                 self.send_recv(&HostMsg::UserUpdate { user: None });
                 true
             }
+            PluginRequest::PluginsChanged => {
+                // The host picks up changes by polling registry.toml.
+                // Nothing else to do here — the flag is for the host loop.
+                true
+            }
         }
     }
 }
@@ -280,6 +304,7 @@ impl Plugin for IpcPluginHost {
 
     fn init(&mut self, ctx: &mut PluginContext) -> Result<(), Box<dyn std::error::Error>> {
         self.theme_data = theme_to_data(&ctx.theme);
+        self.data_dir = ctx.data_dir.clone();
         if let Ok((w, h)) = terminal::size() {
             self.area = Area {
                 w,
@@ -292,12 +317,13 @@ impl Plugin for IpcPluginHost {
         let msg = HostMsg::Init {
             theme: self.theme_data.clone(),
             area: self.area,
+            data_dir: self.data_dir.to_string_lossy().to_string(),
         };
-        self.send_recv(&msg);
+        self.send_recv_blocking(&msg);
 
         if let Some(ref auth) = ctx.auth {
             if let Some(user) = auth.current_user() {
-                self.send_recv(&HostMsg::UserUpdate {
+                self.send_recv_blocking(&HostMsg::UserUpdate {
                     user: Some(user_to_data(&user)),
                 });
             }

@@ -7,6 +7,7 @@ members = [
     "crates/db",
     "crates/plugins/radio-streaming-player",
     "crates/plugins/radio-streaming-player/scraper",
+    "crates/plugins/registry",
     "crates/app",
 ]
 resolver = "2"

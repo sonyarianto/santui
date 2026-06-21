@@ -444,7 +444,11 @@ fn main() {
                 };
 
                 match msg {
-                    HostMsg::Init { theme, area } => {
+                    HostMsg::Init {
+                        theme,
+                        area,
+                        data_dir: _,
+                    } => {
                         app.handle_init(theme, area);
                         respond(&mut app);
                     }
