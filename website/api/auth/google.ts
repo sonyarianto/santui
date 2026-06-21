@@ -16,7 +16,7 @@ function html(title: string, body: string, redirect: string): Response {
   <title>Santui — ${title}</title>
 </head>
 <body class="bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900 min-h-screen flex items-center justify-center font-sans">
-  <div class="bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/20 p-8 max-w-md w-full mx-4 text-center">
+  <div class="bg-white/10 backdrop-blur-lg rounded-lg shadow-2xl border border-white/20 p-8 max-w-md w-full mx-4 text-center">
     ${body}
   </div>
   <script>
