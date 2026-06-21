@@ -673,6 +673,10 @@ impl Santui {
         let mut terminal = Terminal::new(backend)?;
         terminal.clear()?;
 
+        // Resize starfield to match actual terminal dimensions.
+        let (term_w, term_h) = crossterm::terminal::size()?;
+        self.starfield.resize(term_w, term_h);
+
         let mut ctx = PluginContext {
             theme: self.app_state.theme.clone(),
             auth: self.auth.clone(),
