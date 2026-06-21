@@ -26,6 +26,7 @@ crates/
 ├── core/          — framework: App, Plugin trait, event loop, palette
 ├── ipc/           — IPC protocol types + host (`IpcPluginHost`) plugin runner
 ├── auth/          — GitHub OAuth + auth handle/client
+├── db/            — central SQLite database for per-user plugin data
 ├── registry/      — plugin registry: manifest fetch, install, config
 ├── plugins/
 │   └── radio-streaming-player/   — radio plugin

@@ -1654,6 +1654,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-db"
+version = "0.2.7"
+dependencies = [
+ "rusqlite",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "santui-ipc"
 version = "0.2.7"
 dependencies = [

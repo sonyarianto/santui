@@ -4,6 +4,7 @@ members = [
     "crates/ipc",
     "crates/auth",
     "crates/registry",
+    "crates/db",
     "crates/plugins/radio-streaming-player",
     "crates/plugins/radio-streaming-player/scraper",
     "crates/app",
