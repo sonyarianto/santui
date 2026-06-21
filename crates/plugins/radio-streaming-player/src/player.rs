@@ -62,9 +62,15 @@ struct Funcs {
 pub struct Mpv {
     handle: *mut MpvHandle,
     _lib: Arc<Library>,
-    funcs: &'static Funcs,
+    funcs: Box<Funcs>,
 }
 
+// Mpv is Send + Sync because all access to `handle` goes through `funcs`,
+// which are plain function pointers loaded from libmpv. The `_lib` Arc<Library>
+// ensures the shared library stays loaded for the lifetime of every Mpv handle.
+// The caller is responsible for serialising concurrent mpv API calls (libmpv is
+// not thread-safe); the current design keeps one Mpv per plugin process, accessed
+// from a single thread.
 unsafe impl Send for Mpv {}
 unsafe impl Sync for Mpv {}
 
@@ -120,7 +126,7 @@ impl Mpv {
             }
         };
 
-        let funcs = Box::leak(Box::new(Funcs {
+        let funcs = Box::new(Funcs {
             create: unsafe { *lib.get(b"mpv_create\0").unwrap() },
             initialize: unsafe { *lib.get(b"mpv_initialize\0").unwrap() },
             set_option: unsafe { *lib.get(b"mpv_set_option_string\0").unwrap() },
@@ -130,7 +136,7 @@ impl Mpv {
             wait_event: unsafe { *lib.get(b"mpv_wait_event\0").unwrap() },
             get_property: unsafe { *lib.get(b"mpv_get_property\0").unwrap() },
             destroy: unsafe { *lib.get(b"mpv_destroy\0").unwrap() },
-        }));
+        });
 
         let handle = unsafe { (funcs.create)() };
         if handle.is_null() {

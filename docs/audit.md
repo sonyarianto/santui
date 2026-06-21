@@ -25,8 +25,8 @@ Generated 2026-06-20 from a comprehensive codebase review.
 - [x] **GitHub OAuth blocks main thread** (`crates/auth/src/lib.rs:235`) — GitHub device flow now runs on background thread; TUI stays responsive; code shown in status bar
 - [ ] **Google OAuth blocks main thread** (`crates/auth/src/lib.rs:240`) — Google redirect flow still blocks the TUI while waiting for localhost callback
 - [x] **Registry file-write crash loses state** (`crates/registry/src/lib.rs:141`) — config saved *before* binary download; push to installed list first, save, then write binary. On error, entry is rolled back.
-- [ ] **`Box::leak` in mpv FFI** (`crates/plugins/radio-streaming-player/src/player.rs:123`) — undocumented memory leak of function pointer table.
-- [ ] **Unsafe Send+Sync impls without safety docs** (`crates/plugins/radio-streaming-player/src/player.rs:68-69`) — `unsafe impl Send/Sync for Mpv` lacks justification.
+- [x] **`Box::leak` in mpv FFI** (`crates/plugins/radio-streaming-player/src/player.rs:123`) — replaced `Box::leak` with `Box::new`; function table is now dropped when `Mpv` is dropped.
+- [x] **Unsafe Send+Sync impls without safety docs** (`crates/plugins/radio-streaming-player/src/player.rs:68-69`) — added safety justification comment for `unsafe impl Send/Sync` on `Mpv`.
 - [ ] **Cell<Area> interior mutability** (`crates/ipc/src/host.rs:35`) — works because single-threaded, but `Cell` is `!Sync`. Would be a data race if rendering or plugin comms ever moved to separate threads.
 - [x] **`handle_key` calls blocking GitHub OAuth on main thread** (`crates/core/src/app/handle_key.rs:62`) — switched to non-blocking `start_sign_in()` for GitHub; Google sign-in still blocks but is faster (redirect-based).
 - [x] **Radio plugin thread leak** (`crates/plugins/radio-streaming-player/src/main.rs:103`) — mpv event thread handle now stored; `MpvCmd::Quit` sent on shutdown, thread joined.
