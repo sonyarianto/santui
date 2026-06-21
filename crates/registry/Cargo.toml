@@ -1,7 +1,10 @@
 [package]
 name = "santui-registry"
-version = "0.2.5"
+version = "0.2.6"
 edition = "2021"
+description = "Santui plugin registry — manifest fetch, install, config management"
+license = "MIT"
+repository = "https://github.com/sonyarianto/santui"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }

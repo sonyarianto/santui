@@ -1,12 +1,15 @@
 [package]
 name = "santui-core"
-version = "0.2.5"
+version = "0.2.6"
 edition = "2021"
+description = "Santui core framework — App, Plugin trait, events, config, palette"
+license = "MIT"
+repository = "https://github.com/sonyarianto/santui"
 
 [dependencies]
 ratatui = "0.30"
 crossterm = "0.29"
-santui-registry = { path = "../registry", version = "0.2.5" }
+santui-registry = { path = "../registry", version = "0.2.6" }
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
 

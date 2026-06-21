@@ -1,10 +1,13 @@
 [package]
 name = "santui-auth"
-version = "0.2.5"
+version = "0.2.6"
 edition = "2021"
+description = "Santui authentication — GitHub OAuth client with device flow support"
+license = "MIT"
+repository = "https://github.com/sonyarianto/santui"
 
 [dependencies]
-santui-core = { path = "../core", version = "0.2.5" }
+santui-core = { path = "../core", version = "0.2.6" }
 ureq = "3"
 url = "2"
 serde = { version = "1", features = ["derive"] }

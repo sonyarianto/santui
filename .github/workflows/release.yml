@@ -299,10 +299,12 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Publish workspace crates (dependency order)
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
-          for crate in core registry ipc auth app; do
+          for crate in registry core ipc auth app; do
             echo "» Publishing santui-$crate …"
-            cargo publish -p "santui-$crate" --token "${{ secrets.CARGO_REGISTRY_TOKEN }}"
-            sleep 30
+            cargo publish -p "santui-$crate"
+            sleep 60
           done
 
