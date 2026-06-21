@@ -48,6 +48,19 @@ cd website && npm run dev   # dev server
 cd website && npm run build # static build
 ```
 
+## Release
+
+```bash
+# Update version in all Cargo.toml files + packages/npm/package.json
+# They must all match (CI verifies against crates/core/Cargo.toml)
+git add -A && git commit -m "chore: bump version to x.y.z"
+git tag vx.y.z && git push --tags
+# CI builds binaries, creates GitHub Release, and publishes to npm
+```
+
+Prerequisites:
+- `NPM_TOKEN` secret set in GitHub repo Settings → Secrets → Actions
+
 ## Docs Index
 
 - `docs/architecture.md` — architecture & IPC plugin model
