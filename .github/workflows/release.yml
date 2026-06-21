@@ -275,7 +275,10 @@ jobs:
         working-directory: packages/npm
         run: |
           VER="${GITHUB_REF_NAME#v}"
-          npm version "$VER" --no-git-tag-version
+          CURRENT="$(jq -r '.version' package.json)"
+          if [ "$VER" != "$CURRENT" ]; then
+            npm version "$VER" --no-git-tag-version
+          fi
 
       - name: Publish to npm
         working-directory: packages/npm
