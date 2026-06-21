@@ -10,9 +10,8 @@ impl Santui {
     }
 
     /// Set the plugin factory (called from main.rs before run()).
-    /// Also forwards to `PluginManager` so it can recreate plugins during hot-reload.
+    /// Used by PluginManager for hot-reload and on-demand plugin creation.
     pub fn set_plugin_factory(&mut self, factory: PluginFactory) {
-        self.plugin_factory = Some(factory.clone());
         self.plugin_manager.set_factory(factory);
     }
 

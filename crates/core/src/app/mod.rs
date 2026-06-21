@@ -486,9 +486,6 @@ pub struct Santui {
     palette_controller: palette_controller::PaletteController,
     /// Hot-reloadable configuration manager.
     pub(super) config_manager: crate::config::ConfigManager,
-    /// Factory to create a Box<dyn Plugin> from (id, name, binary_path).
-    /// Set by main.rs before run().
-    pub(super) plugin_factory: Option<crate::plugin::PluginFactory>,
     /// Starfield background animation.
     pub(super) starfield: starfield::Starfield,
     /// Main loop tick rate (how often the UI refreshes and polls for input).
@@ -514,7 +511,6 @@ impl Santui {
             palette_controller: palette_controller::PaletteController::new(),
             registry_controller: registry_controller::RegistryController::new(),
             config_manager: ConfigManager::new(std::path::PathBuf::new()),
-            plugin_factory: None,
             starfield: starfield::Starfield::new(),
             tick_rate: Duration::from_millis(100),
         }

@@ -70,12 +70,20 @@ impl PluginManager {
         }
     }
 
-    /// Register a plugin, initialise it, and return its index.
-    pub fn push_and_init(
+    /// Use the internal factory to create a plugin from (id, name, binary_path),
+    /// initialise it, register it, and return its index.
+    pub fn spawn_and_init(
         &mut self,
-        mut plugin: Box<dyn Plugin + Send>,
+        id: &str,
+        name: &str,
+        binary_path: &std::path::Path,
         ctx: &mut PluginContext,
     ) -> Result<usize, Box<dyn std::error::Error>> {
+        let factory = self
+            .plugin_factory
+            .as_ref()
+            .ok_or_else::<Box<dyn std::error::Error>, _>(|| "no factory".into())?;
+        let mut plugin = factory(id, name, binary_path);
         plugin.init(ctx)?;
         let idx = self.plugins.len();
         self.mtimes.push(stat_mtime(plugin.binary_path()));

@@ -96,16 +96,17 @@ impl super::Santui {
                                 .map(|s| s.trim_end_matches(".exe"))
                                 == Some(id.as_str())
                         }) {
-                            if let Some(ref factory) = self.plugin_factory {
-                                let plugin = factory(&id, &name, &installed.path);
-                                let mut ctx = crate::plugin::PluginContext {
-                                    theme: self.app_state.theme.clone(),
-                                    auth: self.auth.clone(),
-                                };
-                                if let Ok(idx) = self.plugin_manager.push_and_init(plugin, &mut ctx)
-                                {
-                                    self.plugin_manager.set_active(Some(idx));
-                                }
+                            let mut ctx = crate::plugin::PluginContext {
+                                theme: self.app_state.theme.clone(),
+                                auth: self.auth.clone(),
+                            };
+                            if let Ok(idx) = self.plugin_manager.spawn_and_init(
+                                &id,
+                                &name,
+                                &installed.path,
+                                &mut ctx,
+                            ) {
+                                self.plugin_manager.set_active(Some(idx));
                             }
                         }
                     }
