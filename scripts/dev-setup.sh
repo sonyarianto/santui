@@ -36,7 +36,7 @@ for bin in "$OUTDIR"/santui-*.exe "$OUTDIR"/santui-*; do
     name="$(basename "$bin")"
     # Skip the main santui binary and scraper
     case "$name" in
-        santui.exe|santui|santui-*-scraper|santui-*-scraper.exe) continue ;;
+        santui.exe|santui|santui-*-scraper|santui-*-scraper.exe|santui-registry-plugin|santui-registry-plugin.exe) continue ;;
     esac
 
     id="${name#santui-}"

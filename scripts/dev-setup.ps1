@@ -20,7 +20,7 @@ if (Test-Path "$Root\native") {
 # -- generate plugins.json --
 Write-Host ">> Generating plugins.json ..."
 $pluginBinaries = Get-ChildItem -LiteralPath $OutDir -Filter "santui-*.exe" | Where-Object {
-    $_.Name -notmatch 'scraper'
+    $_.Name -notmatch 'scraper|registry-plugin'
 }
 
 $plugins = @()
