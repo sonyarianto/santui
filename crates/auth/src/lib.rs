@@ -198,6 +198,40 @@ fn user_from_token(provider: &str, access_token: &str) -> Result<User, Box<dyn s
     }
 }
 
+struct FlowCtx {
+    token_path: PathBuf,
+    user: Arc<Mutex<Option<User>>>,
+    pending: Arc<Mutex<Option<Result<User, String>>>>,
+    auth_msg: Arc<Mutex<Option<String>>>,
+}
+
+impl FlowCtx {
+    fn set_msg(&self, msg: &str) {
+        *self.auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = Some(msg.into());
+    }
+
+    fn fail(&self, err: String) {
+        *self.pending.lock().unwrap_or_else(|e| e.into_inner()) = Some(Err(err));
+        *self.auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = None;
+    }
+
+    fn succeed(&self, user: User, access_token: String) {
+        let stored = StoredToken {
+            id: user.id.clone(),
+            email: user.email.clone(),
+            name: user.name.clone(),
+            avatar_url: user.avatar_url.clone(),
+            provider: user.provider.clone(),
+            access_token,
+            refresh_token: None,
+        };
+        save_tokens_to_path(&self.token_path, &stored);
+        *self.user.lock().unwrap_or_else(|e| e.into_inner()) = Some(user.clone());
+        *self.auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = None;
+        *self.pending.lock().unwrap_or_else(|e| e.into_inner()) = Some(Ok(user));
+    }
+}
+
 pub struct AuthClient {
     providers: HashMap<String, AuthConfig>,
     user: Arc<Mutex<Option<User>>>,
@@ -229,6 +263,30 @@ impl AuthClient {
         self
     }
 
+    fn flow_ctx(&self) -> FlowCtx {
+        FlowCtx {
+            token_path: self.token_path.clone(),
+            user: Arc::clone(&self.user),
+            pending: Arc::clone(&self.pending_sign_in),
+            auth_msg: Arc::clone(&self.auth_msg),
+        }
+    }
+
+    fn wait_for_pending(&self) -> Result<User, Box<dyn std::error::Error>> {
+        loop {
+            if let Some(result) = self
+                .pending_sign_in
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .take()
+            {
+                *self.auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = None;
+                return result.map_err(|e| e.into());
+            }
+            thread::sleep(Duration::from_millis(100));
+        }
+    }
+
     fn load_tokens(path: &PathBuf) -> Option<User> {
         let data = std::fs::read_to_string(path).ok()?;
         let stored: StoredToken = serde_json::from_str(&data).ok()?;
@@ -245,13 +303,7 @@ impl AuthClient {
         let _ = std::fs::remove_file(&self.token_path);
     }
 
-    fn run_google_redirect_flow(
-        vercel_url: &str,
-        token_path: &PathBuf,
-        user_lock: &Arc<Mutex<Option<User>>>,
-        pending: &Arc<Mutex<Option<Result<User, String>>>>,
-        auth_msg: &Arc<Mutex<Option<String>>>,
-    ) {
+    fn run_google_redirect_flow(vercel_url: &str, ctx: &FlowCtx) {
         let vercel = if vercel_url.is_empty() {
             "https://santuiapp.vercel.app".to_string()
         } else {
@@ -261,21 +313,18 @@ impl AuthClient {
         let (listener, port) = match bind_with_fallback() {
             Ok(v) => v,
             Err(e) => {
-                *pending.lock().unwrap_or_else(|e| e.into_inner()) = Some(Err(e.to_string()));
-                *auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = None;
+                ctx.fail(e.to_string());
                 return;
             }
         };
         let auth_url = format!("{vercel}/api/auth/google?port={port}");
-        *auth_msg.lock().unwrap_or_else(|e| e.into_inner()) =
-            Some("Google: waiting for browser…".into());
+        ctx.set_msg("Google: waiting for browser…");
         open_browser(&auth_url);
 
         let params = match handle_redirect(listener) {
             Ok(p) => p,
             Err(e) => {
-                *pending.lock().unwrap_or_else(|e| e.into_inner()) = Some(Err(e.to_string()));
-                *auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = None;
+                ctx.fail(e.to_string());
                 return;
             }
         };
@@ -283,9 +332,7 @@ impl AuthClient {
         let access_token = match params.get("access_token") {
             Some(t) => t.clone(),
             None => {
-                *pending.lock().unwrap_or_else(|e| e.into_inner()) =
-                    Some(Err("No access_token in redirect".into()));
-                *auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = None;
+                ctx.fail("No access_token in redirect".into());
                 return;
             }
         };
@@ -298,85 +345,34 @@ impl AuthClient {
             provider: "google".into(),
         };
 
-        let stored = StoredToken {
-            id: user.id.clone(),
-            email: user.email.clone(),
-            name: user.name.clone(),
-            avatar_url: user.avatar_url.clone(),
-            provider: user.provider.clone(),
-            access_token,
-            refresh_token: None,
-        };
-        save_tokens_to_path(token_path, &stored);
-        *user_lock.lock().unwrap_or_else(|e| e.into_inner()) = Some(user.clone());
-        *auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = None;
-        *pending.lock().unwrap_or_else(|e| e.into_inner()) = Some(Ok(user));
+        ctx.succeed(user, access_token);
     }
 
     fn sign_in_google(&self) -> Result<User, Box<dyn std::error::Error>> {
         let vercel_url = self.vercel_url.clone();
-        Self::run_google_redirect_flow(
-            &vercel_url,
-            &self.token_path,
-            &self.user,
-            &self.pending_sign_in,
-            &self.auth_msg,
-        );
-
-        // Block until the flow completes
-        loop {
-            if let Some(result) = self
-                .pending_sign_in
-                .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .take()
-            {
-                *self.auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = None;
-                return result.map_err(|e| e.into());
-            }
-            thread::sleep(Duration::from_millis(100));
-        }
+        Self::run_google_redirect_flow(&vercel_url, &self.flow_ctx());
+        self.wait_for_pending()
     }
 
     fn start_sign_in_google(&self) -> Result<(), Box<dyn std::error::Error>> {
         let vercel_url = self.vercel_url.clone();
-        let token_path = self.token_path.clone();
-        let user_lock = Arc::clone(&self.user);
-        let pending = Arc::clone(&self.pending_sign_in);
-        let auth_msg = Arc::clone(&self.auth_msg);
-
-        thread::spawn(move || {
-            Self::run_google_redirect_flow(
-                &vercel_url,
-                &token_path,
-                &user_lock,
-                &pending,
-                &auth_msg,
-            );
-        });
-
+        let ctx = self.flow_ctx();
+        thread::spawn(move || Self::run_google_redirect_flow(&vercel_url, &ctx));
         Ok(())
     }
 
-    fn run_github_device_flow(
-        config: &AuthConfig,
-        token_path: &PathBuf,
-        user_lock: &Arc<Mutex<Option<User>>>,
-        pending: &Arc<Mutex<Option<Result<User, String>>>>,
-        auth_msg: &Arc<Mutex<Option<String>>>,
-    ) {
+    fn run_github_device_flow(config: &AuthConfig, ctx: &FlowCtx) {
         let device = match request_device_code(config) {
             Ok(d) => d,
             Err(e) => {
-                *pending.lock().unwrap_or_else(|e| e.into_inner()) = Some(Err(e.to_string()));
-                *auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = None;
+                ctx.fail(e.to_string());
                 return;
             }
         };
         let user_code = device.user_code.clone();
         let interval = device.interval.unwrap_or(5);
         let activation_url = format!("https://github.com/login/device?user_code={user_code}");
-        *auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = Some(format!(
+        ctx.set_msg(&format!(
             "GitHub: enter code {user_code} at github.com/login/device"
         ));
         open_browser(&activation_url);
@@ -384,8 +380,7 @@ impl AuthClient {
         let access_token = match poll_device_token(config, &device.device_code, interval) {
             Ok(t) => t,
             Err(e) => {
-                *pending.lock().unwrap_or_else(|e| e.into_inner()) = Some(Err(e.to_string()));
-                *auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = None;
+                ctx.fail(e.to_string());
                 return;
             }
         };
@@ -393,54 +388,22 @@ impl AuthClient {
         let user = match user_from_token("github", &access_token) {
             Ok(u) => u,
             Err(e) => {
-                *pending.lock().unwrap_or_else(|e| e.into_inner()) = Some(Err(e.to_string()));
-                *auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = None;
+                ctx.fail(e.to_string());
                 return;
             }
         };
 
-        let stored = StoredToken {
-            id: user.id.clone(),
-            email: user.email.clone(),
-            name: user.name.clone(),
-            avatar_url: user.avatar_url.clone(),
-            provider: user.provider.clone(),
-            access_token,
-            refresh_token: None,
-        };
-        save_tokens_to_path(token_path, &stored);
-        *user_lock.lock().unwrap_or_else(|e| e.into_inner()) = Some(user.clone());
-        *auth_msg.lock().unwrap_or_else(|e| e.into_inner()) = None;
-        *pending.lock().unwrap_or_else(|e| e.into_inner()) = Some(Ok(user));
+        ctx.succeed(user, access_token);
     }
 
     fn sign_in_github(&self) -> Result<User, Box<dyn std::error::Error>> {
         let config = self
             .providers
             .get("github")
-            .ok_or_else(|| "GitHub auth not configured".to_string())?;
-
-        let clone = config.clone();
-        Self::run_github_device_flow(
-            &clone,
-            &self.token_path,
-            &self.user,
-            &self.pending_sign_in,
-            &self.auth_msg,
-        );
-
-        // Block until the flow completes (read from pending)
-        loop {
-            if let Some(result) = self
-                .pending_sign_in
-                .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .take()
-            {
-                return result.map_err(|e| e.into());
-            }
-            thread::sleep(Duration::from_millis(100));
-        }
+            .ok_or_else(|| "GitHub auth not configured".to_string())?
+            .clone();
+        Self::run_github_device_flow(&config, &self.flow_ctx());
+        self.wait_for_pending()
     }
 
     fn start_sign_in_github(&self) -> Result<(), Box<dyn std::error::Error>> {
@@ -449,15 +412,8 @@ impl AuthClient {
             .get("github")
             .ok_or_else(|| "GitHub auth not configured".to_string())?
             .clone();
-        let token_path = self.token_path.clone();
-        let user_lock = Arc::clone(&self.user);
-        let pending = Arc::clone(&self.pending_sign_in);
-        let msg = Arc::clone(&self.auth_msg);
-
-        thread::spawn(move || {
-            Self::run_github_device_flow(&config, &token_path, &user_lock, &pending, &msg);
-        });
-
+        let ctx = self.flow_ctx();
+        thread::spawn(move || Self::run_github_device_flow(&config, &ctx));
         Ok(())
     }
 }
