@@ -346,13 +346,203 @@ mod tests {
 
     #[test]
     fn plugin_filename_windows() {
-        // We can't easily test platform-specific logic, but the function
-        // should return something with .exe on Windows.
         let name = plugin_filename("test-plugin");
         if cfg!(target_os = "windows") {
             assert!(name.ends_with(".exe"));
         } else {
             assert!(!name.ends_with(".exe"));
         }
+    }
+
+    #[test]
+    fn manifest_filename_returns_non_empty() {
+        let name = Registry::manifest_filename();
+        assert!(!name.is_empty());
+        assert!(name.ends_with(".json"));
+    }
+
+    #[test]
+    fn parse_manifest_array() {
+        let json = r#"[
+            {"id":"p1","name":"Plugin 1","description":"Desc","version":"1.0","download_url":"https://example.com/p1","sha256":"abcd","size":100}
+        ]"#;
+        let result = parse_manifest(json).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].id, "p1");
+    }
+
+    #[test]
+    fn parse_manifest_single_object() {
+        let json = r#"{"id":"p1","name":"Plugin 1","description":"Desc","version":"1.0","download_url":"https://example.com/p1","sha256":"abcd","size":100}"#;
+        let result = parse_manifest(json).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].id, "p1");
+    }
+
+    #[test]
+    fn parse_manifest_wrapper_object() {
+        let json = r#"{"plugins":[{"id":"p1","name":"Plugin 1","description":"Desc","version":"1.0","download_url":"https://example.com/p1","sha256":"abcd","size":100}]}"#;
+        let result = parse_manifest(json).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].id, "p1");
+    }
+
+    #[test]
+    fn parse_manifest_empty_array() {
+        let result = parse_manifest("[]").unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn parse_manifest_invalid_json() {
+        let result = parse_manifest("not json");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn parse_manifest_multiple_plugins() {
+        let json = r#"[
+            {"id":"p1","name":"P1","description":"D","version":"1","download_url":"https://ex.com/p1","sha256":"a","size":1},
+            {"id":"p2","name":"P2","description":"D","version":"2","download_url":"https://ex.com/p2","sha256":"b","size":2}
+        ]"#;
+        let result = parse_manifest(json).unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].id, "p1");
+        assert_eq!(result[1].id, "p2");
+    }
+
+    #[test]
+    fn plugin_manifest_serde_roundtrip() {
+        let m = PluginManifest {
+            id: "test".into(),
+            name: "Test".into(),
+            description: "A test".into(),
+            version: "0.1".into(),
+            download_url: "https://example.com/p".into(),
+            sha256: "abc123".into(),
+            size: 42,
+        };
+        let json = serde_json::to_string(&m).unwrap();
+        let back: PluginManifest = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.id, m.id);
+        assert_eq!(back.name, m.name);
+        assert_eq!(back.size, m.size);
+    }
+
+    #[test]
+    fn installed_plugin_serde_roundtrip() {
+        let p = InstalledPlugin {
+            enabled: true,
+            version: "1.0".into(),
+            path: PathBuf::from("/tmp/plugin.exe"),
+            id: "test-plugin".into(),
+            name: "Test Plugin".into(),
+        };
+        let json = serde_json::to_string(&p).unwrap();
+        let back: InstalledPlugin = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.id, p.id);
+        assert!(back.enabled);
+    }
+
+    #[test]
+    fn installed_plugin_defaults_id_and_name_when_missing() {
+        let json = r#"{"enabled":true,"version":"1","path":"/x"}"#;
+        let p: InstalledPlugin = serde_json::from_str(json).unwrap();
+        assert!(p.enabled);
+        assert_eq!(p.id, "");
+        assert_eq!(p.name, "");
+        assert_eq!(p.version, "1");
+    }
+
+    #[test]
+    fn registry_new_creates_empty_registry() {
+        let dir = std::env::temp_dir().join("santui-reg-test-new");
+        let _ = std::fs::create_dir_all(&dir);
+        let r = Registry::new(dir.clone());
+        assert!(r.available.is_empty());
+        assert!(!r.fetched);
+        assert!(!r.dev_mode);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn registry_set_enabled_toggles_state() {
+        let dir = std::env::temp_dir().join("santui-reg-test-toggle");
+        let _ = std::fs::create_dir_all(&dir);
+        let mut r = Registry::new(dir.clone());
+
+        r.installed.push(InstalledPlugin {
+            enabled: false,
+            version: "1".into(),
+            path: PathBuf::from("test.exe"),
+            id: "test".into(),
+            name: "Test".into(),
+        });
+
+        r.set_enabled(0, true).unwrap();
+        assert!(r.installed[0].enabled);
+
+        r.set_enabled(0, false).unwrap();
+        assert!(!r.installed[0].enabled);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn registry_add_installed_appends_and_persists() {
+        let dir = std::env::temp_dir().join("santui-reg-test-add");
+        let _ = std::fs::create_dir_all(&dir);
+        let mut r = Registry::new(dir.clone());
+
+        r.add_installed("p1", "Plugin 1", "1.0", PathBuf::from("p1.exe"))
+            .unwrap();
+        assert_eq!(r.installed.len(), 1);
+        assert_eq!(r.installed[0].id, "p1");
+        assert!(r.installed[0].enabled);
+
+        // Config file was written
+        let config_path = dir.join("registry.toml");
+        assert!(config_path.exists());
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn registry_set_dev_mode() {
+        let dir = std::env::temp_dir().join("santui-reg-test-dev");
+        let _ = std::fs::create_dir_all(&dir);
+        let mut r = Registry::new(dir.clone());
+        assert!(!r.dev_mode);
+
+        r.set_dev_mode(true);
+        assert!(r.dev_mode);
+
+        r.set_dev_mode(false);
+        assert!(!r.dev_mode);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn registry_persists_and_reloads_installed_plugins() {
+        let dir = std::env::temp_dir().join("santui-reg-test-persist");
+        let _ = std::fs::create_dir_all(&dir);
+
+        // First instance — add a plugin
+        {
+            let mut r = Registry::new(dir.clone());
+            r.add_installed("p1", "P1", "1.0", PathBuf::from("p1.exe"))
+                .unwrap();
+        }
+
+        // Second instance — should reload from config
+        {
+            let r = Registry::new(dir.clone());
+            assert_eq!(r.installed.len(), 1);
+            assert_eq!(r.installed[0].id, "p1");
+            assert_eq!(r.installed[0].version, "1.0");
+        }
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
