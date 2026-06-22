@@ -63,18 +63,21 @@ jobs:
         run: |
           mkdir staging -Force
           Copy-Item "target\release\santui.exe" staging\
+          Copy-Item "target\release\santui-registry-plugin.exe" staging\
 
       - name: Prepare macOS artifacts
         if: matrix.os == 'macos-latest'
         run: |
           mkdir -p staging
           cp target/release/santui staging/
+          cp target/release/santui-registry-plugin staging/
 
       - name: Prepare Linux artifacts
         if: matrix.os == 'ubuntu-latest'
         run: |
           mkdir -p staging
           cp target/release/santui staging/
+          cp target/release/santui-registry-plugin staging/
 
       - name: Get version
         shell: bash
