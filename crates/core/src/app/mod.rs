@@ -15,9 +15,7 @@ use crate::config::ConfigManager;
 use crate::plugin::{Plugin, PluginContext};
 use crossterm::event::{Event, KeyEventKind};
 use crossterm::execute;
-use crossterm::terminal::{
-    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
-};
+use crossterm::terminal::enable_raw_mode;
 use ratatui::backend::CrosstermBackend;
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::Color;
@@ -622,10 +620,24 @@ impl Santui {
     pub fn run(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         enable_raw_mode()?;
         let mut stdout = std::io::stdout();
-        execute!(stdout, EnterAlternateScreen)?;
+        execute!(stdout, crossterm::terminal::EnterAlternateScreen)?;
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend)?;
         terminal.clear()?;
+
+        // Restore terminal on panic so user doesn't get stuck in raw mode.
+        struct TerminalGuard;
+        impl Drop for TerminalGuard {
+            fn drop(&mut self) {
+                let _ = crossterm::terminal::disable_raw_mode();
+                let _ = crossterm::execute!(
+                    std::io::stdout(),
+                    crossterm::terminal::LeaveAlternateScreen,
+                    crossterm::cursor::Show,
+                );
+            }
+        }
+        let _guard = TerminalGuard;
 
         // Resize starfield to match actual terminal dimensions.
         let (term_w, term_h) = crossterm::terminal::size()?;
@@ -696,9 +708,6 @@ impl Santui {
             }
         }
 
-        disable_raw_mode()?;
-        execute!(std::io::stdout(), LeaveAlternateScreen)?;
-        terminal.show_cursor()?;
         Ok(())
     }
 

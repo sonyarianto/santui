@@ -8,6 +8,8 @@ Items from the [architecture audit](audit.md) that have been fixed.
 
 - [x] **No graceful plugin shutdown** (`crates/core/src/plugin.rs`, `crates/ipc/src/host.rs`) — `shutdown()` added to `Plugin` trait; `IpcPluginHost` sends `Shutdown` + waits 1s before kill; called on hot-reload
 
+- [x] **No panic hook** (`crates/core/src/app/mod.rs`) — added `TerminalGuard` Drop guard inside `run()` that calls `disable_raw_mode()` + `LeaveAlternateScreen` + `Show` on any exit path (normal, error, or panic)
+
 ## Critical — crash or corrupt state
 
 - [x] **Mutex poisoning in auth** (`crates/auth/src/lib.rs`) — replaced `.lock().unwrap()` with `.lock().unwrap_or_else(|e| e.into_inner())` on all 4 call sites to recover from poisoning
