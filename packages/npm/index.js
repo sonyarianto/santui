@@ -9,7 +9,8 @@ const http = require('http');
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
 const version = pkg.version;
 const repo = 'sonyarianto/santui';
-const binaryName = process.platform === 'win32' ? 'santui.exe' : 'santui';
+const isWin = process.platform === 'win32';
+const binaryName = isWin ? 'santui.exe' : 'santui';
 const binaryPath = path.join(__dirname, binaryName);
 
 // ── Download helpers ──
@@ -64,30 +65,48 @@ async function downloadBinary() {
 
     if (ext === 'zip') {
       execSync(`powershell -Command "Expand-Archive -Path '${archivePath}' -DestinationPath '${tmpDir}' -Force"`, { stdio: 'pipe' });
-      const files = fs.readdirSync(tmpDir);
-      const exeFile = files.find(f => f.endsWith('.exe'));
-      if (!exeFile) throw new Error('santui.exe not found in archive');
-      fs.copyFileSync(path.join(tmpDir, exeFile), binaryPath);
     } else {
       execSync(`tar xzf '${archivePath}' -C '${tmpDir}'`, { stdio: 'pipe' });
-      const extracted = path.join(tmpDir, binaryName);
-      if (fs.existsSync(extracted)) {
-        fs.copyFileSync(extracted, binaryPath);
-      } else {
-        const items = fs.readdirSync(tmpDir);
-        let found = false;
-        for (const item of items) {
-          const itemPath = path.join(tmpDir, item);
-          if (fs.statSync(itemPath).isDirectory()) {
-            const sub = path.join(itemPath, binaryName);
-            if (fs.existsSync(sub)) { fs.copyFileSync(sub, binaryPath); found = true; break; }
-          }
+    }
+
+    // Determine extracted root (some archives wrap in a top-level folder)
+    const entries = fs.readdirSync(tmpDir).filter(e => e !== path.basename(archivePath));
+    let extractedRoot = tmpDir;
+    if (entries.length === 1 && fs.statSync(path.join(tmpDir, entries[0])).isDirectory()) {
+      extractedRoot = path.join(tmpDir, entries[0]);
+    }
+
+    // Validate main binary exists
+    if (!fs.existsSync(path.join(extractedRoot, binaryName))) {
+      throw new Error(`${binaryName} not found in archive`);
+    }
+
+    // Copy all extracted files (binaries + native deps) to package directory
+    for (const item of fs.readdirSync(extractedRoot)) {
+      const src = path.join(extractedRoot, item);
+      const dest = path.join(__dirname, item);
+      const stat = fs.statSync(src);
+      if (stat.isDirectory()) {
+        if (fs.existsSync(dest)) fs.rmSync(dest, { recursive: true, force: true });
+        fs.mkdirSync(dest, { recursive: true });
+        for (const f of fs.readdirSync(src)) {
+          fs.copyFileSync(path.join(src, f), path.join(dest, f));
         }
-        if (!found) throw new Error(`${binaryName} not found in archive`);
+      } else {
+        fs.copyFileSync(src, dest);
+        if (!isWin) fs.chmodSync(dest, 0o755);
       }
     }
 
-    if (process.platform !== 'win32') execSync(`chmod +x '${binaryPath}'`, { stdio: 'pipe' });
+    if (!isWin) {
+      // Ensure all plugin binaries are executable
+      for (const bin of fs.readdirSync(__dirname)) {
+        if (bin.startsWith('santui') && !bin.endsWith('.js') && !bin.endsWith('.json') && !bin.endsWith('.md')) {
+          fs.chmodSync(path.join(__dirname, bin), 0o755);
+        }
+      }
+    }
+
     console.error('');
     console.error('  ✅ Santui v' + version + ' ready!');
     console.error('  Type "santui" to launch your terminal home base.');

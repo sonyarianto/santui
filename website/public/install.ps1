@@ -65,7 +65,7 @@ if ($UserPath -notlike "*$BinDir*") {
 if (Test-Path $exe) {
     $size = (Get-Item $exe).Length
     if ($size -gt 1mb) {
-        Write-Host "[OK] santui v0.2.11 ($([math]::Round($size / 1mb, 1)) MB)" -ForegroundColor Green
+        Write-Host "[OK] santui v0.2.12 ($([math]::Round($size / 1mb, 1)) MB)" -ForegroundColor Green
     } else {
         Write-Host "  [!] santui.exe seems too small ($size bytes)" -ForegroundColor Yellow
     }

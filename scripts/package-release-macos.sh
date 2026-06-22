@@ -25,6 +25,7 @@ STAGE="$(mktemp -d)/santui-pkg/$VERSION"
 mkdir -p "$STAGE/native"
 
 cp "$TARGET/santui"                       "$STAGE/"
+cp "$TARGET/santui-registry-plugin"       "$STAGE/"
 cp "$TARGET/santui-radio-streaming-player" "$STAGE/"
 cp "$ROOT/native/radio_streaming_stations.db" "$STAGE/native/"
 
