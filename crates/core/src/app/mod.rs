@@ -755,14 +755,9 @@ impl Santui {
         if self.palette_controller.is_open() || self.app_state.theme_picker_open {
             let dim_bg = self.app_state.theme.background_overlay;
             let buf = f.buffer_mut();
-            // Scale both foreground AND background brightness by 45%.
-            // For cells with an explicit background (e.g. the gold
-            // highlight on the selected radio station), dimming both
-            // preserves the contrast ratio — the text stays readable.
-            // Cells without an explicit bg fall back to dim_bg.
             const DIM: f64 = 0.45;
-            for y in area.top()..area.bottom() {
-                for x in area.left()..area.right() {
+            for y in chunks[0].top()..chunks[0].bottom() {
+                for x in chunks[0].left()..chunks[0].right() {
                     if let Some(cell) = buf.cell_mut((x, y)) {
                         let mut style = cell.style();
                         if let Some(fg) = style.fg {
