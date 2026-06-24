@@ -79,6 +79,17 @@ pub enum HostMsg {
     },
 }
 
+/// Serializable style information for IPC render commands.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
+pub struct TextStyle {
+    #[serde(default)]
+    pub fg: Option<[u8; 3]>,
+    #[serde(default)]
+    pub bg: Option<[u8; 3]>,
+    #[serde(default)]
+    pub bold: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RenderCmd {
     Text {
@@ -110,6 +121,41 @@ pub enum RenderCmd {
         w: u16,
         h: u16,
         fg: [u8; 3],
+    },
+    /// Renders wrapped text within a rectangle.
+    Paragraph {
+        x: u16,
+        y: u16,
+        w: u16,
+        h: u16,
+        text: String,
+        style: TextStyle,
+        wrap: bool,
+    },
+    /// A scrollable list with selection highlighting.
+    List {
+        x: u16,
+        y: u16,
+        w: u16,
+        h: u16,
+        items: Vec<String>,
+        selected: Option<usize>,
+        style: TextStyle,
+        highlight_style: TextStyle,
+    },
+    /// A table with header, rows, and selection highlighting.
+    Table {
+        x: u16,
+        y: u16,
+        w: u16,
+        h: u16,
+        header: Vec<String>,
+        header_style: TextStyle,
+        rows: Vec<Vec<String>>,
+        column_widths: Vec<u16>,
+        selected: Option<usize>,
+        style: TextStyle,
+        highlight_style: TextStyle,
     },
 }
 

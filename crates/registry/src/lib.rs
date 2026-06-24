@@ -267,7 +267,19 @@ impl Registry {
         self.available =
             parse_manifest(&text).map_err(|e| format!("Invalid manifest JSON: {e}"))?;
         self.fetched = true;
-        self.status = format!("[DEV] {} plugin(s) available", self.available.len());
+        self.status = format!("{} plugin(s) available", self.available.len());
+        Ok(())
+    }
+
+    /// Remove an installed plugin by index (deletes binary + config entry).
+    pub fn remove_installed(&mut self, idx: usize) -> Result<(), String> {
+        if idx >= self.installed.len() {
+            return Err("Invalid plugin index".into());
+        }
+        let path = self.installed[idx].path.clone();
+        self.installed.remove(idx);
+        self.save_config()?;
+        let _ = std::fs::remove_file(&path);
         Ok(())
     }
 

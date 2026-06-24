@@ -9,12 +9,22 @@ pub(super) enum DownloadEvent {
     Error(String),
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) enum Action {
+    Enable,
+    Disable,
+    Install,
+    Update,
+    Delete,
+}
+
 pub struct App {
     pub(super) registry: Option<Registry>,
     pub(super) cursor: usize,
     pub(super) scroll: u16,
     pub(super) status: String,
     pub(super) detail_idx: Option<usize>,
+    pub(super) action_cursor: usize,
     pub(super) theme: ThemeData,
     pub(super) area: Area,
     pub(super) plugins_dir: PathBuf,
@@ -33,6 +43,7 @@ impl App {
             scroll: 0,
             status: String::new(),
             detail_idx: None,
+            action_cursor: 0,
             theme: ThemeData {
                 text: [220; 3],
                 text_muted: [140; 3],

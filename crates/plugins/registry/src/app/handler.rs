@@ -1,7 +1,7 @@
 use santui_ipc::protocol::{HostMsg, IpcKey, PluginMsg, PluginRequest};
-use santui_registry::plugin_filename;
+use santui_registry::{plugin_filename, PluginManifest};
 
-use super::state::{App, DownloadEvent};
+use super::state::{Action, App, DownloadEvent};
 
 use std::sync::mpsc;
 
@@ -30,7 +30,7 @@ impl App {
                             .unwrap_or_else(|_| std::path::PathBuf::from("plugins.json"));
                         match reg.load_local_manifest(&path) {
                             Ok(()) => self.status = reg.status.clone(),
-                            Err(e) => self.status = format!("[DEV] Error: {e}"),
+                            Err(e) => self.status = format!("Error: {e}"),
                         }
                     } else {
                         match reg.fetch_manifest() {
@@ -152,7 +152,7 @@ impl App {
         }
     }
 
-    fn handle_list_key(&mut self, key: IpcKey, request: &mut Option<PluginRequest>) {
+    fn handle_list_key(&mut self, key: IpcKey, _request: &mut Option<PluginRequest>) {
         match key {
             IpcKey::Up => {
                 if self.cursor > 0 {
@@ -167,18 +167,14 @@ impl App {
                     self.ensure_scroll_visible();
                 }
             }
-            IpcKey::Enter => {
-                if let Some(req) = self.toggle_or_install(self.cursor) {
-                    *request = Some(req);
-                }
-            }
-            IpcKey::Esc => {}
-            IpcKey::Backspace | IpcKey::Char('d') | IpcKey::Char('D') => {
+            IpcKey::Enter | IpcKey::Char('d') | IpcKey::Char('D') => {
                 let count = self.available_count();
                 if self.cursor < count {
                     self.detail_idx = Some(self.cursor);
+                    self.action_cursor = 0;
                 }
             }
+            IpcKey::Esc => {}
             IpcKey::Char('q') => {}
             _ => {}
         }
@@ -190,22 +186,40 @@ impl App {
         detail_idx: usize,
         request: &mut Option<PluginRequest>,
     ) {
+        let actions = self.available_actions(detail_idx);
         match key {
-            IpcKey::Esc | IpcKey::Backspace => {
-                self.detail_idx = None;
+            IpcKey::Up => {
+                if self.action_cursor > 0 {
+                    self.action_cursor -= 1;
+                }
+            }
+            IpcKey::Down => {
+                let last = actions.len().saturating_sub(1);
+                if self.action_cursor < last {
+                    self.action_cursor += 1;
+                }
             }
             IpcKey::Enter => {
-                if let Some(req) = self.toggle_or_install(detail_idx) {
-                    *request = Some(req);
+                if self.action_cursor < actions.len() {
+                    self.execute_action(detail_idx, actions[self.action_cursor], request);
                 }
+            }
+            IpcKey::Esc | IpcKey::Backspace => {
+                self.detail_idx = None;
             }
             _ => {}
         }
     }
 
-    fn toggle_or_install(&mut self, idx: usize) -> Option<PluginRequest> {
-        let reg = self.registry.as_mut()?;
-        let plugin = reg.available.get(idx)?.clone();
+    pub(super) fn available_actions(&self, idx: usize) -> Vec<Action> {
+        let reg = match &self.registry {
+            Some(r) => r,
+            None => return vec![],
+        };
+        let plugin = match reg.available.get(idx) {
+            Some(p) => p,
+            None => return vec![],
+        };
         let installed_idx = reg.installed.iter().position(|p| {
             p.path
                 .file_stem()
@@ -213,32 +227,79 @@ impl App {
                 .map(|s| s.trim_end_matches(".exe"))
                 == Some(&plugin.id)
         });
+        let mut actions = Vec::new();
         match installed_idx {
-            Some(installed_idx) => {
-                let current = reg.installed[installed_idx].enabled;
-                match reg.set_enabled(installed_idx, !current) {
-                    Ok(()) => {
-                        self.status = if !current {
-                            format!("{} enabled", plugin.name)
-                        } else {
-                            format!("{} disabled", plugin.name)
-                        };
-                        Some(PluginRequest::PluginsChanged)
-                    }
-                    Err(e) => {
-                        self.status = format!("Error: {e}");
-                        None
-                    }
+            Some(i) => {
+                if reg.installed[i].enabled {
+                    actions.push(Action::Disable);
+                } else {
+                    actions.push(Action::Enable);
                 }
+                if reg.installed[i].version != plugin.version {
+                    actions.push(Action::Update);
+                }
+                actions.push(Action::Delete);
             }
             None => {
+                actions.push(Action::Install);
+            }
+        }
+        actions
+    }
+
+    fn execute_action(&mut self, idx: usize, action: Action, request: &mut Option<PluginRequest>) {
+        let reg = match self.registry.as_mut() {
+            Some(r) => r,
+            None => return,
+        };
+        let plugin = match reg.available.get(idx) {
+            Some(p) => p.clone(),
+            None => return,
+        };
+        let installed_idx = reg.installed.iter().position(|p| {
+            p.path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .map(|s| s.trim_end_matches(".exe"))
+                == Some(&plugin.id)
+        });
+
+        match action {
+            Action::Enable => {
+                if let Some(i) = installed_idx {
+                    if reg.set_enabled(i, true).is_ok() {
+                        self.status = format!("{} enabled", plugin.name);
+                        *request = Some(PluginRequest::PluginsChanged);
+                    }
+                }
+                self.detail_idx = None;
+            }
+            Action::Disable => {
+                if let Some(i) = installed_idx {
+                    if reg.set_enabled(i, false).is_ok() {
+                        self.status = format!("{} disabled", plugin.name);
+                        *request = Some(PluginRequest::PluginsChanged);
+                    }
+                }
+                self.detail_idx = None;
+            }
+            Action::Install | Action::Update => {
                 self.spawn_install(&plugin);
-                None
+                self.detail_idx = None;
+            }
+            Action::Delete => {
+                if let Some(i) = installed_idx {
+                    if reg.remove_installed(i).is_ok() {
+                        self.status = format!("{} deleted", plugin.name);
+                        *request = Some(PluginRequest::PluginsChanged);
+                    }
+                }
+                self.detail_idx = None;
             }
         }
     }
 
-    fn spawn_install(&mut self, plugin: &santui_registry::PluginManifest) {
+    fn spawn_install(&mut self, plugin: &PluginManifest) {
         if self.download_rx.is_some() {
             self.status = "Already downloading…".to_string();
             return;

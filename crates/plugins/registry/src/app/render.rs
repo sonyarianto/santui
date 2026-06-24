@@ -1,6 +1,7 @@
-use santui_ipc::protocol::RenderCmd;
+use santui_ipc::protocol::{RenderCmd, TextStyle};
+use santui_ipc::ui;
 
-use super::state::App;
+use super::state::{Action, App};
 
 pub(super) fn max_list_h(content_h: u16) -> u16 {
     content_h.saturating_sub(8).max(3)
@@ -18,14 +19,14 @@ impl App {
     pub(super) fn hints(&self) -> Vec<(String, String)> {
         if self.detail_idx.is_some() {
             vec![
-                ("Enter".into(), "Install/Toggle".into()),
+                ("↑↓".into(), "Navigate".into()),
+                ("Enter".into(), "Select action".into()),
                 ("Esc".into(), "Back".into()),
             ]
         } else {
             vec![
                 ("↑↓".into(), "Navigate".into()),
-                ("Enter".into(), "Install/Toggle".into()),
-                ("d".into(), "Details".into()),
+                ("Enter".into(), "Actions".into()),
             ]
         }
     }
@@ -34,7 +35,8 @@ impl App {
         let mut cmds = Vec::new();
 
         if let Some(detail_idx) = self.detail_idx {
-            self.render_detail(detail_idx, &mut cmds);
+            self.render_list(&mut cmds);
+            self.render_dialog(detail_idx, &mut cmds);
         } else {
             self.render_list(&mut cmds);
         }
@@ -49,56 +51,15 @@ impl App {
         if aw < 10 || ah < 3 {
             return;
         }
-        let inner_w = aw.saturating_sub(4) as usize;
+        let inner_w = (aw.saturating_sub(3)) as usize;
 
-        santui_ipc::ui::draw_panel(cmds, t, 0, 0, aw, ah, "Plugins");
+        ui::draw_panel(cmds, t, 0, 0, aw, ah, "Plugins");
 
         let status_x = aw.saturating_sub(self.status.len() as u16 + 1);
         cmds.push(RenderCmd::Text {
             x: status_x,
             y: 0,
             text: self.status.clone(),
-            fg: Some(t.text_muted),
-            bg: Some(t.background_panel),
-            bold: false,
-        });
-
-        let status_w: usize = 7;
-        let ver_w: usize = 10;
-        let act_w: usize = 7;
-        let rem = inner_w.saturating_sub(status_w + ver_w + act_w + 4);
-        let name_w = (rem * 3 / 10).max(5);
-        let desc_w = rem.saturating_sub(name_w);
-        let sep = " ";
-
-        let hdr = format!(
-            "{:<sw$}{sep}{:<nw$}{sep}{:<dw$}{sep}{:>vw$}{sep}{:<aw$}",
-            "Status",
-            "Name",
-            "Description",
-            "Version",
-            "Action",
-            sw = status_w,
-            nw = name_w,
-            dw = desc_w,
-            vw = ver_w,
-            aw = act_w,
-            sep = sep
-        );
-        cmds.push(RenderCmd::Text {
-            x: 2,
-            y: 2,
-            text: hdr,
-            fg: Some(t.text_muted),
-            bg: Some(t.background_panel),
-            bold: true,
-        });
-
-        let sep_line = format!("{:_<iw$}", "", iw = inner_w.saturating_sub(1));
-        cmds.push(RenderCmd::Text {
-            x: 2,
-            y: 3,
-            text: sep_line,
             fg: Some(t.text_muted),
             bg: Some(t.background_panel),
             bold: false,
@@ -123,7 +84,7 @@ impl App {
             );
             cmds.push(RenderCmd::Text {
                 x: 2,
-                y: 4,
+                y: 2,
                 text: bar,
                 fg: Some(t.accent),
                 bg: Some(t.background_panel),
@@ -132,10 +93,13 @@ impl App {
         }
 
         if let Some(ref reg) = self.registry {
+            let list_top = if has_progress { 4u16 } else { 2u16 };
+            let list_h = max_list_h(ah) as usize;
+
             if reg.available.is_empty() {
                 cmds.push(RenderCmd::Text {
                     x: 2,
-                    y: 5,
+                    y: list_top,
                     text: "No plugins available".into(),
                     fg: self.fg(t.text_muted),
                     bg: self.bg(),
@@ -144,9 +108,17 @@ impl App {
                 return;
             }
 
-            let list_top = if has_progress { 6u16 } else { 5u16 };
-            let list_h = max_list_h(ah) as usize;
-            for i in 0..list_h.min(reg.available.len()) {
+            let status_w: usize = 9;
+            let ver_w: usize = 10;
+            let rem = inner_w.saturating_sub(status_w + ver_w);
+            let name_w = (rem * 3 / 10).max(5);
+            let desc_w = rem.saturating_sub(name_w);
+
+            let visible_count =
+                list_h.min(reg.available.len().saturating_sub(self.scroll as usize));
+
+            let mut rows: Vec<Vec<String>> = Vec::with_capacity(visible_count);
+            for i in 0..visible_count {
                 let idx = self.scroll as usize + i;
                 if idx >= reg.available.len() {
                     break;
@@ -167,201 +139,170 @@ impl App {
                         == Some(&plugin.id)
                         && p.enabled
                 });
-                let hovered = idx == self.cursor;
 
                 let status = if is_enabled {
-                    "ON"
-                } else if is_installed {
-                    "OFF"
-                } else {
-                    "--"
-                };
-
-                let name_s = if plugin.name.len() > name_w {
-                    format!("{}…", &plugin.name[..name_w.saturating_sub(1)])
-                } else {
-                    format!("{:<nw$}", plugin.name, nw = name_w)
-                };
-                let desc_s = if plugin.description.len() > desc_w {
-                    format!("{}…", &plugin.description[..desc_w.saturating_sub(1)])
-                } else {
-                    format!("{:<dw$}", plugin.description, dw = desc_w)
-                };
-                let ver_s = if plugin.version.len() > ver_w {
-                    format!("{}…", &plugin.version[..ver_w.saturating_sub(1)])
-                } else {
-                    format!("{:>vw$}", plugin.version, vw = ver_w)
-                };
-
-                let action = if !is_installed {
-                    "Install"
-                } else if reg.installed.iter().any(|p| {
-                    p.path
-                        .file_stem()
-                        .and_then(|s| s.to_str())
-                        .map(|s| s.trim_end_matches(".exe"))
-                        == Some(&plugin.id)
-                        && p.version != plugin.version
-                }) {
-                    "Update"
-                } else {
-                    ""
-                };
-                let act_s = if action.len() > act_w {
-                    format!("{}…", &action[..act_w.saturating_sub(1)])
-                } else {
-                    format!("{:<aw$}", action, aw = act_w)
-                };
-
-                let row_y = list_top + i as u16;
-                let row_fg = if hovered { t.inverted_text } else { t.text };
-                let line = format!(
-                    "{:<sw$}{sep}{:<nw$}{sep}{:<dw$}{sep}{:>vw$}{sep}{:<aw$}",
-                    status,
-                    name_s,
-                    desc_s,
-                    ver_s,
-                    act_s,
-                    sw = status_w,
-                    nw = name_w,
-                    dw = desc_w,
-                    vw = ver_w,
-                    aw = act_w,
-                    sep = sep
-                );
-                cmds.push(RenderCmd::Text {
-                    x: 2,
-                    y: row_y,
-                    text: line,
-                    fg: self.fg(row_fg),
-                    bg: if hovered {
-                        Some(t.highlight)
-                    } else {
-                        self.bg()
-                    },
-                    bold: hovered,
-                });
-            }
-        }
-    }
-
-    fn render_detail(&self, detail_idx: usize, cmds: &mut Vec<RenderCmd>) {
-        let t = &self.theme;
-        let aw = self.area.w;
-        let ah = self.area.h;
-        if aw < 10 || ah < 3 {
-            return;
-        }
-
-        santui_ipc::ui::draw_panel(cmds, t, 0, 0, aw, ah, "Plugin Details");
-
-        if let Some(ref reg) = self.registry {
-            if let Some(plugin) = reg.available.get(detail_idx) {
-                let is_installed = reg.installed.iter().any(|p| {
-                    p.path
-                        .file_stem()
-                        .and_then(|s| s.to_str())
-                        .map(|s| s.trim_end_matches(".exe"))
-                        == Some(&plugin.id)
-                });
-                let is_enabled = reg.installed.iter().any(|p| {
-                    p.path
-                        .file_stem()
-                        .and_then(|s| s.to_str())
-                        .map(|s| s.trim_end_matches(".exe"))
-                        == Some(&plugin.id)
-                        && p.enabled
-                });
-
-                let status_str = if is_enabled {
                     "Enabled"
                 } else if is_installed {
                     "Disabled"
                 } else {
-                    "Not installed"
+                    "--"
                 };
 
-                let y_base = 2u16;
-                cmds.push(RenderCmd::Text {
-                    x: 2,
-                    y: y_base,
-                    text: format!(" {}", &plugin.name),
-                    fg: Some(t.text),
+                let name_s = ui::truncate(&plugin.name, name_w);
+                let desc_s = ui::truncate(&plugin.description, desc_w);
+                let ver_s = ui::truncate(&plugin.version, ver_w);
+
+                rows.push(vec![status.into(), name_s, desc_s, ver_s]);
+            }
+
+            let vis_selected = {
+                let cursor = self.cursor;
+                let scroll = self.scroll as usize;
+                if cursor >= scroll && cursor < scroll + visible_count {
+                    Some(cursor - scroll)
+                } else {
+                    None
+                }
+            };
+
+            cmds.push(RenderCmd::Table {
+                x: 2,
+                y: list_top,
+                w: inner_w as u16,
+                h: list_h as u16,
+                header: vec![
+                    "Status".into(),
+                    "Name".into(),
+                    "Description".into(),
+                    "Version".into(),
+                ],
+                header_style: TextStyle {
+                    fg: Some(t.text_muted),
                     bg: Some(t.background_panel),
                     bold: true,
-                });
-
-                let desc_w = aw.saturating_sub(4) as usize;
-                let desc = if plugin.description.len() > desc_w {
-                    format!("{}…", &plugin.description[..desc_w.saturating_sub(1)])
-                } else {
-                    plugin.description.clone()
-                };
-                cmds.push(RenderCmd::Text {
-                    x: 2,
-                    y: y_base + 2,
-                    text: desc,
+                },
+                rows,
+                column_widths: vec![status_w as u16, name_w as u16, desc_w as u16, ver_w as u16],
+                selected: vis_selected,
+                style: TextStyle {
                     fg: Some(t.text),
                     bg: Some(t.background_panel),
                     bold: false,
-                });
+                },
+                highlight_style: TextStyle {
+                    fg: Some(t.inverted_text),
+                    bg: Some(t.highlight),
+                    bold: true,
+                },
+            });
+        }
+    }
 
-                let field_fg = Some(t.text_muted);
-                cmds.push(RenderCmd::Text {
-                    x: 2,
-                    y: y_base + 4,
-                    text: format!(" ID:      {}", &plugin.id),
-                    fg: field_fg,
-                    bg: Some(t.background_panel),
-                    bold: false,
-                });
-                cmds.push(RenderCmd::Text {
-                    x: 2,
-                    y: y_base + 5,
-                    text: format!(" Version: {}", &plugin.version),
-                    fg: field_fg,
-                    bg: Some(t.background_panel),
-                    bold: false,
-                });
-                cmds.push(RenderCmd::Text {
-                    x: 2,
-                    y: y_base + 6,
-                    text: format!(" Size:    {} bytes", &plugin.size),
-                    fg: field_fg,
-                    bg: Some(t.background_panel),
-                    bold: false,
-                });
-                cmds.push(RenderCmd::Text {
-                    x: 2,
-                    y: y_base + 7,
-                    text: format!(" Status:  {}", status_str),
-                    fg: if is_enabled {
-                        Some(t.success)
-                    } else {
-                        field_fg
-                    },
-                    bg: Some(t.background_panel),
-                    bold: false,
-                });
+    fn render_dialog(&self, detail_idx: usize, cmds: &mut Vec<RenderCmd>) {
+        let t = &self.theme;
+        let aw = self.area.w;
+        let ah = self.area.h;
 
-                let hint_y = y_base + 9;
-                cmds.push(RenderCmd::Text {
-                    x: 2,
-                    y: hint_y,
-                    text: " [Enter] Install / Toggle".into(),
-                    fg: field_fg,
-                    bg: Some(t.background_panel),
-                    bold: false,
-                });
-                cmds.push(RenderCmd::Text {
-                    x: 2,
-                    y: hint_y + 1,
-                    text: " [Esc]   Back to list".into(),
-                    fg: field_fg,
-                    bg: Some(t.background_panel),
-                    bold: false,
-                });
+        let actions = self.available_actions(detail_idx);
+        if actions.is_empty() {
+            return;
+        }
+
+        let Some(reg) = &self.registry else { return };
+        let Some(plugin) = reg.available.get(detail_idx) else {
+            return;
+        };
+
+        let content_h = 7u16 + actions.len() as u16;
+        let pr = ui::palette_rect(aw, ah, content_h);
+        ui::palette_bg(cmds, t, &pr);
+        // PAD_T=1 (blank), title, then Name/Version/Status info fields
+        ui::palette_title(cmds, t, &pr, 1, "Plugin Actions");
+
+        let field_fg = Some(t.text_muted);
+        let ix = pr.ix;
+        let bg = Some(t.background_panel);
+
+        cmds.push(RenderCmd::Text {
+            x: ix,
+            y: pr.y + 2,
+            text: format!(" Name:    {}", plugin.name),
+            fg: field_fg,
+            bg,
+            bold: false,
+        });
+
+        let (installed_idx, is_enabled, installed_ver) = reg
+            .installed
+            .iter()
+            .position(|p| {
+                p.path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .map(|s| s.trim_end_matches(".exe"))
+                    == Some(&plugin.id)
+            })
+            .map(|i| {
+                (
+                    i,
+                    reg.installed[i].enabled,
+                    reg.installed[i].version.clone(),
+                )
+            })
+            .unwrap_or((usize::MAX, false, String::new()));
+
+        let ver_text = if installed_idx != usize::MAX && installed_ver != plugin.version {
+            format!(
+                " Version: {iv}  →  {av}",
+                iv = installed_ver,
+                av = plugin.version
+            )
+        } else {
+            format!(" Version: {}", plugin.version)
+        };
+        cmds.push(RenderCmd::Text {
+            x: ix,
+            y: pr.y + 3,
+            text: ver_text,
+            fg: field_fg,
+            bg,
+            bold: false,
+        });
+
+        let status_str = if installed_idx != usize::MAX {
+            if is_enabled {
+                "Enabled"
+            } else {
+                "Disabled"
             }
+        } else {
+            "Not installed"
+        };
+        let status_color = if is_enabled {
+            Some(t.success)
+        } else {
+            field_fg
+        };
+        cmds.push(RenderCmd::Text {
+            x: ix,
+            y: pr.y + 4,
+            text: format!(" Status:  {}", status_str),
+            fg: status_color,
+            bg,
+            bold: false,
+        });
+
+        // Action items
+        for (i, action) in actions.iter().enumerate() {
+            let focused = i == self.action_cursor;
+            let label = match action {
+                Action::Enable => "Enable".into(),
+                Action::Disable => "Disable".into(),
+                Action::Install => "Install".into(),
+                Action::Update => format!("Update to v{}", plugin.version),
+                Action::Delete => "Delete".into(),
+            };
+            ui::palette_item(cmds, t, &pr, 6 + i as u16, &label, focused);
         }
     }
 }

@@ -22,8 +22,8 @@ pub fn render_ui(
     });
 
     const GAP: u16 = 1;
-    let left_w = (area_w / 3).max(12);
-    let right_w = area_w.saturating_sub(left_w + GAP);
+
+    let volume_h = 4u16;
     let info_h = (match &state.play_state {
         PlayState::Stopped => 3,
         PlayState::Playing(_) => {
@@ -40,17 +40,18 @@ pub fn render_ui(
         }
         PlayState::Error(_) => 4,
     })
-    .max(4)
-    .min(area_h.saturating_sub(GAP + 3));
+    .max(4);
 
-    // ---- Left panel: station list ----
-    ui::draw_panel(&mut cmds, theme, 0, 0, left_w, area_h, "Stations");
+    let bottom_h = info_h + GAP + volume_h;
+    let stations_h = area_h.saturating_sub(bottom_h);
+
+    // ---- Stations panel (top, full width, fills remaining height) ----
+    ui::draw_panel(&mut cmds, theme, 0, 0, area_w, stations_h, "Stations");
 
     let inner_x = 2u16;
-    let inner_w = left_w.saturating_sub(3);
-    // Reserve bottom rows for scroll indicator + search bar
+    let inner_w = area_w.saturating_sub(3);
     let search_extra = if state.search_mode { 2 } else { 0 };
-    let max_visible = (area_h.saturating_sub(4 + search_extra)) as usize;
+    let max_visible = (stations_h.saturating_sub(4 + search_extra)) as usize;
 
     let scroll = state.scroll.min(state.filtered.len().saturating_sub(1));
 
@@ -100,7 +101,7 @@ pub fn render_ui(
 
     // More stations indicator (hidden during search)
     if !state.search_mode {
-        let scroll_indicator_y = area_h.saturating_sub(2);
+        let scroll_indicator_y = stations_h.saturating_sub(2);
         if scroll + max_visible < state.filtered.len() {
             let more = state.filtered.len() - scroll - max_visible;
             let label = format!("{more} more");
@@ -123,8 +124,8 @@ pub fn render_ui(
 
     // ---- Search bar overlay ----
     if state.search_mode {
-        let search_y = area_h.saturating_sub(3);
-        let bar_w = left_w.saturating_sub(4) as usize;
+        let search_y = stations_h.saturating_sub(3);
+        let bar_w = area_w.saturating_sub(4) as usize;
 
         // Draw search input line
         let cursor = if state.tick_counter % 6 < 3 {
@@ -148,7 +149,7 @@ pub fn render_ui(
         });
 
         // Draw results count
-        let count_y = area_h.saturating_sub(2);
+        let count_y = stations_h.saturating_sub(2);
         let count_text = format!(" {} of {}", state.filtered.len(), state.stations.len());
         cmds.push(RenderCmd::Text {
             x: 2,
@@ -162,8 +163,8 @@ pub fn render_ui(
 
     // ---- Scan message (temporary overlay in left panel) ----
     if let Some(ref msg) = state.scan_msg {
-        let msg_y = area_h.saturating_sub(2);
-        let max_w = left_w.saturating_sub(3) as usize;
+        let msg_y = stations_h.saturating_sub(2);
+        let max_w = area_w.saturating_sub(3) as usize;
         let display = if msg.len() > max_w {
             format!("{}…", &msg[..max_w.saturating_sub(1)])
         } else {
@@ -179,26 +180,19 @@ pub fn render_ui(
         });
     }
 
-    // ---- Right panel: Now Playing ----
-    ui::draw_panel(
-        &mut cmds,
-        theme,
-        left_w + GAP,
-        0,
-        right_w,
-        info_h,
-        "Now Playing",
-    );
+    // ---- Now Playing panel (full width, below Stations) ----
+    let np_y = stations_h + GAP;
+    ui::draw_panel(&mut cmds, theme, 0, np_y, area_w, info_h, "Now Playing");
 
-    let r_inner_x = left_w + GAP + 2;
-    let r_inner_w = right_w.saturating_sub(3);
+    let r_inner_x = 2u16;
+    let r_inner_w = area_w.saturating_sub(3);
 
     match &state.play_state {
         PlayState::Stopped => {
             ui::text_at(
                 &mut cmds,
                 r_inner_x,
-                2,
+                np_y + 2,
                 "No station selected",
                 theme.text_muted,
                 theme.background_panel,
@@ -209,7 +203,7 @@ pub fn render_ui(
             ui::text_at(
                 &mut cmds,
                 r_inner_x,
-                2,
+                np_y + 2,
                 station_name,
                 theme.success,
                 theme.background_panel,
@@ -224,7 +218,7 @@ pub fn render_ui(
             ui::text_at(
                 &mut cmds,
                 r_inner_x,
-                3,
+                np_y + 3,
                 title,
                 theme.text,
                 theme.background_panel,
@@ -236,7 +230,7 @@ pub fn render_ui(
                     ui::text_at(
                         &mut cmds,
                         r_inner_x,
-                        4,
+                        np_y + 4,
                         artist,
                         theme.text_muted,
                         theme.background_panel,
@@ -249,7 +243,7 @@ pub fn render_ui(
             ui::text_at(
                 &mut cmds,
                 r_inner_x,
-                2,
+                np_y + 2,
                 "Error",
                 theme.error,
                 theme.background_panel,
@@ -258,7 +252,7 @@ pub fn render_ui(
             ui::text_at(
                 &mut cmds,
                 r_inner_x,
-                3,
+                np_y + 3,
                 e,
                 theme.error,
                 theme.background_panel,
@@ -267,22 +261,13 @@ pub fn render_ui(
         }
     }
 
-    // ---- Right panel bottom: Volume gauge ----
-    let gauge_y = info_h + GAP;
-    let gauge_h = 4u16;
-    if gauge_y + gauge_h <= area_h {
-        ui::draw_panel(
-            &mut cmds,
-            theme,
-            left_w + GAP,
-            gauge_y,
-            right_w,
-            gauge_h,
-            "Volume",
-        );
+    // ---- Volume panel (full width, bottom) ----
+    let vol_y = np_y + info_h + GAP;
+    if vol_y + volume_h <= area_h {
+        ui::draw_panel(&mut cmds, theme, 0, vol_y, area_w, volume_h, "Volume");
 
-        let g_inner_x = left_w + GAP + 2;
-        let g_inner_w = right_w.saturating_sub(3) as usize;
+        let g_inner_x = 2u16;
+        let g_inner_w = area_w.saturating_sub(3) as usize;
         let bar_w = g_inner_w.saturating_sub(5); // room for " 100%"
         let filled = (bar_w as u64 * state.volume as u64 / 100) as usize;
         let empty = bar_w.saturating_sub(filled);
@@ -294,7 +279,7 @@ pub fn render_ui(
         );
         cmds.push(RenderCmd::Text {
             x: g_inner_x,
-            y: gauge_y + 2,
+            y: vol_y + 2,
             text: gauge_text,
             fg: Some(theme.success),
             bg: Some(theme.background_panel),
