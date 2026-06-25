@@ -24,8 +24,6 @@ Resolved items moved to [audit-history.md](audit-history.md).
 
 - [ ] **Palette `filtered_items()` + grouping rebuilt every frame** — 50+ small heap allocations when palette is open. Memoize; only recompute on query change. (`crates/core/src/app/palette_widget.rs:118-143`)
 
-- [ ] **`PluginContext` constructed twice per frame** — both `Theme` and `Arc` cloned each time. Hold references instead of owned values. (`crates/core/src/app/mod.rs:642,658`)
-
 - [ ] **Radio `respond()` serializes unconditionally** — full `PluginMsg` JSON on every Tick/Key/Focus/etc. Cache JSON string; only re-serialize when dirty. (`crates/plugins/radio-streaming-player/src/main.rs:417`)
 
 - [ ] **`theme_manager.filtered()` allocates `Vec<usize>` per frame** — 37 elements rebuilt each tick when picker is open. Memoize. (`crates/core/src/app/theme_manager.rs:86-97`)

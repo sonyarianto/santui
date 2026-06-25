@@ -107,3 +107,5 @@ Items from the [architecture audit](audit.md) that have been fixed.
 - [x] **`filtered_items()` called on arrow key presses** — cached filtered result on `PaletteController`, recompute only on query change. (`crates/core/src/app/palette_controller.rs:54-61`)
 
 - [x] **`query.to_lowercase()` re-alloc per `filtered_items()` call** — controller caching reduces per-frame calls from 2-3× to 1× (render only). (`crates/core/src/app/palette_widget.rs:40`)
+
+- [x] **`PluginContext` constructed twice per frame** — reused `ctx` from before the loop; only updates `ctx.theme` when config triggers a theme change. (`crates/core/src/app/mod.rs:687`)

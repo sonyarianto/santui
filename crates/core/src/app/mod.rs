@@ -681,14 +681,10 @@ impl Santui {
             self.config_manager.poll();
             if self.config_manager.dirty {
                 self.apply_config();
+                ctx.theme = self.app_state.theme.clone();
             }
 
             // Check for plugin binary updates (hot-reload).
-            let mut ctx = PluginContext {
-                theme: self.app_state.theme.clone(),
-                auth: self.auth.clone(),
-                data_dir: self.plugin_manager.data_dir().to_path_buf(),
-            };
             self.plugin_manager.check_reloads(&mut ctx);
 
             // Poll registry.toml for changes (registry plugin writes it).
