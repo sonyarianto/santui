@@ -26,7 +26,7 @@ Resolved items moved to [audit-history.md](audit-history.md).
 
 - [ ] **Radio `respond()` serializes unconditionally** — full `PluginMsg` JSON on every Tick/Key/Focus/etc. Cache JSON string; only re-serialize when dirty. (`crates/plugins/radio-streaming-player/src/main.rs:417`)
 
-- [ ] **`theme_manager.filtered()` allocates `Vec<usize>` per frame** — 37 elements rebuilt each tick when picker is open. Memoize. (`crates/core/src/app/theme_manager.rs:86-97`)
+
 
 - [ ] **Radio `" ".repeat(fill_w)` per row** — string allocation for each row in panel draw (~40 per frame). Use `Paragraph` with background style. (`crates/plugins/radio-streaming-player/src/ui.rs:30`)
 

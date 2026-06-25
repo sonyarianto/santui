@@ -166,7 +166,7 @@ mod tests {
 
     #[test]
     fn filtered_themes_empty_query_returns_all() {
-        let app = Santui::new();
+        let mut app = Santui::new();
         let themes = app.theme_manager.filtered();
         assert_eq!(themes.len(), app.theme_manager.themes.len());
     }

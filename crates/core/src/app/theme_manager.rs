@@ -23,6 +23,10 @@ pub(crate) struct ThemeManager {
     /// Theme index that was selected when the picker was opened,
     /// so Esc restores it.
     pub(super) picker_orig_idx: usize,
+    /// Cached result of `filtered()`, invalidated when `picker_query` changes.
+    cached_filtered: Vec<usize>,
+    /// Previous query value used to validate `cached_filtered`.
+    cached_filtered_query: Option<String>,
 }
 
 impl ThemeManager {
@@ -39,6 +43,8 @@ impl ThemeManager {
             picker_cursor: 0,
             picker_scroll: 0,
             picker_orig_idx: 0,
+            cached_filtered: Vec::new(),
+            cached_filtered_query: None,
         }
     }
 
@@ -83,17 +89,23 @@ impl ThemeManager {
     }
 
     /// Return the indices of themes matching the current picker query.
-    pub(super) fn filtered(&self) -> Vec<usize> {
-        if self.picker_query.is_empty() {
-            return (0..self.themes.len()).collect();
+    pub(super) fn filtered(&mut self) -> Vec<usize> {
+        if self.cached_filtered_query.as_deref() == Some(self.picker_query.as_str()) {
+            return self.cached_filtered.clone();
         }
-        let q = self.picker_query.to_lowercase();
-        self.themes
-            .iter()
-            .enumerate()
-            .filter(|(_, (name, _))| name.to_lowercase().contains(&q))
-            .map(|(i, _)| i)
-            .collect()
+        self.cached_filtered = if self.picker_query.is_empty() {
+            (0..self.themes.len()).collect()
+        } else {
+            let q = self.picker_query.to_lowercase();
+            self.themes
+                .iter()
+                .enumerate()
+                .filter(|(_, (name, _))| name.to_lowercase().contains(&q))
+                .map(|(i, _)| i)
+                .collect()
+        };
+        self.cached_filtered_query = Some(self.picker_query.clone());
+        self.cached_filtered.clone()
     }
 
     /// Adjust scroll so that the cursor is visible in the picker list.
@@ -109,7 +121,7 @@ impl ThemeManager {
 
     /// Render the theme-picker overlay.
     pub(super) fn render_picker(
-        &self,
+        &mut self,
         f: &mut Frame,
         content: ratatui::layout::Rect,
         theme: &Theme,

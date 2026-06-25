@@ -109,3 +109,5 @@ Items from the [architecture audit](audit.md) that have been fixed.
 - [x] **`query.to_lowercase()` re-alloc per `filtered_items()` call** — controller caching reduces per-frame calls from 2-3× to 1× (render only). (`crates/core/src/app/palette_widget.rs:40`)
 
 - [x] **`PluginContext` constructed twice per frame** — reused `ctx` from before the loop; only updates `ctx.theme` when config triggers a theme change. (`crates/core/src/app/mod.rs:687`)
+
+- [x] **`theme_manager.filtered()` allocates `Vec<usize>` per frame** — cached with dirty-flag comparison against `picker_query`. Returns cached clone when query unchanged. (`crates/core/src/app/theme_manager.rs:86-97`)
