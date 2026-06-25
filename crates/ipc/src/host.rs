@@ -13,10 +13,15 @@ use std::cell::Cell;
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::sync::mpsc::{self, Receiver};
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError, SyncSender};
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
+
+enum Priority {
+    High,
+    Low,
+}
 
 pub struct IpcPluginHost {
     id: String,
@@ -37,6 +42,12 @@ pub struct IpcPluginHost {
     current_area: Cell<Area>,
     theme_data: ThemeData,
     pending_request: Option<PluginRequest>,
+    /// High-priority channel sender (key, resize, focus, blur, palette).
+    writer_high_tx: Option<SyncSender<String>>,
+    /// Low-priority channel sender (tick, theme, update, etc.).
+    writer_low_tx: Option<SyncSender<String>>,
+    /// Join handle for the background writer thread.
+    writer_thread: Option<thread::JoinHandle<()>>,
     /// Join handle for the background reader thread, joined on drop.
     reader_thread: Option<thread::JoinHandle<()>>,
 }
@@ -70,6 +81,9 @@ impl IpcPluginHost {
                 inverted_text: [20, 20, 20],
             },
             pending_request: None,
+            writer_high_tx: None,
+            writer_low_tx: None,
+            writer_thread: None,
             reader_thread: None,
         }
     }
@@ -115,19 +129,50 @@ fn user_to_data(user: &User) -> UserData {
     }
 }
 
+/// Background writer loop: drains high-priority channel first, then
+/// low-priority with a short timeout, writing each message to the plugin's
+/// stdin pipe.
+fn writer_loop(mut stdin: impl Write, high_rx: Receiver<String>, low_rx: Receiver<String>) {
+    loop {
+        // Drain all high-priority messages first.
+        loop {
+            match high_rx.try_recv() {
+                Ok(msg) => {
+                    if writeln!(stdin, "{msg}").is_err() || stdin.flush().is_err() {
+                        return; // pipe broken
+                    }
+                }
+                Err(mpsc::TryRecvError::Empty) => break,
+                Err(mpsc::TryRecvError::Disconnected) => return,
+            }
+        }
+        // Then check low-priority with a short timeout so high-priority
+        // messages are never stuck behind a long block.
+        match low_rx.recv_timeout(Duration::from_millis(10)) {
+            Ok(msg) => {
+                if writeln!(stdin, "{msg}").is_err() || stdin.flush().is_err() {
+                    return;
+                }
+            }
+            Err(RecvTimeoutError::Timeout) => {}
+            Err(RecvTimeoutError::Disconnected) => return,
+        }
+    }
+}
+
 impl IpcPluginHost {
-    fn send(&mut self, msg: &HostMsg) {
-        let child = match self.process.as_mut() {
-            Some(c) => c,
-            None => return,
-        };
-        let stdin = match child.stdin.as_mut() {
-            Some(s) => s,
-            None => return,
-        };
+    fn enqueue(&self, tx: &Option<SyncSender<String>>, json: String) {
+        if let Some(ref tx) = tx {
+            let _ = tx.try_send(json);
+        }
+    }
+
+    fn send(&mut self, msg: &HostMsg, priority: Priority) {
         let json = serde_json::to_string(msg).expect("HostMsg serialization");
-        let _ = writeln!(stdin, "{json}");
-        let _ = stdin.flush();
+        match priority {
+            Priority::High => self.enqueue(&self.writer_high_tx, json),
+            Priority::Low => self.enqueue(&self.writer_low_tx, json),
+        }
     }
 
     /// Non-blocking: consume all pending responses from the background reader
@@ -150,13 +195,22 @@ impl IpcPluginHost {
         }
     }
 
-    /// Kill the plugin process, drop the response channel, and join the
-    /// background reader thread so no thread leaks on hot-reload.
+    /// Kill the plugin process, stop the writer/reader threads, and join them
+    /// so no thread leaks on hot-reload.
     fn kill(&mut self) {
+        // Drop senders first so the writer loop exits on Disconnected.
+        self.writer_high_tx = None;
+        self.writer_low_tx = None;
+
         if let Some(mut child) = self.process.take() {
             let _ = child.kill();
             let _ = child.wait();
         }
+
+        if let Some(h) = self.writer_thread.take() {
+            let _ = h.join();
+        }
+
         self.response_rx = None;
         if let Some(h) = self.reader_thread.take() {
             let _ = h.join();
@@ -164,7 +218,7 @@ impl IpcPluginHost {
     }
 
     fn send_recv(&mut self, msg: &HostMsg) {
-        self.send(msg);
+        self.send(msg, Priority::High);
         self.drain_responses();
     }
 
@@ -172,7 +226,7 @@ impl IpcPluginHost {
     /// Used during `init()` so the first PluginMsg (with palette_commands)
     /// is guaranteed to be cached before the host calls refresh_commands().
     fn send_recv_blocking(&mut self, msg: &HostMsg) {
-        self.send(msg);
+        self.send(msg, Priority::High);
         if let Some(ref rx) = self.response_rx {
             if let Ok(resp) = rx.recv_timeout(Duration::from_millis(500)) {
                 self.cached_commands = resp.commands;
@@ -225,6 +279,21 @@ impl IpcPluginHost {
             })?;
 
         let reader = child.stdout.take().map(BufReader::new);
+
+        // Writer thread: reads from priority channels and writes to the
+        // plugin's stdin pipe.  This is what makes send() non-blocking —
+        // the main thread never blocks on a pipe write.
+        if let Some(stdin) = child.stdin.take() {
+            let (high_tx, high_rx) = mpsc::sync_channel::<String>(8);
+            let (low_tx, low_rx) = mpsc::sync_channel::<String>(32);
+            let handle = thread::Builder::new()
+                .name(format!("ipc-writer-{}", self.id))
+                .spawn(move || writer_loop(stdin, high_rx, low_rx))?;
+            self.writer_thread = Some(handle);
+            self.writer_high_tx = Some(high_tx);
+            self.writer_low_tx = Some(low_tx);
+        }
+
         self.process = Some(child);
 
         // Background thread: continuously read stdout, send parsed
@@ -373,7 +442,7 @@ impl Plugin for IpcPluginHost {
             }
         }
         // Non-blocking: just send Tick and consume any ready response.
-        self.send(&HostMsg::Tick);
+        self.send(&HostMsg::Tick, Priority::Low);
         self.drain_responses();
     }
 
@@ -423,7 +492,7 @@ impl Plugin for IpcPluginHost {
     }
 
     fn shutdown(&mut self) {
-        self.send(&HostMsg::Shutdown);
+        self.send(&HostMsg::Shutdown, Priority::High);
         self.recv_shutdown();
     }
 
