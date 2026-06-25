@@ -62,6 +62,8 @@ Items from the [architecture audit](audit.md) that have been fixed.
 
 - [x] **Splash/about screen logo rebuilt every frame** (`crates/core/src/app/screens.rs:73-83`) — pre-built `Vec<Line>` cached in `Santui.cached_logo`, invalidated on `ThemeChanged` event
 
+- [x] **Plugin child process leaks on failed `kill()`** (`crates/ipc/src/host.rs:153-161`) — `kill()` now calls `try_wait()` first, logs errors from `kill()`/`wait()`, and safely handles zombies; `reload_plugin()` shuts down old plugin before spawning new one to prevent overlapping orphaned processes
+
 ## Low — polish
 
 - [x] **No structured logging** — replaced all `eprintln!` with `log::error!`/`log::warn!`; `env_logger` initialized in all 3 binaries with default level `warn`; set `RUST_LOG=debug` for verbose output

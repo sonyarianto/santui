@@ -203,17 +203,49 @@ impl IpcPluginHost {
         self.writer_low_tx = None;
 
         if let Some(mut child) = self.process.take() {
-            let _ = child.kill();
-            let _ = child.wait();
+            // Try to reap first — if already exited, skip the kill.
+            match child.try_wait() {
+                Ok(Some(_status)) => {
+                    // Already exited, nothing to kill.
+                }
+                Ok(None) => {
+                    // Still running — kill it.
+                    if let Err(e) = child.kill() {
+                        log::warn!("[santui] kill() failed for plugin `{}`: {e}", self.id);
+                        // On Unix, ESRCH means already gone; on Windows,
+                        // TerminateProcess may fail on a zombie. Try wait
+                        // anyway in case it reaps cleanly.
+                    }
+                    if let Err(e) = child.wait() {
+                        log::error!("[santui] wait() failed to reap plugin `{}`: {e}", self.id);
+                    }
+                }
+                Err(e) => {
+                    log::warn!("[santui] try_wait() failed for plugin `{}`: {e}", self.id);
+                    // Fallback: force kill + wait.
+                    let _ = child.kill();
+                    let _ = child.wait();
+                }
+            }
         }
 
         if let Some(h) = self.writer_thread.take() {
-            let _ = h.join();
+            if let Err(e) = h.join() {
+                log::warn!(
+                    "[santui] writer thread join failed for plugin `{}`: {e:?}",
+                    self.id
+                );
+            }
         }
 
         self.response_rx = None;
         if let Some(h) = self.reader_thread.take() {
-            let _ = h.join();
+            if let Err(e) = h.join() {
+                log::warn!(
+                    "[santui] reader thread join failed for plugin `{}`: {e:?}",
+                    self.id
+                );
+            }
         }
     }
 

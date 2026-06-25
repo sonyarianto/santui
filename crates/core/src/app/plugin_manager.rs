@@ -227,18 +227,25 @@ impl PluginManager {
         let id = self.plugins[idx].id().to_string();
         let name = self.plugins[idx].name().to_string();
 
-        let mut new_plugin = factory(&id, &name, &path);
-        new_plugin.init(ctx)?;
+        // Shut down the old plugin first so no two plugin processes are
+        // alive at the same time, preventing an orphan if kill() fails.
+        self.plugins[idx].shutdown();
+        // Drop the old plugin now (kills child process) before spawning a
+        // new one.  If init() fails below, at worst we are left without a
+        // running plugin (the palette entry still exists).
+        self.plugins[idx] = factory(&id, &name, &path);
+        // Clear stale commands before refreshing.
+        self.mtimes[idx] = None;
 
-        // Update stored mtime *before* replacing so a second consecutive poll
-        // doesn't trigger another reload.
-        if idx < self.mtimes.len() {
-            self.mtimes[idx] = current_mtime;
+        // Update stored mtime *before* init, so if init fails the mtime is
+        // still bumped and we don't retry on every frame.
+        if let Some(mtime) = current_mtime {
+            if idx < self.mtimes.len() {
+                self.mtimes[idx] = Some(mtime);
+            }
         }
 
-        // Gracefully shut down the old plugin before dropping it.
-        self.plugins[idx].shutdown();
-        self.plugins[idx] = new_plugin;
+        self.plugins[idx].init(ctx)?;
         self.refresh_commands();
 
         Ok(())

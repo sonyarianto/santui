@@ -10,8 +10,6 @@ Resolved items moved to [audit-history.md](audit-history.md).
 
 - [ ] **Plugin crash silently tolerated** — no watchdog, no auto-restart, no user-visible error. `send()` and `drain_responses()` silently return when the child process has exited. (`crates/ipc/src/host.rs:117-141`)
 
-- [ ] **Plugin child process leaks on failed `kill()`** — if `child.kill()` fails, the orphan continues running; a new instance is spawned alongside it. (`crates/ipc/src/host.rs:153-161`)
-
 - [ ] **No `deny.toml` or clippy lint config** — no automated enforcement of `unsafe` usage, duplicate dependencies, or advisory checks.
 
 - [ ] **`serde` duplicated across workspace** — declared independently (with identical version+features) in 8+ crates instead of using a workspace dep.
