@@ -7,8 +7,6 @@ use crate::theme::Theme;
 pub enum Event {
     /// The active theme changed (plugins should refresh their colours).
     ThemeChanged(Theme),
-    /// The current user signed in or out (plugins should refresh their state).
-    UserUpdated,
     /// Plugin-to-plugin message.  `from` and `to` are plugin ids.
     PluginMessage {
         from: String,

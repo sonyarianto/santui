@@ -698,7 +698,6 @@ impl Santui {
                     match result {
                         Ok(user) => {
                             self.plugin_manager.on_user_update_all(Some(&user));
-                            self.event_bus.emit(crate::event::Event::UserUpdated);
                         }
                         Err(e) => {
                             log::error!("[auth] background sign-in error: {e}");

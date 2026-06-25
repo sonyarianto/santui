@@ -176,7 +176,7 @@ pub fn truncate(text: &str, max_len: usize) -> String {
         let t: String = text.chars().take(max_len.saturating_sub(1)).collect();
         format!("{t}…")
     } else {
-        format!("{:<width$}", text, width = max_len)
+        text.to_string()
     }
 }
 

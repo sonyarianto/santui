@@ -78,7 +78,7 @@ pub fn render_ui(
             t.push('…');
             t
         } else {
-            format!("{:<width$}", text, width = max_len)
+            text
         };
 
         let (fg, bg, bold) = if is_selected {
@@ -168,7 +168,7 @@ pub fn render_ui(
         let display = if msg.len() > max_w {
             format!("{}…", &msg[..max_w.saturating_sub(1)])
         } else {
-            format!("{:<width$}", msg, width = max_w)
+            msg.to_string()
         };
         cmds.push(RenderCmd::Text {
             x: 2,

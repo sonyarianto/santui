@@ -59,7 +59,6 @@ impl super::Santui {
                         if let Some(ref auth) = self.auth {
                             auth.sign_out();
                             self.plugin_manager.on_user_update_all(None);
-                            self.event_bus.emit(crate::event::Event::UserUpdated);
                         }
                     }
                     super::BuiltinId::SwitchTheme => {

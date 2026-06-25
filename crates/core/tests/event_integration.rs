@@ -13,12 +13,25 @@ fn event_bus_emit_and_drain() {
     let mut bus = EventBus::new();
     let theme = Theme::default();
     bus.emit(Event::ThemeChanged(theme.clone()));
-    bus.emit(Event::UserUpdated);
+    bus.emit(Event::PluginMessage {
+        from: "alpha".into(),
+        to: "beta".into(),
+        action: "ping".into(),
+        data: "".into(),
+    });
 
     let events = bus.drain();
     assert_eq!(events.len(), 2);
     assert_eq!(events[0], Event::ThemeChanged(theme));
-    assert_eq!(events[1], Event::UserUpdated);
+    assert_eq!(
+        events[1],
+        Event::PluginMessage {
+            from: "alpha".into(),
+            to: "beta".into(),
+            action: "ping".into(),
+            data: "".into(),
+        }
+    );
 }
 
 #[test]

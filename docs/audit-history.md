@@ -70,6 +70,13 @@ Items from the [architecture audit](audit.md) that have been fixed.
 
 - [x] **`unwrap()` on mpv symbol lookup** (`crates/plugins/radio-streaming-player/src/player.rs:130-138`) — replaced 9 `unwrap()` calls with a `get_sym!()` macro that returns `Err` with a descriptive message when a symbol is missing, instead of panicking
 
+## Medium — latent bugs & performance issues
+
+- [x] **Radio `text_at()` string allocation per text element** — `truncate()` no longer pads when text fits; station list reuses the `text` string directly. (~20-40 allocs saved per frame)
+- [x] **Radio `" ".repeat(fill_w)` per row** — migrated from per-row padding to `RenderCmd::Rect` (one alloc per panel, 3 per frame). Host-side `render.rs` still allocates once per `Rect`/`Clear`.
+- [x] **Radio DB connection opened per `load()`** — persistent `db: Connection` in `App` struct.
+- [x] **`Event::UserUpdated` handler is a no-op** — removed dead `UserUpdated` variant; sign-out/sign-in calls `on_user_update_all()` directly.
+
 ## Low — polish
 
 - [x] **No structured logging** — replaced all `eprintln!` with `log::error!`/`log::warn!`; `env_logger` initialized in all 3 binaries with default level `warn`; set `RUST_LOG=debug` for verbose output

@@ -20,15 +20,15 @@ Resolved items moved to [audit-history.md](audit-history.md).
 
 
 
-- [ ] **Radio `" ".repeat(fill_w)` per row** — string allocation for each row in panel draw (~40 per frame). Use `Paragraph` with background style. (`crates/plugins/radio-streaming-player/src/ui.rs:30`)
+- [x] **Radio `" ".repeat(fill_w)` per row** — now uses `RenderCmd::Rect` (one alloc per panel, not per row); 3 allocs per frame. Host-side `render.rs` still allocates once per `Rect`/`Clear` via `" ".repeat(cw)`. (`crates/ipc/src/render.rs:140`)
 
-- [ ] **Radio `text_at()` string allocation per text element** — 15-30 small String allocs per radio frame. (`crates/plugins/radio-streaming-player/src/ui.rs:57-63`)
+- [x] **Radio `text_at()` string allocation per text element** — `truncate()` no longer pads when text fits; station list reuses the `text` string directly instead of re-formatting. (`crates/ipc/src/ui.rs:174`, `crates/plugins/radio-streaming-player/src/ui.rs:71`)
 
-- [ ] **Radio DB connection opened per `load()`** — `database::open()` re-creates SQLite connection + runs migrations on every reload. Keep connection alive. (`crates/plugins/radio-streaming-player/src/database.rs:37-71`)
+- [x] **Radio DB connection opened per `load()`** — persistent `db: Connection` in `App` struct, initialized once in `new()`. (`crates/plugins/radio-streaming-player/src/main.rs:54`)
 
 
 
-- [ ] **`Event::UserUpdated` handler is a no-op** — event IS emitted on sign-out/sign-in, but the handler in `process_events()` (`app_state.rs:45`) does nothing because the actual notification is done via a direct call to `on_user_update_all()`. Dead code in event dispatch.
+- [x] **`Event::UserUpdated` handler is a no-op** — removed `UserUpdated` variant; sign-out/sign-in calls `on_user_update_all()` directly. (`crates/core/src/event.rs`, `crates/core/src/app/mod.rs:701`, `crates/core/src/app/handle_key.rs:62`, `crates/core/src/app/plugin_manager.rs:292`)
 
 ## Low — polish
 

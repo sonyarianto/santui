@@ -289,7 +289,6 @@ impl PluginManager {
                 Event::ThemeChanged(theme) => {
                     self.on_theme_change_all(theme);
                 }
-                Event::UserUpdated => {}
             }
         }
     }
