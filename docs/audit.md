@@ -36,8 +36,6 @@ Resolved items moved to [audit-history.md](audit-history.md).
 
 
 
-- [ ] **Plugin shutdown timeout too short (1s)** — may force-kill plugin mid-write. Increase grace period. (`crates/ipc/src/host.rs:145-149`)
-
 - [ ] **`Event::UserUpdated` handler is a no-op** — event IS emitted on sign-out/sign-in, but the handler in `process_events()` (`app_state.rs:45`) does nothing because the actual notification is done via a direct call to `on_user_update_all()`. Dead code in event dispatch.
 
 ## Low — polish

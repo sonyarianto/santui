@@ -210,7 +210,7 @@ impl IpcPluginHost {
     /// Block briefly for one response (used during shutdown only).
     fn recv_shutdown(&mut self) {
         if let Some(ref rx) = self.response_rx {
-            let _ = rx.recv_timeout(Duration::from_secs(1));
+            let _ = rx.recv_timeout(Duration::from_secs(3));
         }
     }
 
