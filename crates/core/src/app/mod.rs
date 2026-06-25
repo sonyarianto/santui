@@ -531,23 +531,25 @@ impl Santui {
 
     /// Apply the loaded config (theme, custom colors) to the current app state.
     pub(super) fn apply_config(&mut self) {
-        let cfg = self.config_manager.config().clone();
-
-        // Apply default theme if specified.
-        if let Some(ref theme_name) = cfg.theme {
-            let lower = theme_name.to_lowercase();
-            if let Some(idx) = self
-                .theme_manager
-                .themes
-                .iter()
-                .position(|(n, _)| n.to_lowercase() == lower)
-            {
-                self.select_theme(idx);
-            }
+        // Apply default theme if specified (borrow config_manager, then drop before mutate).
+        let theme_idx = self
+            .config_manager
+            .config()
+            .theme
+            .as_ref()
+            .and_then(|theme_name| {
+                let lower = theme_name.to_lowercase();
+                self.theme_manager
+                    .themes
+                    .iter()
+                    .position(|(n, _)| n.to_lowercase() == lower)
+            });
+        if let Some(idx) = theme_idx {
+            self.select_theme(idx);
         }
 
         // Apply custom color overrides.
-        if let Some(ref custom) = cfg.custom_theme {
+        if let Some(custom) = &self.config_manager.config().custom_theme {
             let mut t = self.app_state.theme.clone();
             if let Some(ref v) = custom.accent {
                 if let Some(c) = parse_hex(v) {

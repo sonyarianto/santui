@@ -91,3 +91,19 @@ Items from the [architecture audit](audit.md) that have been fixed.
 - [x] **`dbg!()` calls remain in production code** — zero `dbg!()` calls found across the workspace; all removed
 
 - [x] **Formatting inconsistencies** — trailing whitespace cleaned up; `cargo fmt` enforced via pre-commit hook
+
+- [x] **`unwrap()` on `tx_msg` before `handle_init`** — replaced with `let Some(tx) = ... else { return; }` to avoid panic if plugin ticked before Init. (`crates/plugins/radio-streaming-player/src/main.rs:322`)
+
+- [x] **`expect()` in scraper SQL transactions** — replaced `expect("begin transaction")`/`expect("commit transaction")` with `if let Err(e) = ... { log::error!(); std::process::exit(1); }`. (`crates/plugins/radio-streaming-player/scraper/src/main.rs:433-434,501`)
+
+- [x] **`env_logger::init()` panics if called twice** — all 3 `init()` calls changed to `let _ = ...try_init()`. (`crates/app/src/main.rs:8-11`, `crates/plugins/radio-streaming-player/src/main.rs:424-427`, `scraper/src/main.rs:384-387`)
+
+- [x] **`Config.clone()` in `apply_config()`** — removed `.clone()`; `config()` already returns `&Config`. Restructured to avoid borrow conflict. (`crates/core/src/app/mod.rs:534`)
+
+- [x] **Unnecessary `PluginCmdItem` clone on palette exec** — removed `.clone()` from tuple; directly index into `commands()` slice. (`crates/core/src/app/handle_key.rs:79`)
+
+- [x] **Dynamic item triple-String clone** — removed `.cloned()` from dynamic items get; clone only `id` + `name` on the cold path. (`crates/core/src/app/handle_key.rs:87`)
+
+- [x] **`filtered_items()` called on arrow key presses** — cached filtered result on `PaletteController`, recompute only on query change. (`crates/core/src/app/palette_controller.rs:54-61`)
+
+- [x] **`query.to_lowercase()` re-alloc per `filtered_items()` call** — controller caching reduces per-frame calls from 2-3× to 1× (render only). (`crates/core/src/app/palette_widget.rs:40`)

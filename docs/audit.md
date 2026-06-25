@@ -28,15 +28,7 @@ Resolved items moved to [audit-history.md](audit-history.md).
 
 - [ ] **Radio `respond()` serializes unconditionally** — full `PluginMsg` JSON on every Tick/Key/Focus/etc. Cache JSON string; only re-serialize when dirty. (`crates/plugins/radio-streaming-player/src/main.rs:417`)
 
-- [ ] **`Config.clone()` in `apply_config()`** — clones entire `Config` with up to 14 heap-allocated `Option<String>` fields. Use by-reference. (`crates/core/src/app/mod.rs:536`)
-
 - [ ] **`theme_manager.filtered()` allocates `Vec<usize>` per frame** — 37 elements rebuilt each tick when picker is open. Memoize. (`crates/core/src/app/theme_manager.rs:86-97`)
-
-- [ ] **Unnecessary `PluginCmdItem` clone on palette exec** — 2 String fields cloned then immediately discarded. (`crates/core/src/app/handle_key.rs:79`)
-
-- [ ] **Dynamic item triple-String clone** — `(String, String, String)` cloned on activation when only `id` and `name` needed. (`crates/core/src/app/handle_key.rs:87`)
-
-- [ ] **`filtered_items()` called on arrow key presses in palette** — unnecessary; only needed when query text changes. (`crates/core/src/app/palette_controller.rs:45-49`)
 
 - [ ] **Radio `" ".repeat(fill_w)` per row** — string allocation for each row in panel draw (~40 per frame). Use `Paragraph` with background style. (`crates/plugins/radio-streaming-player/src/ui.rs:30`)
 
@@ -45,12 +37,6 @@ Resolved items moved to [audit-history.md](audit-history.md).
 - [ ] **Theme picker `list_lines` + `header_lines` rebuilt per frame** — ~40-80 allocs when picker is open. Memoize. (`crates/core/src/app/theme_manager.rs:206,221`)
 
 - [ ] **Radio DB connection opened per `load()`** — `database::open()` re-creates SQLite connection + runs migrations on every reload. Keep connection alive. (`crates/plugins/radio-streaming-player/src/database.rs:37-71`)
-
-- [ ] **`expect()` in scraper SQL transactions** — panics on broken connection mid-scrape. Use `?` instead. (`crates/plugins/radio-streaming-player/scraper/src/main.rs:434,501`)
-
-
-
-- [ ] **`unwrap()` on `tx_msg` before `handle_init`** — panics if plugin ticked before Init. (`crates/plugins/radio-streaming-player/src/main.rs:322`)
 
 - [ ] **Config invalid field values silently ignored** — invalid hex colours, unknown theme names accepted without feedback. Log warnings. (`crates/core/src/app/mod.rs:555-615`)
 
@@ -77,9 +63,5 @@ Resolved items moved to [audit-history.md](audit-history.md).
 - [ ] **`#[allow(dead_code)]` on several items** — `database.rs:search()`, `itunes.rs:collection_name`, `auth.rs:verification_uri`. Remove or use. (various)
 
 - [ ] **`let _ =` swallows errors silently** — widespread; at minimum log at `warn!` level when a fallible operation fails. (various)
-
-- [ ] **`env_logger::init()` panics if called twice** — guard with `try_init()` or `OnceCell`. (`crates/app/src/main.rs:8-11`)
-
-- [ ] **`query.to_lowercase()` re-allocated per `filtered_items()` call** — called 2-3× per frame when palette open. Cache lowered query. (`crates/core/src/app/palette_widget.rs:40`)
 
 - [ ] **EventBus subscriber scan O(n) on emit** — no current subscribers, but worth noting for future. (`crates/core/src/event.rs:64-66`)

@@ -76,14 +76,15 @@ impl PaletteWidget {
     }
 
     /// Adjust `self.scroll` so that the cursor is visible in the list.
+    /// Accepts a pre-computed `filtered` slice to avoid re-filtering.
     pub(super) fn ensure_cursor_visible(
         &mut self,
         content_h: u16,
+        filtered: &[super::ItemIndex],
         builtin_items: &[(super::BuiltinId, String, String)],
         dynamic_items: &[(String, String, String)],
         cmds: &[(usize, usize, PluginCmdItem)],
     ) {
-        let filtered = self.filtered_items(builtin_items, dynamic_items, cmds);
         let no_results = !self.query.is_empty() && filtered.is_empty();
         let mut line: u16 = 0;
         if no_results {

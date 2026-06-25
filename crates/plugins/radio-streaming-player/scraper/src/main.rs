@@ -381,10 +381,10 @@ fn fetch_country_http(url_code: &str) -> Result<Vec<(String, String)>, String> {
 }
 
 fn main() {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))
+    let _ = env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))
         .format_timestamp(None)
         .format_target(false)
-        .init();
+        .try_init();
     println!("Radio Station Scraper");
     let num_workers: usize = std::thread::available_parallelism()
         .map(|n| n.get())
@@ -430,8 +430,10 @@ fn main() {
         println!("Cleaned {cleaned} existing URLs");
     }
 
-    conn.execute_batch("BEGIN TRANSACTION")
-        .expect("begin transaction");
+    if let Err(e) = conn.execute_batch("BEGIN TRANSACTION") {
+        log::error!("Failed to begin transaction: {e}");
+        std::process::exit(1);
+    }
 
     let (tx, rx) = std::sync::mpsc::channel::<(String, String, Vec<(String, String)>)>();
     let countries: Vec<(&str, &str)> = ALL_COUNTRIES.to_vec();
@@ -498,7 +500,10 @@ fn main() {
         }
     });
 
-    conn.execute_batch("COMMIT").expect("commit transaction");
+    if let Err(e) = conn.execute_batch("COMMIT") {
+        log::error!("Failed to commit transaction: {e}");
+        std::process::exit(1);
+    }
 
     let total: i64 = conn
         .query_row("SELECT COUNT(*) FROM stations", [], |row| row.get(0))

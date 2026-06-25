@@ -10,6 +10,10 @@ use ratatui::Frame;
 /// it, returning actions for the caller to execute.
 pub(super) struct PaletteController {
     palette: Option<PaletteWidget>,
+    /// Cached result of `filtered_items()` — recomputed only when query changes.
+    cached_filtered: Vec<ItemIndex>,
+    /// True when `cached_filtered` is stale (query changed or palette opened).
+    filtered_dirty: bool,
 }
 
 pub(super) enum PaletteAction {
@@ -19,11 +23,16 @@ pub(super) enum PaletteAction {
 
 impl PaletteController {
     pub fn new() -> Self {
-        Self { palette: None }
+        Self {
+            palette: None,
+            cached_filtered: Vec::new(),
+            filtered_dirty: true,
+        }
     }
 
     pub fn open(&mut self) {
         self.palette = Some(PaletteWidget::new());
+        self.filtered_dirty = true;
     }
 
     pub fn is_open(&self) -> bool {
@@ -42,11 +51,15 @@ impl PaletteController {
         dynamic_items: &[(String, String, String)],
         cmds: &[(usize, usize, PluginCmdItem)],
     ) -> PaletteAction {
-        let filtered = self
-            .palette
-            .as_ref()
-            .map(|p| p.filtered_items(builtin_items, dynamic_items, cmds))
-            .unwrap_or_default();
+        if self.filtered_dirty {
+            self.cached_filtered = self
+                .palette
+                .as_ref()
+                .map(|p| p.filtered_items(builtin_items, dynamic_items, cmds))
+                .unwrap_or_default();
+            self.filtered_dirty = false;
+        }
+        let filtered = &self.cached_filtered;
 
         match key.code {
             KeyCode::Char(c)
@@ -65,6 +78,7 @@ impl PaletteController {
                     p.cursor = 0;
                     p.scroll = 0;
                 }
+                self.filtered_dirty = true;
             }
             KeyCode::Backspace => {
                 if let Some(ref mut p) = self.palette {
@@ -72,6 +86,7 @@ impl PaletteController {
                     p.cursor = 0;
                     p.scroll = 0;
                 }
+                self.filtered_dirty = true;
             }
             KeyCode::Up => {
                 if !filtered.is_empty() {
@@ -112,7 +127,13 @@ impl PaletteController {
         }
 
         if let Some(ref mut p) = self.palette {
-            p.ensure_cursor_visible(term_h.saturating_sub(1), builtin_items, dynamic_items, cmds);
+            p.ensure_cursor_visible(
+                term_h.saturating_sub(1),
+                filtered,
+                builtin_items,
+                dynamic_items,
+                cmds,
+            );
         }
 
         PaletteAction::None

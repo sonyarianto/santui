@@ -7,10 +7,10 @@ use santui_db::open_db;
 use santui_auth::AuthClient;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))
+    let _ = env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))
         .format_timestamp(None)
         .format_target(false)
-        .init();
+        .try_init();
     let mut app = Santui::new();
 
     // Initialize local database (per-user key-value storage for plugins).

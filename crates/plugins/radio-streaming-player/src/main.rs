@@ -319,7 +319,9 @@ impl App {
                     MpvMsg::Metadata(title) => {
                         self.state.song_title = title.clone();
                         self.state.track_info = None;
-                        let tx = self.tx_msg.clone().unwrap();
+                        let Some(tx) = self.tx_msg.clone() else {
+                            return;
+                        };
                         thread::spawn(move || {
                             if let Ok(Some(info)) = itunes::lookup(&title) {
                                 let _ = tx.send(MpvMsg::TrackInfo(info));
@@ -421,10 +423,10 @@ fn respond(app: &mut App) {
 }
 
 fn main() {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))
+    let _ = env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))
         .format_timestamp(None)
         .format_target(false)
-        .init();
+        .try_init();
     let mut reader = BufReader::new(std::io::stdin().lock());
 
     let mut app = App::new();

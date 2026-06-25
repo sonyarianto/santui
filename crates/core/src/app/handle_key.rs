@@ -76,7 +76,7 @@ impl super::Santui {
                 }
             }
             super::ItemIndex::PluginCmd(pci) => {
-                let (plugin_idx, local_idx, _cmd) = self.plugin_manager.commands()[pci].clone();
+                let (plugin_idx, local_idx, _) = self.plugin_manager.commands()[pci];
                 if plugin_idx < self.plugin_manager.len() {
                     self.plugin_manager.set_active(Some(plugin_idx));
                     self.plugin_manager
@@ -97,7 +97,7 @@ impl super::Santui {
                                     .file_stem()
                                     .and_then(|s| s.to_str())
                                     .map(|s| s.trim_end_matches(".exe"))
-                                    == Some(id.as_str())
+                                    .is_some_and(|stem| stem == name)
                             }) {
                                 let mut ctx = crate::plugin::PluginContext {
                                     theme: self.app_state.theme.clone(),
