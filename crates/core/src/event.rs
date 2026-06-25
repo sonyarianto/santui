@@ -72,7 +72,7 @@ impl EventBus {
 
     /// Drain all pending events.
     pub fn drain(&mut self) -> Vec<Event> {
-        self.pending.drain(..).collect()
+        std::mem::take(&mut self.pending).into_iter().collect()
     }
 }
 

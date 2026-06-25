@@ -65,36 +65,36 @@ impl super::Santui {
         }
     }
 
-    pub(super) fn render_splash(&self, f: &mut Frame, area: Rect) {
+    pub(super) fn render_splash(&mut self, f: &mut Frame, area: Rect) {
         self.render_starfield(f, area);
         let t = &self.app_state.theme;
         let ver = super::VERSION;
 
-        let logo: Vec<Line> = [
-            "███████╗ █████╗ ███╗   ██╗████████╗██╗   ██╗██╗",
-            "██╔════╝██╔══██╗████╗  ██║╚══██╔══╝██║   ██║██║",
-            "███████╗███████║██╔██╗ ██║   ██║   ██║   ██║██║",
-            "╚════██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║",
-            "███████║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║",
-            "╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝",
-        ]
-        .iter()
-        .map(|line| Line::from(Span::styled(*line, Style::default().fg(t.logo))))
-        .collect::<Vec<_>>();
-
-        let logo = logo
-            .into_iter()
-            .chain([
-                Line::from(Span::styled(
-                    "your terminal home base",
-                    Style::default().fg(t.text_muted),
-                )),
-                Line::from(Span::styled(
-                    format!("v{ver}"),
-                    Style::default().fg(t.text_muted),
-                )),
-            ])
+        if self.cached_logo.is_none() {
+            let mut lines: Vec<Line> = [
+                "███████╗ █████╗ ███╗   ██╗████████╗██╗   ██╗██╗",
+                "██╔════╝██╔══██╗████╗  ██║╚══██╔══╝██║   ██║██║",
+                "███████╗███████║██╔██╗ ██║   ██║   ██║   ██║██║",
+                "╚════██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║",
+                "███████║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║",
+                "╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝",
+            ]
+            .iter()
+            .map(|line| Line::from(Span::styled(*line, Style::default().fg(t.logo))))
             .collect::<Vec<_>>();
+
+            lines.push(Line::from(Span::styled(
+                "your terminal home base",
+                Style::default().fg(t.text_muted),
+            )));
+            lines.push(Line::from(Span::styled(
+                format!("v{ver}"),
+                Style::default().fg(t.text_muted),
+            )));
+            self.cached_logo = Some(lines);
+        }
+
+        let logo = self.cached_logo.as_ref().unwrap();
 
         // ── Carousel bar ──
         let carousel = self.plugin_manager.carousel_items();
@@ -124,7 +124,7 @@ impl super::Santui {
             ])
             .split(area);
 
-        let p = Paragraph::new(logo).alignment(Alignment::Center);
+        let p = Paragraph::new(logo.as_slice()).alignment(Alignment::Center);
         f.render_widget(p, vert[1]);
 
         if !carousel_lines.is_empty() {

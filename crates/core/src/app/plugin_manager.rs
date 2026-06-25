@@ -29,6 +29,8 @@ pub(crate) struct PluginManager {
     data_dir: PathBuf,
     /// Last mtime of registry.toml, used for change detection.
     registry_mtime: Option<SystemTime>,
+    /// Throttle: only stat plugin binaries every N frames.
+    reload_skip: u32,
 }
 
 impl PluginManager {
@@ -42,6 +44,7 @@ impl PluginManager {
             dynamic_items: Vec::new(),
             data_dir: PathBuf::new(),
             registry_mtime: None,
+            reload_skip: 0,
         }
     }
 
@@ -183,6 +186,11 @@ impl PluginManager {
     /// Check every plugin's binary mtime and reload any that have changed.
     /// Called once per frame from the event loop.
     pub fn check_reloads(&mut self, ctx: &mut PluginContext) {
+        self.reload_skip = self.reload_skip.saturating_sub(1);
+        if self.reload_skip > 0 {
+            return;
+        }
+        self.reload_skip = 30;
         for idx in 0..self.plugins.len() {
             if let Err(e) = self.reload_plugin(idx, ctx) {
                 let name = self.plugins[idx].name().to_string();

@@ -81,7 +81,7 @@ impl App {
         self.area = area;
         self.dirty = true;
 
-        let (mpv, warns) = match Mpv::new() {
+        let (mut mpv, warns) = match Mpv::new() {
             Ok(v) => v,
             Err(e) => {
                 self.init_error = Some(format!("{e}"));

@@ -286,7 +286,16 @@ impl Mpv {
         }
     }
 
-    pub fn destroy(&self) {
-        unsafe { (self.funcs.destroy)(self.handle) };
+    pub fn destroy(&mut self) {
+        if !self.handle.is_null() {
+            unsafe { (self.funcs.destroy)(self.handle) };
+            self.handle = std::ptr::null_mut();
+        }
+    }
+}
+
+impl Drop for Mpv {
+    fn drop(&mut self) {
+        self.destroy();
     }
 }

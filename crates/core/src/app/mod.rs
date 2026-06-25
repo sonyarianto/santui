@@ -484,6 +484,8 @@ pub struct Santui {
     pub(super) config_manager: crate::config::ConfigManager,
     /// Starfield background animation.
     pub(super) starfield: starfield::Starfield,
+    /// Pre-built splash logo lines, invalidated on theme change.
+    cached_logo: Option<Vec<ratatui::text::Line<'static>>>,
 }
 
 impl Default for Santui {
@@ -505,6 +507,7 @@ impl Santui {
             palette_controller: palette_controller::PaletteController::new(),
             config_manager: ConfigManager::new(std::path::PathBuf::new()),
             starfield: starfield::Starfield::new(),
+            cached_logo: None,
         }
     }
 
@@ -691,6 +694,12 @@ impl Santui {
 
             // Drain the event bus and forward events to subsystems.
             let events = self.event_bus.drain();
+            if events
+                .iter()
+                .any(|e| matches!(e, crate::event::Event::ThemeChanged(_)))
+            {
+                self.cached_logo = None;
+            }
             self.app_state.process_events(&events);
             self.plugin_manager.process_events(&events);
 
@@ -727,7 +736,7 @@ impl Santui {
         Ok(())
     }
 
-    fn render(&self, f: &mut Frame) {
+    fn render(&mut self, f: &mut Frame) {
         let area = f.area();
 
         let chunks = Layout::default()

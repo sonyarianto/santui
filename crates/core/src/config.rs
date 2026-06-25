@@ -88,6 +88,8 @@ pub struct ConfigManager {
     error: Option<String>,
     /// Main loop tick rate (how often the UI refreshes and polls for input).
     tick_rate: Duration,
+    /// Throttle: only poll the filesystem every N frames.
+    poll_skip: u32,
 }
 
 impl ConfigManager {
@@ -109,11 +111,17 @@ impl ConfigManager {
             dirty: false,
             error,
             tick_rate: Duration::from_millis(100),
+            poll_skip: 0,
         }
     }
 
     /// Re-read config from disk.  Call this once per frame.
     pub fn poll(&mut self) {
+        self.poll_skip = self.poll_skip.saturating_sub(1);
+        if self.poll_skip > 0 {
+            return;
+        }
+        self.poll_skip = 30;
         let path = self.dir.join("config.toml");
         let modified = match path.metadata().ok().and_then(|m| m.modified().ok()) {
             Some(t) => t,
