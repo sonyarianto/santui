@@ -37,6 +37,7 @@ struct App {
     dirty: bool,
     cached_commands: Vec<RenderCmd>,
     user: Option<UserData>,
+    db: rusqlite::Connection,
 }
 
 fn send_cmd(app: &App, cmd: MpvCmd) {
@@ -47,8 +48,10 @@ fn send_cmd(app: &App, cmd: MpvCmd) {
 
 impl App {
     fn new() -> Self {
-        let station_list = stations::load();
+        let db = database::open().expect("Failed to open station database");
+        let station_list = stations::load(&db);
         App {
+            db,
             state: state::RadioState::new(station_list),
             theme: ThemeData {
                 text: [220, 220, 220],
@@ -195,7 +198,7 @@ impl App {
             }
             1 => {
                 // "Reload stations" — reload from DB
-                let new_stations = crate::stations::reload();
+                let new_stations = crate::stations::reload(&self.db);
                 let count = new_stations.len();
                 self.state.stations = new_stations;
                 self.state.set_query(String::new());
@@ -283,7 +286,7 @@ impl App {
                 }
             }
             IpcKey::Char('r') => {
-                let new_stations = crate::stations::reload();
+                let new_stations = crate::stations::reload(&self.db);
                 let count = new_stations.len();
                 self.state.stations = new_stations;
                 self.state.set_query(String::new());
