@@ -52,6 +52,16 @@ Items from the [architecture audit](audit.md) that have been fixed.
 
 - [x] **Radio plugin thread leak** (`crates/plugins/radio-streaming-player/src/main.rs:103`) — mpv event thread handle now stored; `MpvCmd::Quit` sent on shutdown, thread joined
 
+- [x] **`Mpv::drop` doesn't call `mpv_destroy`** (`crates/plugins/radio-streaming-player/src/player.rs:62-66`) — added `impl Drop for Mpv` that calls `destroy()`; `destroy()` changed to `&mut self` and nulls the handle so double-destroy is safe
+
+- [x] **`EventBus::drain()` allocates every frame** (`crates/core/src/event.rs:74-76`) — replaced `drain(..).collect()` with `std::mem::take`, zero allocation when the queue is empty
+
+- [x] **Config file metadata syscall every frame** (`crates/core/src/config.rs:118`) — throttled to every 30 frames via `poll_skip` counter
+
+- [x] **Plugin binary stat per frame** (`crates/core/src/app/plugin_manager.rs:159-165`) — throttled `check_reloads()` to every 30 frames via `reload_skip` counter
+
+- [x] **Splash/about screen logo rebuilt every frame** (`crates/core/src/app/screens.rs:73-83`) — pre-built `Vec<Line>` cached in `Santui.cached_logo`, invalidated on `ThemeChanged` event
+
 ## Low — polish
 
 - [x] **No structured logging** — replaced all `eprintln!` with `log::error!`/`log::warn!`; `env_logger` initialized in all 3 binaries with default level `warn`; set `RUST_LOG=debug` for verbose output

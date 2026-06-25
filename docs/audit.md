@@ -12,8 +12,6 @@ Resolved items moved to [audit-history.md](audit-history.md).
 
 - [ ] **Plugin child process leaks on failed `kill()`** — if `child.kill()` fails, the orphan continues running; a new instance is spawned alongside it. (`crates/ipc/src/host.rs:153-161`)
 
-- [ ] **`Mpv::drop` doesn't call `mpv_destroy`** — if dropped before `MpvCmd::Quit`, mpv internals and network streams leak. (`crates/plugins/radio-streaming-player/src/player.rs:62-66`)
-
 - [ ] **No `deny.toml` or clippy lint config** — no automated enforcement of `unsafe` usage, duplicate dependencies, or advisory checks.
 
 - [ ] **`serde` duplicated across workspace** — declared independently (with identical version+features) in 8+ crates instead of using a workspace dep.
@@ -24,8 +22,6 @@ Resolved items moved to [audit-history.md](audit-history.md).
 
 - [ ] **JSON serialized on every IPC send** — `serde_json::to_string` called per frame (`Tick`) and per keystroke (`Key`). Pre-compute fixed-shape messages; batch when idle. (`crates/ipc/src/host.rs:126`)
 
-- [ ] **`EventBus::drain()` allocates every frame** — `self.pending.drain(..).collect()` creates a `Vec<Event>` allocation even when empty. Use `mem::take` instead. (`crates/core/src/event.rs:74-76`)
-
 - [ ] **IPC round-trip every tick** — `send(Tick)` + `drain_responses()` every frame even when plugin has no new data. Skip send when plugin is idle; use dirty flag. (`crates/ipc/src/host.rs:350-351`)
 
 - [ ] **Radio plugin clones `cached_commands` on every render** — entire `Vec<RenderCmd>` heap-cloned, then immediately serialized. Return reference or `mem::take`. (`crates/plugins/radio-streaming-player/src/main.rs:399`)
@@ -35,12 +31,6 @@ Resolved items moved to [audit-history.md](audit-history.md).
 - [ ] **Palette `filtered_items()` + grouping rebuilt every frame** — 50+ small heap allocations when palette is open. Memoize; only recompute on query change. (`crates/core/src/app/palette_widget.rs:118-143`)
 
 - [ ] **`PluginContext` constructed twice per frame** — both `Theme` and `Arc` cloned each time. Hold references instead of owned values. (`crates/core/src/app/mod.rs:642,658`)
-
-- [ ] **Config file metadata syscall every frame** — `config_manager.poll()` calls `path.metadata()` on every tick. Throttle to every 30-60 frames. (`crates/core/src/config.rs:118`)
-
-- [ ] **Plugin binary stat per frame** — `check_reloads()` stats every plugin binary on every tick. Throttle to every 30-60 frames. (`crates/core/src/app/plugin_manager.rs:159-165`)
-
-- [ ] **Splash/about screen logo rebuilt every frame** — `Vec<Line>` re-allocated each render. Pre-build at startup. (`crates/core/src/app/screens.rs:73-83`)
 
 - [ ] **Radio `respond()` serializes unconditionally** — full `PluginMsg` JSON on every Tick/Key/Focus/etc. Cache JSON string; only re-serialize when dirty. (`crates/plugins/radio-streaming-player/src/main.rs:417`)
 
