@@ -6,12 +6,6 @@ Resolved items moved to [audit-history.md](audit-history.md).
 
 ## Critical — crash, terminal corruption, or shipped dead code
 
-- [x] **No panic hook** — terminal left in raw mode on panic; user must manually `reset`. Install a panic hook at the top of `main()` that calls `disable_raw_mode()` + `LeaveAlternateScreen`. (`crates/core/src/app/mod.rs:629-702`)
-
-- [x] **No Ctrl+C / SIGINT handler** — the only exit path is `'q'`. Ctrl+C in raw mode falls through unhandled. On Unix, `kill` terminates without cleanup. (`crates/core/src/app/handle_key.rs:209-234`)
-
-- [ ] **`core` depends on `registry` crate** — violates the layered architecture; core must not know about plugin registry. Invert the dependency or extract an interface. (`crates/core/Cargo.toml`)
-
 ## High — design problems, resource leaks, unenforced quality
 
 - [ ] **Plugin crash silently tolerated** — no watchdog, no auto-restart, no user-visible error. `send()` and `drain_responses()` silently return when the child process has exited. (`crates/ipc/src/host.rs:117-141`)
@@ -22,9 +16,7 @@ Resolved items moved to [audit-history.md](audit-history.md).
 
 - [ ] **No `deny.toml` or clippy lint config** — no automated enforcement of `unsafe` usage, duplicate dependencies, or advisory checks.
 
-- [x] **Scraper crate version drift** — `0.2.5` vs workspace `0.2.7`. (`crates/plugins/radio-streaming-player/scraper/Cargo.toml:3`) — fixed in v0.2.9
-
-- [ ] **`serde` duplicated across workspace** — declared both as path dep and workspace dep in multiple crates.
+- [ ] **`serde` duplicated across workspace** — declared independently (with identical version+features) in 8+ crates instead of using a workspace dep.
 
 ## Medium — latent bugs & performance issues
 
@@ -80,7 +72,7 @@ Resolved items moved to [audit-history.md](audit-history.md).
 
 - [ ] **Plugin shutdown timeout too short (1s)** — may force-kill plugin mid-write. Increase grace period. (`crates/ipc/src/host.rs:145-149`)
 
-- [ ] **`Event::UserUpdated` processed but never emitted** — dead code in event dispatch. (`crates/core/src/app/app_state.rs:45`)
+- [ ] **`Event::UserUpdated` handler is a no-op** — event IS emitted on sign-out/sign-in, but the handler in `process_events()` (`app_state.rs:45`) does nothing because the actual notification is done via a direct call to `on_user_update_all()`. Dead code in event dispatch.
 
 - [ ] **`poll()` sets `dirty=true` even on config parse failure** — stale config re-applied, wasting a render frame. (`crates/core/src/config.rs:130-139`)
 
@@ -91,8 +83,6 @@ Resolved items moved to [audit-history.md](audit-history.md).
 - [ ] **30+ `unwrap()` in production paths** — audit each for provable safety; replace with `?` or `expect("message")` where not provable. (various)
 
 - [ ] **Raw pointer casts in radio player `unsafe` blocks** — `Mpv` FFI uses raw function pointers cast from `libloading::Symbol`. Add safety justification comments. (`crates/plugins/radio-streaming-player/src/player.rs`)
-
-- [ ] **`dbg!()` calls remain in production code** — remove before release. (various)
 
 - [ ] **`to_string_lossy()` without fallback** — replaces invalid UTF-8 silently. Consider logging the path on error. (various)
 
@@ -109,5 +99,3 @@ Resolved items moved to [audit-history.md](audit-history.md).
 - [ ] **`query.to_lowercase()` re-allocated per `filtered_items()` call** — called 2-3× per frame when palette open. Cache lowered query. (`crates/core/src/app/palette_widget.rs:40`)
 
 - [ ] **EventBus subscriber scan O(n) on emit** — no current subscribers, but worth noting for future. (`crates/core/src/event.rs:64-66`)
-
-- [ ] **Formatting inconsistencies** — trailing whitespace in `radio-player/src/main.rs:93`, `scraper/src/main.rs:454`. Run `cargo fmt`. (various)

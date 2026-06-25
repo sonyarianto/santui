@@ -28,6 +28,10 @@ Items from the [architecture audit](audit.md) that have been fixed.
 
 - [x] **Unbounded EventBus** (`crates/core/src/event.rs`) — switched internal storage to `VecDeque` with a 1024 cap; oldest event dropped when at capacity
 
+- [x] **`core` depends on `registry` crate** (`crates/core/Cargo.toml`) — `santui-registry` dependency removed; types inlined locally in commit `0d6b5d6`
+
+- [x] **Scraper crate version drift** (`crates/plugins/radio-streaming-player/scraper/Cargo.toml`) — version synced to workspace `0.2.9`; resolved in v0.2.9
+
 ## Medium — latent bugs & resource issues
 
 - [x] **IPC blocks main thread up to 5 seconds** (`crates/ipc/src/host.rs:130`) — `send_recv` now non-blocking; all calls use `send` + `drain_responses`; the UI never waits for a plugin response
@@ -65,3 +69,7 @@ Items from the [architecture audit](audit.md) that have been fixed.
 - [x] **Platform manifest filenames hardcoded via cfg** — `manifest_filename()` now uses `std::env::consts::{OS, ARCH}` instead of `cfg!` chains
 
 - [x] **`Plugin` trait doesn't require `Send`** — `trait Plugin: Send`; all `Box<dyn Plugin>` → `Box<dyn Plugin + Send>`; `IpcPluginHost` and `MockPlugin` are already Send
+
+- [x] **`dbg!()` calls remain in production code** — zero `dbg!()` calls found across the workspace; all removed
+
+- [x] **Formatting inconsistencies** — trailing whitespace cleaned up; `cargo fmt` enforced via pre-commit hook
