@@ -25,6 +25,7 @@ impl App {
                 if let Some(ref mut reg) = self.registry {
                     let dev = std::env::var("SANTUI_DEV").as_deref() == Ok("1");
                     if dev {
+                        reg.set_dev_mode(true);
                         let path = std::env::var("SANTUI_DEV_MANIFEST")
                             .map(std::path::PathBuf::from)
                             .unwrap_or_else(|_| std::path::PathBuf::from("plugins.json"));
@@ -311,6 +312,7 @@ impl App {
         let url = plugin.download_url.clone();
         let sha256 = plugin.sha256.clone();
         let dest = self.plugins_dir.join(plugin_filename(&id));
+        let dev_mode = self.registry.as_ref().map(|r| r.dev_mode).unwrap_or(false);
 
         let (tx, rx) = mpsc::channel();
         self.download_rx = Some(rx);
@@ -326,10 +328,16 @@ impl App {
                     log::warn!("failed to create plugin download directory: {e}");
                 }
             }
-            let result =
+            let result = if dev_mode {
+                let src = std::path::Path::new(&url);
+                std::fs::copy(src, &dest).map(|_| ()).map_err(|e| {
+                    format!("Failed to copy plugin binary from {}: {e}", src.display())
+                })
+            } else {
                 santui_registry::download_plugin(&url, &sha256, &dest, &|downloaded, total| {
                     let _ = tx.send(DownloadEvent::Progress(downloaded, total));
-                });
+                })
+            };
             match result {
                 Ok(()) => {
                     let _ = tx.send(DownloadEvent::Done);

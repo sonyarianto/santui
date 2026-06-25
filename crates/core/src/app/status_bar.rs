@@ -77,9 +77,7 @@ impl StatusBar<'_> {
             spans.push(Span::styled("ctrl+p", key));
             spans.push(Span::styled(" commands • ", dim));
             spans.push(Span::styled("esc", key));
-            spans.push(Span::styled(" back • ", dim));
-            spans.push(Span::styled("q", key));
-            spans.push(Span::styled(" quit", dim));
+            spans.push(Span::styled(" back", dim));
             Line::from(spans)
         } else {
             Line::from(vec![
