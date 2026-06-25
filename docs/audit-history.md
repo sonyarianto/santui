@@ -64,6 +64,8 @@ Items from the [architecture audit](audit.md) that have been fixed.
 
 - [x] **Plugin child process leaks on failed `kill()`** (`crates/ipc/src/host.rs:153-161`) — `kill()` now calls `try_wait()` first, logs errors from `kill()`/`wait()`, and safely handles zombies; `reload_plugin()` shuts down old plugin before spawning new one to prevent overlapping orphaned processes
 
+- [x] **`serde` duplicated across workspace** — declared independently (with identical version+features) in 8+ crates instead of using a workspace dep. Moved both `serde` and `serde_json` to `[workspace.dependencies]`; all 9 crates now use `{ workspace = true }`. Template crate kept explicit deps for standalone use.
+
 ## Low — polish
 
 - [x] **No structured logging** — replaced all `eprintln!` with `log::error!`/`log::warn!`; `env_logger` initialized in all 3 binaries with default level `warn`; set `RUST_LOG=debug` for verbose output

@@ -9,7 +9,7 @@ repository = "https://github.com/sonyarianto/santui"
 [dependencies]
 ratatui = "0.30"
 crossterm = "0.29"
-serde = { version = "1", features = ["derive"] }
+serde = { workspace = true }
 toml = "0.8"
 log = { workspace = true }
 ctrlc = { version = "3.5", features = ["termination"] }

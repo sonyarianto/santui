@@ -12,8 +12,6 @@ Resolved items moved to [audit-history.md](audit-history.md).
 
 - [ ] **No `deny.toml` or clippy lint config** — no automated enforcement of `unsafe` usage, duplicate dependencies, or advisory checks.
 
-- [ ] **`serde` duplicated across workspace** — declared independently (with identical version+features) in 8+ crates instead of using a workspace dep.
-
 ## Medium — latent bugs & performance issues
 
 - [ ] **`status_hints()` allocates per frame** — returns owned `Vec<(String,String)>` cloned from cache every render tick (~8+ string allocs). Change return to `&[(String,String)]`. (`crates/ipc/src/host.rs:408-410`)

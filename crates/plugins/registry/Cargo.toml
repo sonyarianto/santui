@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 santui-ipc = { path = "../../ipc", version = "0.2.13", default-features = false }
 santui-registry = { path = "../../registry", version = "0.2.13" }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+serde = { workspace = true }
+serde_json = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
