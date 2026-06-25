@@ -320,7 +320,7 @@ impl App {
                         self.state.song_title = title.clone();
                         self.state.track_info = None;
                         let Some(tx) = self.tx_msg.clone() else {
-                            return;
+                            continue;
                         };
                         thread::spawn(move || {
                             if let Ok(Some(info)) = itunes::lookup(&title) {

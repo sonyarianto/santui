@@ -97,7 +97,7 @@ impl super::Santui {
                                     .file_stem()
                                     .and_then(|s| s.to_str())
                                     .map(|s| s.trim_end_matches(".exe"))
-                                    .is_some_and(|stem| stem == name)
+                                    .is_some_and(|stem| stem == id)
                             }) {
                                 let mut ctx = crate::plugin::PluginContext {
                                     theme: self.app_state.theme.clone(),
