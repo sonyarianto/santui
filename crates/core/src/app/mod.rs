@@ -546,70 +546,61 @@ impl Santui {
             });
         if let Some(idx) = theme_idx {
             self.select_theme(idx);
+        } else if let Some(theme_name) = &self.config_manager.config().theme {
+            log::warn!("[config] unknown theme '{theme_name}'");
         }
 
         // Apply custom color overrides.
         if let Some(custom) = &self.config_manager.config().custom_theme {
             let mut t = self.app_state.theme.clone();
+            macro_rules! apply_color {
+                ($field:ident, $v:expr, $name:literal) => {
+                    if let Some(c) = parse_hex($v) {
+                        t.$field = c;
+                    } else {
+                        log::warn!(
+                            "[config] invalid hex colour '{}' for custom_theme.{}",
+                            $v,
+                            $name
+                        );
+                    }
+                };
+            }
             if let Some(ref v) = custom.accent {
-                if let Some(c) = parse_hex(v) {
-                    t.accent = c;
-                }
+                apply_color!(accent, v, "accent");
             }
             if let Some(ref v) = custom.highlight {
-                if let Some(c) = parse_hex(v) {
-                    t.highlight = c;
-                }
+                apply_color!(highlight, v, "highlight");
             }
             if let Some(ref v) = custom.logo {
-                if let Some(c) = parse_hex(v) {
-                    t.logo = c;
-                }
+                apply_color!(logo, v, "logo");
             }
             if let Some(ref v) = custom.text {
-                if let Some(c) = parse_hex(v) {
-                    t.text = c;
-                }
+                apply_color!(text, v, "text");
             }
             if let Some(ref v) = custom.text_muted {
-                if let Some(c) = parse_hex(v) {
-                    t.text_muted = c;
-                }
+                apply_color!(text_muted, v, "text_muted");
             }
             if let Some(ref v) = custom.background {
-                if let Some(c) = parse_hex(v) {
-                    t.background = c;
-                }
+                apply_color!(background, v, "background");
             }
             if let Some(ref v) = custom.background_panel {
-                if let Some(c) = parse_hex(v) {
-                    t.background_panel = c;
-                }
+                apply_color!(background_panel, v, "background_panel");
             }
             if let Some(ref v) = custom.background_overlay {
-                if let Some(c) = parse_hex(v) {
-                    t.background_overlay = c;
-                }
+                apply_color!(background_overlay, v, "background_overlay");
             }
             if let Some(ref v) = custom.border {
-                if let Some(c) = parse_hex(v) {
-                    t.border = c;
-                }
+                apply_color!(border, v, "border");
             }
             if let Some(ref v) = custom.success {
-                if let Some(c) = parse_hex(v) {
-                    t.success = c;
-                }
+                apply_color!(success, v, "success");
             }
             if let Some(ref v) = custom.error {
-                if let Some(c) = parse_hex(v) {
-                    t.error = c;
-                }
+                apply_color!(error, v, "error");
             }
             if let Some(ref v) = custom.inverted_text {
-                if let Some(c) = parse_hex(v) {
-                    t.inverted_text = c;
-                }
+                apply_color!(inverted_text, v, "inverted_text");
             }
             self.event_bus.emit(crate::event::Event::ThemeChanged(t));
         }

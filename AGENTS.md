@@ -43,6 +43,7 @@ website/           — VitePress docs site
 - `cargo fmt` before commit; clippy must pass with `-D warnings`
 - Commit messages must be in English
 - **Refactoring / non-trivial changes**: work on a feature branch, push for review, then merge to `main`
+- **Semantic correctness**: before/after each edit, read the full surrounding function to ensure variable names, types, and logic still make sense. The compiler catches type errors but NOT wrong variable names (e.g. `name` vs `id`) or wrong control flow (e.g. `return` vs `continue`). Re-read the diff yourself before staging.
 
 ## Website
 

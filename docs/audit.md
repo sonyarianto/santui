@@ -36,7 +36,7 @@ Resolved items moved to [audit-history.md](audit-history.md).
 
 - [ ] **Radio DB connection opened per `load()`** — `database::open()` re-creates SQLite connection + runs migrations on every reload. Keep connection alive. (`crates/plugins/radio-streaming-player/src/database.rs:37-71`)
 
-- [ ] **Config invalid field values silently ignored** — invalid hex colours, unknown theme names accepted without feedback. Log warnings. (`crates/core/src/app/mod.rs:555-615`)
+
 
 - [ ] **Plugin shutdown timeout too short (1s)** — may force-kill plugin mid-write. Increase grace period. (`crates/ipc/src/host.rs:145-149`)
 
