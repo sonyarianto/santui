@@ -10,7 +10,7 @@ use std::sync::mpsc;
 use std::thread;
 
 use player::Mpv;
-use santui_ipc::protocol::{Area, HostMsg, IpcKey, PluginMsg, RenderCmd, ThemeData, UserData};
+use santui_ipc::protocol::{Area, HostMsg, IpcKey, RenderCmd, ThemeData, UserData};
 
 enum MpvMsg {
     Metadata(String),
@@ -385,23 +385,23 @@ impl App {
         ]
     }
 
-    fn render(&mut self) -> Vec<RenderCmd> {
-        if let Some(ref err) = self.init_error {
-            return vec![RenderCmd::Text {
-                x: 0,
-                y: 0,
-                text: format!("Failed to load libmpv: {err}"),
-                fg: Some(self.theme.error),
-                bg: None,
-                bold: false,
-            }];
-        }
+    fn render(&mut self) -> &[RenderCmd] {
         if self.dirty || self.cached_commands.is_empty() {
-            self.cached_commands =
-                ui::render_ui(&self.state, &self.theme, self.area.w, self.area.h);
+            self.cached_commands = if let Some(ref err) = self.init_error {
+                vec![RenderCmd::Text {
+                    x: 0,
+                    y: 0,
+                    text: format!("Failed to load libmpv: {err}"),
+                    fg: Some(self.theme.error),
+                    bg: None,
+                    bold: false,
+                }]
+            } else {
+                ui::render_ui(&self.state, &self.theme, self.area.w, self.area.h)
+            };
             self.dirty = false;
         }
-        self.cached_commands.clone()
+        &self.cached_commands
     }
 }
 
@@ -413,13 +413,15 @@ fn palette_commands() -> Vec<(String, String)> {
 }
 
 fn respond(app: &mut App) {
-    let msg = PluginMsg {
-        commands: app.render(),
-        hints: app.status_hints(),
-        palette_commands: palette_commands(),
-        request: None,
-    };
-    let json = serde_json::to_string(&msg).expect("PluginMsg serialization");
+    let commands_val = serde_json::to_value(app.render()).expect("commands");
+    let hints = app.status_hints();
+    let palette = palette_commands();
+    let json = serde_json::json!({
+        "commands": commands_val,
+        "hints": hints,
+        "palette_commands": palette,
+    });
+    let json = serde_json::to_string(&json).expect("PluginMsg serialization");
     let mut out = std::io::stdout().lock();
     let _ = writeln!(out, "{json}");
     let _ = out.flush();

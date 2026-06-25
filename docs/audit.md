@@ -18,8 +18,6 @@ Resolved items moved to [audit-history.md](audit-history.md).
 
 - [ ] **IPC round-trip every tick** — `send(Tick)` + `drain_responses()` every frame even when plugin has no new data. Skip send when plugin is idle; use dirty flag. (`crates/ipc/src/host.rs:350-351`)
 
-- [ ] **Radio plugin clones `cached_commands` on every render** — entire `Vec<RenderCmd>` heap-cloned, then immediately serialized. Return reference or `mem::take`. (`crates/plugins/radio-streaming-player/src/main.rs:399`)
-
 - [ ] **StatusBar `Vec<Span>` built from scratch per frame** — 8-14 string allocations every render tick from hint keys/descriptions. Memoize or pre-compute. (`crates/core/src/app/status_bar.rs:62,109`)
 
 - [ ] **Palette `filtered_items()` + grouping rebuilt every frame** — 50+ small heap allocations when palette is open. Memoize; only recompute on query change. (`crates/core/src/app/palette_widget.rs:118-143`)
