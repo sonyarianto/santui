@@ -23,6 +23,8 @@ features:
     details: Plugins run as separate processes with JSON IPC. Hot-reloadable, crash-isolated, and easy to write in Rust.
 ---
 
+![Santui screenshot](/santui_1.png)
+
 ## Install
 
 ### Windows

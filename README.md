@@ -9,6 +9,8 @@ Your terminal home base.
 
 Santui is a keyboard-driven TUI app that lives in your terminal. Think of it as a **launcher for plugins** — the core is lightweight, and everything extra comes through the Plugin Registry.
 
+![Santui screenshot](santui_1.png)
+
 ## What's built in
 
 Out of the box, Santui gives you:
