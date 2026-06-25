@@ -149,7 +149,7 @@ impl PaletteController {
     /// Render the palette overlay if it is open.
     #[allow(clippy::too_many_arguments)]
     pub fn render(
-        &self,
+        &mut self,
         f: &mut Frame,
         area: Rect,
         theme: &Theme,
@@ -158,6 +158,16 @@ impl PaletteController {
         dynamic_items: &[(String, String, String)],
         cmds: &[(usize, usize, PluginCmdItem)],
     ) {
+        if self.filtered_dirty {
+            self.cached_filtered = self
+                .palette
+                .as_ref()
+                .map(|p| p.filtered_items(builtin_items, dynamic_items, cmds))
+                .unwrap_or_default();
+            self.cached_groups =
+                build_groups(&self.cached_filtered, builtin_items, dynamic_items, cmds);
+            self.filtered_dirty = false;
+        }
         if let Some(ref pal) = self.palette {
             pal.render_with_groups(
                 f,
