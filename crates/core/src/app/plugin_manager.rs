@@ -169,9 +169,26 @@ impl PluginManager {
         }
     }
 
-    pub fn on_blur(&mut self, idx: usize) {
-        if idx < self.plugins.len() {
+    /// Shut down an IPC plugin and remove it from the managed set.
+    ///
+    /// In-process plugins (no binary path) are *not* removed — only the active
+    /// index is cleared so the home screen regains focus.
+    pub fn shutdown_and_remove(&mut self, idx: usize) {
+        if idx >= self.plugins.len() {
+            return;
+        }
+
+        // Only remove out-of-process plugins; keep in-process plugins loaded.
+        if self.plugins[idx].binary_path().is_some() {
             self.plugins[idx].on_blur();
+            self.plugins[idx].shutdown();
+            self.plugins.remove(idx);
+            self.mtimes.remove(idx);
+            self.refresh_commands();
+        }
+
+        if self.active_idx == Some(idx) {
+            self.active_idx = None;
         }
     }
 

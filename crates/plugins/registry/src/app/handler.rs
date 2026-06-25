@@ -322,7 +322,9 @@ impl App {
 
         std::thread::spawn(move || {
             if let Some(parent) = dest.parent() {
-                let _ = std::fs::create_dir_all(parent);
+                if let Err(e) = std::fs::create_dir_all(parent) {
+                    log::warn!("failed to create plugin download directory: {e}");
+                }
             }
             let result =
                 santui_registry::download_plugin(&url, &sha256, &dest, &|downloaded, total| {

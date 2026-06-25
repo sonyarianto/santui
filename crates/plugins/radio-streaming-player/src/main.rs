@@ -98,10 +98,18 @@ impl App {
             log::warn!("  ⚠️  {w}");
         }
 
-        let _ = mpv.observe_property(0, "metadata");
-        let _ = mpv.observe_property(1, "media-title");
-        let _ = mpv.observe_property(2, "volume");
-        let _ = mpv.set_volume(self.state.volume);
+        if let Err(e) = mpv.observe_property(0, "metadata") {
+            log::warn!("mpv observe_property(metadata) failed: {e}");
+        }
+        if let Err(e) = mpv.observe_property(1, "media-title") {
+            log::warn!("mpv observe_property(media-title) failed: {e}");
+        }
+        if let Err(e) = mpv.observe_property(2, "volume") {
+            log::warn!("mpv observe_property(volume) failed: {e}");
+        }
+        if let Err(e) = mpv.set_volume(self.state.volume) {
+            log::warn!("mpv set_volume failed: {e}");
+        }
 
         let (tx_msg, rx_msg) = mpsc::channel::<MpvMsg>();
         let (tx_cmd, rx_cmd) = mpsc::channel::<MpvCmd>();
@@ -159,16 +167,22 @@ impl App {
                 while let Ok(cmd) = rx_cmd.try_recv() {
                     match cmd {
                         MpvCmd::LoadUrl(url) => {
-                            let _ = mpv.load_url(&url);
+                            if let Err(e) = mpv.load_url(&url) {
+                                log::warn!("mpv load_url failed: {e}");
+                            }
                             if let Some(title) = mpv.metadata_title().ok().flatten() {
                                 let _ = tx_msg_mpv.send(MpvMsg::Metadata(title));
                             }
                         }
                         MpvCmd::Stop => {
-                            let _ = mpv.stop();
+                            if let Err(e) = mpv.stop() {
+                                log::warn!("mpv stop failed: {e}");
+                            }
                         }
                         MpvCmd::SetVolume(v) => {
-                            let _ = mpv.set_volume(v);
+                            if let Err(e) = mpv.set_volume(v) {
+                                log::warn!("mpv set_volume failed: {e}");
+                            }
                         }
                         MpvCmd::Quit => {
                             mpv.destroy();
@@ -427,7 +441,10 @@ fn respond(app: &mut App) {
         app.cached_json = Some(serde_json::to_string(&json).expect("PluginMsg serialization"));
         app.dirty = false;
     }
-    let json = app.cached_json.as_deref().unwrap();
+    let json = app
+        .cached_json
+        .as_deref()
+        .expect("cached_json populated if dirty or None");
     let mut out = std::io::stdout().lock();
     let _ = writeln!(out, "{json}");
     let _ = out.flush();

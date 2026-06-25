@@ -37,7 +37,9 @@ fn migrate(conn: &Connection) -> Result<(), rusqlite::Error> {
 pub fn open() -> Result<Connection, rusqlite::Error> {
     let path = db_path();
     if let Some(parent) = path.parent() {
-        let _ = std::fs::create_dir_all(parent);
+        if let Err(e) = std::fs::create_dir_all(parent) {
+            log::warn!("failed to create DB parent directory: {e}");
+        }
     }
     if !path.exists() {
         if let Some(bundled) = std::env::current_exe()
@@ -48,7 +50,9 @@ pub fn open() -> Result<Connection, rusqlite::Error> {
             })
             .filter(|p| p.exists())
         {
-            let _ = std::fs::copy(&bundled, &path);
+            if let Err(e) = std::fs::copy(&bundled, &path) {
+                log::warn!("failed to copy bundled station DB: {e}");
+            }
         }
     }
     let conn = Connection::open(&path)?;

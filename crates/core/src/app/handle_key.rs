@@ -284,11 +284,14 @@ impl super::Santui {
             },
             Some(idx) => match key.code {
                 KeyCode::Esc => {
-                    self.plugin_manager.on_blur(idx);
-                    self.plugin_manager.set_active(None);
+                    self.plugin_manager.shutdown_and_remove(idx);
                     self.app_state.home_selected = None;
                 }
-                KeyCode::Char('q') => self.app_state.running = false,
+                KeyCode::Char('q') => {
+                    // Instead of quitting, let the plugin handle 'q'. User can
+                    // still quit via Ctrl+C or by pressing Esc then q.
+                    self.plugin_manager.handle_key(idx, key);
+                }
                 KeyCode::Char('?') => self.app_state.show_about = true,
                 _ => {
                     self.plugin_manager.handle_key(idx, key);

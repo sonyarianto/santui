@@ -203,7 +203,10 @@ impl Mpv {
     }
 
     pub fn command(&self, args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
-        let cstrs: Vec<CString> = args.iter().map(|a| CString::new(*a).unwrap()).collect();
+        let cstrs: Vec<CString> = args
+            .iter()
+            .map(|a| CString::new(*a))
+            .collect::<Result<Vec<_>, _>>()?;
         let mut ptrs: Vec<*const i8> = cstrs.iter().map(|c| c.as_ptr()).collect();
         ptrs.push(std::ptr::null());
         to_rc(

@@ -28,9 +28,7 @@ pub trait Plugin: Send {
     fn tick(&mut self) {}
     fn on_focus(&mut self) {}
     fn on_blur(&mut self) {}
-    fn on_theme_change(&mut self, theme: &Theme) {
-        let _ = theme;
-    }
+    fn on_theme_change(&mut self, _theme: &Theme) {}
     fn on_user_update(&mut self, _user: Option<&User>) {}
     fn status_hints(&self) -> Vec<(String, String)> {
         vec![]
