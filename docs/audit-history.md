@@ -10,6 +10,8 @@ Items from the [architecture audit](audit.md) that have been fixed.
 
 - [x] **No panic hook** (`crates/core/src/app/mod.rs`) — added `TerminalGuard` Drop guard inside `run()` that calls `disable_raw_mode()` + `LeaveAlternateScreen` + `Show` on any exit path (normal, error, or panic)
 
+- [x] **No Ctrl+C / SIGINT handler** (`crates/core/src/app/handle_key.rs`, `crates/core/src/app/mod.rs`) — two-layer fix: (1) keyboard `Ctrl+C` caught as a raw-mode key event at the top of `handle_key()`, (2) OS-level signal handler via `ctrlc` crate (with `termination` feature covering SIGTERM/SIGHUP) sets an `AtomicBool` flag checked each frame
+
 ## Critical — crash or corrupt state
 
 - [x] **Mutex poisoning in auth** (`crates/auth/src/lib.rs`) — replaced `.lock().unwrap()` with `.lock().unwrap_or_else(|e| e.into_inner())` on all 4 call sites to recover from poisoning

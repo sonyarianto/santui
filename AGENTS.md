@@ -41,6 +41,7 @@ website/           — VitePress docs site
 - `ratatui` for rendering; `Theme` semantic colors over hardcoded `Color::*`
 - `impl Default` for any type with a `new()` constructor
 - `cargo fmt` before commit; clippy must pass with `-D warnings`
+- Commit messages must be in English
 - **Refactoring / non-trivial changes**: work on a feature branch, push for review, then merge to `main`
 
 ## Website

@@ -8,7 +8,7 @@ Resolved items moved to [audit-history.md](audit-history.md).
 
 - [x] **No panic hook** — terminal left in raw mode on panic; user must manually `reset`. Install a panic hook at the top of `main()` that calls `disable_raw_mode()` + `LeaveAlternateScreen`. (`crates/core/src/app/mod.rs:629-702`)
 
-- [ ] **No Ctrl+C / SIGINT handler** — the only exit path is `'q'`. Ctrl+C in raw mode falls through unhandled. On Unix, `kill` terminates without cleanup. (`crates/core/src/app/handle_key.rs:209-234`)
+- [x] **No Ctrl+C / SIGINT handler** — the only exit path is `'q'`. Ctrl+C in raw mode falls through unhandled. On Unix, `kill` terminates without cleanup. (`crates/core/src/app/handle_key.rs:209-234`)
 
 - [ ] **`core` depends on `registry` crate** — violates the layered architecture; core must not know about plugin registry. Invert the dependency or extract an interface. (`crates/core/Cargo.toml`)
 

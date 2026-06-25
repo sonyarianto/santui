@@ -21,10 +21,14 @@ use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::Color;
 use ratatui::Frame;
 use ratatui::Terminal;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// Set by the `ctrlc` signal handler when SIGINT/SIGTERM/SIGHUP is received.
+static SIGINT: AtomicBool = AtomicBool::new(false);
 
 /// Identifier for a built-in palette command.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -618,6 +622,13 @@ impl Santui {
     }
 
     pub fn run(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        // Reset and install OS-level signal handler (SIGINT/SIGTERM/SIGHUP on Unix,
+        // CTRL_C_EVENT/CTRL_BREAK_EVENT on Windows). In raw mode, keyboard Ctrl+C
+        // passes through as a key event (handled in handle_key), so this catches
+        // external signals like `kill` or system shutdown.
+        SIGINT.store(false, Ordering::SeqCst);
+        ctrlc::set_handler(|| SIGINT.store(true, Ordering::SeqCst))?;
+
         enable_raw_mode()?;
         let mut stdout = std::io::stdout();
         execute!(stdout, crossterm::terminal::EnterAlternateScreen)?;
@@ -654,6 +665,11 @@ impl Santui {
         self.plugin_manager.read_registry_installed();
 
         while self.app_state.running {
+            // Check for external signals (SIGINT/SIGTERM via ctrlc handler).
+            if SIGINT.load(Ordering::SeqCst) {
+                self.app_state.running = false;
+                break;
+            }
             self.plugin_manager.tick_all();
 
             // Poll for config changes (hot-reload).

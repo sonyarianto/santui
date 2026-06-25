@@ -1,7 +1,13 @@
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 impl super::Santui {
     pub(super) fn handle_key(&mut self, key: KeyEvent) {
+        // Ctrl+C quits immediately from any screen, even in raw mode where
+        // it arrives as a key event rather than a signal.
+        if matches!(key.code, KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL)) {
+            self.app_state.running = false;
+            return;
+        }
         if self.palette_controller.is_open() {
             return self.handle_key_palette(key);
         }
