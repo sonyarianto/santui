@@ -1,5 +1,5 @@
 use crate::state::{PlayState, RadioState};
-use santui_ipc::protocol::{RenderCmd, ThemeData};
+use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData};
 use santui_ipc::ui;
 
 pub fn render_ui(
@@ -49,78 +49,64 @@ pub fn render_ui(
     ui::draw_panel(&mut cmds, theme, 0, 0, area_w, stations_h, "Stations");
 
     let inner_x = 2u16;
-    let inner_w = area_w.saturating_sub(3);
+    let inner_w = area_w.saturating_sub(3) as usize;
     let search_extra = if state.search_mode { 2 } else { 0 };
-    let max_visible = (stations_h.saturating_sub(4 + search_extra)) as usize;
+    let table_top = 2u16;
+    let header_h = 1u16;
+    let table_avail = stations_h.saturating_sub(table_top + header_h + search_extra);
+    let max_visible = table_avail as usize;
 
     let scroll = state.scroll.min(state.filtered.len().saturating_sub(1));
+    let visible_count = max_visible.min(state.filtered.len().saturating_sub(scroll));
 
-    for (vis_idx, &station_idx) in state
-        .filtered
-        .iter()
-        .enumerate()
-        .skip(scroll)
-        .take(max_visible)
-    {
-        let item_y = 2u16 + (vis_idx - scroll) as u16;
+    // Column widths
+    let name_w = (inner_w * 3 / 4).max(10);
+    let country_w = inner_w.saturating_sub(name_w);
+
+    let mut rows: Vec<Vec<String>> = Vec::with_capacity(visible_count);
+    for i in 0..visible_count {
+        let station_idx = state.filtered[scroll + i];
         let station = &state.stations[station_idx];
-        let is_selected = vis_idx == state.selected;
         let is_current = state.current_station == Some(station_idx);
-
-        let icon = if is_current { " ♫ " } else { "   " };
-        let text = format!("{}{}", icon, station.name);
-        let max_len = inner_w as usize;
-        let display = if text.len() > max_len && max_len > 0 {
-            let mut t = text
-                .chars()
-                .take(max_len.saturating_sub(1))
-                .collect::<String>();
-            t.push('…');
-            t
+        let name = if is_current {
+            ui::truncate(&format!("♪ {}", station.name), name_w)
         } else {
-            text
+            ui::truncate(&station.name, name_w)
         };
-
-        let (fg, bg, bold) = if is_selected {
-            (Some([0u8, 0, 0]), Some(theme.highlight), false)
-        } else if is_current {
-            (Some(theme.accent), Some(theme.background_panel), true)
-        } else {
-            (Some(theme.text), Some(theme.background_panel), false)
-        };
-
-        cmds.push(RenderCmd::Text {
-            x: inner_x,
-            y: item_y,
-            text: display,
-            fg,
-            bg,
-            bold,
-        });
+        rows.push(vec![name, ui::truncate(&station.country, country_w)]);
     }
 
-    // More stations indicator (hidden during search)
-    if !state.search_mode {
-        let scroll_indicator_y = stations_h.saturating_sub(2);
-        if scroll + max_visible < state.filtered.len() {
-            let more = state.filtered.len() - scroll - max_visible;
-            let label = format!("{more} more");
-            let max_w = inner_w as usize;
-            let display = if label.len() > max_w {
-                format!("{}…", more)
-            } else {
-                label
-            };
-            cmds.push(RenderCmd::Text {
-                x: inner_x,
-                y: scroll_indicator_y,
-                text: display,
-                fg: Some(theme.text_muted),
-                bg: Some(theme.background_panel),
-                bold: false,
-            });
-        }
-    }
+    let vis_selected = if state.selected >= scroll && state.selected < scroll + visible_count {
+        Some(state.selected - scroll)
+    } else {
+        None
+    };
+
+    cmds.push(RenderCmd::Table {
+        x: inner_x,
+        y: table_top,
+        w: inner_w as u16,
+        h: (visible_count + 1).max(1) as u16,
+        header: vec!["Name".into(), "Country".into()],
+        header_style: TextStyle {
+            fg: Some(theme.text_muted),
+            bg: Some(theme.background_panel),
+            bold: true,
+        },
+        rows,
+        column_widths: vec![name_w as u16, country_w as u16],
+        selected: vis_selected,
+        style: TextStyle {
+            fg: Some(theme.text),
+            bg: Some(theme.background_panel),
+            bold: false,
+        },
+        highlight_style: TextStyle {
+            fg: Some(theme.inverted_text),
+            bg: Some(theme.highlight),
+            bold: true,
+        },
+    });
 
     // ---- Search bar overlay ----
     if state.search_mode {
