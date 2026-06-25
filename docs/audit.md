@@ -24,8 +24,6 @@ Resolved items moved to [audit-history.md](audit-history.md).
 
 - [ ] **Radio `text_at()` string allocation per text element** — 15-30 small String allocs per radio frame. (`crates/plugins/radio-streaming-player/src/ui.rs:57-63`)
 
-- [ ] **Theme picker `list_lines` + `header_lines` rebuilt per frame** — ~40-80 allocs when picker is open. Memoize. (`crates/core/src/app/theme_manager.rs:206,221`)
-
 - [ ] **Radio DB connection opened per `load()`** — `database::open()` re-creates SQLite connection + runs migrations on every reload. Keep connection alive. (`crates/plugins/radio-streaming-player/src/database.rs:37-71`)
 
 

@@ -90,21 +90,20 @@ impl ThemeManager {
 
     /// Return the indices of themes matching the current picker query.
     pub(super) fn filtered(&mut self) -> Vec<usize> {
-        if self.cached_filtered_query.as_deref() == Some(self.picker_query.as_str()) {
-            return self.cached_filtered.clone();
+        if self.cached_filtered_query.as_deref() != Some(self.picker_query.as_str()) {
+            self.cached_filtered = if self.picker_query.is_empty() {
+                (0..self.themes.len()).collect()
+            } else {
+                let q = self.picker_query.to_lowercase();
+                self.themes
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, (name, _))| name.to_lowercase().contains(&q))
+                    .map(|(i, _)| i)
+                    .collect()
+            };
+            self.cached_filtered_query = Some(self.picker_query.clone());
         }
-        self.cached_filtered = if self.picker_query.is_empty() {
-            (0..self.themes.len()).collect()
-        } else {
-            let q = self.picker_query.to_lowercase();
-            self.themes
-                .iter()
-                .enumerate()
-                .filter(|(_, (name, _))| name.to_lowercase().contains(&q))
-                .map(|(i, _)| i)
-                .collect()
-        };
-        self.cached_filtered_query = Some(self.picker_query.clone());
         self.cached_filtered.clone()
     }
 
@@ -230,7 +229,7 @@ impl ThemeManager {
         };
         f.render_widget(ratatui::widgets::Paragraph::new(header_lines), header_area);
 
-        let mut list_lines = Vec::new();
+        let mut list_lines = Vec::with_capacity(filtered.len() + 1);
 
         if no_results {
             list_lines.push(ratatui::text::Line::from(ratatui::text::Span::styled(
@@ -259,11 +258,12 @@ impl ThemeManager {
             } else if current {
                 style = style.add_modifier(ratatui::style::Modifier::BOLD);
             }
-            let display = format!("{prefix}{name}");
-            list_lines.push(ratatui::text::Line::from(ratatui::text::Span::styled(
-                format!("{:<width$}", display, width = inner_w as usize),
-                style,
-            )));
+            let pad = inner_w as usize - prefix.len() - name.len();
+            list_lines.push(ratatui::text::Line::from(vec![
+                ratatui::text::Span::styled(prefix, style),
+                ratatui::text::Span::styled(name.as_str(), style),
+                ratatui::text::Span::styled(" ".repeat(pad), style),
+            ]));
         }
 
         let list_top = pal_area.y + super::PAD_T + super::HEADER_H;
