@@ -4,6 +4,7 @@
 [![CI](https://github.com/sonyarianto/santui/actions/workflows/ci.yml/badge.svg)](https://github.com/sonyarianto/santui/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/santui)](https://www.npmjs.com/package/santui)
 [![Downloads](https://img.shields.io/npm/dm/santui)](https://www.npmjs.com/package/santui)
+[![Sponsor](https://img.shields.io/badge/sponsor-30363D?logo=GitHub-Sponsors&logoColor=#EA4AAA)](https://github.com/sponsors/sonyarianto)
 
 Your terminal home base.
 
