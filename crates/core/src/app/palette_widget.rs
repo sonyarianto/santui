@@ -119,9 +119,9 @@ impl PaletteWidget {
         }
     }
 
-    /// Render the command-palette overlay.
+    /// Render the command-palette overlay with pre-computed groups.
     #[allow(clippy::too_many_arguments)]
-    pub(super) fn render(
+    pub(super) fn render_with_groups(
         &self,
         f: &mut Frame,
         content: Rect,
@@ -130,29 +130,9 @@ impl PaletteWidget {
         builtin_items: &[(super::BuiltinId, String, String)],
         dynamic_items: &[(String, String, String)],
         cmds: &[(usize, usize, PluginCmdItem)],
+        groups: &[(String, Vec<super::ItemIndex>)],
     ) {
-        let filtered = self.filtered_items(builtin_items, dynamic_items, cmds);
-
-        let mut current_cat = String::new();
-        let mut cat_items: Vec<super::ItemIndex> = Vec::new();
-        let mut groups: Vec<(String, Vec<super::ItemIndex>)> = Vec::new();
-        for &idx in &filtered {
-            let cat = match idx {
-                super::ItemIndex::Builtin(i) => builtin_items[i].1.clone(),
-                super::ItemIndex::Dynamic(i) => dynamic_items[i].0.clone(),
-                super::ItemIndex::PluginCmd(i) => cmds[i].2.category.clone(),
-            };
-            if cat != current_cat && !cat_items.is_empty() {
-                groups.push((current_cat.clone(), std::mem::take(&mut cat_items)));
-            }
-            current_cat = cat;
-            cat_items.push(idx);
-        }
-        if !cat_items.is_empty() {
-            groups.push((current_cat, cat_items));
-        }
-
-        let no_results = !self.query.is_empty() && filtered.is_empty();
+        let no_results = !self.query.is_empty() && groups.is_empty();
         let pw = super::pal_w(content.width);
         let inner_w = pw.saturating_sub(super::PAD_L * 2);
 

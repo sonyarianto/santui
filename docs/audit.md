@@ -20,8 +20,6 @@ Resolved items moved to [audit-history.md](audit-history.md).
 
 - [ ] **StatusBar `Vec<Span>` built from scratch per frame** — 8-14 string allocations every render tick from hint keys/descriptions. Memoize or pre-compute. (`crates/core/src/app/status_bar.rs:62,109`)
 
-- [ ] **Palette `filtered_items()` + grouping rebuilt every frame** — 50+ small heap allocations when palette is open. Memoize; only recompute on query change. (`crates/core/src/app/palette_widget.rs:118-143`)
-
 
 
 - [ ] **Radio `" ".repeat(fill_w)` per row** — string allocation for each row in panel draw (~40 per frame). Use `Paragraph` with background style. (`crates/plugins/radio-streaming-player/src/ui.rs:30`)

@@ -6,12 +6,16 @@ use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::layout::Rect;
 use ratatui::Frame;
 
+type CategoryGroups = Vec<(String, Vec<ItemIndex>)>;
+
 /// Owns the command-palette overlay state and processes key events against
 /// it, returning actions for the caller to execute.
 pub(super) struct PaletteController {
     palette: Option<PaletteWidget>,
     /// Cached result of `filtered_items()` — recomputed only when query changes.
     cached_filtered: Vec<ItemIndex>,
+    /// Cached grouped items — recomputed together with `cached_filtered`.
+    cached_groups: CategoryGroups,
     /// True when `cached_filtered` is stale (query changed or palette opened).
     filtered_dirty: bool,
 }
@@ -26,6 +30,7 @@ impl PaletteController {
         Self {
             palette: None,
             cached_filtered: Vec::new(),
+            cached_groups: Vec::new(),
             filtered_dirty: true,
         }
     }
@@ -57,6 +62,8 @@ impl PaletteController {
                 .as_ref()
                 .map(|p| p.filtered_items(builtin_items, dynamic_items, cmds))
                 .unwrap_or_default();
+            self.cached_groups =
+                build_groups(&self.cached_filtered, builtin_items, dynamic_items, cmds);
             self.filtered_dirty = false;
         }
         let filtered = &self.cached_filtered;
@@ -152,7 +159,16 @@ impl PaletteController {
         cmds: &[(usize, usize, PluginCmdItem)],
     ) {
         if let Some(ref pal) = self.palette {
-            pal.render(f, area, theme, tick, builtin_items, dynamic_items, cmds);
+            pal.render_with_groups(
+                f,
+                area,
+                theme,
+                tick,
+                builtin_items,
+                dynamic_items,
+                cmds,
+                &self.cached_groups,
+            );
         }
     }
 }
@@ -161,4 +177,31 @@ impl Default for PaletteController {
     fn default() -> Self {
         Self::new()
     }
+}
+
+fn build_groups(
+    filtered: &[ItemIndex],
+    builtin_items: &[(BuiltinId, String, String)],
+    dynamic_items: &[(String, String, String)],
+    cmds: &[(usize, usize, PluginCmdItem)],
+) -> CategoryGroups {
+    let mut current_cat = String::new();
+    let mut cat_items: Vec<ItemIndex> = Vec::new();
+    let mut groups: CategoryGroups = Vec::new();
+    for &idx in filtered {
+        let cat = match idx {
+            ItemIndex::Builtin(i) => builtin_items[i].1.clone(),
+            ItemIndex::Dynamic(i) => dynamic_items[i].0.clone(),
+            ItemIndex::PluginCmd(i) => cmds[i].2.category.clone(),
+        };
+        if cat != current_cat && !cat_items.is_empty() {
+            groups.push((current_cat.clone(), std::mem::take(&mut cat_items)));
+        }
+        current_cat = cat;
+        cat_items.push(idx);
+    }
+    if !cat_items.is_empty() {
+        groups.push((current_cat, cat_items));
+    }
+    groups
 }
