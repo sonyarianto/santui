@@ -18,8 +18,6 @@ Resolved items moved to [audit-history.md](audit-history.md).
 
 - [ ] **IPC round-trip every tick** — `send(Tick)` + `drain_responses()` every frame even when plugin has no new data. Skip send when plugin is idle; use dirty flag. (`crates/ipc/src/host.rs:350-351`)
 
-- [ ] **StatusBar `Vec<Span>` built from scratch per frame** — 8-14 string allocations every render tick from hint keys/descriptions. Memoize or pre-compute. (`crates/core/src/app/status_bar.rs:62,109`)
-
 
 
 - [ ] **Radio `" ".repeat(fill_w)` per row** — string allocation for each row in panel draw (~40 per frame). Use `Paragraph` with background style. (`crates/plugins/radio-streaming-player/src/ui.rs:30`)

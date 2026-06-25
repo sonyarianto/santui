@@ -61,13 +61,15 @@ impl StatusBar<'_> {
         } else if self.about_open {
             Line::from(vec![Span::styled("esc", key), Span::styled(" close", dim)])
         } else if self.plugin_active {
-            let mut spans: Vec<Span> = Vec::new();
+            let cap = self.active_plugin_hints.len() * 3 + 6;
+            let mut spans: Vec<Span> = Vec::with_capacity(cap);
             for (i, (hint_key, hint_desc)) in self.active_plugin_hints.iter().enumerate() {
                 if i > 0 {
                     spans.push(Span::styled(" • ", dim));
                 }
-                spans.push(Span::styled(hint_key.clone(), key));
-                spans.push(Span::styled(format!(" {hint_desc}"), dim));
+                spans.push(Span::styled(hint_key.as_str(), key));
+                spans.push(Span::styled(" ", dim));
+                spans.push(Span::styled(hint_desc.as_str(), dim));
             }
             if !self.active_plugin_hints.is_empty() {
                 spans.push(Span::styled(" • ", dim));
@@ -116,7 +118,7 @@ impl StatusBar<'_> {
             .alignment(Alignment::Right);
             f.render_widget(msg_span, area);
         } else {
-            let mut right_spans: Vec<Span> = Vec::new();
+            let mut right_spans: Vec<Span> = Vec::with_capacity(3);
             if let Some(u) = self.user {
                 let provider_prefix = match u.provider.as_str() {
                     "github" => "github:",
