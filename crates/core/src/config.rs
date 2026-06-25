@@ -139,12 +139,12 @@ impl ConfigManager {
             Ok(cfg) => {
                 self.config = cfg;
                 self.error = None;
+                self.dirty = true;
             }
             Err(e) => {
                 self.error = Some(e);
             }
         }
-        self.dirty = true;
     }
 
     /// Acknowledge the dirty flag (call after applying changes).

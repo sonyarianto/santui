@@ -40,8 +40,6 @@ Resolved items moved to [audit-history.md](audit-history.md).
 
 - [ ] **`Event::UserUpdated` handler is a no-op** — event IS emitted on sign-out/sign-in, but the handler in `process_events()` (`app_state.rs:45`) does nothing because the actual notification is done via a direct call to `on_user_update_all()`. Dead code in event dispatch.
 
-- [ ] **`poll()` sets `dirty=true` even on config parse failure** — stale config re-applied, wasting a render frame. (`crates/core/src/config.rs:130-139`)
-
 ## Low — polish
 
 - [ ] **No security/capability model between plugins** — IPC plugins have full system access (filesystem, network, etc.). No sandboxing or permission system. Low priority because plugins are opt-in and typically trusted.
