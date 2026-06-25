@@ -50,6 +50,8 @@ pub struct IpcPluginHost {
     writer_thread: Option<thread::JoinHandle<()>>,
     /// Join handle for the background reader thread, joined on drop.
     reader_thread: Option<thread::JoinHandle<()>>,
+    /// Set to `true` when the plugin child process has exited unexpectedly.
+    crashed: bool,
 }
 
 impl IpcPluginHost {
@@ -85,6 +87,7 @@ impl IpcPluginHost {
             writer_low_tx: None,
             writer_thread: None,
             reader_thread: None,
+            crashed: false,
         }
     }
 
@@ -161,17 +164,23 @@ fn writer_loop(mut stdin: impl Write, high_rx: Receiver<String>, low_rx: Receive
 }
 
 impl IpcPluginHost {
-    fn enqueue(&self, tx: &Option<SyncSender<String>>, json: String) {
-        if let Some(ref tx) = tx {
-            let _ = tx.try_send(json);
-        }
-    }
-
     fn send(&mut self, msg: &HostMsg, priority: Priority) {
         let json = serde_json::to_string(msg).expect("HostMsg serialization");
-        match priority {
-            Priority::High => self.enqueue(&self.writer_high_tx, json),
-            Priority::Low => self.enqueue(&self.writer_low_tx, json),
+        let tx = match priority {
+            Priority::High => &self.writer_high_tx,
+            Priority::Low => &self.writer_low_tx,
+        };
+        let crashed = if let Some(ref tx) = tx {
+            tx.try_send(json).is_err()
+        } else {
+            false
+        };
+        if crashed {
+            self.crashed = true;
+            log::warn!(
+                "[santui] plugin `{}` crashed, channel disconnected",
+                self.id
+            );
         }
     }
 
@@ -179,11 +188,21 @@ impl IpcPluginHost {
     /// thread and keep only the latest cached state.
     fn drain_responses(&mut self) {
         if let Some(ref rx) = self.response_rx {
-            while let Ok(msg) = rx.try_recv() {
-                self.cached_commands = msg.commands;
-                self.cached_hints = msg.hints;
-                self.cached_palette_commands = msg.palette_commands;
-                self.pending_request = msg.request;
+            loop {
+                match rx.try_recv() {
+                    Ok(msg) => {
+                        self.cached_commands = msg.commands;
+                        self.cached_hints = msg.hints;
+                        self.cached_palette_commands = msg.palette_commands;
+                        self.pending_request = msg.request;
+                    }
+                    Err(mpsc::TryRecvError::Empty) => break,
+                    Err(mpsc::TryRecvError::Disconnected) => {
+                        // Reader thread exited — plugin process likely crashed.
+                        self.crashed = true;
+                        break;
+                    }
+                }
             }
         }
     }
@@ -278,6 +297,12 @@ impl Drop for IpcPluginHost {
     }
 }
 
+impl IpcPluginHost {
+    pub fn reset_before_spawn(&mut self) {
+        self.crashed = false;
+    }
+}
+
 fn spawn_binary_name(binary_base: &str) -> String {
     if cfg!(windows) && !binary_base.ends_with(".exe") {
         format!("{}.exe", binary_base)
@@ -288,6 +313,7 @@ fn spawn_binary_name(binary_base: &str) -> String {
 
 impl IpcPluginHost {
     fn spawn(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        self.reset_before_spawn();
         let exe_dir = std::env::current_exe()
             .ok()
             .and_then(|p| p.parent().map(|d| d.to_path_buf()));
@@ -460,6 +486,10 @@ impl Plugin for IpcPluginHost {
     /// Tick is non-blocking: send the message, then drain any pending
     /// responses without waiting.  This keeps the UI responsive even when
     /// a plugin is slow to process a tick.
+    fn is_alive(&self) -> bool {
+        !self.crashed
+    }
+
     fn tick(&mut self) {
         if let Ok((w, h)) = terminal::size() {
             let usable = Area {

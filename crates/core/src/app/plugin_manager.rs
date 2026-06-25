@@ -31,6 +31,8 @@ pub(crate) struct PluginManager {
     registry_mtime: Option<SystemTime>,
     /// Throttle: only stat plugin binaries every N frames.
     reload_skip: u32,
+    /// Names of plugins that have crashed since last check.
+    crashed_plugins: Vec<String>,
 }
 
 impl PluginManager {
@@ -45,6 +47,7 @@ impl PluginManager {
             data_dir: PathBuf::new(),
             registry_mtime: None,
             reload_skip: 0,
+            crashed_plugins: Vec::new(),
         }
     }
 
@@ -94,9 +97,17 @@ impl PluginManager {
     }
 
     pub fn tick_all(&mut self) {
+        self.crashed_plugins.clear();
         for p in &mut self.plugins {
             p.tick();
+            if !p.is_alive() {
+                self.crashed_plugins.push(p.name().to_string());
+            }
         }
+    }
+
+    pub fn crashed_plugins(&self) -> &[String] {
+        &self.crashed_plugins
     }
 
     /// Use the internal factory to create a plugin from (id, name, binary_path),

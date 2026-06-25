@@ -8,8 +8,6 @@ Resolved items moved to [audit-history.md](audit-history.md).
 
 ## High — design problems, resource leaks, unenforced quality
 
-- [ ] **Plugin crash silently tolerated** — no watchdog, no auto-restart, no user-visible error. `send()` and `drain_responses()` silently return when the child process has exited. (`crates/ipc/src/host.rs:117-141`)
-
 - [ ] **No `deny.toml` or clippy lint config** — no automated enforcement of `unsafe` usage, duplicate dependencies, or advisory checks.
 
 ## Medium — latent bugs & performance issues

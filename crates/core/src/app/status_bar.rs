@@ -27,6 +27,8 @@ pub(super) struct StatusBar<'a> {
     pub config_error: Option<&'a str>,
     /// Auth flow message (e.g. "GitHub: enter code ABCD-1234").
     pub auth_message: Option<&'a str>,
+    /// Names of crashed plugins to display in red.
+    pub plugin_errors: &'a [String],
 }
 
 impl StatusBar<'_> {
@@ -94,6 +96,14 @@ impl StatusBar<'_> {
         if let Some(err) = self.config_error {
             let err_span = Paragraph::new(Line::from(vec![Span::styled(
                 err,
+                Style::default().fg(self.theme.error),
+            )]))
+            .alignment(Alignment::Right);
+            f.render_widget(err_span, area);
+        } else if !self.plugin_errors.is_empty() {
+            let msg = format!("⚠ plugin crashed: {}", self.plugin_errors.join(", "));
+            let err_span = Paragraph::new(Line::from(vec![Span::styled(
+                msg,
                 Style::default().fg(self.theme.error),
             )]))
             .alignment(Alignment::Right);

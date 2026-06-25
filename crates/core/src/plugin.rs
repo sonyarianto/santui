@@ -58,6 +58,13 @@ pub trait Plugin: Send {
     fn binary_path(&self) -> Option<&Path> {
         None
     }
+
+    /// Whether the plugin process is still running.
+    /// Returns `true` for in-process plugins.
+    /// IPC plugins override this to check the child process.
+    fn is_alive(&self) -> bool {
+        true
+    }
 }
 
 pub struct PluginContext {

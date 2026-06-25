@@ -66,6 +66,8 @@ Items from the [architecture audit](audit.md) that have been fixed.
 
 - [x] **`serde` duplicated across workspace** — declared independently (with identical version+features) in 8+ crates instead of using a workspace dep. Moved both `serde` and `serde_json` to `[workspace.dependencies]`; all 9 crates now use `{ workspace = true }`. Template crate kept explicit deps for standalone use.
 
+- [x] **Plugin crash silently tolerated** (`crates/ipc/src/host.rs:117-141`) — added `crashed` flag to `IpcPluginHost`, detected on `send()` and `drain_responses()` when channels disconnect; `is_alive()` added to `Plugin` trait; `PluginManager::tick_all()` collects crashed names; status bar shows `⚠ plugin crashed: <name>` in red
+
 ## Low — polish
 
 - [x] **No structured logging** — replaced all `eprintln!` with `log::error!`/`log::warn!`; `env_logger` initialized in all 3 binaries with default level `warn`; set `RUST_LOG=debug` for verbose output

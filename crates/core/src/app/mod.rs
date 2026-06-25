@@ -774,6 +774,7 @@ impl Santui {
             user: current_user.as_ref(),
             config_error: self.config_manager.error(),
             auth_message: auth_message.as_deref(),
+            plugin_errors: self.plugin_manager.crashed_plugins(),
         }
         .render(f, chunks[1]);
 
