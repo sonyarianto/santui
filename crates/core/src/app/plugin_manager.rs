@@ -178,6 +178,13 @@ impl PluginManager {
             return;
         }
 
+        // Keep the registry plugin loaded so its palette entry survives.
+        if self.plugins[idx].id() == "plugin-registry" {
+            self.plugins[idx].on_blur();
+            self.active_idx = None;
+            return;
+        }
+
         // Only remove out-of-process plugins; keep in-process plugins loaded.
         if self.plugins[idx].binary_path().is_some() {
             self.plugins[idx].on_blur();

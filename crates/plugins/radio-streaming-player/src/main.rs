@@ -397,7 +397,6 @@ impl App {
             ("enter".into(), "play".into()),
             ("s".into(), "stop".into()),
             ("r".into(), "reload".into()),
-            ("+/-".into(), "volume".into()),
         ]
     }
 
