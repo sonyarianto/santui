@@ -68,6 +68,8 @@ Items from the [architecture audit](audit.md) that have been fixed.
 
 - [x] **Plugin crash silently tolerated** (`crates/ipc/src/host.rs:117-141`) — added `crashed` flag to `IpcPluginHost`, detected on `send()` and `drain_responses()` when channels disconnect; `is_alive()` added to `Plugin` trait; `PluginManager::tick_all()` collects crashed names; status bar shows `⚠ plugin crashed: <name>` in red
 
+- [x] **`unwrap()` on mpv symbol lookup** (`crates/plugins/radio-streaming-player/src/player.rs:130-138`) — replaced 9 `unwrap()` calls with a `get_sym!()` macro that returns `Err` with a descriptive message when a symbol is missing, instead of panicking
+
 ## Low — polish
 
 - [x] **No structured logging** — replaced all `eprintln!` with `log::error!`/`log::warn!`; `env_logger` initialized in all 3 binaries with default level `warn`; set `RUST_LOG=debug` for verbose output

@@ -48,7 +48,7 @@ Resolved items moved to [audit-history.md](audit-history.md).
 
 - [ ] **`expect()` in scraper SQL transactions** — panics on broken connection mid-scrape. Use `?` instead. (`crates/plugins/radio-streaming-player/scraper/src/main.rs:434,501`)
 
-- [ ] **`unwrap()` on mpv symbol lookup** — 9 `lib.get()` unwraps can panic if libmpv version doesn't match. Return `Err` instead. (`crates/plugins/radio-streaming-player/src/player.rs:130-138`)
+
 
 - [ ] **`unwrap()` on `tx_msg` before `handle_init`** — panics if plugin ticked before Init. (`crates/plugins/radio-streaming-player/src/main.rs:322`)
 

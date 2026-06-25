@@ -126,16 +126,26 @@ impl Mpv {
             }
         };
 
+        macro_rules! get_sym {
+            ($fn_name:literal) => {
+                unsafe {
+                    lib.get($fn_name).map(|s| *s).map_err(|e| {
+                        let name = String::from_utf8_lossy($fn_name);
+                        format!("libmpv symbol {name} not found: {e}")
+                    })?
+                }
+            };
+        }
         let funcs = Box::new(Funcs {
-            create: unsafe { *lib.get(b"mpv_create\0").unwrap() },
-            initialize: unsafe { *lib.get(b"mpv_initialize\0").unwrap() },
-            set_option: unsafe { *lib.get(b"mpv_set_option_string\0").unwrap() },
-            set_property: unsafe { *lib.get(b"mpv_set_property_string\0").unwrap() },
-            command: unsafe { *lib.get(b"mpv_command\0").unwrap() },
-            observe: unsafe { *lib.get(b"mpv_observe_property\0").unwrap() },
-            wait_event: unsafe { *lib.get(b"mpv_wait_event\0").unwrap() },
-            get_property: unsafe { *lib.get(b"mpv_get_property\0").unwrap() },
-            destroy: unsafe { *lib.get(b"mpv_destroy\0").unwrap() },
+            create: get_sym!(b"mpv_create\0"),
+            initialize: get_sym!(b"mpv_initialize\0"),
+            set_option: get_sym!(b"mpv_set_option_string\0"),
+            set_property: get_sym!(b"mpv_set_property_string\0"),
+            command: get_sym!(b"mpv_command\0"),
+            observe: get_sym!(b"mpv_observe_property\0"),
+            wait_event: get_sym!(b"mpv_wait_event\0"),
+            get_property: get_sym!(b"mpv_get_property\0"),
+            destroy: get_sym!(b"mpv_destroy\0"),
         });
 
         let handle = unsafe { (funcs.create)() };
