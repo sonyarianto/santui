@@ -36,6 +36,7 @@ struct App {
     init_error: Option<String>,
     dirty: bool,
     cached_commands: Vec<RenderCmd>,
+    cached_json: Option<String>,
     user: Option<UserData>,
     db: rusqlite::Connection,
 }
@@ -75,6 +76,7 @@ impl App {
             init_error: None,
             dirty: true,
             cached_commands: Vec::new(),
+            cached_json: None,
             user: None,
         }
     }
@@ -413,15 +415,19 @@ fn palette_commands() -> Vec<(String, String)> {
 }
 
 fn respond(app: &mut App) {
-    let commands_val = serde_json::to_value(app.render()).expect("commands");
-    let hints = app.status_hints();
-    let palette = palette_commands();
-    let json = serde_json::json!({
-        "commands": commands_val,
-        "hints": hints,
-        "palette_commands": palette,
-    });
-    let json = serde_json::to_string(&json).expect("PluginMsg serialization");
+    if app.dirty || app.cached_json.is_none() {
+        let commands_val = serde_json::to_value(app.render()).expect("commands");
+        let hints = app.status_hints();
+        let palette = palette_commands();
+        let json = serde_json::json!({
+            "commands": commands_val,
+            "hints": hints,
+            "palette_commands": palette,
+        });
+        app.cached_json = Some(serde_json::to_string(&json).expect("PluginMsg serialization"));
+        app.dirty = false;
+    }
+    let json = app.cached_json.as_deref().unwrap();
     let mut out = std::io::stdout().lock();
     let _ = writeln!(out, "{json}");
     let _ = out.flush();
