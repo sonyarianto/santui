@@ -22,7 +22,8 @@ function getTarget() {
   if (os === 'win32') return 'x86_64-pc-windows-msvc';
   if (os === 'darwin') {
     if (arch === 'arm64') return 'aarch64-apple-darwin';
-    die('Intel Mac (x64) is not supported yet. Build from source instead:\n  git clone https://github.com/sonyarianto/santui.git && cd santui && cargo build --workspace');
+    if (arch === 'x64') return 'x86_64-apple-darwin';
+    die(`Unsupported architecture: ${arch}`);
   }
   if (os === 'linux') return 'x86_64-unknown-linux-gnu';
   die(`Unsupported platform: ${os}`);

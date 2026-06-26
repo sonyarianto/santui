@@ -13,8 +13,9 @@ case "${OS}" in
   Darwin)
     case "${ARCH}" in
       arm64|aarch64) TRIPLE="aarch64-apple-darwin" ;;
+      x86_64)        TRIPLE="x86_64-apple-darwin"  ;;
       *)
-        echo "Unsupported architecture: ${ARCH} (only Apple Silicon is available as a pre-built binary)"
+        echo "Unsupported architecture: ${ARCH}"
         echo "  Build from source: https://github.com/sonyarianto/santui"
         exit 1
         ;;

@@ -22,6 +22,7 @@ This npm package downloads the correct pre-built binary for your platform (Windo
 |---|---|
 | Windows x64 | `santui-x86_64-pc-windows-msvc.zip` |
 | macOS ARM64 | `santui-aarch64-apple-darwin.tar.gz` |
+| macOS x64 | `santui-x86_64-apple-darwin.tar.gz` |
 | Linux x64 | `santui-x86_64-unknown-linux-gnu.tar.gz` |
 
 ## Source

@@ -27,6 +27,12 @@ jobs:
             archive: tar.gz
             plugin_ext: ''
 
+          - os: macos-13
+            target: x86_64-apple-darwin
+            ext: ''
+            archive: tar.gz
+            plugin_ext: ''
+
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             ext: ''
@@ -66,7 +72,7 @@ jobs:
           Copy-Item "target\release\santui-registry-plugin.exe" staging\
 
       - name: Prepare macOS artifacts
-        if: matrix.os == 'macos-latest'
+        if: startsWith(matrix.os, 'macos')
         run: |
           mkdir -p staging
           cp target/release/santui staging/
