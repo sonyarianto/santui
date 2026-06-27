@@ -96,6 +96,7 @@ impl ThemeManager {
         let min_w = 30;
         let ideal_w = 60;
         let title_h = 4;
+        let max_h = 20;
         let pad_b = 1;
         let list_h = if filter.filtered_is_empty() {
             1
@@ -103,6 +104,7 @@ impl ThemeManager {
             (filter.total_items() as u16).max(1)
         };
         let popup_h = (title_h + list_h + pad_b)
+            .min(max_h)
             .min(content.height)
             .max(title_h + pad_b + 1);
         let popup_rect = centered_rect(content, min_w, ideal_w, popup_h);
