@@ -16,7 +16,7 @@ pub struct AppState {
     /// Whether the theme picker overlay is open.
     pub theme_picker_open: bool,
     /// Built-in palette commands: `(id, category, label)`.
-    pub builtin_items: Vec<(super::BuiltinId, String, String)>,
+    pub builtin_items: Vec<(super::BuiltinId, &'static str, &'static str)>,
     /// Index into `PluginManager::carousel_items()` for the home screen carousel.
     /// `None` means no plugin is selected (bare home screen).
     pub home_selected: Option<usize>,
@@ -24,10 +24,7 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(theme: Theme) -> Self {
-        let builtin_items = super::all_builtins()
-            .into_iter()
-            .map(|(id, cat, label)| (id, cat.to_string(), label.to_string()))
-            .collect();
+        let builtin_items = super::all_builtins();
         AppState {
             running: true,
             show_about: false,

@@ -33,7 +33,7 @@ impl PaletteWidget {
     /// built-in, dynamic (registry), and plugin-command categories.
     pub(super) fn filtered_items(
         &self,
-        builtin_items: &[(super::BuiltinId, String, String)],
+        builtin_items: &[(super::BuiltinId, &'static str, &'static str)],
         dynamic_items: &[(String, String, String)],
         cmds: &[(usize, usize, PluginCmdItem)],
     ) -> Vec<super::ItemIndex> {
@@ -61,14 +61,14 @@ impl PaletteWidget {
         // together regardless of source (builtin, dynamic, plugin command).
         results.sort_by(|a, b| {
             let cat_a = match a {
-                super::ItemIndex::Builtin(i) => &builtin_items[*i].1,
-                super::ItemIndex::Dynamic(i) => &dynamic_items[*i].0,
-                super::ItemIndex::PluginCmd(i) => &cmds[*i].2.category,
+                super::ItemIndex::Builtin(i) => builtin_items[*i].1,
+                super::ItemIndex::Dynamic(i) => dynamic_items[*i].0.as_str(),
+                super::ItemIndex::PluginCmd(i) => cmds[*i].2.category.as_str(),
             };
             let cat_b = match b {
-                super::ItemIndex::Builtin(i) => &builtin_items[*i].1,
-                super::ItemIndex::Dynamic(i) => &dynamic_items[*i].0,
-                super::ItemIndex::PluginCmd(i) => &cmds[*i].2.category,
+                super::ItemIndex::Builtin(i) => builtin_items[*i].1,
+                super::ItemIndex::Dynamic(i) => dynamic_items[*i].0.as_str(),
+                super::ItemIndex::PluginCmd(i) => cmds[*i].2.category.as_str(),
             };
             cat_a.cmp(cat_b)
         });
@@ -81,7 +81,7 @@ impl PaletteWidget {
         &mut self,
         content_h: u16,
         filtered: &[super::ItemIndex],
-        builtin_items: &[(super::BuiltinId, String, String)],
+        builtin_items: &[(super::BuiltinId, &'static str, &'static str)],
         dynamic_items: &[(String, String, String)],
         cmds: &[(usize, usize, PluginCmdItem)],
     ) {
@@ -94,11 +94,11 @@ impl PaletteWidget {
         let mut first_cat = true;
         for (flat, &idx) in filtered.iter().enumerate() {
             let c = match idx {
-                super::ItemIndex::Builtin(i) => &builtin_items[i].1,
-                super::ItemIndex::Dynamic(i) => &dynamic_items[i].0,
-                super::ItemIndex::PluginCmd(i) => &cmds[i].2.category,
+                super::ItemIndex::Builtin(i) => builtin_items[i].1,
+                super::ItemIndex::Dynamic(i) => dynamic_items[i].0.as_str(),
+                super::ItemIndex::PluginCmd(i) => cmds[i].2.category.as_str(),
             };
-            if *c != cat {
+            if c != cat {
                 cat = c.to_string();
                 if !first_cat {
                     line += 1;
@@ -127,7 +127,7 @@ impl PaletteWidget {
         content: Rect,
         theme: &Theme,
         tick: u64,
-        builtin_items: &[(super::BuiltinId, String, String)],
+        builtin_items: &[(super::BuiltinId, &'static str, &'static str)],
         dynamic_items: &[(String, String, String)],
         cmds: &[(usize, usize, PluginCmdItem)],
         groups: &[(String, Vec<super::ItemIndex>)],
@@ -159,9 +159,9 @@ impl PaletteWidget {
             for &idx in items {
                 let sel = flat_idx == self.cursor;
                 let label = match idx {
-                    super::ItemIndex::Builtin(i) => builtin_items[i].2.clone(),
-                    super::ItemIndex::Dynamic(i) => dynamic_items[i].2.clone(),
-                    super::ItemIndex::PluginCmd(i) => cmds[i].2.label.clone(),
+                    super::ItemIndex::Builtin(i) => builtin_items[i].2,
+                    super::ItemIndex::Dynamic(i) => &dynamic_items[i].2,
+                    super::ItemIndex::PluginCmd(i) => &cmds[i].2.label,
                 };
                 let style = if sel {
                     Style::default().fg(theme.inverted_text).bg(theme.highlight)

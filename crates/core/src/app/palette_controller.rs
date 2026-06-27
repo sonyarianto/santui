@@ -52,7 +52,7 @@ impl PaletteController {
         &mut self,
         key: KeyEvent,
         term_h: u16,
-        builtin_items: &[(BuiltinId, String, String)],
+        builtin_items: &[(BuiltinId, &'static str, &'static str)],
         dynamic_items: &[(String, String, String)],
         cmds: &[(usize, usize, PluginCmdItem)],
     ) -> PaletteAction {
@@ -154,7 +154,7 @@ impl PaletteController {
         area: Rect,
         theme: &Theme,
         tick: u64,
-        builtin_items: &[(BuiltinId, String, String)],
+        builtin_items: &[(BuiltinId, &'static str, &'static str)],
         dynamic_items: &[(String, String, String)],
         cmds: &[(usize, usize, PluginCmdItem)],
     ) {
@@ -191,7 +191,7 @@ impl Default for PaletteController {
 
 fn build_groups(
     filtered: &[ItemIndex],
-    builtin_items: &[(BuiltinId, String, String)],
+    builtin_items: &[(BuiltinId, &'static str, &'static str)],
     dynamic_items: &[(String, String, String)],
     cmds: &[(usize, usize, PluginCmdItem)],
 ) -> CategoryGroups {
@@ -200,14 +200,14 @@ fn build_groups(
     let mut groups: CategoryGroups = Vec::new();
     for &idx in filtered {
         let cat = match idx {
-            ItemIndex::Builtin(i) => builtin_items[i].1.clone(),
-            ItemIndex::Dynamic(i) => dynamic_items[i].0.clone(),
-            ItemIndex::PluginCmd(i) => cmds[i].2.category.clone(),
+            ItemIndex::Builtin(i) => builtin_items[i].1,
+            ItemIndex::Dynamic(i) => &dynamic_items[i].0,
+            ItemIndex::PluginCmd(i) => &cmds[i].2.category,
         };
         if cat != current_cat && !cat_items.is_empty() {
-            groups.push((current_cat.clone(), std::mem::take(&mut cat_items)));
+            groups.push((current_cat, std::mem::take(&mut cat_items)));
         }
-        current_cat = cat;
+        current_cat = cat.to_string();
         cat_items.push(idx);
     }
     if !cat_items.is_empty() {
