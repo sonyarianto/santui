@@ -87,6 +87,7 @@ impl App {
                             Err(mpsc::TryRecvError::Empty) => break,
                             Err(mpsc::TryRecvError::Disconnected) => {
                                 done = true;
+                                error = Some("Download thread terminated unexpectedly".into());
                                 break;
                             }
                         }

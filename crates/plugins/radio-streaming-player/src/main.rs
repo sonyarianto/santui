@@ -247,7 +247,7 @@ impl App {
         }
     }
 
-    fn handle_key(&mut self, key: IpcKey) {
+    fn handle_key(&mut self, key: IpcKey) -> bool {
         self.state.scan_msg = None;
         self.dirty = true;
         if self.state.search_mode {
@@ -255,52 +255,61 @@ impl App {
                 IpcKey::Esc => {
                     self.state.search_mode = false;
                     self.state.set_query(String::new());
+                    return true;
                 }
                 IpcKey::Enter => {
                     self.state.search_mode = false;
+                    return true;
                 }
                 IpcKey::Backspace => {
                     self.state.query.pop();
                     self.state.apply_filter();
+                    return true;
                 }
                 IpcKey::Char(c) if !c.is_control() => {
                     self.state.query.push(c);
                     self.state.apply_filter();
+                    return true;
                 }
                 IpcKey::Up => {
                     self.state.select_prev();
                     let max_visible = self.area.h.saturating_sub(6) as usize;
                     self.state.ensure_scroll_visible(max_visible.max(1));
+                    return true;
                 }
                 IpcKey::Down => {
                     self.state.select_next();
                     let max_visible = self.area.h.saturating_sub(6) as usize;
                     self.state.ensure_scroll_visible(max_visible.max(1));
+                    return true;
                 }
-                _ => {}
+                _ => return false,
             }
-            return;
         }
         match key {
             IpcKey::Up => {
                 self.state.select_prev();
                 let max_visible = self.area.h.saturating_sub(4) as usize;
                 self.state.ensure_scroll_visible(max_visible.max(1));
+                true
             }
             IpcKey::Down => {
                 self.state.select_next();
                 let max_visible = self.area.h.saturating_sub(4) as usize;
                 self.state.ensure_scroll_visible(max_visible.max(1));
+                true
             }
             IpcKey::PageUp => {
                 let page = self.area.h.saturating_sub(4) as usize;
                 self.state.select_page_up(page.max(1));
                 self.state.ensure_scroll_visible(page.max(1));
+                true
             }
             IpcKey::PageDown => {
                 let page = self.area.h.saturating_sub(4) as usize;
                 self.state.select_page_down(page.max(1));
                 self.state.ensure_scroll_visible(page.max(1));
+                true
             }
             IpcKey::Char('/') => {
                 self.state.search_mode = true;
@@ -308,6 +317,7 @@ impl App {
                 self.state.filtered = (0..self.state.stations.len()).collect();
                 self.state.selected = 0;
                 self.state.scroll = 0;
+                true
             }
             IpcKey::Enter => {
                 if let Some(station) = self.state.selected_station().cloned() {
@@ -320,6 +330,7 @@ impl App {
                     send_cmd(self, MpvCmd::Stop);
                     send_cmd(self, MpvCmd::LoadUrl(station.url));
                 }
+                true
             }
             IpcKey::Char('r') => {
                 let new_stations = crate::stations::reload(&self.db);
@@ -329,6 +340,7 @@ impl App {
                 self.state.selected = 0;
                 self.state.scroll = 0;
                 self.state.scan_msg = Some(format!("Reloaded {count} stations from DB"));
+                true
             }
             IpcKey::Char('s') => {
                 send_cmd(self, MpvCmd::Stop);
@@ -336,16 +348,19 @@ impl App {
                 self.state.current_station = None;
                 self.state.song_title.clear();
                 self.state.track_info = None;
+                true
             }
             IpcKey::Char('+') | IpcKey::Char('=') => {
                 self.state.volume_up();
                 send_cmd(self, MpvCmd::SetVolume(self.state.volume));
+                true
             }
             IpcKey::Char('-') => {
                 self.state.volume_down();
                 send_cmd(self, MpvCmd::SetVolume(self.state.volume));
+                true
             }
-            _ => {}
+            _ => false,
         }
     }
 
@@ -447,7 +462,7 @@ fn palette_commands() -> Vec<(String, String)> {
     ]
 }
 
-fn respond(app: &mut App) {
+fn respond(app: &mut App, consumed: bool) {
     if app.dirty || app.cached_json.is_none() {
         let commands_val = match serde_json::to_value(app.render()) {
             Ok(v) => v,
@@ -462,6 +477,7 @@ fn respond(app: &mut App) {
             "commands": commands_val,
             "hints": hints,
             "palette_commands": palette,
+            "consumed": consumed,
         });
         app.cached_json = match serde_json::to_string(&json) {
             Ok(s) => Some(s),
@@ -510,43 +526,43 @@ fn main() {
                         data_dir: _,
                     } => {
                         app.handle_init(theme, area);
-                        respond(&mut app);
+                        respond(&mut app, false);
                     }
                     HostMsg::Key { key } => {
-                        app.handle_key(key);
-                        respond(&mut app);
+                        let consumed = app.handle_key(key);
+                        respond(&mut app, consumed);
                     }
                     HostMsg::Tick => {
                         app.handle_tick();
-                        respond(&mut app);
+                        respond(&mut app, false);
                     }
                     HostMsg::Focus | HostMsg::Blur => {
-                        respond(&mut app);
+                        respond(&mut app, false);
                     }
                     HostMsg::ThemeChange { theme } => {
                         app.theme = theme;
                         app.dirty = true;
-                        respond(&mut app);
+                        respond(&mut app, false);
                     }
                     HostMsg::Resize { area } => {
                         app.area = area;
                         app.dirty = true;
-                        respond(&mut app);
+                        respond(&mut app, false);
                     }
                     HostMsg::PaletteCommand { index } => {
                         app.handle_palette_command(index);
-                        respond(&mut app);
+                        respond(&mut app, false);
                     }
                     HostMsg::PluginMessage { .. } => {
                         // Plugin-to-plugin messaging — radio player does not
                         // participate in this yet, but we must handle the variant
                         // to keep the match exhaustive.
-                        respond(&mut app);
+                        respond(&mut app, false);
                     }
                     HostMsg::UserUpdate { user } => {
                         app.user = user;
                         app.dirty = true;
-                        respond(&mut app);
+                        respond(&mut app, false);
                     }
                     HostMsg::Shutdown => {
                         app.handle_shutdown();

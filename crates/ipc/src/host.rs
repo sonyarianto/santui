@@ -183,7 +183,17 @@ impl IpcPluginHost {
             Priority::Low => &self.writer_low_tx,
         };
         let crashed = if let Some(ref tx) = tx {
-            tx.try_send(json).is_err()
+            match tx.try_send(json) {
+                Ok(_) => false,
+                Err(mpsc::TrySendError::Disconnected(_)) => true,
+                Err(mpsc::TrySendError::Full(_)) => {
+                    log::warn!(
+                        "[santui] plugin `{}` channel full, dropping message",
+                        self.id
+                    );
+                    false
+                }
+            }
         } else {
             false
         };
@@ -307,8 +317,12 @@ impl IpcPluginHost {
                 self.consumed = resp.consumed;
             }
         }
-        // Drain any additional responses that piled up.
+        // Drain any additional responses that piled up, but preserve
+        // consumed from the blocking recv so a stale Tick response
+        // cannot overwrite it.
+        let consumed = self.consumed;
         self.drain_responses();
+        self.consumed = consumed;
     }
 }
 
