@@ -49,12 +49,13 @@ impl PluginState {
     }
 
     /// Serialise a `PluginMsg` to stdout so the host can consume it.
-    fn respond(&self) {
+    fn respond(&self, consumed: bool) {
         let msg = PluginMsg {
             commands: self.render(),
             hints: vec![("Ctrl+P".into(), "commands".into())],
             palette_commands: vec![],
             request: None,
+            consumed,
         };
         let json = serde_json::to_string(&msg).expect("serialise PluginMsg");
         let mut out = io::stdout().lock();
@@ -119,7 +120,10 @@ fn main() {
 
         // Every host message expects at least one response.
         if let Some(ref s) = state {
-            s.respond();
+            // Track whether the last key was handled internally.
+            // Set `true` for keys your plugin consumes (e.g. Esc on a
+            // sub-dialog) so the host won't fall back to default handling.
+            s.respond(false);
         } else {
             // Not yet initialised — send an empty response so the host
             // doesn't hang waiting for us.
@@ -128,6 +132,7 @@ fn main() {
                 hints: vec![],
                 palette_commands: vec![],
                 request: None,
+                consumed: false,
             };
             let json = serde_json::to_string(&empty).expect("serialise empty PluginMsg");
             let mut out = io::stdout().lock();

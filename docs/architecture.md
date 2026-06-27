@@ -20,7 +20,7 @@ Plugins run as separate processes via `IpcPluginHost`, which implements the `Plu
 santui.exe (host)
   └─ IpcPluginHost (implements Plugin trait)
        ├─ sends HostMsg (Init, Key, Tick, Resize, ...) via stdin  ──►
-       └─ reads PluginMsg { commands, hints, request } via stdout ◄──
+       └─ reads PluginMsg { commands, hints, palette_commands, request, consumed } via stdout ◄──
             │ spawns & manages
             ▼
        santui-radio-streaming-player.exe (headless, no ratatui)
@@ -28,7 +28,7 @@ santui.exe (host)
 ```
 
 - Host owns all ratatui/TUI rendering; plugin is headless with its own native deps (e.g. libmpv).
-- Plugin responds to host messages with a full render command list (`Vec<RenderCmd>`). A background reader thread continuously reads plugin stdout, keeping responses non-blocking. `tick()` sends the message and drains pending responses without waiting — only `init`, `key`, `resize`, and `theme_change` block for a response (with a 5-second timeout).
+- Plugin responds to host messages with a full render command list (`Vec<RenderCmd>`). A background reader thread continuously reads plugin stdout, keeping responses non-blocking. `tick()` sends the message and drains pending responses without waiting — only `init` (500ms) and `key` (50ms) block briefly for a response so the `consumed` flag is reliably captured from the correct key event.
 - Render commands (`Text`, `Clear`) are cached on the host and composited into the ratatui buffer each frame — no IPC round-trip on every frame.
 - To write a new plugin: create a binary crate depending on `santui-ipc` (protocol types only, no ratatui), implement stdin/stdout JSON loop, then add it to the plugin registry manifest for distribution (see `plugins.json` format in `crates/registry/src/lib.rs`). Plugins are discovered through the registry, installed to `~/.santui/plugins/`, and spawned on demand via the `PluginFactory` set in `main.rs`.
 

@@ -25,7 +25,8 @@ Your plugin communicates with the Santui host over JSON lines on stdin/stdout:
 - **stdin** — receives `HostMsg` variants (Init, Key, Tick, Focus, Blur,
   ThemeChange, Resize, Shutdown, UserUpdate, PaletteCommand, PluginMessage)
 - **stdout** — sends `PluginMsg` containing `commands` (RenderCmd list),
-  `hints` (status-bar hints), `palette_commands` (Ctrl+P entries), and
+  `hints` (status-bar hints), `palette_commands` (Ctrl+P entries),
+  `consumed` (whether a key was handled internally), and
   an optional `request` (SignIn / SignOut)
 
 See the `santui-ipc` crate documentation for the full protocol spec.

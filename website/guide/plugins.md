@@ -8,12 +8,12 @@ Plugins extend Santui with new capabilities. They run as **separate processes** 
 santui.exe (host)
   └─ IpcPluginHost (implements Plugin trait)
        ├─ sends HostMsg (Init, Key, Tick, Resize, ...) via plugin's stdin
-       └─ reads PluginMsg { commands, hints, request } from plugin's stdout
+       └─ reads PluginMsg { commands, hints, palette_commands, request, consumed } from plugin's stdout
 ```
 
 - The host owns all rendering. Your plugin returns a list of `RenderCmd` values — `Text` at (x,y) with colours, or `Clear` a region.
 - The host polls your plugin every frame via `Tick`. Response handling is non-blocking — the host never waits on your plugin.
-- Blocking calls (`Init`, `Key`, `Resize`, `ThemeChange`) have a 5-second timeout. If your plugin doesn't respond, the host continues without it.
+- Blocking calls — `Init` (500ms timeout) and `Key` (50ms timeout) — wait briefly for a response so the host can capture the `consumed` flag from the correct key event. If your plugin doesn't respond in time, the host treats the key as unhandled.
 
 ## Quick start
 
@@ -129,6 +129,7 @@ fn respond(&self) {
 | `hints` | `Vec<(String, String)>` | Status bar hints (label, description) |
 | `palette_commands` | `Vec<(String, String)>` | Commands shown in `Ctrl+P` palette |
 | `request` | `Option<PluginRequest>` | Request auth (`SignIn` / `SignOut`) |
+| `consumed` | `bool` | `true` when the plugin handled a key event internally (e.g., closing a sub-dialog on Esc). Defaults to `false` for backward compatibility. |
 
 ### Render commands
 
