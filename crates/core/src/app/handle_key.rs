@@ -297,8 +297,11 @@ impl super::Santui {
             },
             Some(idx) => match key.code {
                 KeyCode::Esc => {
-                    self.plugin_manager.shutdown_and_remove(idx);
-                    self.app_state.home_selected = None;
+                    let consumed = self.plugin_manager.handle_key(idx, key);
+                    if !consumed {
+                        self.plugin_manager.shutdown_and_remove(idx);
+                        self.app_state.home_selected = None;
+                    }
                 }
                 KeyCode::Char('q') => {
                     // Instead of quitting, let the plugin handle 'q'. User can

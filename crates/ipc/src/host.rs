@@ -52,6 +52,8 @@ pub struct IpcPluginHost {
     reader_thread: Option<thread::JoinHandle<()>>,
     /// Set to `true` when the plugin child process has exited unexpectedly.
     crashed: bool,
+    /// Whether the last key event was consumed (handled) by the plugin.
+    consumed: bool,
 }
 
 impl IpcPluginHost {
@@ -88,6 +90,7 @@ impl IpcPluginHost {
             writer_thread: None,
             reader_thread: None,
             crashed: false,
+            consumed: false,
         }
     }
 
@@ -204,6 +207,7 @@ impl IpcPluginHost {
                         self.cached_hints = msg.hints;
                         self.cached_palette_commands = msg.palette_commands;
                         self.pending_request = msg.request;
+                        self.consumed = msg.consumed;
                     }
                     Err(mpsc::TryRecvError::Empty) => break,
                     Err(mpsc::TryRecvError::Disconnected) => {
@@ -481,7 +485,7 @@ impl Plugin for IpcPluginHost {
             _ => return false,
         };
         self.send_recv(&HostMsg::Key { key: ipc_key });
-        true
+        self.consumed
     }
 
     fn render(&self, f: &mut Frame, area: Rect) {

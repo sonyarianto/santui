@@ -194,6 +194,11 @@ pub struct PluginMsg {
     pub palette_commands: Vec<(String, String)>,
     #[serde(default)]
     pub request: Option<PluginRequest>,
+    /// Whether the last host message was consumed (handled) by the plugin.
+    /// Used by the host to decide whether to fall back to default handling
+    /// (e.g. Esc → close plugin if the plugin did not consume it).
+    #[serde(default)]
+    pub consumed: bool,
 }
 
 #[cfg(test)]
@@ -406,6 +411,7 @@ mod tests {
             hints: vec![("key".into(), "desc".into())],
             palette_commands: vec![],
             request: None,
+            consumed: false,
         };
         let json = serde_json::to_string(&msg).unwrap();
         let decoded: PluginMsg = serde_json::from_str(&json).unwrap();
@@ -423,6 +429,7 @@ mod tests {
             request: Some(PluginRequest::SignIn {
                 provider: "google".into(),
             }),
+            consumed: false,
         };
         let json = serde_json::to_string(&msg).unwrap();
         let decoded: PluginMsg = serde_json::from_str(&json).unwrap();

@@ -8,6 +8,7 @@ use std::sync::mpsc;
 impl App {
     pub fn handle(&mut self, msg: HostMsg) -> PluginMsg {
         let mut request = None;
+        let mut consumed = false;
 
         match msg {
             HostMsg::Init {
@@ -59,7 +60,7 @@ impl App {
                 self.status_ticks = 0;
             }
 
-            HostMsg::Key { key } => self.handle_key(key, &mut request),
+            HostMsg::Key { key } => consumed = self.handle_key(key, &mut request),
 
             HostMsg::Tick => {
                 self.tick_status();
@@ -139,6 +140,7 @@ impl App {
                     hints: vec![],
                     palette_commands: vec![],
                     request: None,
+                    consumed: false,
                 }
             }
 
@@ -158,25 +160,27 @@ impl App {
             hints,
             palette_commands,
             request,
+            consumed,
         }
     }
 
-    fn handle_key(&mut self, key: IpcKey, request: &mut Option<PluginRequest>) {
+    fn handle_key(&mut self, key: IpcKey, request: &mut Option<PluginRequest>) -> bool {
         self.status.clear();
         if let Some(detail_idx) = self.detail_idx {
-            self.handle_detail_key(key, detail_idx, request);
+            self.handle_detail_key(key, detail_idx, request)
         } else {
-            self.handle_list_key(key, request);
+            self.handle_list_key(key, request)
         }
     }
 
-    fn handle_list_key(&mut self, key: IpcKey, _request: &mut Option<PluginRequest>) {
+    fn handle_list_key(&mut self, key: IpcKey, _request: &mut Option<PluginRequest>) -> bool {
         match key {
             IpcKey::Up => {
                 if self.cursor > 0 {
                     self.cursor -= 1;
                     self.ensure_scroll_visible();
                 }
+                true
             }
             IpcKey::Down => {
                 let count = self.available_count().saturating_sub(1);
@@ -184,6 +188,7 @@ impl App {
                     self.cursor += 1;
                     self.ensure_scroll_visible();
                 }
+                true
             }
             IpcKey::Enter | IpcKey::Char('d') | IpcKey::Char('D') => {
                 let count = self.available_count();
@@ -191,10 +196,10 @@ impl App {
                     self.detail_idx = Some(self.cursor);
                     self.action_cursor = 0;
                 }
+                true
             }
-            IpcKey::Esc => {}
-            IpcKey::Char('q') => {}
-            _ => {}
+            IpcKey::Esc | IpcKey::Char('q') => false,
+            _ => false,
         }
     }
 
@@ -203,29 +208,33 @@ impl App {
         key: IpcKey,
         detail_idx: usize,
         request: &mut Option<PluginRequest>,
-    ) {
+    ) -> bool {
         let actions = self.available_actions(detail_idx);
         match key {
             IpcKey::Up => {
                 if self.action_cursor > 0 {
                     self.action_cursor -= 1;
                 }
+                true
             }
             IpcKey::Down => {
                 let last = actions.len().saturating_sub(1);
                 if self.action_cursor < last {
                     self.action_cursor += 1;
                 }
+                true
             }
             IpcKey::Enter => {
                 if self.action_cursor < actions.len() {
                     self.execute_action(detail_idx, actions[self.action_cursor], request);
                 }
+                true
             }
             IpcKey::Esc | IpcKey::Backspace => {
                 self.detail_idx = None;
+                true
             }
-            _ => {}
+            _ => false,
         }
     }
 
