@@ -17,9 +17,9 @@ their own commands dynamically.
 **Solution (implemented):**
 - `PluginCmdItem` type added to `santui-core`
 - `commands()` method on `Plugin` trait returns `Vec<PluginCmdItem>`
-- `PaletteWidget` renders built-in + dynamic + plugin commands side by side
+- `PaletteController` renders built-in + dynamic + plugin commands side by side
 
-**Key files:** `plugin.rs` (trait), `palette_widget.rs` (rendering), `handle_key.rs` (dispatch)
+**Key files:** `plugin.rs` (trait), `palette_controller.rs` (rendering), `handle_key.rs` (dispatch)
 
 ### 1.2 Simplify Plugin Trait with Default Implementations ✅
 

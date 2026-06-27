@@ -18,7 +18,7 @@ Items from the [architecture audit](audit.md) that have been fixed.
 
 ## High — design problems
 
-- [x] **Santui is a god object** (`crates/core/src/app/mod.rs:514`) — 13+ fields → 9 fields; extracted `PaletteController` (owns `Option<PaletteWidget>` + key handling), `RegistryController` (owns `Option<PluginRegistry>` + `RegistryScreen` + key handling); moved `dynamic_items` + `plugin_factory` into `PluginManager`; moved `tick_rate` into `ConfigManager`; EventBus decoupling for theme changes (`select_theme`/`apply_config` no longer reach across subsystems)
+- [x] **Santui is a god object** (`crates/core/src/app/mod.rs:514`) — 13+ fields → 9 fields; extracted `PaletteController` (owns `Option<FilteredListState>` + key handling), `RegistryController` (owns `Option<PluginRegistry>` + `RegistryScreen` + key handling); moved `dynamic_items` + `plugin_factory` into `PluginManager`; moved `tick_rate` into `ConfigManager`; EventBus decoupling for theme changes (`select_theme`/`apply_config` no longer reach across subsystems)
 
 - [x] **`handle_key` is a 337-line monolith** (`crates/core/src/app/handle_key.rs:1`) — split into 6 focused per-state handlers (`handle_key_palette`, `execute_palette_selection`, `handle_key_theme_picker`, `handle_key_about`, `handle_key_registry`, `handle_key_normal`)
 
@@ -113,7 +113,7 @@ Items from the [architecture audit](audit.md) that have been fixed.
 
 - [x] **`filtered_items()` called on arrow key presses** — cached filtered result on `PaletteController`, recompute only on query change. (`crates/core/src/app/palette_controller.rs:54-61`)
 
-- [x] **`query.to_lowercase()` re-alloc per `filtered_items()` call** — controller caching reduces per-frame calls from 2-3× to 1× (render only). (`crates/core/src/app/palette_widget.rs:40`)
+- [x] **`query.to_lowercase()` re-alloc per `filtered_items()` call** — controller caching reduces per-frame calls from 2-3× to 1× (render only). (`crates/core/src/app/palette_controller.rs:40`)
 
 - [x] **`PluginContext` constructed twice per frame** — reused `ctx` from before the loop; only updates `ctx.theme` when config triggers a theme change. (`crates/core/src/app/mod.rs:687`)
 

@@ -4,7 +4,7 @@
 
 ### Core
 
-- **Santui** — main app struct; delegates to dedicated subsystems: `PluginManager`, `ThemeManager`, `PaletteWidget`, `RegistryScreen`, `StatusBar`, `ConfigManager`, and `EventBus`.
+- **Santui** — main app struct; delegates to dedicated subsystems: `PluginManager`, `ThemeManager`, `PaletteController`, `RegistryScreen`, `StatusBar`, `ConfigManager`, and `EventBus`.
 - **Plugin trait** — all methods have default implementations; only `id()`, `name()`, and `init()` are required. Additional lifecycle hooks: `handle_key`, `render`, `tick`, `on_focus`/`on_blur`, `on_theme_change`, `on_user_update`, `status_hints`, `commands`, `handle_palette_command`, `on_plugin_message`.
 - **Event loop** — `Santui::run()` drives tick, key dispatch, config polling, event bus draining, and render.
 - **Palette** — command palette overlay (`Ctrl+P`); combines built-in commands from `AppState.builtin_items` + dynamic plugin commands from `PluginCmdItem` + plugin-registered commands for enabled registry plugins. "Switch Theme" opens a searchable theme picker (via `ThemeManager`).
@@ -97,7 +97,7 @@ santui.exe (host)
   │    ├── Vec<Box<dyn Plugin>>
   │    ├── IpcPluginHost
   │    └── EventBus           ← plugin-to-plugin messaging (Phase 2.2 ✅)
-  ├── PaletteWidget           ← dynamic command registry (Phase 1.1 ✅)
+  ├── PaletteController       ← dynamic command registry (Phase 1.1 ✅)
   ├── StatusBar               ← own module (Phase 1.3 ✅)
   ├── ThemeManager            ← theme selection, preview, picker UI (Phase 4.1 ✅)
   ├── ConfigManager           ← hot-reload TOML config (Phase 5.1-5.3 ✅)
