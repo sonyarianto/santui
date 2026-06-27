@@ -56,6 +56,11 @@ impl super::Santui {
                             self.plugin_manager.on_user_update_all(None);
                         }
                     }
+                    super::BuiltinId::PluginRegistry => {
+                        if let Some(idx) = self.plugin_manager.find_by_id("plugin-registry") {
+                            self.plugin_manager.set_active(Some(idx));
+                        }
+                    }
                     super::BuiltinId::SwitchTheme => {
                         self.app_state.theme_picker_open = true;
                         let tm = &mut self.theme_manager;

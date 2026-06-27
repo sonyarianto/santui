@@ -151,7 +151,7 @@ impl App {
 
         let commands = self.render_commands();
         let hints = self.hints();
-        let palette_commands = vec![("System".into(), "Plugin Registry".into())];
+        let palette_commands = vec![];
 
         PluginMsg {
             commands,
