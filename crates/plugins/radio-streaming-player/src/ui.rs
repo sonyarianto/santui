@@ -21,13 +21,9 @@ pub fn render_ui(
         h: area_h,
     });
 
-    const GAP: u16 = 1;
+    const GAP: u16 = 0;
 
-    let info_h = match &state.play_state {
-        PlayState::Stopped => 4,
-        PlayState::Playing(_) => 6,
-        PlayState::Error(_) => 5,
-    };
+    let info_h = state.info_h();
 
     let stations_h = area_h.saturating_sub(GAP + info_h);
 
@@ -38,7 +34,7 @@ pub fn render_ui(
     let search_extra = if state.search_mode { 2 } else { 0 };
     let table_top = 2u16;
     let header_h = 1u16;
-    let table_avail = stations_h.saturating_sub(table_top + header_h + search_extra);
+    let table_avail = stations_h.saturating_sub(table_top + header_h + 1 + search_extra);
     let max_visible = table_avail as usize;
 
     let scroll = state.scroll.min(state.filtered.len().saturating_sub(1));
@@ -51,13 +47,10 @@ pub fn render_ui(
     for i in 0..visible_count {
         let station_idx = state.filtered[scroll + i];
         let station = &state.stations[station_idx];
-        let is_current = state.current_station == Some(station_idx);
-        let name = if is_current {
-            ui::truncate(&format!("♪ {}", station.name), name_w)
-        } else {
-            ui::truncate(&station.name, name_w)
-        };
-        rows.push(vec![name, ui::truncate(station.country_name(), country_w)]);
+        rows.push(vec![
+            ui::truncate(&station.name, name_w),
+            ui::truncate(station.country_name(), country_w),
+        ]);
     }
 
     let vis_selected = if state.selected >= scroll && state.selected < scroll + visible_count {
@@ -65,6 +58,12 @@ pub fn render_ui(
     } else {
         None
     };
+
+    let current_row = state.current_station.and_then(|cur| {
+        state.filtered[scroll..scroll + visible_count]
+            .iter()
+            .position(|&idx| idx == cur)
+    });
 
     cmds.push(RenderCmd::Table {
         x: 2,
@@ -90,6 +89,12 @@ pub fn render_ui(
             bg: Some(theme.highlight),
             bold: true,
         },
+        current_row,
+        current_style: Some(TextStyle {
+            fg: Some(theme.success),
+            bg: None,
+            bold: false,
+        }),
     });
 
     // ---- Search bar overlay ----
@@ -157,7 +162,7 @@ pub fn render_ui(
             ui::text_at(
                 &mut cmds,
                 2,
-                np_y + 2,
+                np_y + 1,
                 "No station selected",
                 theme.text_muted,
                 None,
@@ -167,8 +172,8 @@ pub fn render_ui(
         PlayState::Playing(station_name) => {
             cmds.push(RenderCmd::Text {
                 x: 2,
-                y: np_y + 2,
-                text: ui::truncate(&format!("♫ {station_name}"), r_inner_w as usize),
+                y: np_y + 1,
+                text: ui::truncate(station_name, r_inner_w as usize),
                 fg: Some(theme.success),
                 bg: None,
                 bold: true,
@@ -177,7 +182,7 @@ pub fn render_ui(
                 ui::text_at(
                     &mut cmds,
                     2,
-                    np_y + 3,
+                    np_y + 2,
                     "(no metadata)",
                     theme.text_muted,
                     None,
@@ -187,7 +192,7 @@ pub fn render_ui(
                 ui::text_at(
                     &mut cmds,
                     2,
-                    np_y + 3,
+                    np_y + 2,
                     &state.song_title,
                     theme.text,
                     None,
@@ -198,7 +203,7 @@ pub fn render_ui(
                         ui::text_at(
                             &mut cmds,
                             2,
-                            np_y + 4,
+                            np_y + 3,
                             artist,
                             theme.text_muted,
                             None,
@@ -212,13 +217,13 @@ pub fn render_ui(
             ui::text_at(
                 &mut cmds,
                 2,
-                np_y + 2,
+                np_y + 1,
                 "⚠ Error",
                 theme.error,
                 None,
                 r_inner_w,
             );
-            ui::text_at(&mut cmds, 2, np_y + 3, e, theme.error, None, r_inner_w);
+            ui::text_at(&mut cmds, 2, np_y + 2, e, theme.error, None, r_inner_w);
         }
     }
 

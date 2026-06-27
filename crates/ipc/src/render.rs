@@ -2,7 +2,9 @@ use crate::protocol::{RenderCmd, TextStyle};
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{self, Block, Borders, ListState, Paragraph, Row, Table, TableState, Wrap};
+use ratatui::widgets::{
+    self, Block, Borders, Cell, ListState, Paragraph, Row, Table, TableState, Wrap,
+};
 use ratatui::Frame;
 
 fn to_style(s: &TextStyle) -> Style {
@@ -82,6 +84,8 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                 selected,
                 style,
                 highlight_style,
+                current_row,
+                current_style,
             } => {
                 let table_area = clipped(area, *x, *y, *w, *h);
                 let widths: Vec<ratatui::layout::Constraint> = column_widths
@@ -92,7 +96,19 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                     Row::new(header.iter().map(|s| s.as_str())).style(to_style(header_style));
                 let table_rows: Vec<Row> = rows
                     .iter()
-                    .map(|row| Row::new(row.iter().map(|c| c.as_str())))
+                    .enumerate()
+                    .map(|(i, row)| {
+                        let cells: Vec<Cell> = row.iter().map(|c| Cell::from(c.as_str())).collect();
+                        let mut r = Row::new(cells);
+                        if let Some(cur) = current_row {
+                            if i == *cur {
+                                if let Some(ref cs) = current_style {
+                                    r = r.style(to_style(cs));
+                                }
+                            }
+                        }
+                        r
+                    })
                     .collect();
                 let table = Table::new(table_rows, &widths)
                     .header(header_row)

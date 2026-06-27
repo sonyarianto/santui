@@ -273,13 +273,15 @@ impl App {
                 }
                 IpcKey::Up => {
                     self.state.select_prev();
-                    let max_visible = self.area.h.saturating_sub(6) as usize;
+                    let info_h = self.state.info_h();
+                    let max_visible = self.area.h.saturating_sub(info_h + 6) as usize;
                     self.state.ensure_scroll_visible(max_visible.max(1));
                     return true;
                 }
                 IpcKey::Down => {
                     self.state.select_next();
-                    let max_visible = self.area.h.saturating_sub(6) as usize;
+                    let info_h = self.state.info_h();
+                    let max_visible = self.area.h.saturating_sub(info_h + 6) as usize;
                     self.state.ensure_scroll_visible(max_visible.max(1));
                     return true;
                 }
@@ -289,24 +291,28 @@ impl App {
         match key {
             IpcKey::Up => {
                 self.state.select_prev();
-                let max_visible = self.area.h.saturating_sub(4) as usize;
+                let info_h = self.state.info_h();
+                let max_visible = self.area.h.saturating_sub(info_h + 4) as usize;
                 self.state.ensure_scroll_visible(max_visible.max(1));
                 true
             }
             IpcKey::Down => {
                 self.state.select_next();
-                let max_visible = self.area.h.saturating_sub(4) as usize;
+                let info_h = self.state.info_h();
+                let max_visible = self.area.h.saturating_sub(info_h + 4) as usize;
                 self.state.ensure_scroll_visible(max_visible.max(1));
                 true
             }
             IpcKey::PageUp => {
-                let page = self.area.h.saturating_sub(4) as usize;
+                let info_h = self.state.info_h();
+                let page = self.area.h.saturating_sub(info_h + 4) as usize;
                 self.state.select_page_up(page.max(1));
                 self.state.ensure_scroll_visible(page.max(1));
                 true
             }
             IpcKey::PageDown => {
-                let page = self.area.h.saturating_sub(4) as usize;
+                let info_h = self.state.info_h();
+                let page = self.area.h.saturating_sub(info_h + 4) as usize;
                 self.state.select_page_down(page.max(1));
                 self.state.ensure_scroll_visible(page.max(1));
                 true
@@ -426,8 +432,8 @@ impl App {
             ];
         }
         vec![
-            ("↑/↓".into(), "select".into()),
-            ("PgUp/PgDn".into(), "page".into()),
+            ("↑/↓".into(), "navigate".into()),
+            ("pgup/pgdn".into(), "page".into()),
             ("/".into(), "search".into()),
             ("enter".into(), "play".into()),
             ("s".into(), "stop".into()),

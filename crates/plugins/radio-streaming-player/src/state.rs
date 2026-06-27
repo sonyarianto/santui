@@ -122,6 +122,24 @@ impl RadioState {
         self.stations.get(idx)
     }
 
+    pub fn info_h(&self) -> u16 {
+        let content_rows = match &self.play_state {
+            PlayState::Stopped => 1,
+            PlayState::Playing(_) => {
+                if self.song_title.is_empty() {
+                    2
+                } else {
+                    match &self.track_info {
+                        Some(info) if info.artist.is_some() => 3,
+                        _ => 2,
+                    }
+                }
+            }
+            PlayState::Error(_) => 2,
+        };
+        content_rows + 2
+    }
+
     pub fn volume_up(&mut self) {
         self.volume = (self.volume + 2).min(100);
     }

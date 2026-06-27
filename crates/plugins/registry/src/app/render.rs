@@ -212,6 +212,8 @@ impl App {
                     bg: Some(t.highlight),
                     bold: true,
                 },
+                current_row: None,
+                current_style: None,
             });
         }
     }

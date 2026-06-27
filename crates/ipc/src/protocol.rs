@@ -172,6 +172,11 @@ pub enum RenderCmd {
         selected: Option<usize>,
         style: TextStyle,
         highlight_style: TextStyle,
+        /// Row index (relative to `rows`) of the "currently active" item
+        /// (e.g. the station currently playing). Rendered with `current_style`.
+        current_row: Option<usize>,
+        #[serde(default)]
+        current_style: Option<TextStyle>,
     },
 }
 
