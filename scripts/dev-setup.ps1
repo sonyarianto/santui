@@ -3,6 +3,9 @@ $ErrorActionPreference = 'Stop'
 $Root = Split-Path $PSScriptRoot -Parent
 $OutDir = "$Root\target\debug"
 
+# Derive version from the single source of truth — crates/core/Cargo.toml
+$Version = (Select-String -Path "$Root\crates\core\Cargo.toml" -Pattern '^version\s*=\s*"(.*)"').Matches.Groups[1].Value
+
 Write-Host ">> Building workspace (debug) ..." -ForegroundColor Cyan
 cargo build --workspace
 if ($LASTEXITCODE -ne 0) { throw "build failed" }
@@ -33,7 +36,7 @@ foreach ($bin in $pluginBinaries) {
         name          = "Radio Streaming Player"
         description   = "Listen to thousands of radio stations worldwide"
         publisher     = "Santui"
-        version       = "0.2.1"
+        version       = $Version
         download_url  = "target/debug/$($bin.Name)"
         sha256        = $hash
         size          = $bin.Length

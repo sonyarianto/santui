@@ -4,6 +4,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUTDIR="$ROOT/target/debug"
 
+# Derive version from the single source of truth — crates/core/Cargo.toml
+VERSION="$(grep '^version' "$ROOT/crates/core/Cargo.toml" | head -1 | cut -d'"' -f2)"
+
 echo ">> Building workspace (debug) ..."
 cargo build --workspace
 
@@ -46,7 +49,7 @@ for bin in "$OUTDIR"/santui-*.exe "$OUTDIR"/santui-*; do
 
     echo "  [OK] $id  ($size bytes, sha256=$hash)"
     PLUGINS+=("$(cat << JSON
-{"id":"$id","name":"Radio Streaming Player","publisher":"Santui","description":"Listen to thousands of radio stations worldwide","version":"0.2.1","download_url":"target/debug/$name","sha256":"$hash","size":$size}
+{"id":"$id","name":"Radio Streaming Player","publisher":"Santui","description":"Listen to thousands of radio stations worldwide","version":"$VERSION","download_url":"target/debug/$name","sha256":"$hash","size":$size}
 JSON
 )")
 done
