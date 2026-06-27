@@ -86,7 +86,7 @@ fn main() {
         };
 
         match host_msg {
-            HostMsg::Init { theme, area } => {
+            HostMsg::Init { theme, area, .. } => {
                 state = Some(PluginState::new(theme, area));
             }
             HostMsg::Key { key } => {

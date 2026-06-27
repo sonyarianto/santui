@@ -39,9 +39,11 @@ can discover and install it:
 {
     "id": "{{project-name}}",
     "name": "{{project-name}}",
-    "size": 0,
-    "sha256": "",
+    "description": "A short description of your plugin",
+    "publisher": "Your Name",
+    "version": "0.1.0",
     "download_url": "target/debug/{{project-name}}.exe",
-    "version": "0.1.0"
+    "sha256": "",
+    "size": 0
 }
 ```

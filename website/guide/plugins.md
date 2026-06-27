@@ -136,8 +136,22 @@ fn respond(&self) {
 |---------|---------|
 | `Text { x, y, text, fg, bg, bold }` | Draw a string at (x,y) with optional colours and bold |
 | `Clear { x, y, w, h }` | Clear a rectangular region |
+| `Rect { x, y, w, h, bg }` | Fill a rectangle with a background colour |
+| `Border { x, y, w, h, fg, borders, bg?, title?, title_fg?, title_dash_fg? }` | Draw a box border (bitmask: 1=LEFT, 2=RIGHT, 4=TOP, 8=BOTTOM, 15=ALL) with optional fill and title |
+| `Paragraph { x, y, w, h, text, style, wrap }` | Rendered wrapped text within a rectangle |
+| `List { x, y, w, h, items, selected?, style, highlight_style }` | A scrollable list with selection highlighting |
+| `Table { x, y, w, h, header, header_style, rows, column_widths, selected?, style, highlight_style }` | A table with header and rows |
 
 Colours are `[u8; 3]` RGB arrays (e.g. `[255, 0, 0]` for red). Use `None` for `fg`/`bg` to inherit the terminal default.
+
+Complex widgets (`Paragraph`, `List`, `Table`) use a `TextStyle` struct:
+```rust
+pub struct TextStyle {
+    pub fg: Option<[u8; 3]>,
+    pub bg: Option<[u8; 3]>,
+    pub bold: bool,
+}
+```
 
 The `ThemeData` struct from `Init` and `ThemeChange` provides the current theme colours as RGB arrays. Use them to match Santui's look:
 
