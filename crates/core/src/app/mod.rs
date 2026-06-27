@@ -450,7 +450,6 @@ impl Santui {
         let auth_message = self.auth.as_ref().and_then(|a| a.auth_message());
         status_bar::StatusBar {
             theme: &self.app_state.theme,
-            theme_picker_open: self.app_state.theme_picker_open,
             about_open: self.app_state.show_about,
             plugin_active: self.plugin_manager.active().is_some(),
             active_plugin_hints: &hints,
