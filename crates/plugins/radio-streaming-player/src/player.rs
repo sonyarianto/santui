@@ -65,14 +65,13 @@ pub struct Mpv {
     funcs: Box<Funcs>,
 }
 
-// Mpv is Send + Sync because all access to `handle` goes through `funcs`,
+// Mpv is Send because all access to `handle` goes through `funcs`,
 // which are plain function pointers loaded from libmpv. The `_lib` Arc<Library>
 // ensures the shared library stays loaded for the lifetime of every Mpv handle.
-// The caller is responsible for serialising concurrent mpv API calls (libmpv is
-// not thread-safe); the current design keeps one Mpv per plugin process, accessed
-// from a single thread.
+// Mpv is NOT Sync because libmpv is not thread-safe; shared references (&Mpv)
+// must not cross threads. The current design keeps one Mpv per plugin process
+// accessed from a single thread.
 unsafe impl Send for Mpv {}
-unsafe impl Sync for Mpv {}
 
 fn to_rc(rc: i32, ctx: &str) -> Result<(), Box<dyn std::error::Error>> {
     if rc >= 0 {

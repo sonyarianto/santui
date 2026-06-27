@@ -142,7 +142,13 @@ impl App {
                         }
                     }
                     if id == player::MPV_EVENT_PROPERTY_CHANGE {
+                        if ev.data.is_null() {
+                            continue;
+                        }
                         let prop: &player::MpvEventProperty = unsafe { &*(ev.data as *const _) };
+                        if prop.name.is_null() {
+                            continue;
+                        }
                         let name = unsafe {
                             std::ffi::CStr::from_ptr(prop.name)
                                 .to_string_lossy()
@@ -159,6 +165,9 @@ impl App {
                         }
                     }
                     if id == player::MPV_EVENT_END_FILE {
+                        if ev.data.is_null() {
+                            continue;
+                        }
                         let ef: &player::MpvEventEndFile = unsafe { &*(ev.data as *const _) };
                         let _ = tx_msg_mpv.send(MpvMsg::EndFile(ef.reason));
                     }
