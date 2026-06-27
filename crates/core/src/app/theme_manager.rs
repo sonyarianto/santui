@@ -261,9 +261,7 @@ fn render_picker_footer(buf: &mut Buffer, area: Rect, theme: &Theme) {
             Span::styled("↑↓", key),
             Span::styled(" navigate • ", dim),
             Span::styled("↵", key),
-            Span::styled(" select • ", dim),
-            Span::styled("esc", key),
-            Span::styled(" back", dim),
+            Span::styled(" select", dim),
         ]),
         Line::from(""),
     ];
