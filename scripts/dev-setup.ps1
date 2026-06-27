@@ -32,6 +32,7 @@ foreach ($bin in $pluginBinaries) {
         id            = $id
         name          = "Radio Streaming Player"
         description   = "Listen to thousands of radio stations worldwide"
+        publisher     = "Santui"
         version       = "0.2.1"
         download_url  = "target/debug/$($bin.Name)"
         sha256        = $hash

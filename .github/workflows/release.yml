@@ -115,6 +115,7 @@ jobs:
                 id = $p.id
                 name = $p.name
                 description = $p.desc
+                publisher = "Santui"
                 version = $version
                 download_url = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/$filename"
                 sha256 = $sha
@@ -146,6 +147,7 @@ jobs:
               "id": "radio-streaming-player",
               "name": "Radio Streaming Player",
               "description": "Listen to thousands of radio stations worldwide",
+              "publisher": "Santui",
               "version": "${VERSION}",
               "download_url": "https://github.com/${REPO}/releases/download/${TAG}/radio-streaming-player-${TARGET}${EXT}",
               "sha256": "${SHA256}",

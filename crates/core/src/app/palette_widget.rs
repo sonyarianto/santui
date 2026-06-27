@@ -266,19 +266,21 @@ impl PaletteWidget {
 mod tests {
     use super::PaletteWidget;
     use crate::app::{all_builtins, BuiltinId, ItemIndex};
+    use crate::plugin::PluginCmdItem;
 
-    fn builtin_fixture() -> Vec<(BuiltinId, String, String)> {
+    fn builtin_fixture() -> Vec<(BuiltinId, &'static str, &'static str)> {
         all_builtins()
-            .into_iter()
-            .map(|(id, cat, label)| (id, cat.to_string(), label.to_string()))
-            .collect()
     }
 
     #[test]
     fn filtered_items_empty_query_returns_all() {
         let pal = PaletteWidget::new();
         let bi = builtin_fixture();
-        let items = pal.filtered_items(&bi, &[], &[]);
+        let items = pal.filtered_items(
+            &bi,
+            &[] as &[(String, String, String)],
+            &[] as &[(usize, usize, PluginCmdItem)],
+        );
         assert_eq!(items.len(), bi.len());
     }
 
@@ -290,7 +292,11 @@ mod tests {
             cursor: 0,
             scroll: 0,
         };
-        let items = pal.filtered_items(&bi, &[], &[]);
+        let items = pal.filtered_items(
+            &bi,
+            &[] as &[(String, String, String)],
+            &[] as &[(usize, usize, PluginCmdItem)],
+        );
         assert_eq!(items.len(), 1);
         if let ItemIndex::Builtin(idx) = items[0] {
             assert_eq!(bi[idx].2, "Switch theme");
@@ -307,7 +313,11 @@ mod tests {
             cursor: 0,
             scroll: 0,
         };
-        let items = pal.filtered_items(&bi, &[], &[]);
+        let items = pal.filtered_items(
+            &bi,
+            &[] as &[(String, String, String)],
+            &[] as &[(usize, usize, PluginCmdItem)],
+        );
         assert_eq!(items.len(), 1);
     }
 
@@ -319,7 +329,11 @@ mod tests {
             cursor: 0,
             scroll: 0,
         };
-        let items = pal.filtered_items(&bi, &[], &[]);
+        let items = pal.filtered_items(
+            &bi,
+            &[] as &[(String, String, String)],
+            &[] as &[(usize, usize, PluginCmdItem)],
+        );
         assert!(items.is_empty());
     }
 }

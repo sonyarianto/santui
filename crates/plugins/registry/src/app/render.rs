@@ -108,11 +108,12 @@ impl App {
                 return;
             }
 
-            let status_w: usize = 9;
-            let ver_w: usize = 10;
-            let rem = inner_w.saturating_sub(status_w + ver_w);
-            let name_w = (rem * 3 / 10).max(5);
-            let desc_w = rem.saturating_sub(name_w);
+            let publisher_w: usize = 10;
+            let status_w: usize = 13;
+            let ver_w: usize = 8;
+            let rem = inner_w.saturating_sub(publisher_w + status_w + ver_w);
+            let name_w = (rem * 4 / 10).max(5);
+            let desc_w = rem.saturating_sub(name_w).max(5);
 
             let visible_count =
                 list_h.min(reg.available.len().saturating_sub(self.scroll as usize));
@@ -145,14 +146,15 @@ impl App {
                 } else if is_installed {
                     "Disabled"
                 } else {
-                    "--"
+                    "Not Installed"
                 };
 
                 let name_s = ui::truncate(&plugin.name, name_w);
                 let desc_s = ui::truncate(&plugin.description, desc_w);
+                let publisher_s = ui::truncate(&plugin.publisher, publisher_w);
                 let ver_s = ui::truncate(&plugin.version, ver_w);
 
-                rows.push(vec![status.into(), name_s, desc_s, ver_s]);
+                rows.push(vec![name_s, desc_s, publisher_s, ver_s, status.into()]);
             }
 
             let vis_selected = {
@@ -171,10 +173,11 @@ impl App {
                 w: inner_w as u16,
                 h: list_h as u16,
                 header: vec![
-                    "Status".into(),
                     "Name".into(),
                     "Description".into(),
+                    "Publisher".into(),
                     "Version".into(),
+                    "Status".into(),
                 ],
                 header_style: TextStyle {
                     fg: Some(t.text_muted),
@@ -182,7 +185,13 @@ impl App {
                     bold: true,
                 },
                 rows,
-                column_widths: vec![status_w as u16, name_w as u16, desc_w as u16, ver_w as u16],
+                column_widths: vec![
+                    name_w as u16,
+                    desc_w as u16,
+                    publisher_w as u16,
+                    ver_w as u16,
+                    status_w as u16,
+                ],
                 selected: vis_selected,
                 style: TextStyle {
                     fg: Some(t.text),
@@ -213,10 +222,10 @@ impl App {
             return;
         };
 
-        let content_h = 7u16 + actions.len() as u16;
+        let content_h = 8u16 + actions.len() as u16;
         let pr = ui::palette_rect(aw, ah, content_h);
         ui::palette_bg(cmds, t, &pr);
-        // PAD_T=1 (blank), title, then Name/Version/Status info fields
+        // PAD_T=1 (blank), title, then Name/Publisher/Version/Status info fields
         ui::palette_title(cmds, t, &pr, 1, "Plugin Actions");
 
         let field_fg = Some(t.text_muted);
@@ -226,11 +235,22 @@ impl App {
         cmds.push(RenderCmd::Text {
             x: ix,
             y: pr.y + 2,
-            text: format!(" Name:    {}", plugin.name),
+            text: format!(" Name:      {}", plugin.name),
             fg: field_fg,
             bg,
             bold: false,
         });
+
+        if !plugin.publisher.is_empty() {
+            cmds.push(RenderCmd::Text {
+                x: ix,
+                y: pr.y + 3,
+                text: format!(" Publisher: {}", plugin.publisher),
+                fg: field_fg,
+                bg,
+                bold: false,
+            });
+        }
 
         let (installed_idx, is_enabled, installed_ver) = reg
             .installed
@@ -253,16 +273,17 @@ impl App {
 
         let ver_text = if installed_idx != usize::MAX && installed_ver != plugin.version {
             format!(
-                " Version: {iv}  →  {av}",
+                " Version:   {iv}  →  {av}",
                 iv = installed_ver,
                 av = plugin.version
             )
         } else {
-            format!(" Version: {}", plugin.version)
+            format!(" Version:   {}", plugin.version)
         };
+        let ver_y = if plugin.publisher.is_empty() { 3 } else { 4 };
         cmds.push(RenderCmd::Text {
             x: ix,
-            y: pr.y + 3,
+            y: pr.y + ver_y,
             text: ver_text,
             fg: field_fg,
             bg,
@@ -283,16 +304,18 @@ impl App {
         } else {
             field_fg
         };
+        let status_y = if plugin.publisher.is_empty() { 4 } else { 5 };
         cmds.push(RenderCmd::Text {
             x: ix,
-            y: pr.y + 4,
-            text: format!(" Status:  {}", status_str),
+            y: pr.y + status_y,
+            text: format!(" Status:    {}", status_str),
             fg: status_color,
             bg,
             bold: false,
         });
 
         // Action items
+        let action_base = if plugin.publisher.is_empty() { 5 } else { 6 };
         for (i, action) in actions.iter().enumerate() {
             let focused = i == self.action_cursor;
             let label = match action {
@@ -302,7 +325,7 @@ impl App {
                 Action::Update => format!("Update to v{}", plugin.version),
                 Action::Delete => "Delete".into(),
             };
-            ui::palette_item(cmds, t, &pr, 6 + i as u16, &label, focused);
+            ui::palette_item(cmds, t, &pr, action_base + i as u16, &label, focused);
         }
     }
 }

@@ -58,6 +58,7 @@ impl RadioState {
                 .filter(|(_, s)| {
                     s.name.to_lowercase().contains(&q)
                         || s.country.to_lowercase().contains(&q)
+                        || s.country_name().to_lowercase().contains(&q)
                         || s.genre.to_lowercase().contains(&q)
                 })
                 .map(|(i, _)| i)
@@ -140,7 +141,7 @@ mod tests {
             .map(|i| Station {
                 name: format!("Station {i}"),
                 url: format!("http://example.com/{i}"),
-                country: if i % 2 == 0 { "US".into() } else { "UK".into() },
+                country: if i % 2 == 0 { "US".into() } else { "GB".into() },
                 genre: "Rock".into(),
             })
             .collect()
@@ -176,7 +177,7 @@ mod tests {
     fn apply_filter_matches_country() {
         let s = make_stations(5);
         let mut state = RadioState::new(s);
-        state.set_query("UK".into());
+        state.set_query("GB".into());
         assert_eq!(state.filtered.len(), 2);
         assert!(state.filtered.iter().all(|&i| i % 2 == 1));
     }

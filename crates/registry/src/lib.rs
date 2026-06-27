@@ -18,6 +18,9 @@ pub struct PluginManifest {
     pub sha256: String,
     /// File size in bytes.
     pub size: u64,
+    /// Publisher name (e.g. "Santui").
+    #[serde(default)]
+    pub publisher: String,
 }
 
 /// A plugin the user has installed (either enabled or disabled).
@@ -377,16 +380,17 @@ mod tests {
     #[test]
     fn parse_manifest_array() {
         let json = r#"[
-            {"id":"p1","name":"Plugin 1","description":"Desc","version":"1.0","download_url":"https://example.com/p1","sha256":"abcd","size":100}
+            {"id":"p1","name":"Plugin 1","description":"Desc","version":"1.0","download_url":"https://example.com/p1","sha256":"abcd","size":100,"publisher":"Santui"}
         ]"#;
         let result = parse_manifest(json).unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].id, "p1");
+        assert_eq!(result[0].publisher, "Santui");
     }
 
     #[test]
     fn parse_manifest_single_object() {
-        let json = r#"{"id":"p1","name":"Plugin 1","description":"Desc","version":"1.0","download_url":"https://example.com/p1","sha256":"abcd","size":100}"#;
+        let json = r#"{"id":"p1","name":"Plugin 1","description":"Desc","version":"1.0","download_url":"https://example.com/p1","sha256":"abcd","size":100,"publisher":"Santui"}"#;
         let result = parse_manifest(json).unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].id, "p1");
@@ -394,10 +398,19 @@ mod tests {
 
     #[test]
     fn parse_manifest_wrapper_object() {
-        let json = r#"{"plugins":[{"id":"p1","name":"Plugin 1","description":"Desc","version":"1.0","download_url":"https://example.com/p1","sha256":"abcd","size":100}]}"#;
+        let json = r#"{"plugins":[{"id":"p1","name":"Plugin 1","description":"Desc","version":"1.0","download_url":"https://example.com/p1","sha256":"abcd","size":100,"publisher":"Santui"}]}"#;
         let result = parse_manifest(json).unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].id, "p1");
+    }
+
+    #[test]
+    fn parse_manifest_defaults_publisher() {
+        let json = r#"[
+            {"id":"p1","name":"P1","description":"D","version":"1","download_url":"https://ex.com/p1","sha256":"a","size":1}
+        ]"#;
+        let result = parse_manifest(json).unwrap();
+        assert_eq!(result[0].publisher, "");
     }
 
     #[test]
@@ -415,8 +428,8 @@ mod tests {
     #[test]
     fn parse_manifest_multiple_plugins() {
         let json = r#"[
-            {"id":"p1","name":"P1","description":"D","version":"1","download_url":"https://ex.com/p1","sha256":"a","size":1},
-            {"id":"p2","name":"P2","description":"D","version":"2","download_url":"https://ex.com/p2","sha256":"b","size":2}
+            {"id":"p1","name":"P1","description":"D","version":"1","download_url":"https://ex.com/p1","sha256":"a","size":1,"publisher":"Santui"},
+            {"id":"p2","name":"P2","description":"D","version":"2","download_url":"https://ex.com/p2","sha256":"b","size":2,"publisher":"Santui"}
         ]"#;
         let result = parse_manifest(json).unwrap();
         assert_eq!(result.len(), 2);
@@ -434,12 +447,14 @@ mod tests {
             download_url: "https://example.com/p".into(),
             sha256: "abc123".into(),
             size: 42,
+            publisher: "Santui".into(),
         };
         let json = serde_json::to_string(&m).unwrap();
         let back: PluginManifest = serde_json::from_str(&json).unwrap();
         assert_eq!(back.id, m.id);
         assert_eq!(back.name, m.name);
         assert_eq!(back.size, m.size);
+        assert_eq!(back.publisher, m.publisher);
     }
 
     #[test]

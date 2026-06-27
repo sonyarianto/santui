@@ -57,7 +57,7 @@ pub fn render_ui(
         } else {
             ui::truncate(&station.name, name_w)
         };
-        rows.push(vec![name, ui::truncate(&station.country, country_w)]);
+        rows.push(vec![name, ui::truncate(station.country_name(), country_w)]);
     }
 
     let vis_selected = if state.selected >= scroll && state.selected < scroll + visible_count {
