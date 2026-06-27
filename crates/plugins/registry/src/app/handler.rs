@@ -42,7 +42,8 @@ impl App {
                 }
             }
 
-            HostMsg::Focus | HostMsg::Blur => {}
+            HostMsg::Focus => self.status.clear(),
+            HostMsg::Blur => {}
 
             HostMsg::Key { key } => self.handle_key(key, &mut request),
 
