@@ -293,10 +293,8 @@ fn render_palette_footer(buf: &mut Buffer, area: Rect, theme: &Theme) {
     let footer = vec![
         Line::from(""),
         Line::from(vec![
-            Span::styled("↑", key),
-            Span::styled(" up • ", dim),
-            Span::styled("↓", key),
-            Span::styled(" down • ", dim),
+            Span::styled("↑↓", key),
+            Span::styled(" navigate • ", dim),
             Span::styled("↵", key),
             Span::styled(" select", dim),
         ]),
