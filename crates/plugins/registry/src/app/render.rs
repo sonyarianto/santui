@@ -19,14 +19,14 @@ impl App {
     pub(super) fn hints(&self) -> Vec<(String, String)> {
         if self.detail_idx.is_some() {
             vec![
-                ("↑↓".into(), "Navigate".into()),
-                ("Enter".into(), "Select action".into()),
-                ("Esc".into(), "Back".into()),
+                ("↑↓".into(), "navigate".into()),
+                ("↵".into(), "select".into()),
+                ("esc".into(), "back".into()),
             ]
         } else {
             vec![
-                ("↑↓".into(), "Navigate".into()),
-                ("Enter".into(), "Actions".into()),
+                ("↑↓".into(), "navigate".into()),
+                ("↵".into(), "select".into()),
             ]
         }
     }

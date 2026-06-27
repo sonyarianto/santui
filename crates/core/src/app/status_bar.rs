@@ -50,8 +50,6 @@ impl StatusBar<'_> {
             if !self.active_plugin_hints.is_empty() {
                 spans.push(Span::styled(" • ", dim));
             }
-            spans.push(Span::styled("ctrl+p", key));
-            spans.push(Span::styled(" commands • ", dim));
             spans.push(Span::styled("esc", key));
             spans.push(Span::styled(" back", dim));
             Line::from(spans)
