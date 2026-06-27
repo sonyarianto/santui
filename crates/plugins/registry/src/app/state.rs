@@ -23,6 +23,7 @@ pub struct App {
     pub(super) cursor: usize,
     pub(super) scroll: u16,
     pub(super) status: String,
+    pub(super) status_ticks: u64,
     pub(super) detail_idx: Option<usize>,
     pub(super) action_cursor: usize,
     pub(super) theme: ThemeData,
@@ -42,6 +43,7 @@ impl App {
             cursor: 0,
             scroll: 0,
             status: String::new(),
+            status_ticks: 0,
             detail_idx: None,
             action_cursor: 0,
             theme: ThemeData {
@@ -84,6 +86,21 @@ impl App {
             self.scroll = cursor;
         } else if cursor >= self.scroll + list_h {
             self.scroll = cursor.saturating_sub(list_h.saturating_sub(1));
+        }
+    }
+
+    pub fn set_status(&mut self, msg: String) {
+        self.status = msg;
+        self.status_ticks = 0;
+    }
+
+    /// Called every Tick. Auto-dismisses the status after ~2 seconds.
+    pub fn tick_status(&mut self) {
+        if !self.status.is_empty() {
+            self.status_ticks += 1;
+            if self.status_ticks > 120 {
+                self.status.clear();
+            }
         }
     }
 }

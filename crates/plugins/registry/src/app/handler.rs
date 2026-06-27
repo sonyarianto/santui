@@ -21,7 +21,7 @@ impl App {
                 self.plugins_dir = data.join("plugins");
                 let reg = santui_registry::Registry::new(data);
                 self.registry = Some(reg);
-                self.status = "Fetching plugins…".to_string();
+                self.set_status("Fetching plugins…".to_string());
                 if let Some(ref mut reg) = self.registry {
                     let dev = std::env::var("SANTUI_DEV").as_deref() == Ok("1");
                     if dev {
@@ -30,24 +30,34 @@ impl App {
                             .map(std::path::PathBuf::from)
                             .unwrap_or_else(|_| std::path::PathBuf::from("plugins.json"));
                         match reg.load_local_manifest(&path) {
-                            Ok(()) => self.status = reg.status.clone(),
-                            Err(e) => self.status = format!("Error: {e}"),
+                            Ok(()) => {
+                                let s = reg.status.clone();
+                                self.set_status(s);
+                            }
+                            Err(e) => self.set_status(format!("Error: {e}")),
                         }
                     } else {
                         match reg.fetch_manifest() {
-                            Ok(()) => self.status = reg.status.clone(),
-                            Err(e) => self.status = format!("Error: {e}"),
+                            Ok(()) => {
+                                let s = reg.status.clone();
+                                self.set_status(s);
+                            }
+                            Err(e) => self.set_status(format!("Error: {e}")),
                         }
                     }
                 }
             }
 
-            HostMsg::Focus => self.status.clear(),
+            HostMsg::Focus => {
+                self.status.clear();
+                self.status_ticks = 0;
+            }
             HostMsg::Blur => {}
 
             HostMsg::Key { key } => self.handle_key(key, &mut request),
 
             HostMsg::Tick => {
+                self.tick_status();
                 let rx = self.download_rx.take();
                 if let Some(rx) = rx {
                     let mut done = false;
@@ -84,7 +94,7 @@ impl App {
                         self.download_rx = None;
                         self.download_progress = None;
                         if let Some(e) = error {
-                            self.status = format!("Error: {e}");
+                            self.set_status(format!("Error: {e}"));
                             self.pending_install_id = None;
                             self.pending_install_name = None;
                             self.pending_install_version = None;
@@ -97,10 +107,10 @@ impl App {
                                 let target_path = self.plugins_dir.join(plugin_filename(&id));
                                 match reg.add_installed(&id, &name, &version, target_path) {
                                     Ok(()) => {
-                                        self.status = format!("{name} installed and enabled");
+                                        self.set_status(format!("{name} installed and enabled"));
                                         request = Some(PluginRequest::PluginsChanged);
                                     }
-                                    Err(e) => self.status = format!("Error: {e}"),
+                                    Err(e) => self.set_status(format!("Error: {e}")),
                                 }
                             }
                         }
@@ -271,7 +281,7 @@ impl App {
             Action::Enable => {
                 if let Some(i) = installed_idx {
                     if reg.set_enabled(i, true).is_ok() {
-                        self.status = format!("{} enabled", plugin.name);
+                        self.set_status(format!("{} enabled", plugin.name));
                         *request = Some(PluginRequest::PluginsChanged);
                     }
                 }
@@ -280,7 +290,7 @@ impl App {
             Action::Disable => {
                 if let Some(i) = installed_idx {
                     if reg.set_enabled(i, false).is_ok() {
-                        self.status = format!("{} disabled", plugin.name);
+                        self.set_status(format!("{} disabled", plugin.name));
                         *request = Some(PluginRequest::PluginsChanged);
                     }
                 }
@@ -293,7 +303,7 @@ impl App {
             Action::Delete => {
                 if let Some(i) = installed_idx {
                     if reg.remove_installed(i).is_ok() {
-                        self.status = format!("{} deleted", plugin.name);
+                        self.set_status(format!("{} deleted", plugin.name));
                         *request = Some(PluginRequest::PluginsChanged);
                     }
                 }
@@ -304,7 +314,7 @@ impl App {
 
     fn spawn_install(&mut self, plugin: &PluginManifest) {
         if self.download_rx.is_some() {
-            self.status = "Already downloading…".to_string();
+            self.set_status("Already downloading…".to_string());
             return;
         }
 
@@ -322,7 +332,7 @@ impl App {
         self.pending_install_name = Some(name.clone());
         self.pending_install_version = Some(version.clone());
         self.download_progress = Some((0, 0));
-        self.status = format!("Downloading {name}…");
+        self.set_status(format!("Downloading {name}…"));
 
         std::thread::spawn(move || {
             if let Some(parent) = dest.parent() {
