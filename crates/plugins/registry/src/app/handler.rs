@@ -146,6 +146,7 @@ impl App {
     }
 
     fn handle_key(&mut self, key: IpcKey, request: &mut Option<PluginRequest>) {
+        self.status.clear();
         if let Some(detail_idx) = self.detail_idx {
             self.handle_detail_key(key, detail_idx, request);
         } else {
