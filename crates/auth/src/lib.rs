@@ -187,7 +187,10 @@ fn user_from_token(provider: &str, access_token: &str) -> Result<User, Box<dyn s
                 .call()?;
             let body: serde_json::Value = serde_json::from_str(&resp.body_mut().read_to_string()?)?;
             Ok(User {
-                id: body["id"].to_string(),
+                id: body["id"]
+                    .as_u64()
+                    .map(|n| n.to_string())
+                    .unwrap_or_default(),
                 email: body["email"].as_str().unwrap_or("").into(),
                 name: body["login"].as_str().unwrap_or("").into(),
                 avatar_url: body["avatar_url"].as_str().map(|s| s.into()),
