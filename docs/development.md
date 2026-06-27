@@ -50,9 +50,11 @@ santui/
 │   ├── ipc/            — IPC protocol types + IpcPluginHost runner
 │   ├── auth/           — GitHub OAuth client
 │   ├── registry/       — plugin registry: manifest fetch, install, config
+│   ├── db/             — central SQLite database for per-user plugin data
 │   ├── plugins/
-│   │   └── radio-streaming-player/   — radio player plugin
-│   │       └── scraper/              — radio station scraper
+│   │   ├── radio-streaming-player/   — radio player plugin
+│   │   │   └── scraper/              — radio station scraper
+│   │   └── registry/                 — plugin registry UI plugin
 │   └── app/            — binary entry point (main.rs)
 ├── website/            — VitePress docs site
 ├── docs/               — architecture & dev docs
@@ -63,46 +65,13 @@ santui/
 
 ## Release packaging
 
-Platform-specific scripts in `scripts/`:
+For tagged releases, CI (`.github/workflows/release.yml`) handles cross-platform builds automatically.
+Platform-specific packaging scripts in `scripts/` are available for manual testing:
 
 | Script | Platform | Format |
 |--------|----------|-------|
 | `package-release.ps1` | Windows | `.zip` |
 | `package-release-macos.sh` | macOS | `.tar.gz` |
-
-Run from the repo root:
-
-```bash
-# macOS (requires Homebrew + mpv installed)
-./scripts/package-release-macos.sh [version]
-
-# Windows (requires PowerShell)
-./scripts/package-release.ps1 [version]
-```
-
-The macOS script recursively bundles all transitive Homebrew dylib
- dependencies (`libmpv.2.dylib`, `libavcodec`, etc.) into `native/`
- and rewrites their `LC_LOAD_DYLIB` paths to `@loader_path`-relative
- via `install_name_tool`, making the archive relocatable to machines
- without Homebrew.
-
-
-Platform-specific scripts in `scripts/`:
-
-| Script | Platform | Format |
-|--------|----------|-------|
-| `package-release.ps1` | Windows | `.zip` |
-| `package-release-macos.sh` | macOS | `.tar.gz` |
-
-Run from the repo root:
-
-```bash
-# macOS (requires Homebrew + mpv installed)
-./scripts/package-release-macos.sh [version]
-
-# Windows (requires PowerShell)
-./scripts/package-release.ps1 [version]
-```
 
 The macOS script recursively bundles all transitive Homebrew dylib
  dependencies (`libmpv.2.dylib`, `libavcodec`, etc.) into `native/`

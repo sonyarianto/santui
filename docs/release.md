@@ -2,35 +2,45 @@
 
 ## 1. Bump versions
 
-Update `version` in `Cargo.toml` for each workspace crate that changed:
+Update `version` in **all** `Cargo.toml` files + npm + website. They must all match — CI verifies against `crates/core/Cargo.toml`:
 
-- `santui-core/Cargo.toml`
-- `santui-ipc/Cargo.toml`
-- `santui-auth/Cargo.toml`
-- `santui-radio-streaming-player/Cargo.toml`
-- `santui-radio-streaming-player/scraper/Cargo.toml`
-- `santui/Cargo.toml`
+**Crates (all `Cargo.toml` files):**
+- `crates/core/Cargo.toml`
+- `crates/ipc/Cargo.toml`
+- `crates/auth/Cargo.toml`
+- `crates/registry/Cargo.toml`
+- `crates/db/Cargo.toml`
+- `crates/plugins/radio-streaming-player/Cargo.toml`
+- `crates/plugins/radio-streaming-player/scraper/Cargo.toml`
+- `crates/plugins/registry/Cargo.toml`
+- `crates/app/Cargo.toml`
 
-## 2. Build and package
+**NPM:**
+- `packages/npm/package.json`
 
-```powershell
-.\scripts\package-release.ps1 v0.x.x
+**Website:**
+- `website/.vitepress/config.ts` — nav link + footer
+- `website/public/install.ps1` — banner text
+
+**Dev-setup scripts** auto-detect version from `crates/core/Cargo.toml` — no manual update needed.
+
+## 2. Tag and push
+
+```bash
+git add -A && git commit -m "chore: bump version to x.y.z"
+git tag vx.y.z && git push --tags
 ```
 
-Produces `releases/santui-x86_64-pc-windows-msvc.zip` with:
+## 3. CI does the rest
 
-- `santui.exe`
-- `santui-radio-streaming-player.exe`
-- `native/libmpv-2.dll`
-- `native/radio_streaming_stations.db`
+Pushing a tag triggers the **CI release workflow** (`.github/workflows/release.yml`):
 
-## 3. Create GitHub Release
+1. Builds all crates in release mode for Windows, macOS, and Linux
+2. Generates platform-specific plugin manifests (`plugins-{target}.json`) with SHA-256 hashes
+3. Uploads all binaries + manifests as release assets
+4. Creates a GitHub Release with auto-generated release notes
 
-1. Go to https://github.com/sonyarianto/santui/releases/new
-2. Tag: `v0.x.x`
-3. Title: `v0.x.x`
-4. Attach the zip from `releases/`
-5. Publish
+The install script at `https://santuiapp.vercel.app/install.ps1` fetches the latest release from GitHub automatically.
 
 ## 4. Deploy website
 
@@ -39,5 +49,3 @@ cd website
 npm run build
 npx vercel --prod
 ```
-
-The install script at `https://santuiapp.vercel.app/install.ps1` fetches the latest release from GitHub automatically.
