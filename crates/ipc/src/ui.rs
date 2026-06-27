@@ -151,6 +151,7 @@ pub fn draw_panel(
         borders: BORDER_ALL,
         title: Some(title.trim().into()),
         title_fg: Some(theme.text),
+        title_dash_fg: Some(theme.border),
     });
 }
 

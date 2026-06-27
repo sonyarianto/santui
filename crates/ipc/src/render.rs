@@ -144,6 +144,7 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                 bg,
                 title,
                 title_fg,
+                title_dash_fg,
             } => {
                 let rect = clipped(area, *x, *y, *w, *h);
                 let fg_color = Color::Rgb(fg[0], fg[1], fg[2]);
@@ -157,10 +158,20 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                     f.render_widget(widgets::Clear, rect);
                 }
                 if let Some(ref t) = title {
-                    let ts = title_fg
+                    let text_style = title_fg
                         .map(|c| Style::default().fg(Color::Rgb(c[0], c[1], c[2])))
                         .unwrap_or_default();
-                    block = block.title(Line::from(Span::styled(t.clone(), ts)));
+                    if let Some(dash_col) = title_dash_fg {
+                        let dash_style =
+                            Style::default().fg(Color::Rgb(dash_col[0], dash_col[1], dash_col[2]));
+                        block = block.title(Line::from(vec![
+                            Span::styled("─ ", dash_style),
+                            Span::styled(t.clone(), text_style),
+                            Span::styled(" ─", dash_style),
+                        ]));
+                    } else {
+                        block = block.title(Line::from(Span::styled(t.clone(), text_style)));
+                    }
                 }
                 f.render_widget(block, rect);
             }

@@ -125,6 +125,7 @@ pub enum RenderCmd {
     /// Draw a box border around a rectangle, with optional background fill and title.
     /// `borders` is a bitmask matching ratatui `Borders` (1=LEFT, 2=RIGHT, 4=TOP, 8=BOTTOM, 15=ALL).
     /// When `bg` and `title` are set, this is equivalent to a native ratatui `Block` with title.
+    /// When `title_dash_fg` is set, the title is rendered inline with dashes in that color.
     Border {
         x: u16,
         y: u16,
@@ -135,6 +136,7 @@ pub enum RenderCmd {
         bg: Option<[u8; 3]>,
         title: Option<String>,
         title_fg: Option<[u8; 3]>,
+        title_dash_fg: Option<[u8; 3]>,
     },
     /// Renders wrapped text within a rectangle.
     Paragraph {
@@ -381,6 +383,7 @@ mod tests {
                 bg: Some([20, 20, 20]),
                 title: Some("Test".into()),
                 title_fg: Some([255, 255, 255]),
+                title_dash_fg: Some([250, 178, 131]),
             },
         ];
         for cmd in cmds {
