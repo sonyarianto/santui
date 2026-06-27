@@ -20,6 +20,7 @@ pub struct RadioState {
     pub volume: i64,
     pub start_time: Instant,
     pub scan_msg: Option<String>,
+    pub scan_ticks: u64,
     pub query: String,
     pub search_mode: bool,
     pub tick_counter: u64,
@@ -40,6 +41,7 @@ impl RadioState {
             volume: 100,
             start_time: Instant::now(),
             scan_msg: None,
+            scan_ticks: 0,
             query: String::new(),
             search_mode: false,
             tick_counter: 0,
@@ -120,6 +122,23 @@ impl RadioState {
         }
         let idx = self.filtered[self.selected.min(self.filtered.len() - 1)];
         self.stations.get(idx)
+    }
+
+    pub fn set_scan_msg(&mut self, msg: String) {
+        self.scan_msg = Some(msg);
+        self.scan_ticks = 0;
+    }
+
+    /// Returns `true` if the message was just auto-dismissed this tick.
+    pub fn tick_scan_msg(&mut self) -> bool {
+        if self.scan_msg.is_some() {
+            self.scan_ticks += 1;
+            if self.scan_ticks > 20 {
+                self.scan_msg = None;
+                return true;
+            }
+        }
+        false
     }
 
     pub fn info_h(&self) -> u16 {

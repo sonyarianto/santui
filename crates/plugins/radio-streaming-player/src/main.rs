@@ -240,7 +240,8 @@ impl App {
                 self.state.set_query(String::new());
                 self.state.selected = 0;
                 self.state.scroll = 0;
-                self.state.scan_msg = Some(format!("Reloaded {count} stations from DB"));
+                self.state
+                    .set_scan_msg(format!("Reloaded {count} stations from database"));
                 self.dirty = true;
             }
             _ => {}
@@ -345,7 +346,8 @@ impl App {
                 self.state.set_query(String::new());
                 self.state.selected = 0;
                 self.state.scroll = 0;
-                self.state.scan_msg = Some(format!("Reloaded {count} stations from DB"));
+                self.state
+                    .set_scan_msg(format!("Reloaded {count} stations from database"));
                 true
             }
             IpcKey::Char('s') => {
@@ -409,6 +411,9 @@ impl App {
             }
         }
         self.state.tick_counter += 1;
+        if self.state.tick_scan_msg() {
+            changed = true;
+        }
         if self.state.search_mode && self.state.tick_counter.is_multiple_of(3) {
             changed = true;
         }
