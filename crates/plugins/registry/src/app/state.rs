@@ -94,11 +94,11 @@ impl App {
         self.status_ticks = 0;
     }
 
-    /// Called every Tick. Auto-dismisses the status after ~2 seconds.
+    /// Called every Tick (~100 ms). Auto‑dismisses the status after ~2 s.
     pub fn tick_status(&mut self) {
         if !self.status.is_empty() {
             self.status_ticks += 1;
-            if self.status_ticks > 120 {
+            if self.status_ticks > 20 {
                 self.status.clear();
             }
         }

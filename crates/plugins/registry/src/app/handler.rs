@@ -49,10 +49,15 @@ impl App {
             }
 
             HostMsg::Focus => {
+                self.detail_idx = None;
                 self.status.clear();
                 self.status_ticks = 0;
             }
-            HostMsg::Blur => {}
+            HostMsg::Blur => {
+                self.detail_idx = None;
+                self.status.clear();
+                self.status_ticks = 0;
+            }
 
             HostMsg::Key { key } => self.handle_key(key, &mut request),
 
