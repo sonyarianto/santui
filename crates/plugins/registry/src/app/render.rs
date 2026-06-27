@@ -55,15 +55,24 @@ impl App {
 
         ui::draw_panel(cmds, t, 0, 0, aw, ah, "Plugins");
 
-        let status_x = aw.saturating_sub(self.status.len() as u16 + 1);
-        cmds.push(RenderCmd::Text {
-            x: status_x,
-            y: 1,
-            text: self.status.clone(),
-            fg: Some(t.text_muted),
-            bg: None,
-            bold: false,
-        });
+        let info = if self.status.is_empty() {
+            self.registry.as_ref().map_or_else(String::new, |reg| {
+                format!("{} available", reg.available.len())
+            })
+        } else {
+            self.status.clone()
+        };
+        if !info.is_empty() {
+            let info_x = aw.saturating_sub(info.len() as u16 + 1);
+            cmds.push(RenderCmd::Text {
+                x: info_x,
+                y: 1,
+                text: info,
+                fg: Some(t.text_muted),
+                bg: None,
+                bold: false,
+            });
+        }
 
         let has_progress = self.download_progress.is_some();
         if let Some((downloaded, total)) = self.download_progress {

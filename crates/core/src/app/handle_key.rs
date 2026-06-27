@@ -76,6 +76,9 @@ impl super::Santui {
                     super::BuiltinId::About => {
                         self.app_state.show_about = true;
                     }
+                    super::BuiltinId::Exit => {
+                        self.app_state.running = false;
+                    }
                 }
             }
             super::ItemIndex::PluginCmd(pci) => {

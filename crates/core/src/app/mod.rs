@@ -39,6 +39,7 @@ pub(super) enum BuiltinId {
     SignOut,
     SwitchTheme,
     About,
+    Exit,
 }
 
 /// Return the canonical list of built-in command definitions.
@@ -50,6 +51,7 @@ pub(super) fn all_builtins() -> Vec<(BuiltinId, &'static str, &'static str)> {
         (BuiltinId::SignOut, "Auth", "Sign out"),
         (BuiltinId::SwitchTheme, "System", "Switch theme"),
         (BuiltinId::About, "System", "About"),
+        (BuiltinId::Exit, "System", "Exit"),
     ]
 }
 
