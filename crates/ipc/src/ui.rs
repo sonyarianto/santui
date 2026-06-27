@@ -147,7 +147,7 @@ pub fn draw_panel(
         w,
         h,
         fg: theme.border,
-        bg: Some(theme.background_panel),
+        bg: None,
         borders: BORDER_ALL,
         title: Some(title.trim().into()),
         title_fg: Some(theme.text),
@@ -165,14 +165,14 @@ pub fn truncate(text: &str, max_len: usize) -> String {
     }
 }
 
-/// Render text at (x, y) on the panel background, truncated to `max_w` cells.
+/// Render text at (x, y), truncated to `max_w` cells.
 pub fn text_at(
     cmds: &mut Vec<RenderCmd>,
     x: u16,
     y: u16,
     text: &str,
     fg: [u8; 3],
-    bg: [u8; 3],
+    bg: Option<[u8; 3]>,
     max_w: u16,
 ) {
     let display = truncate(text, max_w as usize);
@@ -181,7 +181,7 @@ pub fn text_at(
         y,
         text: display,
         fg: Some(fg),
-        bg: Some(bg),
+        bg,
         bold: false,
     });
 }

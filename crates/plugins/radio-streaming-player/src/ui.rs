@@ -74,7 +74,7 @@ pub fn render_ui(
         header: vec!["Name".into(), "Country".into()],
         header_style: TextStyle {
             fg: Some(theme.text_muted),
-            bg: Some(theme.background_panel),
+            bg: None,
             bold: true,
         },
         rows,
@@ -82,7 +82,7 @@ pub fn render_ui(
         selected: vis_selected,
         style: TextStyle {
             fg: Some(theme.text),
-            bg: Some(theme.background_panel),
+            bg: None,
             bold: false,
         },
         highlight_style: TextStyle {
@@ -112,7 +112,7 @@ pub fn render_ui(
             y: search_y,
             text: display,
             fg: Some(theme.accent),
-            bg: Some(theme.background_panel),
+            bg: None,
             bold: false,
         });
         let count_y = stations_h.saturating_sub(2);
@@ -122,7 +122,7 @@ pub fn render_ui(
             y: count_y,
             text: count_text,
             fg: Some(theme.text_muted),
-            bg: Some(theme.background_panel),
+            bg: None,
             bold: false,
         });
     }
@@ -141,7 +141,7 @@ pub fn render_ui(
             y: msg_y,
             text: display,
             fg: Some(theme.accent),
-            bg: Some(theme.background_panel),
+            bg: None,
             bold: false,
         });
     }
@@ -160,7 +160,7 @@ pub fn render_ui(
                 np_y + 2,
                 "No station selected",
                 theme.text_muted,
-                theme.background_panel,
+                None,
                 r_inner_w,
             );
         }
@@ -170,7 +170,7 @@ pub fn render_ui(
                 y: np_y + 2,
                 text: ui::truncate(&format!("♫ {station_name}"), r_inner_w as usize),
                 fg: Some(theme.success),
-                bg: Some(theme.background_panel),
+                bg: None,
                 bold: true,
             });
             if state.song_title.is_empty() {
@@ -180,7 +180,7 @@ pub fn render_ui(
                     np_y + 3,
                     "(no metadata)",
                     theme.text_muted,
-                    theme.background_panel,
+                    None,
                     r_inner_w,
                 );
             } else {
@@ -190,7 +190,7 @@ pub fn render_ui(
                     np_y + 3,
                     &state.song_title,
                     theme.text,
-                    theme.background_panel,
+                    None,
                     r_inner_w,
                 );
                 if let Some(ref info) = state.track_info {
@@ -201,7 +201,7 @@ pub fn render_ui(
                             np_y + 4,
                             artist,
                             theme.text_muted,
-                            theme.background_panel,
+                            None,
                             r_inner_w,
                         );
                     }
@@ -215,18 +215,10 @@ pub fn render_ui(
                 np_y + 2,
                 "⚠ Error",
                 theme.error,
-                theme.background_panel,
+                None,
                 r_inner_w,
             );
-            ui::text_at(
-                &mut cmds,
-                2,
-                np_y + 3,
-                e,
-                theme.error,
-                theme.background_panel,
-                r_inner_w,
-            );
+            ui::text_at(&mut cmds, 2, np_y + 3, e, theme.error, None, r_inner_w);
         }
     }
 

@@ -13,7 +13,7 @@ impl App {
     }
 
     pub(super) fn bg(&self) -> Option<[u8; 3]> {
-        Some(self.theme.background_panel)
+        None
     }
 
     pub(super) fn hints(&self) -> Vec<(String, String)> {
@@ -61,7 +61,7 @@ impl App {
             y: 1,
             text: self.status.clone(),
             fg: Some(t.text_muted),
-            bg: Some(t.background_panel),
+            bg: None,
             bold: false,
         });
 
@@ -87,7 +87,7 @@ impl App {
                 y: 3,
                 text: bar,
                 fg: Some(t.accent),
-                bg: Some(t.background_panel),
+                bg: None,
                 bold: false,
             });
         }
@@ -181,7 +181,7 @@ impl App {
                 ],
                 header_style: TextStyle {
                     fg: Some(t.text_muted),
-                    bg: Some(t.background_panel),
+                    bg: None,
                     bold: true,
                 },
                 rows,
@@ -195,7 +195,7 @@ impl App {
                 selected: vis_selected,
                 style: TextStyle {
                     fg: Some(t.text),
-                    bg: Some(t.background_panel),
+                    bg: None,
                     bold: false,
                 },
                 highlight_style: TextStyle {
