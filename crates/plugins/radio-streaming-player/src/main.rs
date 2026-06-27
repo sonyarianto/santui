@@ -49,8 +49,19 @@ fn send_cmd(app: &App, cmd: MpvCmd) {
 
 impl App {
     fn new() -> Self {
-        let db = database::open().expect("Failed to open station database");
-        let station_list = stations::load(&db);
+        let (db, station_list, init_error) = match database::open() {
+            Ok(db) => {
+                let list = stations::load(&db);
+                (db, list, None)
+            }
+            Err(e) => {
+                let err = format!("Database error: {e}");
+                log::error!("{err}");
+                let fallback =
+                    rusqlite::Connection::open_in_memory().expect("in-memory DB fallback");
+                (fallback, Vec::new(), Some(err))
+            }
+        };
         App {
             db,
             state: state::RadioState::new(station_list),
@@ -73,7 +84,7 @@ impl App {
             rx_msg: None,
             tx_msg: None,
             mpv_thread: None,
-            init_error: None,
+            init_error,
             dirty: true,
             cached_commands: Vec::new(),
             cached_json: None,
@@ -415,7 +426,7 @@ impl App {
                 vec![RenderCmd::Text {
                     x: 0,
                     y: 0,
-                    text: format!("Failed to load libmpv: {err}"),
+                    text: err.clone(),
                     fg: Some(self.theme.error),
                     bg: None,
                     bold: false,
@@ -438,7 +449,13 @@ fn palette_commands() -> Vec<(String, String)> {
 
 fn respond(app: &mut App) {
     if app.dirty || app.cached_json.is_none() {
-        let commands_val = serde_json::to_value(app.render()).expect("commands");
+        let commands_val = match serde_json::to_value(app.render()) {
+            Ok(v) => v,
+            Err(e) => {
+                log::error!("failed to serialize render commands: {e}");
+                return;
+            }
+        };
         let hints = app.status_hints();
         let palette = palette_commands();
         let json = serde_json::json!({
@@ -446,13 +463,18 @@ fn respond(app: &mut App) {
             "hints": hints,
             "palette_commands": palette,
         });
-        app.cached_json = Some(serde_json::to_string(&json).expect("PluginMsg serialization"));
+        app.cached_json = match serde_json::to_string(&json) {
+            Ok(s) => Some(s),
+            Err(e) => {
+                log::error!("failed to serialize PluginMsg: {e}");
+                return;
+            }
+        };
         app.dirty = false;
     }
-    let json = app
-        .cached_json
-        .as_deref()
-        .expect("cached_json populated if dirty or None");
+    let Some(json) = app.cached_json.as_deref() else {
+        return;
+    };
     let mut out = std::io::stdout().lock();
     let _ = writeln!(out, "{json}");
     let _ = out.flush();
