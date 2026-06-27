@@ -1,32 +1,26 @@
 use crate::theme::{self, Theme};
+use crate::widgets::filtered_list::{DisplayItem, FilteredListState};
+use crate::widgets::popup::centered_rect;
+use ratatui::buffer::Buffer;
+use ratatui::layout::Rect;
+use ratatui::style::{Modifier, Style};
+use ratatui::text::{Line, Span};
+use ratatui::widgets::{Clear, List, ListItem, ListState, Paragraph, StatefulWidget, Widget};
 use ratatui::Frame;
 use std::path::Path;
 
 /// Manages theme selection, preview, and the theme-picker UI state.
-///
-/// Owns the full theme list, the currently selected index, and all
-/// theme-picker interaction state (query, cursor, scroll).  The active
-/// theme value itself lives in [`AppState`](super::app_state::AppState)
-/// and is kept in sync via [`ThemeManager::select`] and [`ThemeManager::preview`].
 #[derive(Debug)]
 pub(crate) struct ThemeManager {
     /// All known themes: `(display_name, Theme)`.
     pub(super) themes: Vec<(String, Theme)>,
     /// Index into `themes` for the currently applied theme.
     pub(super) current_idx: usize,
-    /// Search text typed into the theme picker.
-    pub(super) picker_query: String,
-    /// Flat-list cursor inside the theme picker.
-    pub(super) picker_cursor: usize,
-    /// Scroll offset (lines) inside the theme picker.
-    pub(super) picker_scroll: u16,
+    /// Theme picker state (filter, cursor, scroll).
+    pub(super) picker_filter: Option<FilteredListState>,
     /// Theme index that was selected when the picker was opened,
     /// so Esc restores it.
     pub(super) picker_orig_idx: usize,
-    /// Cached result of `filtered()`, invalidated when `picker_query` changes.
-    cached_filtered: Vec<usize>,
-    /// Previous query value used to validate `cached_filtered`.
-    cached_filtered_query: Option<String>,
 }
 
 impl ThemeManager {
@@ -39,36 +33,25 @@ impl ThemeManager {
         ThemeManager {
             themes,
             current_idx,
-            picker_query: String::new(),
-            picker_cursor: 0,
-            picker_scroll: 0,
+            picker_filter: None,
             picker_orig_idx: 0,
-            cached_filtered: Vec::new(),
-            cached_filtered_query: None,
         }
     }
 
-    /// Return a reference to the currently active theme value stored in
-    /// the theme list.  This is kept separate from the one in `AppState`.
     pub(super) fn current(&self) -> &Theme {
         &self.themes[self.current_idx].1
     }
 
-    /// Apply the theme at `idx` and return the new theme.
     pub(super) fn select(&mut self, idx: usize) -> Theme {
         self.current_idx = idx;
         self.themes[idx].1.clone()
     }
 
-    /// Preview a theme without permanently selecting it.
     pub(super) fn preview(&mut self, idx: usize) -> Theme {
         self.current_idx = idx;
         self.themes[idx].1.clone()
     }
 
-    /// Load user-defined themes from `config_dir/themes/` and merge them into
-    /// the theme list.  User themes with the same name as a built-in theme
-    /// replace it; new names are appended.
     pub(super) fn load_user_themes(&mut self, config_dir: &Path) {
         let user = theme::load_user_themes(config_dir);
         if user.is_empty() {
@@ -88,194 +71,172 @@ impl ThemeManager {
         }
     }
 
-    /// Return the indices of themes matching the current picker query.
-    pub(super) fn filtered(&mut self) -> Vec<usize> {
-        if self.cached_filtered_query.as_deref() != Some(self.picker_query.as_str()) {
-            self.cached_filtered = if self.picker_query.is_empty() {
-                (0..self.themes.len()).collect()
-            } else {
-                let q = self.picker_query.to_lowercase();
-                self.themes
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, (name, _))| name.to_lowercase().contains(&q))
-                    .map(|(i, _)| i)
-                    .collect()
-            };
-            self.cached_filtered_query = Some(self.picker_query.clone());
-        }
-        self.cached_filtered.clone()
-    }
+    /// Render the theme-picker overlay using ratatui widgets.
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn render_picker(&mut self, f: &mut Frame, content: Rect, theme: &Theme, tick: u64) {
+        // Clone theme names first to avoid borrow conflict with picker_filter.
+        let theme_names: Vec<String> = self.themes.iter().map(|(n, _)| n.clone()).collect();
 
-    /// Adjust scroll so that the cursor is visible in the picker list.
-    pub(super) fn ensure_cursor_visible(&mut self, content_h: u16) {
-        let list_h = super::max_list_h(content_h);
-        let cursor = self.picker_cursor as u16;
-        if cursor < self.picker_scroll {
-            self.picker_scroll = cursor;
-        } else if cursor >= self.picker_scroll + list_h {
-            self.picker_scroll = cursor.saturating_sub(list_h.saturating_sub(1));
-        }
-    }
-
-    /// Render the theme-picker overlay.
-    pub(super) fn render_picker(
-        &mut self,
-        f: &mut Frame,
-        content: ratatui::layout::Rect,
-        theme: &Theme,
-        tick: u64,
-    ) {
-        let t = theme;
-        let filtered = self.filtered();
-        let cursor = self.picker_cursor;
-
-        let pw = super::pal_w(content.width);
-        let inner_w = pw.saturating_sub(super::PAD_L * 2);
-
-        let no_results = !self.picker_query.is_empty() && filtered.is_empty();
-        let list_items = if no_results { 1 } else { filtered.len() };
-
-        let max_visible = super::max_list_h(content.height);
-        let ideal_pal = super::PAD_T + super::HEADER_H + max_visible + super::PAD_B;
-        let pal_h = ideal_pal
-            .max(super::PAD_T + super::HEADER_H + super::PAD_B + 1)
-            .min(content.height);
-        let max_list = pal_h.saturating_sub(super::PAD_T + super::HEADER_H + super::PAD_B);
-        let list_h = (list_items as u16).min(max_list).max(1);
-
-        let x = (content.width.saturating_sub(pw)) / 2;
-        let y = content.y + (content.height.saturating_sub(pal_h)) / 2;
-        let pal_area = ratatui::layout::Rect {
-            x,
-            y,
-            width: pw,
-            height: pal_h,
+        let filter = match self.picker_filter.as_mut() {
+            Some(f) => f,
+            None => return,
         };
 
-        f.render_widget(ratatui::widgets::Clear, pal_area);
-        f.render_widget(
-            ratatui::widgets::Paragraph::new(vec![])
-                .style(ratatui::style::Style::default().bg(t.background_panel)),
-            pal_area,
-        );
-
-        let pad_w = inner_w.saturating_sub(9);
-        let mut title_spans = vec![ratatui::text::Span::styled(
-            "Themes",
-            ratatui::style::Style::default()
-                .fg(t.text)
-                .add_modifier(ratatui::style::Modifier::BOLD),
-        )];
-        if pad_w > 0 {
-            title_spans.push(ratatui::text::Span::styled(
-                " ".repeat(pad_w as usize),
-                ratatui::style::Style::default(),
-            ));
+        if filter.is_dirty() {
+            let items: Vec<DisplayItem> = theme_names
+                .iter()
+                .map(|name| DisplayItem {
+                    category: "",
+                    label: name.as_str(),
+                })
+                .collect();
+            filter.set_query(filter.query.clone(), &items);
         }
-        title_spans.push(ratatui::text::Span::styled(
-            "esc",
-            ratatui::style::Style::default().fg(t.text_muted),
-        ));
 
-        let cursor_on = (tick / 5).is_multiple_of(2);
-
-        let input_line = if self.picker_query.is_empty() {
-            let first_style = if cursor_on {
-                ratatui::style::Style::default()
-                    .fg(t.inverted_text)
-                    .bg(t.highlight)
-            } else {
-                ratatui::style::Style::default().fg(t.text_muted)
-            };
-            ratatui::text::Line::from(vec![
-                ratatui::text::Span::styled("S", first_style),
-                ratatui::text::Span::styled(
-                    "earch",
-                    ratatui::style::Style::default().fg(t.text_muted),
-                ),
-            ])
+        let min_w = 30;
+        let ideal_w = 60;
+        let title_h = 4;
+        let pad_b = 1;
+        let list_h = if filter.filtered_is_empty() {
+            1
         } else {
-            let cursor_style = if cursor_on {
-                ratatui::style::Style::default()
-                    .fg(t.inverted_text)
-                    .bg(t.highlight)
-            } else {
-                ratatui::style::Style::default()
-                    .fg(t.background_panel)
-                    .bg(t.background_panel)
-            };
-            ratatui::text::Line::from(vec![
-                ratatui::text::Span::styled(
-                    self.picker_query.clone(),
-                    ratatui::style::Style::default().fg(t.text),
-                ),
-                ratatui::text::Span::styled(" ", cursor_style),
-            ])
+            (filter.total_items() as u16).max(1)
         };
+        let popup_h = (title_h + list_h + pad_b)
+            .min(content.height)
+            .max(title_h + pad_b + 1);
+        let popup_rect = centered_rect(content, min_w, ideal_w, popup_h);
+        let inner_x = popup_rect.x.saturating_add(2);
+        let inner_w = popup_rect.width.saturating_sub(4);
 
-        let header_lines = vec![
-            ratatui::text::Line::from(title_spans),
-            ratatui::text::Line::from(""),
-            input_line,
-            ratatui::text::Line::from(""),
-        ];
+        render_picker_chrome(f.buffer_mut(), popup_rect, theme);
 
-        let header_area = ratatui::layout::Rect {
-            x: pal_area.x + super::PAD_L,
-            y: pal_area.y + super::PAD_T,
+        // Header: title + search
+        let header_area = Rect {
+            x: inner_x,
+            y: popup_rect.y + 1,
             width: inner_w,
-            height: super::HEADER_H,
+            height: title_h,
         };
-        f.render_widget(ratatui::widgets::Paragraph::new(header_lines), header_area);
+        render_picker_header(f.buffer_mut(), header_area, &filter.query, tick, theme);
 
-        let mut list_lines = Vec::with_capacity(filtered.len() + 1);
+        // Theme list
+        let cursor = filter.cursor;
+        let no_results = filter.filtered_is_empty();
+        let filtered_indices = filter.filtered_indices().to_vec();
 
+        // Build custom list items with ● for current theme
+        let mut list_items: Vec<ListItem> = Vec::with_capacity(filtered_indices.len());
         if no_results {
-            list_lines.push(ratatui::text::Line::from(ratatui::text::Span::styled(
-                "No results found",
-                ratatui::style::Style::default().fg(t.text_muted),
-            )));
-        }
-
-        for (flat, &i) in filtered.iter().enumerate() {
-            let (name, _) = &self.themes[i];
-            let current = i == self.current_idx;
-            let hovered = flat == cursor;
-            let prefix = if current { " ● " } else { "   " };
-            let text_fg = if hovered {
-                t.inverted_text
-            } else if current {
-                t.accent
-            } else {
-                t.text
-            };
-            let mut style = ratatui::style::Style::default().fg(text_fg);
-            if hovered {
-                style = style
-                    .bg(t.highlight)
-                    .add_modifier(ratatui::style::Modifier::BOLD);
-            } else if current {
-                style = style.add_modifier(ratatui::style::Modifier::BOLD);
+            list_items.push(
+                ListItem::new(Line::from(Span::styled(
+                    "No results found",
+                    Style::default().fg(theme.text_muted),
+                )))
+                .style(Style::default().fg(theme.text_muted)),
+            );
+        } else {
+            for (flat, &theme_idx) in filtered_indices.iter().enumerate() {
+                let (name, _) = &self.themes[theme_idx];
+                let is_current = theme_idx == self.current_idx;
+                let is_hovered = flat == cursor;
+                let prefix = if is_current { " ● " } else { "   " };
+                let text_fg = if is_hovered {
+                    theme.inverted_text
+                } else if is_current {
+                    theme.accent
+                } else {
+                    theme.text
+                };
+                let mut item_style = Style::default().fg(text_fg);
+                if is_hovered {
+                    item_style = item_style.bg(theme.highlight).add_modifier(Modifier::BOLD);
+                } else if is_current {
+                    item_style = item_style.add_modifier(Modifier::BOLD);
+                }
+                let line = format!("{}{}", prefix, name);
+                list_items.push(
+                    ListItem::new(Line::from(Span::styled(line, item_style))).style(item_style),
+                );
             }
-            let pad = inner_w as usize - prefix.len() - name.len();
-            list_lines.push(ratatui::text::Line::from(vec![
-                ratatui::text::Span::styled(prefix, style),
-                ratatui::text::Span::styled(name.as_str(), style),
-                ratatui::text::Span::styled(" ".repeat(pad), style),
-            ]));
         }
 
-        let list_top = pal_area.y + super::PAD_T + super::HEADER_H;
-        let list_area = ratatui::layout::Rect {
-            x: pal_area.x + super::PAD_L,
-            y: list_top,
+        let mut list_state = ListState::default();
+        if !filtered_indices.is_empty() && cursor < filtered_indices.len() {
+            list_state.select(Some(cursor));
+        }
+
+        let list_area = Rect {
+            x: inner_x,
+            y: header_area.bottom(),
             width: inner_w,
-            height: list_h,
+            height: popup_rect
+                .bottom()
+                .saturating_sub(header_area.bottom())
+                .saturating_sub(1),
         };
-        f.render_widget(
-            ratatui::widgets::Paragraph::new(list_lines).scroll((self.picker_scroll, 0)),
-            list_area,
-        );
+        if list_area.height > 0 {
+            StatefulWidget::render(
+                List::new(list_items)
+                    .highlight_style(Style::default().fg(theme.inverted_text).bg(theme.highlight)),
+                list_area,
+                f.buffer_mut(),
+                &mut list_state,
+            );
+        }
     }
+}
+
+fn render_picker_chrome(buf: &mut Buffer, popup_rect: Rect, theme: &Theme) {
+    Clear.render(popup_rect, buf);
+    Paragraph::new(vec![])
+        .style(Style::default().bg(theme.background_panel))
+        .render(popup_rect, buf);
+}
+
+fn render_picker_header(buf: &mut Buffer, area: Rect, query: &str, tick: u64, theme: &Theme) {
+    let cursor_on = (tick / 5).is_multiple_of(2);
+
+    let pad_w = area.width.saturating_sub(9) as usize;
+    let title_spans = vec![
+        Span::styled(
+            "Themes",
+            Style::default().fg(theme.text).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(" ".repeat(pad_w), Style::default()),
+        Span::styled("esc", Style::default().fg(theme.text_muted)),
+    ];
+
+    let input_line = if query.is_empty() {
+        let first_style = if cursor_on {
+            Style::default().fg(theme.inverted_text).bg(theme.highlight)
+        } else {
+            Style::default().fg(theme.text_muted)
+        };
+        Line::from(vec![
+            Span::styled("S", first_style),
+            Span::styled("earch", Style::default().fg(theme.text_muted)),
+        ])
+    } else {
+        let cursor_style = if cursor_on {
+            Style::default().fg(theme.inverted_text).bg(theme.highlight)
+        } else {
+            Style::default()
+                .fg(theme.background_panel)
+                .bg(theme.background_panel)
+        };
+        Line::from(vec![
+            Span::styled(query.to_string(), Style::default().fg(theme.text)),
+            Span::styled(" ", cursor_style),
+        ])
+    };
+
+    let header_lines = vec![
+        Line::from(title_spans),
+        Line::from(""),
+        input_line,
+        Line::from(""),
+    ];
+
+    Paragraph::new(header_lines).render(area, buf);
 }

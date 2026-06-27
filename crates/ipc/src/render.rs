@@ -1,7 +1,7 @@
 use crate::protocol::{RenderCmd, TextStyle};
-use ratatui::layout::{Constraint, Rect};
+use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
-use ratatui::widgets::{self, ListState, Paragraph, Row, Table, TableState, Wrap};
+use ratatui::widgets::{self, Block, Borders, ListState, Paragraph, Row, Table, TableState, Wrap};
 use ratatui::Frame;
 
 fn to_style(s: &TextStyle) -> Style {
@@ -18,6 +18,15 @@ fn to_style(s: &TextStyle) -> Style {
     style
 }
 
+/// Clip a rectangle to the frame buffer bounds.
+fn clipped(area: Rect, x: u16, y: u16, w: u16, h: u16) -> Rect {
+    let cx = area.x.saturating_add(x);
+    let cy = area.y.saturating_add(y);
+    let cw = w.min(area.width.saturating_sub(cx.saturating_sub(area.x)));
+    let ch = h.min(area.height.saturating_sub(cy.saturating_sub(area.y)));
+    Rect::new(cx, cy, cw, ch)
+}
+
 pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
     for cmd in commands {
         match cmd {
@@ -30,8 +39,7 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                 style,
                 wrap,
             } => {
-                let p_area =
-                    Rect::new(area.x.saturating_add(*x), area.y.saturating_add(*y), *w, *h);
+                let p_area = clipped(area, *x, *y, *w, *h);
                 let mut p = Paragraph::new(text.as_str()).style(to_style(style));
                 if *wrap {
                     p = p.wrap(Wrap { trim: false });
@@ -48,8 +56,7 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                 style,
                 highlight_style,
             } => {
-                let list_area =
-                    Rect::new(area.x.saturating_add(*x), area.y.saturating_add(*y), *w, *h);
+                let list_area = clipped(area, *x, *y, *w, *h);
                 let list_items: Vec<widgets::ListItem> = items
                     .iter()
                     .map(|item| widgets::ListItem::new(item.as_str()))
@@ -75,11 +82,10 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                 style,
                 highlight_style,
             } => {
-                let table_area =
-                    Rect::new(area.x.saturating_add(*x), area.y.saturating_add(*y), *w, *h);
-                let widths: Vec<Constraint> = column_widths
+                let table_area = clipped(area, *x, *y, *w, *h);
+                let widths: Vec<ratatui::layout::Constraint> = column_widths
                     .iter()
-                    .map(|&cw| Constraint::Length(cw))
+                    .map(|&cw| ratatui::layout::Constraint::Length(cw))
                     .collect();
                 let header_row =
                     Row::new(header.iter().map(|s| s.as_str())).style(to_style(header_style));
@@ -97,15 +103,8 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                 f.render_stateful_widget(table, table_area, &mut state);
             }
             RenderCmd::Clear { x, y, w, h } => {
-                let buf = f.buffer_mut();
-                let cx = area.x.saturating_add(*x);
-                let cy = area.y.saturating_add(*y);
-                let cw = (*w).min(buf.area().width.saturating_sub(cx));
-                let ch = (*h).min(buf.area().height.saturating_sub(cy));
-                let fill = " ".repeat(cw as usize);
-                for row in cy..cy.saturating_add(ch) {
-                    buf.set_string(cx, row, &fill, Style::reset());
-                }
+                let rect = clipped(area, *x, *y, *w, *h);
+                f.render_widget(widgets::Clear, rect);
             }
             RenderCmd::Text {
                 x,
@@ -115,10 +114,7 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                 bg,
                 bold,
             } => {
-                let buf = f.buffer_mut();
-                let cx = area.x.saturating_add(*x);
-                let cy = area.y.saturating_add(*y);
-                let mut style = Style::reset();
+                let mut style = Style::default();
                 if let Some([r, g, b]) = fg {
                     style = style.fg(Color::Rgb(*r, *g, *b));
                 }
@@ -128,47 +124,24 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                 if *bold {
                     style = style.add_modifier(Modifier::BOLD);
                 }
-                buf.set_string(cx, cy, text, style);
+                let rect = clipped(area, *x, *y, text.len() as u16, 1);
+                f.render_widget(Paragraph::new(text.as_str()).style(style), rect);
             }
             RenderCmd::Rect { x, y, w, h, bg } => {
-                let buf = f.buffer_mut();
-                let cx = area.x.saturating_add(*x);
-                let cy = area.y.saturating_add(*y);
-                let cw = (*w).min(buf.area().width.saturating_sub(cx));
-                let ch = (*h).min(buf.area().height.saturating_sub(cy));
-                let bg_style = Style::reset().bg(Color::Rgb(bg[0], bg[1], bg[2]));
-                let fill = " ".repeat(cw as usize);
-                for row in cy..cy.saturating_add(ch) {
-                    buf.set_string(cx, row, &fill, bg_style);
-                }
+                let rect = clipped(area, *x, *y, *w, *h);
+                let bg_color = Color::Rgb(bg[0], bg[1], bg[2]);
+                f.render_widget(widgets::Clear, rect);
+                f.render_widget(Block::default().style(Style::default().bg(bg_color)), rect);
             }
             RenderCmd::Border { x, y, w, h, fg } => {
-                let buf = f.buffer_mut();
-                let cx = area.x.saturating_add(*x);
-                let cy = area.y.saturating_add(*y);
-                let max_w = buf.area().width;
-                let max_h = buf.area().height;
-                let bw = (*w).min(max_w.saturating_sub(cx));
-                let bh = (*h).min(max_h.saturating_sub(cy));
-                if bw < 2 || bh < 2 {
-                    return;
-                }
-                let fg_style = Style::reset().fg(Color::Rgb(fg[0], fg[1], fg[2]));
-                let inner_w = bw.saturating_sub(2) as usize;
-
-                // Top: ┌───┐
-                let top = format!("┌{}┐", "─".repeat(inner_w));
-                buf.set_string(cx, cy, &top, fg_style);
-
-                // Sides: │    │
-                for row in (cy + 1)..(cy + bh - 1) {
-                    buf.set_string(cx, row, "│", fg_style);
-                    buf.set_string(cx + bw - 1, row, "│", fg_style);
-                }
-
-                // Bottom: └───┘
-                let bottom = format!("└{}┘", "─".repeat(inner_w));
-                buf.set_string(cx, cy + bh - 1, &bottom, fg_style);
+                let rect = clipped(area, *x, *y, *w, *h);
+                let fg_color = Color::Rgb(fg[0], fg[1], fg[2]);
+                f.render_widget(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_style(Style::default().fg(fg_color)),
+                    rect,
+                );
             }
         }
     }

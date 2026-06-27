@@ -4,6 +4,7 @@ pub mod config;
 pub mod event;
 pub mod plugin;
 pub mod theme;
+pub mod widgets;
 
 pub use app::Santui;
 pub use auth::{AuthHandle, User};

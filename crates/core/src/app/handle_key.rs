@@ -23,14 +23,9 @@ impl super::Santui {
     fn handle_key_palette(&mut self, key: KeyEvent) {
         let cmds = self.plugin_manager.commands();
         let bi = &self.app_state.builtin_items;
-        let term_h = self.term_h;
-        let action = self.palette_controller.handle_key(
-            key,
-            term_h,
-            bi,
-            self.plugin_manager.dynamic_items(),
-            cmds,
-        );
+        let action =
+            self.palette_controller
+                .handle_key(key, bi, self.plugin_manager.dynamic_items(), cmds);
         if let super::palette_controller::PaletteAction::Execute(idx) = action {
             self.execute_palette_selection(idx);
         }
@@ -64,9 +59,18 @@ impl super::Santui {
                     super::BuiltinId::SwitchTheme => {
                         self.app_state.theme_picker_open = true;
                         let tm = &mut self.theme_manager;
-                        tm.picker_query.clear();
-                        tm.picker_cursor = tm.current_idx;
-                        tm.picker_scroll = 0;
+                        let items: Vec<crate::widgets::filtered_list::DisplayItem> = tm
+                            .themes
+                            .iter()
+                            .map(|(name, _)| crate::widgets::filtered_list::DisplayItem {
+                                category: "",
+                                label: name.as_str(),
+                            })
+                            .collect();
+                        let mut filter = crate::widgets::filtered_list::FilteredListState::new();
+                        filter.set_query(String::new(), &items);
+                        filter.cursor = tm.current_idx;
+                        tm.picker_filter = Some(filter);
                         tm.picker_orig_idx = tm.current_idx;
                     }
                     super::BuiltinId::About => {
@@ -157,7 +161,29 @@ impl super::Santui {
     }
 
     fn handle_key_theme_picker(&mut self, key: KeyEvent) {
-        let mut filtered = self.theme_manager.filtered();
+        use crate::widgets::filtered_list::DisplayItem;
+
+        // Clone names to avoid borrow conflict with picker_filter.
+        let theme_names: Vec<String> = self
+            .theme_manager
+            .themes
+            .iter()
+            .map(|(n, _)| n.clone())
+            .collect();
+
+        let filter = match self.theme_manager.picker_filter.as_mut() {
+            Some(f) => f,
+            None => return,
+        };
+
+        let items: Vec<DisplayItem> = theme_names
+            .iter()
+            .map(|name| DisplayItem {
+                category: "",
+                label: name.as_str(),
+            })
+            .collect();
+
         match key.code {
             KeyCode::Char(c)
                 if c == 'p'
@@ -170,47 +196,31 @@ impl super::Santui {
             }
             KeyCode::Char(_) if !key.modifiers.is_empty() => {}
             KeyCode::Char(c) => {
-                self.theme_manager.picker_query.push(c);
-                self.theme_manager.picker_cursor = 0;
-                if let Some(&idx) = filtered.first() {
+                filter.push_char(c, &items);
+                if let Some(idx) = filter.selected_item() {
                     self.preview_theme(idx);
                 }
             }
             KeyCode::Backspace => {
-                self.theme_manager.picker_query.pop();
-                self.theme_manager.picker_cursor = 0;
-                filtered = self.theme_manager.filtered();
-                if let Some(&idx) = filtered.first() {
+                filter.pop_char(&items);
+                if let Some(idx) = filter.selected_item() {
                     self.preview_theme(idx);
                 }
             }
             KeyCode::Up => {
-                if !filtered.is_empty() {
-                    self.theme_manager.picker_cursor = if self.theme_manager.picker_cursor == 0 {
-                        filtered.len() - 1
-                    } else {
-                        self.theme_manager.picker_cursor - 1
-                    };
-                    if let Some(&idx) = filtered.get(self.theme_manager.picker_cursor) {
-                        self.preview_theme(idx);
-                    }
+                filter.move_up();
+                if let Some(idx) = filter.selected_item() {
+                    self.preview_theme(idx);
                 }
             }
             KeyCode::Down => {
-                if !filtered.is_empty() {
-                    self.theme_manager.picker_cursor =
-                        if self.theme_manager.picker_cursor + 1 >= filtered.len() {
-                            0
-                        } else {
-                            self.theme_manager.picker_cursor + 1
-                        };
-                    if let Some(&idx) = filtered.get(self.theme_manager.picker_cursor) {
-                        self.preview_theme(idx);
-                    }
+                filter.move_down();
+                if let Some(idx) = filter.selected_item() {
+                    self.preview_theme(idx);
                 }
             }
             KeyCode::Enter => {
-                if let Some(&idx) = filtered.get(self.theme_manager.picker_cursor) {
+                if let Some(idx) = filter.selected_item() {
                     self.select_theme(idx);
                 }
                 self.app_state.theme_picker_open = false;
@@ -220,10 +230,6 @@ impl super::Santui {
                 self.app_state.theme_picker_open = false;
             }
             _ => {}
-        }
-        if self.app_state.theme_picker_open {
-            self.theme_manager
-                .ensure_cursor_visible(self.term_h.saturating_sub(1));
         }
     }
 

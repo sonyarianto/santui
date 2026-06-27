@@ -1,23 +1,20 @@
-use super::palette_widget::PaletteWidget;
 use super::{BuiltinId, ItemIndex};
 use crate::plugin::PluginCmdItem;
 use crate::theme::Theme;
-use crossterm::event::{KeyCode, KeyEvent};
+use crate::widgets::filtered_list::{DisplayItem, FilteredListState};
+use crate::widgets::popup::centered_rect;
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
+use ratatui::style::{Modifier, Style};
+use ratatui::text::{Line, Span};
+use ratatui::widgets::{Clear, Paragraph, StatefulWidget, Widget};
 use ratatui::Frame;
-
-type CategoryGroups = Vec<(String, Vec<ItemIndex>)>;
 
 /// Owns the command-palette overlay state and processes key events against
 /// it, returning actions for the caller to execute.
 pub(super) struct PaletteController {
-    palette: Option<PaletteWidget>,
-    /// Cached result of `filtered_items()` — recomputed only when query changes.
-    cached_filtered: Vec<ItemIndex>,
-    /// Cached grouped items — recomputed together with `cached_filtered`.
-    cached_groups: CategoryGroups,
-    /// True when `cached_filtered` is stale (query changed or palette opened).
-    filtered_dirty: bool,
+    state: Option<FilteredListState>,
 }
 
 pub(super) enum PaletteAction {
@@ -27,126 +24,100 @@ pub(super) enum PaletteAction {
 
 impl PaletteController {
     pub fn new() -> Self {
-        Self {
-            palette: None,
-            cached_filtered: Vec::new(),
-            cached_groups: Vec::new(),
-            filtered_dirty: true,
-        }
+        Self { state: None }
     }
 
     pub fn open(&mut self) {
-        self.palette = Some(PaletteWidget::new());
-        self.filtered_dirty = true;
+        self.state = Some(FilteredListState::new());
     }
 
     pub fn is_open(&self) -> bool {
-        self.palette.is_some()
+        self.state.is_some()
     }
 
-    /// Process a key event while the palette is open.
-    /// Returns `PaletteAction::Execute(idx)` when the user presses Enter
-    /// on a selected item; the caller should run the selection.  The
-    /// palette is closed automatically on Enter, Esc, or Ctrl+P.
+    /// Build a flat `DisplayItem` list and a parallel `ItemIndex` mapping
+    /// from the three item sources.
+    fn build_items<'a>(
+        builtin_items: &'a [(BuiltinId, &'static str, &'static str)],
+        dynamic_items: &'a [(String, String, String)],
+        cmds: &'a [(usize, usize, PluginCmdItem)],
+    ) -> (Vec<DisplayItem<'a>>, Vec<ItemIndex>) {
+        let mut items = Vec::new();
+        let mut mapping = Vec::new();
+        for (i, (_id, cat, label)) in builtin_items.iter().enumerate() {
+            items.push(DisplayItem {
+                category: cat,
+                label,
+            });
+            mapping.push(ItemIndex::Builtin(i));
+        }
+        for (i, (cat, _id, name)) in dynamic_items.iter().enumerate() {
+            items.push(DisplayItem {
+                category: cat.as_str(),
+                label: name.as_str(),
+            });
+            mapping.push(ItemIndex::Dynamic(i));
+        }
+        for (i, (_p, _l, cmd)) in cmds.iter().enumerate() {
+            items.push(DisplayItem {
+                category: cmd.category.as_str(),
+                label: cmd.label.as_str(),
+            });
+            mapping.push(ItemIndex::PluginCmd(i));
+        }
+        (items, mapping)
+    }
+
     pub fn handle_key(
         &mut self,
         key: KeyEvent,
-        term_h: u16,
+
         builtin_items: &[(BuiltinId, &'static str, &'static str)],
         dynamic_items: &[(String, String, String)],
         cmds: &[(usize, usize, PluginCmdItem)],
     ) -> PaletteAction {
-        if self.filtered_dirty {
-            self.cached_filtered = self
-                .palette
-                .as_ref()
-                .map(|p| p.filtered_items(builtin_items, dynamic_items, cmds))
-                .unwrap_or_default();
-            self.cached_groups =
-                build_groups(&self.cached_filtered, builtin_items, dynamic_items, cmds);
-            self.filtered_dirty = false;
-        }
-        let filtered = &self.cached_filtered;
+        let Some(ref mut state) = self.state else {
+            return PaletteAction::None;
+        };
+        let (items, _mapping) = Self::build_items(builtin_items, dynamic_items, cmds);
 
         match key.code {
-            KeyCode::Char(c)
-                if c == 'p'
-                    && key
-                        .modifiers
-                        .contains(crossterm::event::KeyModifiers::CONTROL) =>
-            {
-                self.palette = None;
+            KeyCode::Char(c) if c == 'p' && key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.state = None;
                 return PaletteAction::None;
             }
             KeyCode::Char(_) if !key.modifiers.is_empty() => {}
             KeyCode::Char(c) => {
-                if let Some(ref mut p) = self.palette {
-                    p.query.push(c);
-                    p.cursor = 0;
-                    p.scroll = 0;
-                }
-                self.filtered_dirty = true;
+                state.push_char(c, &items);
             }
             KeyCode::Backspace => {
-                if let Some(ref mut p) = self.palette {
-                    p.query.pop();
-                    p.cursor = 0;
-                    p.scroll = 0;
-                }
-                self.filtered_dirty = true;
+                state.pop_char(&items);
             }
             KeyCode::Up => {
-                if !filtered.is_empty() {
-                    if let Some(ref mut p) = self.palette {
-                        p.cursor = if p.cursor == 0 {
-                            filtered.len() - 1
-                        } else {
-                            p.cursor - 1
-                        };
-                    }
-                }
+                state.move_up();
             }
             KeyCode::Down => {
-                if !filtered.is_empty() {
-                    if let Some(ref mut p) = self.palette {
-                        p.cursor = if p.cursor + 1 >= filtered.len() {
-                            0
-                        } else {
-                            p.cursor + 1
-                        };
-                    }
-                }
+                state.move_down();
             }
             KeyCode::Enter => {
-                let cursor = self.palette.as_ref().map(|p| p.cursor).unwrap_or(0);
-                if let Some(&idx) = filtered.get(cursor) {
-                    self.palette = None;
-                    return PaletteAction::Execute(idx);
+                if let Some(item_idx) = state.selected_item() {
+                    let mapping = Self::build_items(builtin_items, dynamic_items, cmds).1;
+                    let action = mapping[item_idx];
+                    self.state = None;
+                    return PaletteAction::Execute(action);
                 }
-                self.palette = None;
+                self.state = None;
                 return PaletteAction::None;
             }
             KeyCode::Esc => {
-                self.palette = None;
+                self.state = None;
                 return PaletteAction::None;
             }
             _ => {}
         }
-
-        if let Some(ref mut p) = self.palette {
-            p.ensure_cursor_visible(
-                term_h.saturating_sub(1),
-                filtered,
-                builtin_items,
-                dynamic_items,
-                cmds,
-            );
-        }
-
         PaletteAction::None
     }
 
-    /// Render the palette overlay if it is open.
     #[allow(clippy::too_many_arguments)]
     pub fn render(
         &mut self,
@@ -158,27 +129,64 @@ impl PaletteController {
         dynamic_items: &[(String, String, String)],
         cmds: &[(usize, usize, PluginCmdItem)],
     ) {
-        if self.filtered_dirty {
-            self.cached_filtered = self
-                .palette
-                .as_ref()
-                .map(|p| p.filtered_items(builtin_items, dynamic_items, cmds))
-                .unwrap_or_default();
-            self.cached_groups =
-                build_groups(&self.cached_filtered, builtin_items, dynamic_items, cmds);
-            self.filtered_dirty = false;
+        let Some(ref mut state) = self.state else {
+            return;
+        };
+
+        let (items, _mapping) = Self::build_items(builtin_items, dynamic_items, cmds);
+
+        if state.is_dirty() {
+            state.set_query(state.query.clone(), &items);
         }
-        if let Some(ref pal) = self.palette {
-            pal.render_with_groups(
-                f,
-                area,
-                theme,
-                tick,
-                builtin_items,
-                dynamic_items,
-                cmds,
-                &self.cached_groups,
-            );
+
+        let min_w = 30;
+        let ideal_w = 60;
+        let title_h = 4;
+        let pad_b = 1;
+        let list_h = if state.filtered_is_empty() {
+            1
+        } else {
+            state.total_lines().max(1)
+        };
+        let popup_h = (title_h + list_h + pad_b)
+            .min(area.height)
+            .max(title_h + pad_b + 1);
+        let popup_rect = centered_rect(area, min_w, ideal_w, popup_h);
+        let inner_x = popup_rect.x.saturating_add(2);
+        let inner_w = popup_rect.width.saturating_sub(4);
+
+        render_palette_chrome(f.buffer_mut(), popup_rect, theme);
+
+        // Header: title + search
+        let header_area = Rect {
+            x: inner_x,
+            y: popup_rect.y + 1,
+            width: inner_w,
+            height: title_h,
+        };
+        render_palette_header(f.buffer_mut(), header_area, &state.query, tick, theme);
+
+        // Filtered list
+        let (list, mut list_state) = state.render_list(
+            &items,
+            Style::default().fg(theme.inverted_text).bg(theme.highlight),
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD),
+            Style::default().fg(theme.text),
+            "No results found",
+        );
+        let list_area = Rect {
+            x: inner_x,
+            y: header_area.bottom(),
+            width: inner_w,
+            height: popup_rect
+                .bottom()
+                .saturating_sub(header_area.bottom())
+                .saturating_sub(1),
+        };
+        if list_area.height > 0 {
+            StatefulWidget::render(list, list_area, f.buffer_mut(), &mut list_state);
         }
     }
 }
@@ -189,29 +197,58 @@ impl Default for PaletteController {
     }
 }
 
-fn build_groups(
-    filtered: &[ItemIndex],
-    builtin_items: &[(BuiltinId, &'static str, &'static str)],
-    dynamic_items: &[(String, String, String)],
-    cmds: &[(usize, usize, PluginCmdItem)],
-) -> CategoryGroups {
-    let mut current_cat = String::new();
-    let mut cat_items: Vec<ItemIndex> = Vec::new();
-    let mut groups: CategoryGroups = Vec::new();
-    for &idx in filtered {
-        let cat = match idx {
-            ItemIndex::Builtin(i) => builtin_items[i].1,
-            ItemIndex::Dynamic(i) => &dynamic_items[i].0,
-            ItemIndex::PluginCmd(i) => &cmds[i].2.category,
+fn render_palette_chrome(buf: &mut Buffer, popup_rect: Rect, theme: &Theme) {
+    Clear.render(popup_rect, buf);
+    Paragraph::new(vec![])
+        .style(Style::default().bg(theme.background_panel))
+        .render(popup_rect, buf);
+}
+
+fn render_palette_header(buf: &mut Buffer, area: Rect, query: &str, tick: u64, theme: &Theme) {
+    let cursor_on = (tick / 5).is_multiple_of(2);
+
+    // Title bar: "Commands" + padding + "esc"
+    let pad_w = area.width.saturating_sub(11) as usize;
+    let title_spans = vec![
+        Span::styled(
+            "Commands",
+            Style::default().fg(theme.text).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(" ".repeat(pad_w), Style::default()),
+        Span::styled("esc", Style::default().fg(theme.text_muted)),
+    ];
+
+    // Search input
+    let input_line = if query.is_empty() {
+        let first_style = if cursor_on {
+            Style::default().fg(theme.inverted_text).bg(theme.highlight)
+        } else {
+            Style::default().fg(theme.text_muted)
         };
-        if cat != current_cat && !cat_items.is_empty() {
-            groups.push((current_cat, std::mem::take(&mut cat_items)));
-        }
-        current_cat = cat.to_string();
-        cat_items.push(idx);
-    }
-    if !cat_items.is_empty() {
-        groups.push((current_cat, cat_items));
-    }
-    groups
+        Line::from(vec![
+            Span::styled("S", first_style),
+            Span::styled("earch", Style::default().fg(theme.text_muted)),
+        ])
+    } else {
+        let cursor_style = if cursor_on {
+            Style::default().fg(theme.inverted_text).bg(theme.highlight)
+        } else {
+            Style::default()
+                .fg(theme.background_panel)
+                .bg(theme.background_panel)
+        };
+        Line::from(vec![
+            Span::styled(query.to_string(), Style::default().fg(theme.text)),
+            Span::styled(" ", cursor_style),
+        ])
+    };
+
+    let header_lines = vec![
+        Line::from(title_spans),
+        Line::from(""),
+        input_line,
+        Line::from(""),
+    ];
+
+    Paragraph::new(header_lines).render(area, buf);
 }
