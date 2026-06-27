@@ -142,7 +142,7 @@ impl PaletteController {
         let min_w = 30;
         let ideal_w = 60;
         let title_h = 4;
-        let footer_h = 1;
+        let footer_h = 3;
         let list_h = if state.filtered_is_empty() {
             1
         } else {
@@ -265,13 +265,17 @@ fn render_palette_header(buf: &mut Buffer, area: Rect, query: &str, tick: u64, t
 fn render_palette_footer(buf: &mut Buffer, area: Rect, theme: &Theme) {
     let dim = Style::default().fg(theme.text_muted);
     let key = Style::default().fg(theme.text);
-    let footer = Line::from(vec![
-        Span::styled("↑", key),
-        Span::styled(" up • ", dim),
-        Span::styled("↓", key),
-        Span::styled(" down • ", dim),
-        Span::styled("↵", key),
-        Span::styled(" select", dim),
-    ]);
+    let footer = vec![
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("↑", key),
+            Span::styled(" up • ", dim),
+            Span::styled("↓", key),
+            Span::styled(" down • ", dim),
+            Span::styled("↵", key),
+            Span::styled(" select", dim),
+        ]),
+        Line::from(""),
+    ];
     Paragraph::new(footer).render(area, buf);
 }
