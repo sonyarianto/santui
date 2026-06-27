@@ -1,4 +1,4 @@
-use crate::protocol::{RenderCmd, ThemeData};
+use crate::protocol::{RenderCmd, ThemeData, BORDER_ALL};
 
 // ── Palette component (Ctrl+P style overlay) ──
 
@@ -125,9 +125,10 @@ pub fn palette_item(
     });
 }
 
-// ── Legacy panel component ──
+// ── Panel component ──
 
-/// Draw a panel with a left border and background fill.
+/// Draw a full-box panel with title integrated into the top border (native ratatui style).
+/// Content should be placed at `x + 2, y + 1` (inside the border).
 pub fn draw_panel(
     cmds: &mut Vec<RenderCmd>,
     theme: &ThemeData,
@@ -140,33 +141,16 @@ pub fn draw_panel(
     if w < 3 || h < 2 {
         return;
     }
-    // Fill the panel body
-    cmds.push(RenderCmd::Rect {
-        x: x + 1,
+    cmds.push(RenderCmd::Border {
+        x,
         y,
-        w: w.saturating_sub(1),
+        w,
         h,
-        bg: theme.background_panel,
-    });
-    // Left border
-    for row in y..(y + h) {
-        cmds.push(RenderCmd::Text {
-            x,
-            y: row,
-            text: "\u{2503}".into(),
-            fg: Some(theme.border),
-            bg: None,
-            bold: false,
-        });
-    }
-    // Title
-    cmds.push(RenderCmd::Text {
-        x: x + 2,
-        y,
-        text: title.trim().into(),
-        fg: Some(theme.text),
+        fg: theme.border,
         bg: Some(theme.background_panel),
-        bold: true,
+        borders: BORDER_ALL,
+        title: Some(title.trim().into()),
+        title_fg: Some(theme.text),
     });
 }
 

@@ -1,6 +1,7 @@
 use crate::protocol::{RenderCmd, TextStyle};
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
+use ratatui::text::{Line, Span};
 use ratatui::widgets::{self, Block, Borders, ListState, Paragraph, Row, Table, TableState, Wrap};
 use ratatui::Frame;
 
@@ -133,15 +134,35 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                 f.render_widget(widgets::Clear, rect);
                 f.render_widget(Block::default().style(Style::default().bg(bg_color)), rect);
             }
-            RenderCmd::Border { x, y, w, h, fg } => {
+            RenderCmd::Border {
+                x,
+                y,
+                w,
+                h,
+                fg,
+                borders,
+                bg,
+                title,
+                title_fg,
+            } => {
                 let rect = clipped(area, *x, *y, *w, *h);
                 let fg_color = Color::Rgb(fg[0], fg[1], fg[2]);
-                f.render_widget(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .border_style(Style::default().fg(fg_color)),
-                    rect,
-                );
+                let border_set = Borders::from_bits_truncate(*borders);
+                let mut block = Block::default()
+                    .borders(border_set)
+                    .border_style(Style::default().fg(fg_color));
+                if let Some(bg_col) = bg {
+                    block = block
+                        .style(Style::default().bg(Color::Rgb(bg_col[0], bg_col[1], bg_col[2])));
+                    f.render_widget(widgets::Clear, rect);
+                }
+                if let Some(ref t) = title {
+                    let ts = title_fg
+                        .map(|c| Style::default().fg(Color::Rgb(c[0], c[1], c[2])))
+                        .unwrap_or_default();
+                    block = block.title(Line::from(Span::styled(t.clone(), ts)));
+                }
+                f.render_widget(block, rect);
             }
         }
     }

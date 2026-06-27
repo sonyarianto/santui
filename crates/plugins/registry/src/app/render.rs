@@ -4,7 +4,7 @@ use santui_ipc::ui;
 use super::state::{Action, App};
 
 pub(super) fn max_list_h(content_h: u16) -> u16 {
-    content_h.saturating_sub(8).max(3)
+    content_h.saturating_sub(10).max(3)
 }
 
 impl App {
@@ -58,7 +58,7 @@ impl App {
         let status_x = aw.saturating_sub(self.status.len() as u16 + 1);
         cmds.push(RenderCmd::Text {
             x: status_x,
-            y: 0,
+            y: 1,
             text: self.status.clone(),
             fg: Some(t.text_muted),
             bg: Some(t.background_panel),
@@ -84,7 +84,7 @@ impl App {
             );
             cmds.push(RenderCmd::Text {
                 x: 2,
-                y: 2,
+                y: 3,
                 text: bar,
                 fg: Some(t.accent),
                 bg: Some(t.background_panel),
@@ -93,7 +93,7 @@ impl App {
         }
 
         if let Some(ref reg) = self.registry {
-            let list_top = if has_progress { 4u16 } else { 2u16 };
+            let list_top = if has_progress { 5u16 } else { 3u16 };
             let list_h = max_list_h(ah) as usize;
 
             if reg.available.is_empty() {

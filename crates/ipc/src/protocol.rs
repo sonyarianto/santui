@@ -1,5 +1,13 @@
 use serde::{Deserialize, Serialize};
 
+/// Bitmask values for `RenderCmd::Border.borders`, matching ratatui `Borders`.
+pub const BORDER_NONE: u8 = 0;
+pub const BORDER_LEFT: u8 = 1;
+pub const BORDER_RIGHT: u8 = 2;
+pub const BORDER_TOP: u8 = 4;
+pub const BORDER_BOTTOM: u8 = 8;
+pub const BORDER_ALL: u8 = 15;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThemeData {
     pub text: [u8; 3],
@@ -114,13 +122,19 @@ pub enum RenderCmd {
         h: u16,
         bg: [u8; 3],
     },
-    /// Draw a box border around a rectangle using box-drawing characters.
+    /// Draw a box border around a rectangle, with optional background fill and title.
+    /// `borders` is a bitmask matching ratatui `Borders` (1=LEFT, 2=RIGHT, 4=TOP, 8=BOTTOM, 15=ALL).
+    /// When `bg` and `title` are set, this is equivalent to a native ratatui `Block` with title.
     Border {
         x: u16,
         y: u16,
         w: u16,
         h: u16,
         fg: [u8; 3],
+        borders: u8,
+        bg: Option<[u8; 3]>,
+        title: Option<String>,
+        title_fg: Option<[u8; 3]>,
     },
     /// Renders wrapped text within a rectangle.
     Paragraph {
@@ -363,6 +377,10 @@ mod tests {
                 w: 60,
                 h: 20,
                 fg: [250, 178, 131],
+                borders: 15,
+                bg: Some([20, 20, 20]),
+                title: Some("Test".into()),
+                title_fg: Some([255, 255, 255]),
             },
         ];
         for cmd in cmds {
