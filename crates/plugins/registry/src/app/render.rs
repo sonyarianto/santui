@@ -231,10 +231,17 @@ impl App {
             return;
         };
 
-        let content_h = 8u16 + actions.len() as u16;
+        let has_publisher = !plugin.publisher.is_empty();
+        let field_count = if has_publisher { 4 } else { 3 };
+        let footer_h = 3u16;
+        let content_h = 2u16   // top padding + title
+            + 1                 // blank after title
+            + field_count       // Name, [Publisher,] Version, Status
+            + 1                 // blank after Status
+            + actions.len() as u16
+            + footer_h;
         let pr = ui::palette_rect(aw, ah, content_h);
         ui::palette_bg(cmds, t, &pr);
-        // PAD_T=1 (blank), title, then Name/Publisher/Version/Status info fields
         ui::palette_title(cmds, t, &pr, 1, "Plugin Actions");
 
         let field_fg = Some(t.text_muted);
@@ -243,18 +250,18 @@ impl App {
 
         cmds.push(RenderCmd::Text {
             x: ix,
-            y: pr.y + 2,
-            text: format!(" Name:      {}", plugin.name),
+            y: pr.y + 3,
+            text: format!("Name:      {}", plugin.name),
             fg: field_fg,
             bg,
             bold: false,
         });
 
-        if !plugin.publisher.is_empty() {
+        if has_publisher {
             cmds.push(RenderCmd::Text {
                 x: ix,
-                y: pr.y + 3,
-                text: format!(" Publisher: {}", plugin.publisher),
+                y: pr.y + 4,
+                text: format!("Publisher: {}", plugin.publisher),
                 fg: field_fg,
                 bg,
                 bold: false,
@@ -282,14 +289,14 @@ impl App {
 
         let ver_text = if installed_idx != usize::MAX && installed_ver != plugin.version {
             format!(
-                " Version:   {iv}  →  {av}",
+                "Version:   {iv}  →  {av}",
                 iv = installed_ver,
                 av = plugin.version
             )
         } else {
-            format!(" Version:   {}", plugin.version)
+            format!("Version:   {}", plugin.version)
         };
-        let ver_y = if plugin.publisher.is_empty() { 3 } else { 4 };
+        let ver_y = if has_publisher { 5 } else { 4 };
         cmds.push(RenderCmd::Text {
             x: ix,
             y: pr.y + ver_y,
@@ -313,18 +320,18 @@ impl App {
         } else {
             field_fg
         };
-        let status_y = if plugin.publisher.is_empty() { 4 } else { 5 };
+        let status_y = if has_publisher { 6 } else { 5 };
         cmds.push(RenderCmd::Text {
             x: ix,
             y: pr.y + status_y,
-            text: format!(" Status:    {}", status_str),
+            text: format!("Status:    {}", status_str),
             fg: status_color,
             bg,
             bold: false,
         });
 
         // Action items
-        let action_base = if plugin.publisher.is_empty() { 5 } else { 6 };
+        let action_base = if has_publisher { 8 } else { 7 };
         for (i, action) in actions.iter().enumerate() {
             let focused = i == self.action_cursor;
             let label = match action {
@@ -336,5 +343,33 @@ impl App {
             };
             ui::palette_item(cmds, t, &pr, action_base + i as u16, &label, focused);
         }
+
+        // Footer: key hints
+        let footer_y = pr.y + action_base + actions.len() as u16;
+        let dim_fg = Some(t.text_muted);
+        cmds.push(RenderCmd::Text {
+            x: ix,
+            y: footer_y,
+            text: "".into(),
+            fg: dim_fg,
+            bg,
+            bold: false,
+        });
+        cmds.push(RenderCmd::Text {
+            x: ix,
+            y: footer_y + 1,
+            text: "↑↓ navigate • ↵ select".into(),
+            fg: dim_fg,
+            bg,
+            bold: false,
+        });
+        cmds.push(RenderCmd::Text {
+            x: ix,
+            y: footer_y + 2,
+            text: "".into(),
+            fg: dim_fg,
+            bg,
+            bold: false,
+        });
     }
 }
