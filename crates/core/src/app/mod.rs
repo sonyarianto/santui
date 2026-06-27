@@ -486,6 +486,8 @@ pub struct Santui {
     pub(super) starfield: starfield::Starfield,
     /// Pre-built splash logo lines, invalidated on theme change.
     cached_logo: Option<Vec<ratatui::text::Line<'static>>>,
+    /// Cached terminal height, updated on resize.
+    term_h: u16,
 }
 
 impl Default for Santui {
@@ -508,6 +510,7 @@ impl Santui {
             config_manager: ConfigManager::new(std::path::PathBuf::new()),
             starfield: starfield::Starfield::new(),
             cached_logo: None,
+            term_h: 24,
         }
     }
 
@@ -648,6 +651,7 @@ impl Santui {
 
         // Resize starfield to match actual terminal dimensions.
         let (term_w, term_h) = crossterm::terminal::size()?;
+        self.term_h = term_h;
         self.starfield.resize(term_w, term_h);
 
         let mut ctx = PluginContext {

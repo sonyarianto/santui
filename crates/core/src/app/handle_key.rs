@@ -23,7 +23,7 @@ impl super::Santui {
     fn handle_key_palette(&mut self, key: KeyEvent) {
         let cmds = self.plugin_manager.commands();
         let bi = &self.app_state.builtin_items;
-        let (_, term_h) = crossterm::terminal::size().unwrap_or((80, 24));
+        let term_h = self.term_h;
         let action = self.palette_controller.handle_key(
             key,
             term_h,
@@ -222,9 +222,8 @@ impl super::Santui {
             _ => {}
         }
         if self.app_state.theme_picker_open {
-            let (_, term_h) = crossterm::terminal::size().unwrap_or((80, 24));
             self.theme_manager
-                .ensure_cursor_visible(term_h.saturating_sub(1));
+                .ensure_cursor_visible(self.term_h.saturating_sub(1));
         }
     }
 
