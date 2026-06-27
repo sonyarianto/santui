@@ -30,37 +30,67 @@ pub fn render_ui(
     // ---- Stations panel (top, fills remaining height) ----
     ui::draw_panel(&mut cmds, theme, 0, 0, area_w, stations_h, "Stations");
 
-    // ---- Top line: scan message or total station count ----
-    let top_text = match state.scan_msg {
-        Some(ref msg) => {
-            let max_w = area_w.saturating_sub(3) as usize;
-            if msg.len() > max_w {
-                format!("{}…", &msg[..max_w.saturating_sub(1)])
-            } else {
-                msg.clone()
-            }
-        }
-        None => format!("Total stations: {}", state.stations.len()),
-    };
-    let top_x = area_w.saturating_sub(2u16.saturating_add(top_text.len() as u16));
-    cmds.push(RenderCmd::Text {
-        x: top_x,
-        y: 1,
-        text: top_text,
-        fg: if state.scan_msg.is_some() {
-            Some(theme.accent)
-        } else {
-            Some(theme.text_muted)
-        },
-        bg: None,
-        bold: false,
-    });
-
     let inner_w = area_w.saturating_sub(3) as usize;
-    let search_extra = if state.search_mode { 2 } else { 0 };
+
+    // ---- Top line: search bar, scan message, or total station count ----
+    if state.search_mode {
+        let cursor = if state.tick_counter % 6 < 3 {
+            '█'
+        } else {
+            ' '
+        };
+        let left_text = format!("Search: {}{cursor}", state.query);
+        let right_text = format!("{}/{}", state.filtered.len(), state.stations.len());
+        let right_len = right_text.len();
+        let max_left = inner_w.saturating_sub(right_len + 1);
+        let display_left: String = left_text.chars().take(max_left).collect();
+        let right_x = area_w.saturating_sub(2u16.saturating_add(right_text.len() as u16));
+        cmds.push(RenderCmd::Text {
+            x: 2,
+            y: 1,
+            text: display_left,
+            fg: Some(theme.accent),
+            bg: None,
+            bold: false,
+        });
+        cmds.push(RenderCmd::Text {
+            x: right_x,
+            y: 1,
+            text: right_text,
+            fg: Some(theme.text_muted),
+            bg: None,
+            bold: false,
+        });
+    } else {
+        let top_text = match state.scan_msg {
+            Some(ref msg) => {
+                let max_w = area_w.saturating_sub(3) as usize;
+                if msg.len() > max_w {
+                    format!("{}…", &msg[..max_w.saturating_sub(1)])
+                } else {
+                    msg.clone()
+                }
+            }
+            None => format!("Total stations: {}", state.stations.len()),
+        };
+        let top_x = area_w.saturating_sub(2u16.saturating_add(top_text.len() as u16));
+        cmds.push(RenderCmd::Text {
+            x: top_x,
+            y: 1,
+            text: top_text,
+            fg: if state.scan_msg.is_some() {
+                Some(theme.accent)
+            } else {
+                Some(theme.text_muted)
+            },
+            bg: None,
+            bold: false,
+        });
+    }
+
     let table_top = 2u16;
     let header_h = 1u16;
-    let table_avail = stations_h.saturating_sub(table_top + header_h + 1 + search_extra);
+    let table_avail = stations_h.saturating_sub(table_top + header_h + 1);
     let max_visible = table_avail as usize;
 
     let scroll = state.scroll.min(state.filtered.len().saturating_sub(1));
@@ -122,41 +152,6 @@ pub fn render_ui(
             bold: false,
         }),
     });
-
-    // ---- Search bar overlay ----
-    if state.search_mode {
-        let search_y = stations_h.saturating_sub(3);
-        let bar_w = area_w.saturating_sub(4) as usize;
-        let cursor = if state.tick_counter % 6 < 3 {
-            '█'
-        } else {
-            ' '
-        };
-        let search_text = if state.query.is_empty() {
-            format!(" Search: {cursor}")
-        } else {
-            format!(" Search: {}{cursor}", state.query)
-        };
-        let display: String = search_text.chars().take(bar_w).collect();
-        cmds.push(RenderCmd::Text {
-            x: 2,
-            y: search_y,
-            text: display,
-            fg: Some(theme.accent),
-            bg: None,
-            bold: false,
-        });
-        let count_y = stations_h.saturating_sub(2);
-        let count_text = format!(" {} of {}", state.filtered.len(), state.stations.len());
-        cmds.push(RenderCmd::Text {
-            x: 2,
-            y: count_y,
-            text: count_text,
-            fg: Some(theme.text_muted),
-            bg: None,
-            bold: false,
-        });
-    }
 
     // ---- Now Playing panel (bottom) ----
     let np_y = stations_h + GAP;

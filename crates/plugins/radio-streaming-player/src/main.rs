@@ -260,6 +260,16 @@ impl App {
                 }
                 IpcKey::Enter => {
                     self.state.search_mode = false;
+                    if let Some(station) = self.state.selected_station().cloned() {
+                        let idx = self.state.current_filtered_index();
+                        self.state.current_station = Some(idx);
+                        self.state.play_state = state::PlayState::Playing(station.name.to_string());
+                        self.state.song_title.clear();
+                        self.state.track_info = None;
+                        self.state.start_time = std::time::Instant::now();
+                        send_cmd(self, MpvCmd::Stop);
+                        send_cmd(self, MpvCmd::LoadUrl(station.url));
+                    }
                     return true;
                 }
                 IpcKey::Backspace => {
@@ -275,14 +285,14 @@ impl App {
                 IpcKey::Up => {
                     self.state.select_prev();
                     let info_h = self.state.info_h();
-                    let max_visible = self.area.h.saturating_sub(info_h + 6) as usize;
+                    let max_visible = self.area.h.saturating_sub(info_h + 4) as usize;
                     self.state.ensure_scroll_visible(max_visible.max(1));
                     return true;
                 }
                 IpcKey::Down => {
                     self.state.select_next();
                     let info_h = self.state.info_h();
-                    let max_visible = self.area.h.saturating_sub(info_h + 6) as usize;
+                    let max_visible = self.area.h.saturating_sub(info_h + 4) as usize;
                     self.state.ensure_scroll_visible(max_visible.max(1));
                     return true;
                 }
@@ -432,7 +442,7 @@ impl App {
     fn status_hints(&self) -> Vec<(String, String)> {
         if self.state.search_mode {
             return vec![
-                ("Enter".into(), "done".into()),
+                ("Enter".into(), "play".into()),
                 ("⌫".into(), "delete".into()),
             ];
         }
