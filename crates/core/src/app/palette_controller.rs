@@ -65,7 +65,32 @@ impl PaletteController {
             });
             mapping.push(ItemIndex::PluginCmd(i));
         }
-        (items, mapping)
+
+        // Sort by category: Plugins, Auth, System, then alpha
+        let mut indices: Vec<usize> = (0..items.len()).collect();
+        let category_priority = |cat: &str| -> u8 {
+            match cat {
+                "Plugins" => 0,
+                "Auth" => 1,
+                "System" => 2,
+                _ => 3,
+            }
+        };
+        indices.sort_by(|&a, &b| {
+            let pa = category_priority(items[a].category);
+            let pb = category_priority(items[b].category);
+            pa.cmp(&pb)
+                .then_with(|| items[a].category.cmp(items[b].category))
+        });
+        let sorted_items: Vec<DisplayItem<'a>> = indices
+            .iter()
+            .map(|&i| DisplayItem {
+                category: items[i].category,
+                label: items[i].label,
+            })
+            .collect();
+        let sorted_mapping: Vec<ItemIndex> = indices.iter().map(|&i| mapping[i]).collect();
+        (sorted_items, sorted_mapping)
     }
 
     pub fn handle_key(

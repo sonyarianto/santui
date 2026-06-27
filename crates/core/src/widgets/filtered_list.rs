@@ -129,12 +129,12 @@ mod tests {
     fn selected_item_returns_original_index() {
         let items = sample_items();
         let mut s = state_with_all_items(&items);
-        // After sorting by category: Auth[0,1], Plugins[2], System[3,4]
-        assert_eq!(s.selected_item(), Some(2)); // first Auth: "Sign in with Google"
-        s.cursor = 1;
-        assert_eq!(s.selected_item(), Some(3)); // second Auth: "Sign in with GitHub"
-        s.cursor = 3;
+        // Input order preserved: System[0,1], Auth[2,3], Plugins[4]
         assert_eq!(s.selected_item(), Some(0)); // first System: "About"
+        s.cursor = 1;
+        assert_eq!(s.selected_item(), Some(1)); // second System: "Switch theme"
+        s.cursor = 3;
+        assert_eq!(s.selected_item(), Some(3)); // second Auth: "Sign in with GitHub"
     }
 
     #[test]
@@ -192,12 +192,12 @@ mod tests {
         let s = state_with_all_items(&items);
         let groups = s.groups();
         assert_eq!(groups.len(), 3);
-        assert_eq!(groups[0].name, "Auth");
+        assert_eq!(groups[0].name, "System");
         assert_eq!(groups[0].count, 2);
-        assert_eq!(groups[1].name, "Plugins");
-        assert_eq!(groups[1].count, 1);
-        assert_eq!(groups[2].name, "System");
-        assert_eq!(groups[2].count, 2);
+        assert_eq!(groups[1].name, "Auth");
+        assert_eq!(groups[1].count, 2);
+        assert_eq!(groups[2].name, "Plugins");
+        assert_eq!(groups[2].count, 1);
     }
 
     #[test]
@@ -246,7 +246,7 @@ mod tests {
     fn render_list_returns_state_with_selected_position() {
         let items = sample_items();
         let mut s = state_with_all_items(&items);
-        s.cursor = 3; // first System item "About" → cursor_to_line = 8
+        s.cursor = 3; // second Auth item "Sign in with GitHub" → cursor_to_line = 6
         let (_list, state) = s.render_list(
             &items,
             default_highlight(),
@@ -254,7 +254,7 @@ mod tests {
             default_text(),
             "",
         );
-        assert_eq!(state.selected(), Some(8));
+        assert_eq!(state.selected(), Some(6));
     }
 
     #[test]
@@ -362,9 +362,6 @@ impl FilteredListState {
                 self.filtered_indices.push(i);
             }
         }
-        self.filtered_indices
-            .sort_by(|&a, &b| items[a].category.cmp(items[b].category));
-
         self.groups.clear();
         let mut current_cat = String::new();
         let mut start = 0;
