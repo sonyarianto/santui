@@ -14,7 +14,6 @@ use crate::theme::Theme;
 #[derive(Debug)]
 pub(super) struct StatusBar<'a> {
     pub theme: &'a Theme,
-    pub palette_open: bool,
     pub theme_picker_open: bool,
     pub about_open: bool,
     /// True when a plugin is the active (foreground) view.
@@ -36,18 +35,7 @@ impl StatusBar<'_> {
         let dim = Style::default().fg(self.theme.text_muted);
         let key = Style::default().fg(self.theme.text);
 
-        let line: Line = if self.palette_open {
-            Line::from(vec![
-                Span::styled("↑", key),
-                Span::styled(" up • ", dim),
-                Span::styled("↓", key),
-                Span::styled(" down • ", dim),
-                Span::styled("↵", key),
-                Span::styled(" enter • ", dim),
-                Span::styled("esc", key),
-                Span::styled(" close", dim),
-            ])
-        } else if self.theme_picker_open {
+        let line: Line = if self.theme_picker_open {
             Line::from(vec![
                 Span::styled("↑", key),
                 Span::styled(" up • ", dim),

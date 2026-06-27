@@ -142,15 +142,15 @@ impl PaletteController {
         let min_w = 30;
         let ideal_w = 60;
         let title_h = 4;
-        let pad_b = 1;
+        let footer_h = 1;
         let list_h = if state.filtered_is_empty() {
             1
         } else {
             state.total_lines().max(1)
         };
-        let popup_h = (title_h + list_h + pad_b)
+        let popup_h = (title_h + list_h + footer_h)
             .min(area.height)
-            .max(title_h + pad_b + 1);
+            .max(title_h + footer_h + 1);
         let popup_rect = centered_rect(area, min_w, ideal_w, popup_h);
         let inner_x = popup_rect.x.saturating_add(2);
         let inner_w = popup_rect.width.saturating_sub(4);
@@ -183,11 +183,20 @@ impl PaletteController {
             height: popup_rect
                 .bottom()
                 .saturating_sub(header_area.bottom())
-                .saturating_sub(1),
+                .saturating_sub(footer_h),
         };
         if list_area.height > 0 {
             StatefulWidget::render(list, list_area, f.buffer_mut(), &mut list_state);
         }
+
+        // Footer: key hints
+        let footer_area = Rect {
+            x: inner_x,
+            y: popup_rect.bottom().saturating_sub(footer_h),
+            width: inner_w,
+            height: footer_h,
+        };
+        render_palette_footer(f.buffer_mut(), footer_area, theme);
     }
 }
 
@@ -251,4 +260,18 @@ fn render_palette_header(buf: &mut Buffer, area: Rect, query: &str, tick: u64, t
     ];
 
     Paragraph::new(header_lines).render(area, buf);
+}
+
+fn render_palette_footer(buf: &mut Buffer, area: Rect, theme: &Theme) {
+    let dim = Style::default().fg(theme.text_muted);
+    let key = Style::default().fg(theme.text);
+    let footer = Line::from(vec![
+        Span::styled("↑", key),
+        Span::styled(" up • ", dim),
+        Span::styled("↓", key),
+        Span::styled(" down • ", dim),
+        Span::styled("↵", key),
+        Span::styled(" select", dim),
+    ]);
+    Paragraph::new(footer).render(area, buf);
 }
