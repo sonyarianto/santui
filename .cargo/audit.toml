@@ -1,0 +1,6 @@
+[advisories]
+# proc-macro-error2 is unmaintained (RUSTSEC-2026-0173).
+# It appears in the lockfile only via optional dependencies behind
+# unenabled feature flags (jiff -> defmt -> defmt-macros), so it is
+# never compiled or linked into any santui binary.
+ignore = ["RUSTSEC-2026-0173"]
