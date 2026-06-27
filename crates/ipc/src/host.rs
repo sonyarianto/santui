@@ -290,13 +290,21 @@ impl IpcPluginHost {
     /// Used during `init()` so the first PluginMsg (with palette_commands)
     /// is guaranteed to be cached before the host calls refresh_commands().
     fn send_recv_blocking(&mut self, msg: &HostMsg) {
+        self.send_recv_blocking_timeout(msg, Duration::from_millis(500));
+    }
+
+    fn send_recv_blocking_timeout(&mut self, msg: &HostMsg, timeout: Duration) {
         self.send(msg, Priority::High);
+        // Drain any already-available responses first (e.g., Tick responses)
+        // so the blocking recv below picks up the response to *this* message.
+        self.drain_responses();
         if let Some(ref rx) = self.response_rx {
-            if let Ok(resp) = rx.recv_timeout(Duration::from_millis(500)) {
+            if let Ok(resp) = rx.recv_timeout(timeout) {
                 self.cached_commands = resp.commands;
                 self.cached_hints = resp.hints;
                 self.cached_palette_commands = resp.palette_commands;
                 self.pending_request = resp.request;
+                self.consumed = resp.consumed;
             }
         }
         // Drain any additional responses that piled up.
@@ -484,7 +492,9 @@ impl Plugin for IpcPluginHost {
             KeyCode::Char(c) => IpcKey::Char(c),
             _ => return false,
         };
-        self.send_recv(&HostMsg::Key { key: ipc_key });
+        // Block briefly for the response so the consumed flag reflects this
+        // specific key event, not a stale response (e.g., from an earlier Tick).
+        self.send_recv_blocking_timeout(&HostMsg::Key { key: ipc_key }, Duration::from_millis(50));
         self.consumed
     }
 
