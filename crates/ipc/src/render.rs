@@ -7,6 +7,17 @@ use ratatui::widgets::{
 };
 use ratatui::Frame;
 
+fn dim_color(c: Color, factor: f64) -> Color {
+    match c {
+        Color::Rgb(r, g, b) => Color::Rgb(
+            (r as f64 * factor) as u8,
+            (g as f64 * factor) as u8,
+            (b as f64 * factor) as u8,
+        ),
+        _ => c,
+    }
+}
+
 fn to_style(s: &TextStyle) -> Style {
     let mut style = Style::default();
     if let Some([r, g, b]) = s.fg {
@@ -149,6 +160,24 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                 let bg_color = Color::Rgb(bg[0], bg[1], bg[2]);
                 f.render_widget(widgets::Clear, rect);
                 f.render_widget(Block::default().style(Style::default().bg(bg_color)), rect);
+            }
+            RenderCmd::Dim { x, y, w, h, bg } => {
+                let rect = clipped(area, *x, *y, *w, *h);
+                let dim_bg = Color::Rgb(bg[0], bg[1], bg[2]);
+                for row in rect.top()..rect.bottom() {
+                    for col in rect.left()..rect.right() {
+                        if let Some(cell) = f.buffer_mut().cell_mut((col, row)) {
+                            let mut s = cell.style();
+                            if s.bg.is_none_or(|c| c == Color::Reset) {
+                                s.bg = Some(dim_bg);
+                            } else {
+                                s.bg = s.bg.map(|c| dim_color(c, 0.45));
+                            }
+                            s.fg = s.fg.map(|c| dim_color(c, 0.45));
+                            cell.set_style(s);
+                        }
+                    }
+                }
             }
             RenderCmd::Border {
                 x,

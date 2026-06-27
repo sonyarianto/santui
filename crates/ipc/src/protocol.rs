@@ -122,6 +122,16 @@ pub enum RenderCmd {
         h: u16,
         bg: [u8; 3],
     },
+    /// Dim an area: darken existing foreground/background colours and apply
+    /// `bg` to cells that have no explicit background.  Analogous to the
+    /// host's `DimOverlay` widget.
+    Dim {
+        x: u16,
+        y: u16,
+        w: u16,
+        h: u16,
+        bg: [u8; 3],
+    },
     /// Draw a box border around a rectangle, with optional background fill and title.
     /// `borders` is a bitmask matching ratatui `Borders` (1=LEFT, 2=RIGHT, 4=TOP, 8=BOTTOM, 15=ALL).
     /// When `bg` and `title` are set, this is equivalent to a native ratatui `Block` with title.
@@ -382,6 +392,13 @@ mod tests {
                 w: 10,
                 h: 5,
                 bg: [20, 20, 20],
+            },
+            RenderCmd::Dim {
+                x: 0,
+                y: 0,
+                w: 30,
+                h: 20,
+                bg: [22, 23, 24],
             },
             RenderCmd::Border {
                 x: 0,

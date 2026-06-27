@@ -36,7 +36,7 @@ pub fn palette_rect(area_w: u16, area_h: u16, content_rows: u16) -> PaletteRect 
 
 /// Draw the palette backdrop (full overlay) and background rect.
 pub fn palette_bg(cmds: &mut Vec<RenderCmd>, theme: &ThemeData, r: &PaletteRect) {
-    cmds.push(RenderCmd::Rect {
+    cmds.push(RenderCmd::Dim {
         x: 0,
         y: 0,
         w: 4096,

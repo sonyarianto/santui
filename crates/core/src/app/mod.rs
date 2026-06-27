@@ -464,7 +464,7 @@ impl Santui {
             DimOverlay {
                 style: Style::default().bg(self.app_state.theme.background_overlay),
             }
-            .render(chunks[0], f.buffer_mut());
+            .render(area, f.buffer_mut());
         }
 
         if self.palette_controller.is_open() {

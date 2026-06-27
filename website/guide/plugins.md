@@ -11,7 +11,7 @@ santui.exe (host)
        └─ reads PluginMsg { commands, hints, palette_commands, request, consumed } from plugin's stdout
 ```
 
-- The host owns all rendering. Your plugin returns a list of `RenderCmd` values — `Text` at (x,y) with colours, or `Clear` a region.
+- The host owns all rendering. Your plugin returns a list of `RenderCmd` values — `Text`, `Clear`, `Rect`, `Dim`, `Border`, `Paragraph`, `List`, and `Table`.
 - The host polls your plugin every frame via `Tick`. Response handling is non-blocking — the host never waits on your plugin.
 - Blocking calls — `Init` (500ms timeout) and `Key` (50ms timeout) — wait briefly for a response so the host can capture the `consumed` flag from the correct key event. If your plugin doesn't respond in time, the host treats the key as unhandled.
 
@@ -138,6 +138,7 @@ fn respond(&self) {
 | `Text { x, y, text, fg, bg, bold }` | Draw a string at (x,y) with optional colours and bold |
 | `Clear { x, y, w, h }` | Clear a rectangular region |
 | `Rect { x, y, w, h, bg }` | Fill a rectangle with a background colour |
+| `Dim { x, y, w, h, bg }` | Dim an area: darkens existing foreground/background and applies `bg` to cells without an explicit background. Use for palette/modal overlays |
 | `Border { x, y, w, h, fg, borders, bg?, title?, title_fg?, title_dash_fg? }` | Draw a box border (bitmask: 1=LEFT, 2=RIGHT, 4=TOP, 8=BOTTOM, 15=ALL) with optional fill and title |
 | `Paragraph { x, y, w, h, text, style, wrap }` | Rendered wrapped text within a rectangle |
 | `List { x, y, w, h, items, selected?, style, highlight_style }` | A scrollable list with selection highlighting |
@@ -211,8 +212,8 @@ Return hints to show key bindings in the status bar:
 
 ```rust
 hints: vec![
-    ("j/k".into(), "navigate".into()),
-    ("Enter".into(), "select".into()),
+    ("↑↓".into(), "navigate".into()),
+    ("↵".into(), "select".into()),
 ],
 ```
 

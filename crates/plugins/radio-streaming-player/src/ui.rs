@@ -88,7 +88,7 @@ pub fn render_ui(
         });
     }
 
-    let table_top = 2u16;
+    let table_top = 3u16;
     let header_h = 1u16;
     let table_avail = stations_h.saturating_sub(table_top + header_h + 1);
     let max_visible = table_avail as usize;
