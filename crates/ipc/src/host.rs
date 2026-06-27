@@ -165,7 +165,16 @@ fn writer_loop(mut stdin: impl Write, high_rx: Receiver<String>, low_rx: Receive
 
 impl IpcPluginHost {
     fn send(&mut self, msg: &HostMsg, priority: Priority) {
-        let json = serde_json::to_string(msg).expect("HostMsg serialization");
+        let json = match serde_json::to_string(msg) {
+            Ok(j) => j,
+            Err(e) => {
+                log::error!(
+                    "[santui] failed to serialize HostMsg for plugin `{}`: {e}",
+                    self.id
+                );
+                return;
+            }
+        };
         let tx = match priority {
             Priority::High => &self.writer_high_tx,
             Priority::Low => &self.writer_low_tx,
