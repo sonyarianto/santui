@@ -20,16 +20,19 @@ impl Widget for DimOverlay {
                         if s.bg.is_none_or(|c| c == ratatui::style::Color::Reset) {
                             s.bg = Some(bg);
                         } else {
-                            s.bg = s.bg.map(|c| dim_color(c, 0.45));
+                            s.bg = s.bg.map(|c| dim_color(c, DIM_FACTOR));
                         }
                     }
-                    s.fg = s.fg.map(|c| dim_color(c, 0.45));
+                    s.fg = s.fg.map(|c| dim_color(c, DIM_FACTOR));
                     cell.set_style(s);
                 }
             }
         }
     }
 }
+
+/// Twin of `crates/ipc/src/render.rs` `DIM_FACTOR` — keep in sync.
+const DIM_FACTOR: f64 = 0.45;
 
 fn dim_color(c: ratatui::style::Color, factor: f64) -> ratatui::style::Color {
     match c {

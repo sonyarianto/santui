@@ -4,10 +4,13 @@ mod player;
 mod state;
 mod stations;
 mod ui;
-
 use std::io::{BufRead, BufReader, Write};
 use std::sync::mpsc;
 use std::thread;
+
+use ui::{HEADER_H, TABLE_TOP};
+
+const LIST_OVERHEAD: u16 = TABLE_TOP + HEADER_H + 1;
 
 use player::Mpv;
 use santui_ipc::protocol::{Area, HostMsg, IpcKey, RenderCmd, ThemeData, UserData};
@@ -38,7 +41,7 @@ struct App {
     cached_commands: Vec<RenderCmd>,
     cached_json: Option<String>,
     user: Option<UserData>,
-    db: rusqlite::Connection,
+    db: Option<rusqlite::Connection>,
 }
 
 fn send_cmd(app: &App, cmd: MpvCmd) {
@@ -52,14 +55,19 @@ impl App {
         let (db, station_list, init_error) = match database::open() {
             Ok(db) => {
                 let list = stations::load(&db);
-                (db, list, None)
+                (Some(db), list, None)
             }
             Err(e) => {
                 let err = format!("Database error: {e}");
                 log::error!("{err}");
-                let fallback =
-                    rusqlite::Connection::open_in_memory().expect("in-memory DB fallback");
-                (fallback, Vec::new(), Some(err))
+                match rusqlite::Connection::open_in_memory() {
+                    Ok(fallback) => (Some(fallback), Vec::new(), Some(err)),
+                    Err(e2) => {
+                        let err2 = format!("{err}; in-memory fallback also failed: {e2}");
+                        log::error!("{err2}");
+                        (None, Vec::new(), Some(err2))
+                    }
+                }
             }
         };
         App {
@@ -234,14 +242,16 @@ impl App {
             }
             1 => {
                 // "Reload stations" — reload from DB
-                let new_stations = crate::stations::reload(&self.db);
-                let count = new_stations.len();
-                self.state.stations = new_stations;
-                self.state.set_query(String::new());
-                self.state.selected = 0;
-                self.state.scroll = 0;
-                self.state
-                    .set_scan_msg(format!("Reloaded {count} stations from database"));
+                if let Some(ref db) = self.db {
+                    let new_stations = crate::stations::reload(db);
+                    let count = new_stations.len();
+                    self.state.stations = new_stations;
+                    self.state.set_query(String::new());
+                    self.state.selected = 0;
+                    self.state.scroll = 0;
+                    self.state
+                        .set_scan_msg(format!("Reloaded {count} stations from database"));
+                }
                 self.dirty = true;
             }
             _ => {}
@@ -285,14 +295,14 @@ impl App {
                 IpcKey::Up => {
                     self.state.select_prev();
                     let info_h = self.state.info_h();
-                    let max_visible = self.area.h.saturating_sub(info_h + 5) as usize;
+                    let max_visible = self.area.h.saturating_sub(info_h + LIST_OVERHEAD) as usize;
                     self.state.ensure_scroll_visible(max_visible.max(1));
                     return true;
                 }
                 IpcKey::Down => {
                     self.state.select_next();
                     let info_h = self.state.info_h();
-                    let max_visible = self.area.h.saturating_sub(info_h + 5) as usize;
+                    let max_visible = self.area.h.saturating_sub(info_h + LIST_OVERHEAD) as usize;
                     self.state.ensure_scroll_visible(max_visible.max(1));
                     return true;
                 }
@@ -303,27 +313,27 @@ impl App {
             IpcKey::Up => {
                 self.state.select_prev();
                 let info_h = self.state.info_h();
-                let max_visible = self.area.h.saturating_sub(info_h + 5) as usize;
+                let max_visible = self.area.h.saturating_sub(info_h + LIST_OVERHEAD) as usize;
                 self.state.ensure_scroll_visible(max_visible.max(1));
                 true
             }
             IpcKey::Down => {
                 self.state.select_next();
                 let info_h = self.state.info_h();
-                let max_visible = self.area.h.saturating_sub(info_h + 5) as usize;
+                let max_visible = self.area.h.saturating_sub(info_h + LIST_OVERHEAD) as usize;
                 self.state.ensure_scroll_visible(max_visible.max(1));
                 true
             }
             IpcKey::PageUp => {
                 let info_h = self.state.info_h();
-                let page = self.area.h.saturating_sub(info_h + 5) as usize;
+                let page = self.area.h.saturating_sub(info_h + LIST_OVERHEAD) as usize;
                 self.state.select_page_up(page.max(1));
                 self.state.ensure_scroll_visible(page.max(1));
                 true
             }
             IpcKey::PageDown => {
                 let info_h = self.state.info_h();
-                let page = self.area.h.saturating_sub(info_h + 5) as usize;
+                let page = self.area.h.saturating_sub(info_h + LIST_OVERHEAD) as usize;
                 self.state.select_page_down(page.max(1));
                 self.state.ensure_scroll_visible(page.max(1));
                 true
@@ -350,14 +360,16 @@ impl App {
                 true
             }
             IpcKey::Char('r') => {
-                let new_stations = crate::stations::reload(&self.db);
-                let count = new_stations.len();
-                self.state.stations = new_stations;
-                self.state.set_query(String::new());
-                self.state.selected = 0;
-                self.state.scroll = 0;
-                self.state
-                    .set_scan_msg(format!("Reloaded {count} stations from database"));
+                if let Some(ref db) = self.db {
+                    let new_stations = crate::stations::reload(db);
+                    let count = new_stations.len();
+                    self.state.stations = new_stations;
+                    self.state.set_query(String::new());
+                    self.state.selected = 0;
+                    self.state.scroll = 0;
+                    self.state
+                        .set_scan_msg(format!("Reloaded {count} stations from database"));
+                }
                 true
             }
             IpcKey::Char('s') => {

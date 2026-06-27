@@ -2,6 +2,9 @@ use crate::state::{PlayState, RadioState};
 use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData};
 use santui_ipc::ui;
 
+pub const TABLE_TOP: u16 = 3;
+pub const HEADER_H: u16 = 1;
+
 pub fn render_ui(
     state: &RadioState,
     theme: &ThemeData,
@@ -88,8 +91,8 @@ pub fn render_ui(
         });
     }
 
-    let table_top = 3u16;
-    let header_h = 1u16;
+    let table_top = TABLE_TOP;
+    let header_h = HEADER_H;
     let table_avail = stations_h.saturating_sub(table_top + header_h + 1);
     let max_visible = table_avail as usize;
 

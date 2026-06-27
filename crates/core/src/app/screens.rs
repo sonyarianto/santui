@@ -94,10 +94,9 @@ impl super::Santui {
             self.cached_logo = Some(lines);
         }
 
-        let logo = self
-            .cached_logo
-            .as_ref()
-            .expect("logo cached before render_splash");
+        let Some(logo) = self.cached_logo.as_ref() else {
+            return;
+        };
 
         // ── Carousel bar ──
         let carousel = self.plugin_manager.carousel_items();
