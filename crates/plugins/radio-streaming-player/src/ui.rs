@@ -209,7 +209,7 @@ pub fn render_ui(
         np_y,
         left_w,
         info_h,
-        "Now Playing",
+        &format!("Now Playing │ Vol: {}%", state.volume),
         false,
     );
 
