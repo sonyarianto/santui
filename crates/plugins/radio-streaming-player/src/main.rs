@@ -534,6 +534,7 @@ impl App {
                 ("pgup/pgdn".into(), "page".into()),
                 ("tab".into(), "stations".into()),
                 ("l".into(), "hide".into()),
+                ("+/-".into(), "volume".into()),
             ]
         } else {
             vec![
@@ -543,6 +544,7 @@ impl App {
                 ("↵".into(), "play".into()),
                 ("s".into(), "stop".into()),
                 ("r".into(), "reload".into()),
+                ("+/-".into(), "volume".into()),
             ]
         };
         if self.state.show_lyrics && !self.state.lyrics_focused {
