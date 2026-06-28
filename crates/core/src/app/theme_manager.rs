@@ -23,6 +23,12 @@ pub(crate) struct ThemeManager {
     pub(super) picker_orig_idx: usize,
 }
 
+impl Default for ThemeManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ThemeManager {
     pub(super) fn new() -> Self {
         let themes: Vec<(String, Theme)> = Theme::all()

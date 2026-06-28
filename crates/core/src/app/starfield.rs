@@ -50,6 +50,12 @@ fn generate_stars(count: usize) -> Vec<Star> {
     stars
 }
 
+impl Default for Starfield {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Starfield {
     pub(super) fn new() -> Self {
         Starfield {

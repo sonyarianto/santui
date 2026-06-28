@@ -37,6 +37,12 @@ pub struct App {
     pub(super) pending_install_capabilities: Vec<String>,
 }
 
+impl Default for App {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl App {
     pub fn new() -> Self {
         App {
