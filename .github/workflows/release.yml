@@ -62,6 +62,7 @@ jobs:
           echo "✅ Tag v${TAG_VERSION} matches Cargo.toml ${CARGO_VERSION}"
 
       - name: Set binary directory
+        shell: bash
         run: |
           if [ "${{ matrix.cross_compile }}" = "true" ]; then
             echo "BINARY_DIR=target/${{ matrix.target }}/release" >> $GITHUB_ENV
@@ -74,6 +75,7 @@ jobs:
         run: rustup target add ${{ matrix.target }}
 
       - name: Build
+        shell: bash
         run: |
           if [ "${{ matrix.cross_compile }}" = "true" ]; then
             cargo build --release --workspace --target ${{ matrix.target }}
