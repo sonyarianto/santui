@@ -22,7 +22,13 @@ pub fn db_path() -> PathBuf {
 fn migrate_old_db() {
     let old = app_data_dir().join("radio_streaming_stations.db");
     let new = db_path();
-    if old.exists() && !new.exists() {
+    if old.exists() {
+        if new.exists() {
+            if let Err(e) = std::fs::remove_file(&new) {
+                log::warn!("failed to remove stale empty database: {e}");
+                return;
+            }
+        }
         if let Err(e) = std::fs::rename(&old, &new) {
             log::warn!("failed to migrate old database (radio_streaming_stations.db): {e}");
         } else {
@@ -238,7 +244,10 @@ mod tests {
         std::fs::write(&old, b"some data").unwrap();
 
         // Simulate migrate_old_db logic
-        if old.exists() && !new.exists() {
+        if old.exists() {
+            if new.exists() {
+                let _ = std::fs::remove_file(&new);
+            }
             std::fs::rename(&old, &new).unwrap();
         }
 
@@ -250,7 +259,7 @@ mod tests {
     }
 
     #[test]
-    fn migrate_old_db_does_not_overwrite_existing_new() {
+    fn migrate_old_db_replaces_existing_new() {
         let dir = std::env::temp_dir().join("santui-db-migrate-test2");
         let _ = std::fs::create_dir_all(&dir);
         let old = dir.join("radio_streaming_stations.db");
@@ -258,15 +267,19 @@ mod tests {
         std::fs::write(&old, b"old data").unwrap();
         std::fs::write(&new, b"new data").unwrap();
 
-        if old.exists() && !new.exists() {
+        // Simulate migrate_old_db logic
+        if old.exists() {
+            if new.exists() {
+                let _ = std::fs::remove_file(&new);
+            }
             std::fs::rename(&old, &new).unwrap();
         }
 
-        assert!(old.exists(), "old file should still exist");
+        assert!(!old.exists(), "old file should be gone");
         assert_eq!(
             std::fs::read(&new).unwrap(),
-            b"new data",
-            "new file should be untouched"
+            b"old data",
+            "old data should replace new"
         );
 
         let _ = std::fs::remove_dir_all(&dir);
