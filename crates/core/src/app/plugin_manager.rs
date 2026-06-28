@@ -140,7 +140,20 @@ impl PluginManager {
     }
 
     pub fn set_active(&mut self, idx: Option<usize>) {
+        if self.active_idx == idx {
+            return;
+        }
+        if let Some(old) = self.active_idx {
+            if old < self.plugins.len() {
+                self.plugins[old].on_blur();
+            }
+        }
         self.active_idx = idx;
+        if let Some(new) = idx {
+            if new < self.plugins.len() {
+                self.plugins[new].on_focus();
+            }
+        }
     }
 
     // ------------------------------------------------------------------
@@ -171,6 +184,9 @@ impl PluginManager {
 
     /// Shut down an IPC plugin and remove it from the managed set.
     ///
+    /// Background-capable plugins (e.g., audio players) are kept alive — only
+    /// blurred and removed from the active display.
+    ///
     /// In-process plugins (no binary path) are *not* removed — only the active
     /// index is cleared so the home screen regains focus.
     pub fn shutdown_and_remove(&mut self, idx: usize) {
@@ -180,6 +196,13 @@ impl PluginManager {
 
         // Keep the registry plugin loaded so its palette entry survives.
         if self.plugins[idx].id() == "plugin-registry" {
+            self.plugins[idx].on_blur();
+            self.active_idx = None;
+            return;
+        }
+
+        // Background-capable plugins: blur but keep alive.
+        if self.plugins[idx].can_background() {
             self.plugins[idx].on_blur();
             self.active_idx = None;
             return;

@@ -596,6 +596,10 @@ impl Plugin for IpcPluginHost {
         self.recv_shutdown();
     }
 
+    fn can_background(&self) -> bool {
+        self.id == "santui-radio-streaming-player"
+    }
+
     fn binary_path(&self) -> Option<&Path> {
         Some(Path::new(&self.binary_name))
     }

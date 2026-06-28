@@ -63,6 +63,13 @@ pub trait Plugin: Send {
     fn is_alive(&self) -> bool {
         true
     }
+
+    /// Whether the plugin supports running in the background when the user
+    /// presses Esc (e.g., audio players that should keep playing).
+    /// Default is `false`. Override to return `true` for background-capable plugins.
+    fn can_background(&self) -> bool {
+        false
+    }
 }
 
 pub struct PluginContext {
