@@ -1,5 +1,6 @@
 mod database;
 mod itunes;
+mod lrclib;
 mod player;
 mod state;
 mod stations;
@@ -18,6 +19,7 @@ use santui_ipc::protocol::{Area, HostMsg, IpcKey, RenderCmd, ThemeData, UserData
 enum MpvMsg {
     Metadata(String),
     TrackInfo(itunes::TrackInfo),
+    Lyrics(Option<lrclib::LyricsData>),
     EndFile(u32),
 }
 
@@ -261,6 +263,7 @@ impl App {
     fn handle_key(&mut self, key: IpcKey) -> bool {
         self.state.scan_msg = None;
         self.dirty = true;
+
         if self.state.search_mode {
             match key {
                 IpcKey::Esc => {
@@ -276,6 +279,7 @@ impl App {
                         self.state.play_state = state::PlayState::Playing(station.name.to_string());
                         self.state.song_title.clear();
                         self.state.track_info = None;
+                        self.state.clear_lyrics();
                         self.state.start_time = std::time::Instant::now();
                         send_cmd(self, MpvCmd::Stop);
                         send_cmd(self, MpvCmd::LoadUrl(station.url));
@@ -309,50 +313,80 @@ impl App {
                 _ => return false,
             }
         }
+
         match key {
+            IpcKey::Tab => {
+                if self.state.show_lyrics {
+                    self.state.lyrics_focused = !self.state.lyrics_focused;
+                }
+                true
+            }
             IpcKey::Up => {
-                self.state.select_prev();
-                let info_h = self.state.info_h();
-                let max_visible = self.area.h.saturating_sub(info_h + LIST_OVERHEAD) as usize;
-                self.state.ensure_scroll_visible(max_visible.max(1));
+                if self.state.show_lyrics && self.state.lyrics_focused {
+                    self.state.lyrics_scroll_up();
+                } else {
+                    self.state.select_prev();
+                    let info_h = self.state.info_h();
+                    let max_visible = self.area.h.saturating_sub(info_h + LIST_OVERHEAD) as usize;
+                    self.state.ensure_scroll_visible(max_visible.max(1));
+                }
                 true
             }
             IpcKey::Down => {
-                self.state.select_next();
-                let info_h = self.state.info_h();
-                let max_visible = self.area.h.saturating_sub(info_h + LIST_OVERHEAD) as usize;
-                self.state.ensure_scroll_visible(max_visible.max(1));
+                if self.state.show_lyrics && self.state.lyrics_focused {
+                    let panel_h = self.area.h.saturating_sub(2) as usize;
+                    self.state.lyrics_scroll_down(panel_h);
+                } else {
+                    self.state.select_next();
+                    let info_h = self.state.info_h();
+                    let max_visible = self.area.h.saturating_sub(info_h + LIST_OVERHEAD) as usize;
+                    self.state.ensure_scroll_visible(max_visible.max(1));
+                }
                 true
             }
             IpcKey::PageUp => {
-                let info_h = self.state.info_h();
-                let page = self.area.h.saturating_sub(info_h + LIST_OVERHEAD) as usize;
-                self.state.select_page_up(page.max(1));
-                self.state.ensure_scroll_visible(page.max(1));
+                if self.state.show_lyrics && self.state.lyrics_focused {
+                    self.state.lyrics_scroll_up();
+                } else {
+                    let info_h = self.state.info_h();
+                    let page = self.area.h.saturating_sub(info_h + LIST_OVERHEAD) as usize;
+                    self.state.select_page_up(page.max(1));
+                    self.state.ensure_scroll_visible(page.max(1));
+                }
                 true
             }
             IpcKey::PageDown => {
-                let info_h = self.state.info_h();
-                let page = self.area.h.saturating_sub(info_h + LIST_OVERHEAD) as usize;
-                self.state.select_page_down(page.max(1));
-                self.state.ensure_scroll_visible(page.max(1));
+                if self.state.show_lyrics && self.state.lyrics_focused {
+                    let panel_h = self.area.h.saturating_sub(2) as usize;
+                    self.state.lyrics_scroll_down(panel_h);
+                } else {
+                    let info_h = self.state.info_h();
+                    let page = self.area.h.saturating_sub(info_h + LIST_OVERHEAD) as usize;
+                    self.state.select_page_down(page.max(1));
+                    self.state.ensure_scroll_visible(page.max(1));
+                }
                 true
             }
             IpcKey::Char('/') => {
-                self.state.search_mode = true;
-                self.state.query.clear();
-                self.state.filtered = (0..self.state.stations.len()).collect();
-                self.state.selected = 0;
-                self.state.scroll = 0;
+                if !self.state.lyrics_focused {
+                    self.state.search_mode = true;
+                    self.state.query.clear();
+                    self.state.filtered = (0..self.state.stations.len()).collect();
+                    self.state.selected = 0;
+                    self.state.scroll = 0;
+                }
                 true
             }
             IpcKey::Enter => {
-                if let Some(station) = self.state.selected_station().cloned() {
+                if self.state.lyrics_focused {
+                    // no-op while lyrics focused
+                } else if let Some(station) = self.state.selected_station().cloned() {
                     let idx = self.state.current_filtered_index();
                     self.state.current_station = Some(idx);
                     self.state.play_state = state::PlayState::Playing(station.name.to_string());
                     self.state.song_title.clear();
                     self.state.track_info = None;
+                    self.state.clear_lyrics();
                     self.state.start_time = std::time::Instant::now();
                     send_cmd(self, MpvCmd::Stop);
                     send_cmd(self, MpvCmd::LoadUrl(station.url));
@@ -360,15 +394,17 @@ impl App {
                 true
             }
             IpcKey::Char('r') => {
-                if let Some(ref db) = self.db {
-                    let new_stations = crate::stations::reload(db);
-                    let count = new_stations.len();
-                    self.state.stations = new_stations;
-                    self.state.set_query(String::new());
-                    self.state.selected = 0;
-                    self.state.scroll = 0;
-                    self.state
-                        .set_scan_msg(format!("Reloaded {count} stations from database"));
+                if !self.state.lyrics_focused {
+                    if let Some(ref db) = self.db {
+                        let new_stations = crate::stations::reload(db);
+                        let count = new_stations.len();
+                        self.state.stations = new_stations;
+                        self.state.set_query(String::new());
+                        self.state.selected = 0;
+                        self.state.scroll = 0;
+                        self.state
+                            .set_scan_msg(format!("Reloaded {count} stations from database"));
+                    }
                 }
                 true
             }
@@ -378,6 +414,7 @@ impl App {
                 self.state.current_station = None;
                 self.state.song_title.clear();
                 self.state.track_info = None;
+                self.state.clear_lyrics();
                 true
             }
             IpcKey::Char('+') | IpcKey::Char('=') => {
@@ -388,6 +425,12 @@ impl App {
             IpcKey::Char('-') => {
                 self.state.volume_down();
                 send_cmd(self, MpvCmd::SetVolume(self.state.volume));
+                true
+            }
+            IpcKey::Char('l') => {
+                self.state.show_lyrics = !self.state.show_lyrics;
+                self.state.lyrics_scroll = 0;
+                self.state.lyrics_focused = self.state.show_lyrics;
                 true
             }
             _ => false,
@@ -403,12 +446,29 @@ impl App {
                     MpvMsg::Metadata(title) => {
                         self.state.song_title = title.clone();
                         self.state.track_info = None;
+                        self.state.clear_lyrics();
+                        self.state.lyrics_loading = true;
                         let Some(tx) = self.tx_msg.clone() else {
                             continue;
                         };
+                        let tx2 = tx.clone();
+                        let title_for_itunes = title.clone();
                         thread::spawn(move || {
-                            if let Ok(Some(info)) = itunes::lookup(&title) {
+                            if let Ok(Some(info)) = itunes::lookup(&title_for_itunes) {
                                 let _ = tx.send(MpvMsg::TrackInfo(info));
+                            }
+                        });
+                        thread::spawn(move || {
+                            let (artist, track) = lrclib::split_title(&title);
+                            let lyrics = lrclib::fetch(&track, artist.as_deref());
+                            match lyrics {
+                                Ok(data) => {
+                                    let _ = tx2.send(MpvMsg::Lyrics(data));
+                                }
+                                Err(e) => {
+                                    log::warn!("LRCLib error: {e}");
+                                    let _ = tx2.send(MpvMsg::Lyrics(None));
+                                }
                             }
                         });
                     }
@@ -417,6 +477,19 @@ impl App {
                         if let Some(title) = &info.title {
                             self.state.song_title = title.clone();
                         }
+                    }
+                    MpvMsg::Lyrics(data) => {
+                        match data {
+                            Some(lyrics) => {
+                                self.state.lyrics_text = lyrics.text;
+                                self.state.lyrics_source = lyrics.source;
+                            }
+                            None => {
+                                self.state.lyrics_text = String::new();
+                            }
+                        }
+                        self.state.lyrics_loading = false;
+                        self.state.lyrics_scroll = 0;
                     }
                     MpvMsg::EndFile(reason) => {
                         if reason == player::MPV_END_FILE_REASON_EOF {
@@ -455,14 +528,32 @@ impl App {
         if self.state.search_mode {
             return vec![("↵".into(), "play".into()), ("⌫".into(), "delete".into())];
         }
-        vec![
-            ("↑↓".into(), "navigate".into()),
-            ("pgup/pgdn".into(), "page".into()),
-            ("/".into(), "search".into()),
-            ("↵".into(), "play".into()),
-            ("s".into(), "stop".into()),
-            ("r".into(), "reload".into()),
-        ]
+        let mut hints = if self.state.show_lyrics && self.state.lyrics_focused {
+            vec![
+                ("↑↓".into(), "scroll lyrics".into()),
+                ("pgup/pgdn".into(), "page".into()),
+                ("tab".into(), "stations".into()),
+                ("l".into(), "hide".into()),
+            ]
+        } else {
+            vec![
+                ("↑↓".into(), "navigate".into()),
+                ("pgup/pgdn".into(), "page".into()),
+                ("/".into(), "search".into()),
+                ("↵".into(), "play".into()),
+                ("s".into(), "stop".into()),
+                ("r".into(), "reload".into()),
+            ]
+        };
+        if self.state.show_lyrics && !self.state.lyrics_focused {
+            hints.push(("tab".into(), "lyrics".into()));
+            hints.push(("l".into(), "hide".into()));
+        } else if !self.state.show_lyrics
+            && (!self.state.lyrics_text.is_empty() || self.state.lyrics_loading)
+        {
+            hints.push(("l".into(), "lyrics".into()));
+        }
+        hints
     }
 
     fn render(&mut self) -> &[RenderCmd] {

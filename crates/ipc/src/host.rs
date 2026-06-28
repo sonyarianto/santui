@@ -503,6 +503,7 @@ impl Plugin for IpcPluginHost {
             KeyCode::Enter => IpcKey::Enter,
             KeyCode::Esc => IpcKey::Esc,
             KeyCode::Backspace => IpcKey::Backspace,
+            KeyCode::Tab => IpcKey::Tab,
             KeyCode::Char(c) => IpcKey::Char(c),
             _ => return false,
         };

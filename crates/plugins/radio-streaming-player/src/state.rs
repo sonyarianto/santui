@@ -24,6 +24,12 @@ pub struct RadioState {
     pub query: String,
     pub search_mode: bool,
     pub tick_counter: u64,
+    pub show_lyrics: bool,
+    pub lyrics_focused: bool,
+    pub lyrics_text: String,
+    pub lyrics_loading: bool,
+    pub lyrics_scroll: usize,
+    pub lyrics_source: String,
 }
 
 impl RadioState {
@@ -45,6 +51,12 @@ impl RadioState {
             query: String::new(),
             search_mode: false,
             tick_counter: 0,
+            show_lyrics: false,
+            lyrics_focused: false,
+            lyrics_text: String::new(),
+            lyrics_loading: false,
+            lyrics_scroll: 0,
+            lyrics_source: String::new(),
         }
     }
 
@@ -165,6 +177,23 @@ impl RadioState {
 
     pub fn volume_down(&mut self) {
         self.volume = (self.volume - 2).max(0);
+    }
+
+    pub fn clear_lyrics(&mut self) {
+        self.lyrics_text.clear();
+        self.lyrics_loading = false;
+        self.lyrics_scroll = 0;
+        self.lyrics_source.clear();
+    }
+
+    pub fn lyrics_scroll_up(&mut self) {
+        self.lyrics_scroll = self.lyrics_scroll.saturating_sub(1);
+    }
+
+    pub fn lyrics_scroll_down(&mut self, panel_h: usize) {
+        let total = self.lyrics_text.lines().count();
+        let max_scroll = total.saturating_sub(panel_h);
+        self.lyrics_scroll = (self.lyrics_scroll + 1).min(max_scroll);
     }
 }
 

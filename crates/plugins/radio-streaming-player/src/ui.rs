@@ -1,9 +1,38 @@
 use crate::state::{PlayState, RadioState};
-use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData};
+use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData, BORDER_ALL};
 use santui_ipc::ui;
 
 pub const TABLE_TOP: u16 = 3;
 pub const HEADER_H: u16 = 1;
+
+#[allow(clippy::too_many_arguments)]
+fn draw_panel(
+    cmds: &mut Vec<RenderCmd>,
+    theme: &ThemeData,
+    x: u16,
+    y: u16,
+    w: u16,
+    h: u16,
+    title: &str,
+    focused: bool,
+) {
+    if focused {
+        cmds.push(RenderCmd::Border {
+            x,
+            y,
+            w,
+            h,
+            fg: theme.accent,
+            bg: None,
+            borders: BORDER_ALL,
+            title: Some(title.trim().into()),
+            title_fg: Some(theme.text),
+            title_dash_fg: Some(theme.accent),
+        });
+    } else {
+        ui::draw_panel(cmds, theme, x, y, w, h, title);
+    }
+}
 
 pub fn render_ui(
     state: &RadioState,
@@ -24,16 +53,31 @@ pub fn render_ui(
         h: area_h,
     });
 
+    let left_w = if state.show_lyrics {
+        (area_w * 3 / 5).max(20)
+    } else {
+        area_w
+    };
+    let right_w = area_w.saturating_sub(left_w);
+
     const GAP: u16 = 0;
-
     let info_h = state.info_h();
-
     let stations_h = area_h.saturating_sub(GAP + info_h);
 
-    // ---- Stations panel (top, fills remaining height) ----
-    ui::draw_panel(&mut cmds, theme, 0, 0, area_w, stations_h, "Stations");
+    // ---- Stations panel (top-left) ----
+    let stations_focused = state.show_lyrics && !state.lyrics_focused;
+    draw_panel(
+        &mut cmds,
+        theme,
+        0,
+        0,
+        left_w,
+        stations_h,
+        "Stations",
+        stations_focused,
+    );
 
-    let inner_w = area_w.saturating_sub(3) as usize;
+    let inner_w = left_w.saturating_sub(3) as usize;
 
     // ---- Top line: search bar, scan message, or total station count ----
     if state.search_mode {
@@ -47,7 +91,7 @@ pub fn render_ui(
         let right_len = right_text.len();
         let max_left = inner_w.saturating_sub(right_len + 1);
         let display_left: String = left_text.chars().take(max_left).collect();
-        let right_x = area_w.saturating_sub(2u16.saturating_add(right_text.len() as u16));
+        let right_x = left_w.saturating_sub(2u16.saturating_add(right_text.len() as u16));
         cmds.push(RenderCmd::Text {
             x: 2,
             y: 1,
@@ -67,7 +111,7 @@ pub fn render_ui(
     } else {
         let top_text = match state.scan_msg {
             Some(ref msg) => {
-                let max_w = area_w.saturating_sub(3) as usize;
+                let max_w = left_w.saturating_sub(3) as usize;
                 if msg.len() > max_w {
                     format!("{}…", &msg[..max_w.saturating_sub(1)])
                 } else {
@@ -76,7 +120,7 @@ pub fn render_ui(
             }
             None => format!("Total stations: {}", state.stations.len()),
         };
-        let top_x = area_w.saturating_sub(2u16.saturating_add(top_text.len() as u16));
+        let top_x = left_w.saturating_sub(2u16.saturating_add(top_text.len() as u16));
         cmds.push(RenderCmd::Text {
             x: top_x,
             y: 1,
@@ -156,11 +200,20 @@ pub fn render_ui(
         }),
     });
 
-    // ---- Now Playing panel (bottom) ----
+    // ---- Now Playing panel (bottom-left) ----
     let np_y = stations_h + GAP;
-    ui::draw_panel(&mut cmds, theme, 0, np_y, area_w, info_h, "Now Playing");
+    draw_panel(
+        &mut cmds,
+        theme,
+        0,
+        np_y,
+        left_w,
+        info_h,
+        "Now Playing",
+        false,
+    );
 
-    let r_inner_w = area_w.saturating_sub(3);
+    let r_inner_w = left_w.saturating_sub(3);
 
     match &state.play_state {
         PlayState::Stopped => {
@@ -229,6 +282,85 @@ pub fn render_ui(
                 r_inner_w,
             );
             ui::text_at(&mut cmds, 2, np_y + 2, e, theme.error, None, r_inner_w);
+        }
+    }
+
+    // ---- Lyrics panel (right side) ----
+    if state.show_lyrics && right_w >= 15 {
+        let ly_x = left_w;
+        let ly_panel_w = right_w;
+        draw_panel(
+            &mut cmds,
+            theme,
+            ly_x,
+            0,
+            ly_panel_w,
+            area_h,
+            "Lyrics",
+            state.lyrics_focused,
+        );
+
+        let ly_inner_w = ly_panel_w.saturating_sub(3);
+
+        if state.lyrics_loading {
+            ui::text_at(
+                &mut cmds,
+                ly_x + 2,
+                1,
+                "Searching lyrics...",
+                theme.text_muted,
+                None,
+                ly_inner_w,
+            );
+        } else if state.lyrics_text.is_empty() {
+            ui::text_at(
+                &mut cmds,
+                ly_x + 2,
+                1,
+                "No lyrics found",
+                theme.text_muted,
+                None,
+                ly_inner_w,
+            );
+        } else {
+            let ly_h = area_h.saturating_sub(2) as usize;
+            let lines: Vec<&str> = state.lyrics_text.lines().collect();
+            let scroll = state.lyrics_scroll.min(lines.len().saturating_sub(1));
+            for i in 0..ly_h {
+                let line_idx = scroll + i;
+                if line_idx >= lines.len() {
+                    break;
+                }
+                let line = lines[line_idx];
+                ui::text_at(
+                    &mut cmds,
+                    ly_x + 2,
+                    1 + i as u16,
+                    line,
+                    theme.text,
+                    None,
+                    ly_inner_w,
+                );
+            }
+            if lines.len() > ly_h {
+                let total = lines.len();
+                let max_scroll = total.saturating_sub(ly_h);
+                let pct = (scroll * 100)
+                    .checked_div(max_scroll)
+                    .map(|v| v.min(100))
+                    .unwrap_or(0);
+                let scroll_text = format!("{pct}%");
+                let indicator_y = 1 + ly_h as u16 - 1;
+                let sx = ly_x + ly_panel_w.saturating_sub(scroll_text.len() as u16 + 2);
+                cmds.push(RenderCmd::Text {
+                    x: sx,
+                    y: indicator_y,
+                    text: scroll_text,
+                    fg: Some(theme.text_muted),
+                    bg: None,
+                    bold: false,
+                });
+            }
         }
     }
 

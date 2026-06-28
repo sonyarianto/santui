@@ -39,6 +39,7 @@ pub enum IpcKey {
     Enter,
     Esc,
     Backspace,
+    Tab,
     Char(char),
 }
 
