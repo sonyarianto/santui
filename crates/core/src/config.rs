@@ -207,3 +207,163 @@ impl ConfigManager {
             .and_then(|m| m.modified().ok());
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    static NEXT_ID: AtomicUsize = AtomicUsize::new(0);
+
+    struct TempDir {
+        path: PathBuf,
+    }
+
+    impl TempDir {
+        fn new() -> Self {
+            let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
+            let mut p = std::env::temp_dir();
+            p.push(format!("santui_cfg_test_{id}"));
+            let _ = std::fs::remove_dir_all(&p);
+            std::fs::create_dir_all(&p).unwrap();
+            TempDir { path: p }
+        }
+
+        fn path(&self) -> &std::path::Path {
+            &self.path
+        }
+    }
+
+    impl Drop for TempDir {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.path);
+        }
+    }
+
+    #[test]
+    fn config_default_all_none() {
+        let cfg = Config::default();
+        assert!(cfg.theme.is_none());
+        assert!(cfg.custom_theme.is_none());
+        assert!(cfg.keybindings.is_none());
+        assert!(cfg.plugins.is_none());
+    }
+
+    #[test]
+    fn try_load_from_missing_dir_returns_err() {
+        let tmp = TempDir::new();
+        let result = Config::try_load_from(tmp.path());
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("not found"));
+    }
+
+    #[test]
+    fn try_load_from_invalid_toml_returns_err() {
+        let tmp = TempDir::new();
+        std::fs::write(tmp.path().join("config.toml"), "not toml {{{").unwrap();
+        let result = Config::try_load_from(tmp.path());
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("parse"));
+    }
+
+    #[test]
+    fn load_from_missing_dir_returns_default() {
+        let tmp = TempDir::new();
+        let cfg = Config::load_from(tmp.path());
+        assert!(cfg.theme.is_none());
+    }
+
+    #[test]
+    fn save_to_and_load_from_roundtrip() {
+        let tmp = TempDir::new();
+        let cfg = Config {
+            theme: Some("Nord".into()),
+            custom_theme: Some(CustomThemeColors {
+                name: None,
+                accent: Some("#ff8800".into()),
+                highlight: None,
+                logo: None,
+                text: None,
+                text_muted: None,
+                background: None,
+                background_panel: None,
+                background_overlay: None,
+                border: None,
+                success: None,
+                error: None,
+                inverted_text: None,
+            }),
+            keybindings: None,
+            plugins: None,
+        };
+        cfg.save_to(tmp.path()).unwrap();
+        let loaded = Config::load_from(tmp.path());
+        assert_eq!(loaded.theme.as_deref(), Some("Nord"));
+    }
+
+    #[test]
+    fn config_manager_new_sets_last_modified() {
+        let tmp = TempDir::new();
+        let p = tmp.path().join("config.toml");
+        std::fs::write(&p, r#"theme = "Nord""#).unwrap();
+        let mgr = ConfigManager::new(tmp.path().to_path_buf());
+        assert!(mgr.last_modified.is_some());
+        assert!(!mgr.dirty);
+    }
+
+    #[test]
+    fn config_manager_error_on_missing_file() {
+        let tmp = TempDir::new();
+        let mgr = ConfigManager::new(tmp.path().to_path_buf());
+        assert!(mgr.error().is_some());
+    }
+
+    #[test]
+    fn config_manager_error_cleared_on_successful_load() {
+        let tmp = TempDir::new();
+        let p = tmp.path().join("config.toml");
+        std::fs::write(&p, r#"theme = "Nord""#).unwrap();
+        let mgr = ConfigManager::new(tmp.path().to_path_buf());
+        assert!(mgr.error().is_none());
+    }
+
+    #[test]
+    fn config_manager_clear_noop_when_no_custom() {
+        let tmp = TempDir::new();
+        let mut mgr = ConfigManager::new(tmp.path().to_path_buf());
+        mgr.clear_custom_theme();
+        assert!(mgr.config().custom_theme.is_none());
+    }
+
+    #[test]
+    fn config_manager_tick_rate_default_and_set() {
+        let tmp = TempDir::new();
+        let mut mgr = ConfigManager::new(tmp.path().to_path_buf());
+        assert_eq!(mgr.tick_rate(), Duration::from_millis(100));
+        mgr.set_tick_rate(Duration::from_millis(200));
+        assert_eq!(mgr.tick_rate(), Duration::from_millis(200));
+    }
+
+    #[test]
+    fn config_manager_poll_throttle_skips() {
+        let tmp = TempDir::new();
+        let p = tmp.path().join("config.toml");
+        std::fs::write(&p, r#"theme = "Nord""#).unwrap();
+        let mut mgr = ConfigManager::new(tmp.path().to_path_buf());
+        mgr.poll_skip = 5;
+        mgr.ack();
+        std::fs::write(&p, r#"theme = "Dracula""#).unwrap();
+        mgr.poll();
+        assert!(!mgr.dirty, "should skip due to poll_skip");
+    }
+
+    #[test]
+    fn config_manager_poll_no_file_returns_early() {
+        let tmp = TempDir::new();
+        let mut mgr = ConfigManager::new(tmp.path().to_path_buf());
+        mgr.poll_skip = 0;
+        // File doesn't exist, metadata returns None → poll returns early.
+        mgr.poll();
+        assert!(!mgr.dirty);
+    }
+}
