@@ -438,8 +438,11 @@ fn parse_genres(html: &str) -> Vec<String> {
 }
 
 /// Fetch a station's detail page and extract genre tags.
-fn enrich_station_genre(conn: &Connection, radio_id: &str) -> Result<(), String> {
-    let url = format!("https://onlineradiobox.com/{radio_id}/");
+/// radio_id is `us.kmgl` — convert to `https://onlineradiobox.com/us/kmgl/`.
+/// Returns the genres string (comma-separated) on success.
+fn enrich_station_genre(conn: &Connection, radio_id: &str) -> Result<String, String> {
+    let path = radio_id.replace('.', "/");
+    let url = format!("https://onlineradiobox.com/{path}/");
     let mut resp = ureq::get(&url)
         .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
         .call()
@@ -451,7 +454,7 @@ fn enrich_station_genre(conn: &Connection, radio_id: &str) -> Result<(), String>
 
     let genres = parse_genres(&body);
     if genres.is_empty() {
-        return Ok(());
+        return Ok(String::new());
     }
     let joined = genres.join(", ");
     conn.execute(
@@ -459,7 +462,7 @@ fn enrich_station_genre(conn: &Connection, radio_id: &str) -> Result<(), String>
         rusqlite::params![joined, radio_id],
     )
     .map_err(|e| format!("DB update failed: {e}"))?;
-    Ok(())
+    Ok(joined)
 }
 
 /// Enrich a random sample of stations with no genre set.
@@ -494,7 +497,10 @@ fn enrich_genres(conn: &Connection) {
     let mut failed = 0usize;
     for radio_id in &rows {
         match enrich_station_genre(conn, radio_id) {
-            Ok(()) => enriched += 1,
+            Ok(genres) => {
+                enriched += 1;
+                println!("  📡  {radio_id}: {genres}");
+            }
             Err(e) => {
                 log::warn!("  ⚠️  {radio_id}: {e}");
                 failed += 1;
