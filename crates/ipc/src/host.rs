@@ -694,3 +694,708 @@ impl Plugin for IpcPluginHost {
         self.cached_hints.clone()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use santui_core::auth::User;
+    use santui_core::theme::Theme;
+    use std::sync::mpsc::sync_channel;
+
+    // ─── Free function tests ───
+
+    #[test]
+    fn test_spawn_binary_name_appends_exe_on_windows() {
+        let name = spawn_binary_name("my-plugin");
+        if cfg!(windows) {
+            assert_eq!(name, "my-plugin.exe");
+        } else {
+            assert_eq!(name, "my-plugin");
+        }
+    }
+
+    #[test]
+    fn test_spawn_binary_name_keeps_existing_exe() {
+        assert_eq!(spawn_binary_name("plugin.exe"), "plugin.exe");
+    }
+
+    #[test]
+    fn test_color_to_rgb_converts_rgb() {
+        let c = ratatui::style::Color::Rgb(100, 150, 200);
+        assert_eq!(color_to_rgb(&c), [100, 150, 200]);
+    }
+
+    #[test]
+    fn test_color_to_rgb_fallback_for_non_rgb() {
+        let c = ratatui::style::Color::Reset;
+        assert_eq!(color_to_rgb(&c), [220, 220, 220]);
+    }
+
+    #[test]
+    fn test_theme_to_data_converts_all_fields() {
+        let theme = Theme {
+            accent: ratatui::style::Color::Rgb(1, 2, 3),
+            highlight: ratatui::style::Color::Rgb(4, 5, 6),
+            logo: ratatui::style::Color::Rgb(7, 8, 9),
+            text: ratatui::style::Color::Rgb(10, 11, 12),
+            text_muted: ratatui::style::Color::Rgb(13, 14, 15),
+            background: ratatui::style::Color::Rgb(16, 17, 18),
+            background_panel: ratatui::style::Color::Rgb(19, 20, 21),
+            background_overlay: ratatui::style::Color::Rgb(22, 23, 24),
+            border: ratatui::style::Color::Rgb(25, 26, 27),
+            success: ratatui::style::Color::Rgb(28, 29, 30),
+            error: ratatui::style::Color::Rgb(31, 32, 33),
+            inverted_text: ratatui::style::Color::Rgb(34, 35, 36),
+        };
+        let data = theme_to_data(&theme);
+        assert_eq!(data.accent, [1, 2, 3]);
+        assert_eq!(data.highlight, [4, 5, 6]);
+        assert_eq!(data.logo, [7, 8, 9]);
+        assert_eq!(data.text, [10, 11, 12]);
+        assert_eq!(data.text_muted, [13, 14, 15]);
+        assert_eq!(data.background, [16, 17, 18]);
+        assert_eq!(data.background_panel, [19, 20, 21]);
+        assert_eq!(data.background_overlay, [22, 23, 24]);
+        assert_eq!(data.border, [25, 26, 27]);
+        assert_eq!(data.success, [28, 29, 30]);
+        assert_eq!(data.error, [31, 32, 33]);
+        assert_eq!(data.inverted_text, [34, 35, 36]);
+    }
+
+    #[test]
+    fn test_user_to_data_converts_all_fields() {
+        let user = User {
+            id: "42".into(),
+            email: "test@test.com".into(),
+            name: "Test User".into(),
+            avatar_url: Some("https://example.com/avatar.png".into()),
+            provider: "github".into(),
+        };
+        let data = user_to_data(&user);
+        assert_eq!(data.id, "42");
+        assert_eq!(data.email, "test@test.com");
+        assert_eq!(data.name, "Test User");
+        assert_eq!(
+            data.avatar_url,
+            Some("https://example.com/avatar.png".into())
+        );
+        assert_eq!(data.provider, "github");
+    }
+
+    #[test]
+    fn test_user_to_data_without_avatar() {
+        let user = User {
+            id: "1".into(),
+            email: "a@b.com".into(),
+            name: "A".into(),
+            avatar_url: None,
+            provider: "google".into(),
+        };
+        let data = user_to_data(&user);
+        assert_eq!(data.avatar_url, None);
+    }
+
+    #[test]
+    fn test_writer_loop_writes_high_priority_messages() {
+        let written = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let w = Arc::clone(&written);
+
+        struct SharedWriter(Arc<std::sync::Mutex<Vec<u8>>>);
+        impl std::io::Write for SharedWriter {
+            fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+                self.0.lock().unwrap().extend_from_slice(buf);
+                Ok(buf.len())
+            }
+            fn flush(&mut self) -> std::io::Result<()> {
+                Ok(())
+            }
+        }
+
+        let (high_tx, high_rx) = sync_channel::<String>(8);
+        let (_low_tx, low_rx) = sync_channel::<String>(32);
+
+        let handle = thread::spawn(move || {
+            writer_loop(SharedWriter(w), high_rx, low_rx);
+        });
+
+        high_tx.try_send("ping".into()).unwrap();
+        // Drop sender so writer loop exits after draining
+        drop(high_tx);
+        drop(_low_tx);
+        handle.join().unwrap();
+
+        let output = String::from_utf8(written.lock().unwrap().clone()).unwrap();
+        assert_eq!(output, "ping\n");
+    }
+
+    #[test]
+    fn test_writer_loop_writes_low_priority_messages() {
+        let written = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let w = Arc::clone(&written);
+
+        struct SharedWriter(Arc<std::sync::Mutex<Vec<u8>>>);
+        impl std::io::Write for SharedWriter {
+            fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+                self.0.lock().unwrap().extend_from_slice(buf);
+                Ok(buf.len())
+            }
+            fn flush(&mut self) -> std::io::Result<()> {
+                Ok(())
+            }
+        }
+
+        let (high_tx, high_rx) = sync_channel::<String>(8);
+        let (low_tx, low_rx) = sync_channel::<String>(32);
+
+        let handle = thread::spawn(move || {
+            writer_loop(SharedWriter(w), high_rx, low_rx);
+        });
+
+        // Give writer time to reach the low-priority check
+        thread::sleep(Duration::from_millis(10));
+        low_tx.try_send("data".into()).unwrap();
+        thread::sleep(Duration::from_millis(10));
+
+        drop(high_tx);
+        drop(low_tx);
+        handle.join().unwrap();
+
+        let output = String::from_utf8(written.lock().unwrap().clone()).unwrap();
+        assert_eq!(output, "data\n");
+    }
+
+    // ─── IpcPluginHost unit tests ───
+
+    #[test]
+    fn test_new_default_fields() {
+        let host = IpcPluginHost::new("test-id", "Test Plugin", "/path/to/bin");
+        assert_eq!(host.id, "test-id");
+        assert_eq!(host.name, "Test Plugin");
+        assert_eq!(host.binary_name, "/path/to/bin");
+        assert!(host.capabilities.is_empty());
+        assert!(host.process.is_none());
+        assert!(host.response_rx.is_none());
+        assert!(host.cached_commands.is_empty());
+        assert!(host.cached_hints.is_empty());
+        assert!(host.cached_palette_commands.is_empty());
+        assert_eq!(host.area, Area { w: 80, h: 24 });
+        assert!(!host.crashed);
+        assert!(!host.consumed);
+        assert!(!host.persistent);
+        assert!(host.pending_request.is_none());
+        assert!(host.writer_high_tx.is_none());
+        assert!(host.writer_low_tx.is_none());
+    }
+
+    #[test]
+    fn test_id_and_name_accessors() {
+        let host = IpcPluginHost::new("my-id", "My Name", "bin");
+        assert_eq!(host.id(), "my-id");
+        assert_eq!(host.name(), "My Name");
+    }
+
+    #[test]
+    fn test_reset_before_spawn_clears_crashed() {
+        let mut host = IpcPluginHost::new("id", "name", "bin");
+        host.crashed = true;
+        host.reset_before_spawn();
+        assert!(!host.crashed);
+    }
+
+    #[test]
+    fn test_is_alive_reflects_crashed() {
+        let mut host = IpcPluginHost::new("id", "name", "bin");
+        assert!(host.is_alive());
+        host.crashed = true;
+        assert!(!host.is_alive());
+    }
+
+    #[test]
+    fn test_can_background_without_capabilities() {
+        let host = IpcPluginHost::new("id", "name", "bin");
+        assert!(!host.can_background());
+    }
+
+    #[test]
+    fn test_can_background_with_background_cap() {
+        let mut host = IpcPluginHost::new("id", "name", "bin");
+        host.set_capabilities(vec!["background".into()]);
+        assert!(host.can_background());
+    }
+
+    #[test]
+    fn test_can_background_with_other_cap() {
+        let mut host = IpcPluginHost::new("id", "name", "bin");
+        host.set_capabilities(vec!["audio".into()]);
+        assert!(!host.can_background());
+    }
+
+    #[test]
+    fn test_persistent_default_and_set() {
+        let mut host = IpcPluginHost::new("id", "name", "bin");
+        assert!(!host.persistent());
+        host.set_persistent(true);
+        assert!(host.persistent());
+    }
+
+    #[test]
+    fn test_binary_path_returns_some() {
+        let host = IpcPluginHost::new("id", "name", "/some/path");
+        assert_eq!(host.binary_path(), Some(Path::new("/some/path")));
+    }
+
+    #[test]
+    fn test_new_boxed_creates_plugin_with_correct_path() {
+        let path = Path::new("/tmp/my-plugin");
+        let plugin = IpcPluginHost::new_boxed("b", "B", path);
+        assert_eq!(plugin.id(), "b");
+        assert_eq!(plugin.name(), "B");
+        assert_eq!(plugin.binary_path(), Some(path));
+    }
+
+    #[test]
+    fn test_commands_returns_cached_palette_commands() {
+        let mut host = IpcPluginHost::new("id", "name", "bin");
+        host.cached_palette_commands = vec![
+            ("Cat".into(), "Action".into()),
+            ("Other".into(), "Thing".into()),
+        ];
+        let cmds = host.commands();
+        assert_eq!(cmds.len(), 2);
+        assert_eq!(cmds[0].category, "Cat");
+        assert_eq!(cmds[0].label, "Action");
+        assert_eq!(cmds[1].category, "Other");
+        assert_eq!(cmds[1].label, "Thing");
+    }
+
+    #[test]
+    fn test_status_hints_returns_cached_hints() {
+        let mut host = IpcPluginHost::new("id", "name", "bin");
+        host.cached_hints = vec![("k".into(), "v".into())];
+        let hints = host.status_hints();
+        assert_eq!(hints, vec![("k".into(), "v".into())]);
+    }
+
+    // ─── Channel-based tests ───
+
+    #[test]
+    fn test_send_high_priority_puts_json_on_high_channel() {
+        let mut host = IpcPluginHost::new("id", "name", "bin");
+        let (tx, rx) = sync_channel::<String>(8);
+        host.writer_high_tx = Some(tx);
+        host.writer_low_tx = Some(sync_channel::<String>(8).0);
+
+        host.send(&HostMsg::Tick, Priority::High);
+
+        let sent = rx.try_recv().unwrap();
+        let decoded: HostMsg = serde_json::from_str(&sent).unwrap();
+        assert!(matches!(decoded, HostMsg::Tick));
+    }
+
+    #[test]
+    fn test_send_low_priority_puts_json_on_low_channel() {
+        let mut host = IpcPluginHost::new("id", "name", "bin");
+        host.writer_high_tx = Some(sync_channel::<String>(8).0);
+        let (tx, rx) = sync_channel::<String>(32);
+        host.writer_low_tx = Some(tx);
+
+        host.send(&HostMsg::Focus, Priority::Low);
+
+        let sent = rx.try_recv().unwrap();
+        let decoded: HostMsg = serde_json::from_str(&sent).unwrap();
+        assert!(matches!(decoded, HostMsg::Focus));
+    }
+
+    #[test]
+    fn test_send_sets_crashed_on_channel_disconnect() {
+        let mut host = IpcPluginHost::new("id", "name", "bin");
+        let (tx, rx) = sync_channel::<String>(8);
+        host.writer_high_tx = Some(tx);
+        drop(rx); // Disconnect the receiver before sending
+
+        host.send(&HostMsg::Tick, Priority::High);
+        assert!(host.crashed);
+    }
+
+    #[test]
+    fn test_send_does_not_set_crashed_on_full_channel() {
+        let mut host = IpcPluginHost::new("id", "name", "bin");
+        // Sync channel with capacity 1
+        let (tx, rx) = sync_channel::<String>(1);
+        host.writer_low_tx = Some(sync_channel::<String>(8).0);
+
+        // Fill the channel before moving tx into host
+        tx.try_send("fill".into()).unwrap();
+        host.writer_high_tx = Some(tx);
+
+        host.send(&HostMsg::Tick, Priority::High);
+        // Channel is full, not disconnected — should NOT set crashed
+        assert!(!host.crashed);
+        // Tidy up
+        drop(rx);
+    }
+
+    #[test]
+    fn test_drain_responses_updates_all_cached_fields() {
+        let mut host = IpcPluginHost::new("id", "name", "bin");
+        let (tx, rx) = mpsc::channel::<PluginMsg>();
+        host.response_rx = Some(rx);
+
+        tx.send(PluginMsg {
+            commands: vec![RenderCmd::Clear {
+                x: 1,
+                y: 2,
+                w: 3,
+                h: 4,
+            }],
+            hints: vec![("k".into(), "v".into())],
+            palette_commands: vec![("P".into(), "A".into())],
+            request: Some(PluginRequest::SignOut),
+            consumed: true,
+        })
+        .unwrap();
+
+        host.drain_responses();
+
+        assert_eq!(host.cached_commands.len(), 1);
+        assert_eq!(host.cached_hints.len(), 1);
+        assert_eq!(host.cached_palette_commands.len(), 1);
+        assert!(host.pending_request.is_some());
+        assert!(host.consumed);
+        assert!(!host.crashed);
+    }
+
+    #[test]
+    fn test_drain_responses_takes_latest_message() {
+        let mut host = IpcPluginHost::new("id", "name", "bin");
+        let (tx, rx) = mpsc::channel::<PluginMsg>();
+        host.response_rx = Some(rx);
+
+        // First message — stale
+        tx.send(PluginMsg {
+            commands: vec![],
+            hints: vec![],
+            palette_commands: vec![],
+            request: None,
+            consumed: false,
+        })
+        .unwrap();
+
+        // Second message — latest
+        tx.send(PluginMsg {
+            commands: vec![RenderCmd::Text {
+                x: 5,
+                y: 5,
+                text: "latest".into(),
+                fg: None,
+                bg: None,
+                bold: false,
+            }],
+            hints: vec![("new".into(), "hint".into())],
+            palette_commands: vec![],
+            request: None,
+            consumed: true,
+        })
+        .unwrap();
+
+        host.drain_responses();
+
+        match &host.cached_commands[0] {
+            RenderCmd::Text { text, .. } => assert_eq!(text, "latest"),
+            _ => panic!("expected Text command"),
+        }
+        assert_eq!(host.cached_hints[0], ("new".into(), "hint".into()));
+        assert!(host.consumed);
+    }
+
+    #[test]
+    fn test_drain_responses_sets_crashed_on_disconnect() {
+        let mut host = IpcPluginHost::new("id", "name", "bin");
+        let (tx, rx) = mpsc::channel::<PluginMsg>();
+        host.response_rx = Some(rx);
+        drop(tx);
+
+        host.drain_responses();
+        assert!(host.crashed);
+    }
+
+    #[test]
+    fn test_send_recv_sends_and_drains() {
+        let mut host = IpcPluginHost::new("id", "name", "bin");
+        let (high_tx, high_rx) = sync_channel::<String>(8);
+        let (resp_tx, resp_rx) = mpsc::channel::<PluginMsg>();
+
+        host.writer_high_tx = Some(high_tx);
+        host.writer_low_tx = Some(sync_channel::<String>(8).0);
+        host.response_rx = Some(resp_rx);
+
+        resp_tx
+            .send(PluginMsg {
+                commands: vec![],
+                hints: vec![],
+                palette_commands: vec![],
+                request: None,
+                consumed: true,
+            })
+            .unwrap();
+
+        host.send_recv(&HostMsg::Focus);
+
+        // Message was sent to the high channel
+        let sent: String = high_rx.try_recv().unwrap();
+        assert!(matches!(
+            serde_json::from_str::<HostMsg>(&sent).unwrap(),
+            HostMsg::Focus
+        ));
+
+        // Response was drained
+        assert!(host.consumed);
+    }
+
+    #[test]
+    fn test_send_recv_blocking_timeout_receives_response() {
+        let mut host = IpcPluginHost::new("id", "name", "bin");
+        let (high_tx, _high_rx) = sync_channel::<String>(8);
+        let (resp_tx, resp_rx) = mpsc::channel::<PluginMsg>();
+
+        host.writer_high_tx = Some(high_tx);
+        host.writer_low_tx = Some(sync_channel::<String>(8).0);
+        host.response_rx = Some(resp_rx);
+
+        // Put a stale response that will be drained first
+        resp_tx
+            .send(PluginMsg {
+                commands: vec![],
+                hints: vec![],
+                palette_commands: vec![],
+                request: None,
+                consumed: false,
+            })
+            .unwrap();
+
+        // Put the response for the blocking recv
+        resp_tx
+            .send(PluginMsg {
+                commands: vec![],
+                hints: vec![],
+                palette_commands: vec![],
+                request: None,
+                consumed: true,
+            })
+            .unwrap();
+
+        host.send_recv_blocking_timeout(
+            &HostMsg::Key {
+                key: IpcKey::Char('q'),
+                modifiers: IpcKeyModifiers::default(),
+            },
+            Duration::from_millis(50),
+        );
+
+        // consumed=true from the blocking recv should be preserved
+        assert!(host.consumed);
+    }
+
+    #[test]
+    fn test_send_recv_blocking_timeout_timeout_does_not_set_consumed() {
+        let mut host = IpcPluginHost::new("id", "name", "bin");
+        let (high_tx, _high_rx) = sync_channel::<String>(8);
+        let (_resp_tx, resp_rx) = mpsc::channel::<PluginMsg>();
+
+        host.writer_high_tx = Some(high_tx);
+        host.writer_low_tx = Some(sync_channel::<String>(8).0);
+        host.response_rx = Some(resp_rx);
+
+        host.consumed = false;
+
+        host.send_recv_blocking_timeout(
+            &HostMsg::Key {
+                key: IpcKey::Esc,
+                modifiers: IpcKeyModifiers::default(),
+            },
+            Duration::from_millis(10),
+        );
+
+        assert!(!host.consumed);
+    }
+
+    struct MockAuth {
+        user: std::sync::Mutex<Option<User>>,
+    }
+    impl MockAuth {
+        fn new() -> Self {
+            MockAuth {
+                user: std::sync::Mutex::new(None),
+            }
+        }
+        fn with_user(user: User) -> Self {
+            MockAuth {
+                user: std::sync::Mutex::new(Some(user)),
+            }
+        }
+    }
+    impl AuthHandle for MockAuth {
+        fn current_user(&self) -> Option<User> {
+            self.user.lock().unwrap().clone()
+        }
+        fn bearer_token(&self) -> Option<String> {
+            None
+        }
+        fn sign_out(&self) {
+            *self.user.lock().unwrap() = None;
+        }
+        fn sign_in(&self, _provider: &str) -> Result<User, Box<dyn std::error::Error>> {
+            self.user
+                .lock()
+                .unwrap()
+                .clone()
+                .ok_or_else(|| "no user".into())
+        }
+        fn start_sign_in(&self, _provider: &str) -> Result<(), Box<dyn std::error::Error>> {
+            Ok(())
+        }
+        fn drain_pending_sign_in(&self) -> Option<Result<User, Box<dyn std::error::Error>>> {
+            None
+        }
+        fn auth_message(&self) -> Option<String> {
+            None
+        }
+    }
+
+    #[test]
+    fn test_process_request_sign_in_triggers_user_update() {
+        let mut host = IpcPluginHost::new("id", "name", "bin");
+        let (high_tx, _high_rx) = sync_channel::<String>(8);
+        let (resp_tx, resp_rx) = mpsc::channel::<PluginMsg>();
+
+        host.writer_high_tx = Some(high_tx);
+        host.writer_low_tx = Some(sync_channel::<String>(8).0);
+        host.response_rx = Some(resp_rx);
+        host.pending_request = Some(PluginRequest::SignIn {
+            provider: "github".into(),
+        });
+
+        let user = User {
+            id: "1".into(),
+            email: "u@t.com".into(),
+            name: "U".into(),
+            avatar_url: None,
+            provider: "github".into(),
+        };
+
+        let auth: Arc<dyn AuthHandle> = Arc::new(MockAuth::with_user(user.clone()));
+
+        // Plugin will respond to UserUpdate with its new state
+        resp_tx
+            .send(PluginMsg {
+                commands: vec![],
+                hints: vec![],
+                palette_commands: vec![],
+                request: None,
+                consumed: false,
+            })
+            .unwrap();
+
+        let changed = host.process_request(&auth);
+        assert!(changed);
+        assert!(host.pending_request.is_none());
+        assert!(!host.crashed);
+    }
+
+    #[test]
+    fn test_process_request_sign_out_clears_user() {
+        let mut host = IpcPluginHost::new("id", "name", "bin");
+        let (high_tx, _high_rx) = sync_channel::<String>(8);
+        let (resp_tx, resp_rx) = mpsc::channel::<PluginMsg>();
+
+        host.writer_high_tx = Some(high_tx);
+        host.writer_low_tx = Some(sync_channel::<String>(8).0);
+        host.response_rx = Some(resp_rx);
+        host.pending_request = Some(PluginRequest::SignOut);
+
+        resp_tx
+            .send(PluginMsg {
+                commands: vec![],
+                hints: vec![],
+                palette_commands: vec![],
+                request: None,
+                consumed: false,
+            })
+            .unwrap();
+
+        let auth: Arc<dyn AuthHandle> = Arc::new(MockAuth::new());
+        let changed = host.process_request(&auth);
+        assert!(changed);
+    }
+
+    #[test]
+    fn test_process_request_plugins_changed_returns_true() {
+        let mut host = IpcPluginHost::new("id", "name", "bin");
+        host.pending_request = Some(PluginRequest::PluginsChanged);
+
+        let auth: Arc<dyn AuthHandle> = Arc::new(MockAuth::new());
+        let changed = host.process_request(&auth);
+        assert!(changed);
+        assert!(host.pending_request.is_none());
+    }
+
+    #[test]
+    fn test_process_request_no_pending_returns_false() {
+        let mut host = IpcPluginHost::new("id", "name", "bin");
+        let auth: Arc<dyn AuthHandle> = Arc::new(MockAuth::new());
+        assert!(!host.process_request(&auth));
+    }
+
+    #[test]
+    fn test_handle_key_esc_returns_consumed() {
+        let mut host = IpcPluginHost::new("id", "name", "bin");
+        let (high_tx, _high_rx) = sync_channel::<String>(8);
+        let (resp_tx, resp_rx) = mpsc::channel::<PluginMsg>();
+
+        host.writer_high_tx = Some(high_tx);
+        host.writer_low_tx = Some(sync_channel::<String>(8).0);
+        host.response_rx = Some(resp_rx);
+
+        // Plugin responds that it consumed the key
+        resp_tx
+            .send(PluginMsg {
+                commands: vec![],
+                hints: vec![],
+                palette_commands: vec![],
+                request: None,
+                consumed: true,
+            })
+            .unwrap();
+
+        let key = crossterm::event::KeyEvent::new(
+            crossterm::event::KeyCode::Esc,
+            crossterm::event::KeyModifiers::NONE,
+        );
+
+        let consumed = host.handle_key(key);
+        assert!(consumed);
+    }
+
+    #[test]
+    fn test_handle_key_unrecognized_returns_false() {
+        let mut host = IpcPluginHost::new("id", "name", "bin");
+        // No channels set up — any key that isn't in the match returns false
+        let key = crossterm::event::KeyEvent::new(
+            crossterm::event::KeyCode::CapsLock,
+            crossterm::event::KeyModifiers::NONE,
+        );
+        assert!(!host.handle_key(key));
+    }
+
+    #[test]
+    fn test_render_updates_current_area() {
+        let mut host = IpcPluginHost::new("id", "name", "bin");
+        host.cached_commands = vec![RenderCmd::Clear {
+            x: 0,
+            y: 0,
+            w: 10,
+            h: 10,
+        }];
+        assert_eq!(host.current_area.get(), Area { w: 80, h: 24 });
+    }
+}
