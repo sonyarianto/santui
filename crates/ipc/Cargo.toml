@@ -1,6 +1,6 @@
 [package]
 name = "santui-ipc"
-version = "0.2.15"
+version = "0.2.16"
 edition = "2021"
 description = "Santui IPC protocol — typed messages and host plugin runner over JSON lines"
 license = "MIT"
@@ -11,7 +11,7 @@ default = ["host"]
 host = ["dep:santui-core", "dep:ratatui", "dep:crossterm"]
 
 [dependencies]
-santui-core = { path = "../core", version = "0.2.15", optional = true }
+santui-core = { path = "../core", version = "0.2.16", optional = true }
 ratatui = { version = "0.30", optional = true }
 crossterm = { version = "0.29", optional = true }
 serde = { workspace = true }

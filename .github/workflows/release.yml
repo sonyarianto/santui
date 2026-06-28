@@ -27,11 +27,12 @@ jobs:
             archive: tar.gz
             plugin_ext: ''
 
-          - os: macos-13
+          - os: macos-latest
             target: x86_64-apple-darwin
             ext: ''
             archive: tar.gz
             plugin_ext: ''
+            cross_compile: true
 
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
@@ -60,8 +61,25 @@ jobs:
           fi
           echo "✅ Tag v${TAG_VERSION} matches Cargo.toml ${CARGO_VERSION}"
 
+      - name: Set binary directory
+        run: |
+          if [ "${{ matrix.cross_compile }}" = "true" ]; then
+            echo "BINARY_DIR=target/${{ matrix.target }}/release" >> $GITHUB_ENV
+          else
+            echo "BINARY_DIR=target/release" >> $GITHUB_ENV
+          fi
+
+      - name: Install cross-compilation target
+        if: matrix.cross_compile == true
+        run: rustup target add ${{ matrix.target }}
+
       - name: Build
-        run: cargo build --release --workspace
+        run: |
+          if [ "${{ matrix.cross_compile }}" = "true" ]; then
+            cargo build --release --workspace --target ${{ matrix.target }}
+          else
+            cargo build --release --workspace
+          fi
 
       - name: Prepare Windows artifacts
         if: matrix.os == 'windows-latest'
@@ -75,8 +93,8 @@ jobs:
         if: startsWith(matrix.os, 'macos')
         run: |
           mkdir -p staging
-          cp target/release/santui staging/
-          cp target/release/santui-registry-plugin staging/
+          cp "${BINARY_DIR}/santui" staging/
+          cp "${BINARY_DIR}/santui-registry-plugin" staging/
 
       - name: Prepare Linux artifacts
         if: matrix.os == 'ubuntu-latest'
@@ -135,7 +153,7 @@ jobs:
           EXT="${{ matrix.plugin_ext }}"
           REPO="${{ github.repository }}"
           TAG="${{ github.ref_name }}"
-          BINARY="target/release/santui-radio-streaming-player${EXT}"
+          BINARY="${BINARY_DIR}/santui-radio-streaming-player${EXT}"
 
           # Portable SHA256: works on Linux (sha256sum) and macOS (shasum -a 256)
           SHA256="$(sha256sum "$BINARY" 2>/dev/null | cut -d' ' -f1 || shasum -a 256 "$BINARY" 2>/dev/null | cut -d' ' -f1)"
@@ -161,7 +179,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p plugin-binaries
-          for binary in target/release/santui-radio-streaming-player${{ matrix.plugin_ext }}; do
+          for binary in "${BINARY_DIR}/santui-radio-streaming-player${{ matrix.plugin_ext }}"; do
             if [ -f "$binary" ]; then
               name="$(basename "$binary")"
               # Strip .exe and also strip the santui- prefix so the filename
