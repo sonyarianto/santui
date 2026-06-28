@@ -279,17 +279,23 @@ fn db_path() -> PathBuf {
     app_data_dir().join("radio_streaming_stations.db")
 }
 
-fn migrate(conn: &Connection) -> Result<(), rusqlite::Error> {
-    let has_genre: bool = conn
+/// Returns true if a column exists on the stations table.
+fn has_column(conn: &Connection, col: &str) -> Result<bool, rusqlite::Error> {
+    Ok(conn
         .prepare("PRAGMA table_info(stations)")?
         .query_map([], |row| {
             let name: String = row.get(1)?;
             Ok(name)
         })?
-        .any(|r| r.is_ok_and(|n| n == "genre"));
+        .any(|r| r.is_ok_and(|n| n == col)))
+}
 
-    if !has_genre {
+fn migrate(conn: &Connection) -> Result<(), rusqlite::Error> {
+    if !has_column(conn, "genre")? {
         conn.execute_batch("ALTER TABLE stations ADD COLUMN genre TEXT NOT NULL DEFAULT '';")?;
+    }
+    if !has_column(conn, "radio_id")? {
+        conn.execute_batch("ALTER TABLE stations ADD COLUMN radio_id TEXT NOT NULL DEFAULT '';")?;
     }
     Ok(())
 }
@@ -306,19 +312,21 @@ fn open_db() -> Result<Connection, rusqlite::Error> {
             name TEXT NOT NULL,
             url TEXT NOT NULL,
             country TEXT NOT NULL DEFAULT '',
-            genre TEXT NOT NULL DEFAULT ''
+            genre TEXT NOT NULL DEFAULT '',
+            radio_id TEXT NOT NULL DEFAULT ''
         );",
     )?;
     migrate(&conn)?;
     conn.execute_batch(
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_stations_name_url ON stations(name, url);
         CREATE INDEX IF NOT EXISTS idx_stations_country ON stations(country);
-        CREATE INDEX IF NOT EXISTS idx_stations_genre ON stations(genre);",
+        CREATE INDEX IF NOT EXISTS idx_stations_genre ON stations(genre);
+        CREATE INDEX IF NOT EXISTS idx_stations_genre_null ON stations(genre) WHERE genre = '';",
     )?;
     Ok(conn)
 }
 
-fn extract_stations(html: &str) -> Vec<(String, String)> {
+fn extract_stations(html: &str) -> Vec<(String, String, String)> {
     let mut stations = Vec::new();
     let search = r#"class="b-play station_play"#;
     let mut pos = 0;
@@ -328,6 +336,7 @@ fn extract_stations(html: &str) -> Vec<(String, String)> {
 
         let stream = extract_attr(fragment, "stream");
         let name = extract_attr(fragment, "radioName");
+        let radio_id = extract_attr(fragment, "radioId");
 
         if let (Some(url), Some(name)) = (stream, name) {
             let name = unescape_html(&name);
@@ -337,7 +346,7 @@ fn extract_stations(html: &str) -> Vec<(String, String)> {
                     .replace("&dist=onlineradiobox", "")
                     .replace("?ref=onlineradiobox26", "")
                     .replace("&ref=onlineradiobox26", "");
-                stations.push((name, url));
+                stations.push((name, url, radio_id.unwrap_or_default()));
             }
         }
 
@@ -362,7 +371,7 @@ fn unescape_html(s: &str) -> String {
         .replace("&gt;", ">")
 }
 
-fn fetch_country_http(url_code: &str) -> Result<Vec<(String, String)>, String> {
+fn fetch_country_http(url_code: &str) -> Result<Vec<(String, String, String)>, String> {
     let url = format!("https://onlineradiobox.com/{url_code}/?nowlisten=1");
     let mut resp = ureq::get(&url)
         .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
@@ -378,6 +387,121 @@ fn fetch_country_http(url_code: &str) -> Result<Vec<(String, String)>, String> {
         serde_json::from_str(&body).map_err(|e| format!("JSON parse error: {e}"))?;
 
     Ok(extract_stations(&resp.data))
+}
+
+/// How many station-genre pages to fetch per scraper run.
+const GENRE_SAMPLE_SIZE: usize = 50;
+
+/// Parse genre names out of a station detail page HTML that contains:
+/// ```html
+/// <ul class="station__tags" role="list">
+///   <li><a href="...">pop</a></li>
+///   ...
+/// </ul>
+/// ```
+fn parse_genres(html: &str) -> Vec<String> {
+    let mut genres = Vec::new();
+    let search = r#"<ul class="station__tags""#;
+    let Some(tag_start) = html.find(search) else {
+        return genres;
+    };
+    let ul_fragment = &html[tag_start..];
+    let Some(close_start) = ul_fragment.find("</ul>") else {
+        return genres;
+    };
+    let inner = &ul_fragment[..close_start];
+
+    let mut pos = 0;
+    let li_marker = "<li><a href=\"";
+    while let Some(link_start) = inner[pos..].find(li_marker) {
+        let value_start = pos + link_start + li_marker.len();
+        let after_href = &inner[value_start..];
+        let Some(quote_end) = after_href.find('"') else {
+            break;
+        };
+        let after_close = &after_href[quote_end..];
+        let Some(gt_pos) = after_close.find('>') else {
+            break;
+        };
+        let genre_start = gt_pos + 1;
+        let genre_text = &after_close[genre_start..];
+        let Some(close_a) = genre_text.find("</a>") else {
+            break;
+        };
+        let genre = genre_text[..close_a].trim();
+        if !genre.is_empty() {
+            genres.push(genre.to_string());
+        }
+        pos = value_start + quote_end + after_close[quote_end..].find("</a>").unwrap_or(0) + 4;
+    }
+    genres
+}
+
+/// Fetch a station's detail page and extract genre tags.
+fn enrich_station_genre(conn: &Connection, radio_id: &str) -> Result<(), String> {
+    let url = format!("https://onlineradiobox.com/{radio_id}/");
+    let mut resp = ureq::get(&url)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .call()
+        .map_err(|e| format!("request failed: {e}"))?;
+    let body = resp
+        .body_mut()
+        .read_to_string()
+        .map_err(|e| format!("failed to read response: {e}"))?;
+
+    let genres = parse_genres(&body);
+    if genres.is_empty() {
+        return Ok(());
+    }
+    let joined = genres.join(", ");
+    conn.execute(
+        "UPDATE stations SET genre = ?1 WHERE radio_id = ?2 AND genre = ''",
+        rusqlite::params![joined, radio_id],
+    )
+    .map_err(|e| format!("DB update failed: {e}"))?;
+    Ok(())
+}
+
+/// Enrich a random sample of stations with no genre set.
+fn enrich_genres(conn: &Connection) {
+    let total_no_genre: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM stations WHERE genre = ''",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(0);
+    if total_no_genre == 0 {
+        println!("All stations already have genres.");
+        return;
+    }
+
+    let sample = std::cmp::min(GENRE_SAMPLE_SIZE, total_no_genre as usize);
+    println!("\nEnriching {sample}/{total_no_genre} stations without genre...");
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT radio_id FROM stations WHERE genre = '' AND radio_id != '' ORDER BY RANDOM() LIMIT ?1",
+        )
+        .expect("prepare failed");
+    let rows: Vec<String> = stmt
+        .query_map(rusqlite::params![sample as i64], |row| row.get(0))
+        .expect("query failed")
+        .filter_map(|r| r.ok())
+        .collect();
+
+    let mut enriched = 0usize;
+    let mut failed = 0usize;
+    for radio_id in &rows {
+        match enrich_station_genre(conn, radio_id) {
+            Ok(()) => enriched += 1,
+            Err(e) => {
+                log::warn!("  ⚠️  {radio_id}: {e}");
+                failed += 1;
+            }
+        }
+    }
+    println!("Genre enrichment done — {enriched} enriched, {failed} failed");
 }
 
 fn main() {
@@ -435,7 +559,7 @@ fn main() {
         std::process::exit(1);
     }
 
-    let (tx, rx) = std::sync::mpsc::channel::<(String, String, Vec<(String, String)>)>();
+    let (tx, rx) = std::sync::mpsc::channel::<(String, String, Vec<(String, String, String)>)>();
     let countries: Vec<(&str, &str)> = ALL_COUNTRIES.to_vec();
     let chunk_size = countries.len().div_ceil(num_workers);
 
@@ -469,10 +593,10 @@ fn main() {
             total_fetched += stations.len();
 
             let mut inserted = 0usize;
-            for (name, url) in &stations {
+            for (name, url, radio_id) in &stations {
                 match conn.execute(
-                    "INSERT OR IGNORE INTO stations (name, url, country, genre) VALUES (?1, ?2, ?3, ?4)",
-                    rusqlite::params![name, url, iso_code, ""],
+                    "INSERT OR IGNORE INTO stations (name, url, country, genre, radio_id) VALUES (?1, ?2, ?3, ?4, ?5)",
+                    rusqlite::params![name, url, iso_code, "", radio_id],
                 ) {
                     Ok(rows) => {
                         if rows > 0 {
@@ -516,4 +640,6 @@ fn main() {
          {total} total in DB"
     );
     println!("Database: {}", db_path().display());
+
+    enrich_genres(&conn);
 }
