@@ -30,17 +30,36 @@ pub struct Area {
     pub h: u16,
 }
 
+/// Modifier key flags sent alongside key events.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Default)]
+pub struct IpcKeyModifiers {
+    #[serde(default)]
+    pub shift: bool,
+    #[serde(default)]
+    pub ctrl: bool,
+    #[serde(default)]
+    pub alt: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum IpcKey {
     Up,
     Down,
+    Left,
+    Right,
     PageUp,
     PageDown,
     Enter,
     Esc,
     Backspace,
     Tab,
+    BackTab,
+    Delete,
+    Insert,
+    Home,
+    End,
     Char(char),
+    F(u8),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,6 +83,8 @@ pub enum HostMsg {
     },
     Key {
         key: IpcKey,
+        #[serde(default)]
+        modifiers: IpcKeyModifiers,
     },
     Tick,
     Focus,
@@ -255,12 +276,22 @@ mod tests {
         let cases = vec![
             IpcKey::Up,
             IpcKey::Down,
+            IpcKey::Left,
+            IpcKey::Right,
             IpcKey::PageUp,
             IpcKey::PageDown,
             IpcKey::Enter,
             IpcKey::Esc,
             IpcKey::Backspace,
+            IpcKey::Tab,
+            IpcKey::BackTab,
+            IpcKey::Delete,
+            IpcKey::Insert,
+            IpcKey::Home,
+            IpcKey::End,
             IpcKey::Char('x'),
+            IpcKey::F(1),
+            IpcKey::F(12),
         ];
         for key in cases {
             let json = serde_json::to_string(&key).unwrap();
@@ -332,6 +363,14 @@ mod tests {
             },
             HostMsg::Key {
                 key: IpcKey::Char('q'),
+                modifiers: IpcKeyModifiers::default(),
+            },
+            HostMsg::Key {
+                key: IpcKey::Char('s'),
+                modifiers: IpcKeyModifiers {
+                    ctrl: true,
+                    ..Default::default()
+                },
             },
             HostMsg::Tick,
             HostMsg::Focus,

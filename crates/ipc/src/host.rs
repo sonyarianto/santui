@@ -1,5 +1,6 @@
 use crate::protocol::{
-    Area, HostMsg, IpcKey, PluginMsg, PluginRequest, RenderCmd, ThemeData, UserData,
+    Area, HostMsg, IpcKey, IpcKeyModifiers, PluginMsg, PluginRequest, RenderCmd, ThemeData,
+    UserData,
 };
 use crate::render::render_commands;
 use crossterm::event::{KeyCode, KeyEvent};
@@ -503,20 +504,43 @@ impl Plugin for IpcPluginHost {
         let ipc_key = match key.code {
             KeyCode::Up => IpcKey::Up,
             KeyCode::Down => IpcKey::Down,
+            KeyCode::Left => IpcKey::Left,
+            KeyCode::Right => IpcKey::Right,
             KeyCode::PageUp => IpcKey::PageUp,
             KeyCode::PageDown => IpcKey::PageDown,
             KeyCode::Enter => IpcKey::Enter,
             KeyCode::Esc => IpcKey::Esc,
             KeyCode::Backspace => IpcKey::Backspace,
             KeyCode::Tab => IpcKey::Tab,
+            KeyCode::BackTab => IpcKey::BackTab,
+            KeyCode::Delete => IpcKey::Delete,
+            KeyCode::Insert => IpcKey::Insert,
+            KeyCode::Home => IpcKey::Home,
+            KeyCode::End => IpcKey::End,
             KeyCode::Char(c) => IpcKey::Char(c),
+            KeyCode::F(n) => IpcKey::F(n),
             _ => return false,
+        };
+        let modifiers = IpcKeyModifiers {
+            shift: key
+                .modifiers
+                .contains(crossterm::event::KeyModifiers::SHIFT),
+            ctrl: key
+                .modifiers
+                .contains(crossterm::event::KeyModifiers::CONTROL),
+            alt: key.modifiers.contains(crossterm::event::KeyModifiers::ALT),
         };
         // Block briefly for the response so the consumed flag reflects this
         // specific key event. 5ms covers the writer's 1ms low-priority wait
         // window plus plugin processing and channel round-trip, while keeping
         // the worst-case stall well under a 60fps frame (16.6ms).
-        self.send_recv_blocking_timeout(&HostMsg::Key { key: ipc_key }, Duration::from_millis(5));
+        self.send_recv_blocking_timeout(
+            &HostMsg::Key {
+                key: ipc_key,
+                modifiers,
+            },
+            Duration::from_millis(5),
+        );
         self.consumed
     }
 

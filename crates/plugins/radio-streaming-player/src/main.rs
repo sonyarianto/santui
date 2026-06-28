@@ -650,7 +650,7 @@ fn main() {
                         app.handle_init(theme, area);
                         respond(&mut app, false);
                     }
-                    HostMsg::Key { key } => {
+                    HostMsg::Key { key, .. } => {
                         let consumed = app.handle_key(key);
                         respond(&mut app, consumed);
                     }

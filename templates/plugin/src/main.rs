@@ -1,5 +1,5 @@
 use santui_ipc::protocol::{
-    Area, HostMsg, IpcKey, PluginMsg, RenderCmd, ThemeData,
+    Area, HostMsg, IpcKey, IpcKeyModifiers, PluginMsg, RenderCmd, ThemeData,
 };
 use std::io::{self, BufRead, Write};
 
@@ -24,13 +24,16 @@ impl PluginState {
         self.counter = self.counter.wrapping_add(1);
     }
 
-    fn handle_key(&mut self, key: IpcKey) {
+    fn handle_key(&mut self, key: IpcKey, _modifiers: IpcKeyModifiers) {
         match key {
             IpcKey::Up => {}
             IpcKey::Down => {}
+            IpcKey::Left => {}
+            IpcKey::Right => {}
             IpcKey::Enter => {}
             IpcKey::Esc => {}
             IpcKey::Backspace => {}
+            IpcKey::Tab => {}
             IpcKey::Char(_c) => {}
             _ => {}
         }
@@ -90,9 +93,9 @@ fn main() {
             HostMsg::Init { theme, area, .. } => {
                 state = Some(PluginState::new(theme, area));
             }
-            HostMsg::Key { key } => {
+            HostMsg::Key { key, modifiers } => {
                 if let Some(ref mut s) = state {
-                    s.handle_key(key);
+                    s.handle_key(key, modifiers);
                 }
             }
             HostMsg::Tick => {

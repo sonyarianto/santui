@@ -60,7 +60,7 @@ impl App {
                 self.status_ticks = 0;
             }
 
-            HostMsg::Key { key } => consumed = self.handle_key(key, &mut request),
+            HostMsg::Key { key, .. } => consumed = self.handle_key(key, &mut request),
 
             HostMsg::Tick => {
                 self.tick_status();
