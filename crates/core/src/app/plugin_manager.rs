@@ -6,7 +6,7 @@ use crate::event::Event;
 use crate::plugin::{Plugin, PluginCmdItem, PluginContext, PluginFactory};
 use crate::registry_config::RegistryConfig;
 use crate::theme::Theme;
-use crossterm::event::KeyEvent;
+use crossterm::event::{KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::Frame;
 
@@ -174,6 +174,14 @@ impl PluginManager {
     pub fn handle_key(&mut self, idx: usize, key: KeyEvent) -> bool {
         if idx < self.plugins.len() {
             self.plugins[idx].handle_key(key)
+        } else {
+            false
+        }
+    }
+
+    pub fn handle_mouse(&mut self, idx: usize, event: &MouseEvent) -> bool {
+        if idx < self.plugins.len() {
+            self.plugins[idx].handle_mouse(event)
         } else {
             false
         }

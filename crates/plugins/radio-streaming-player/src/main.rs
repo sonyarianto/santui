@@ -681,6 +681,9 @@ fn main() {
                         // to keep the match exhaustive.
                         respond(&mut app, false);
                     }
+                    HostMsg::Mouse { .. } => {
+                        respond(&mut app, false);
+                    }
                     HostMsg::UserUpdate { user } => {
                         app.user = user;
                         app.dirty = true;

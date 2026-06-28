@@ -1,6 +1,6 @@
 use crate::auth::{AuthHandle, User};
 use crate::theme::Theme;
-use crossterm::event::KeyEvent;
+use crossterm::event::{KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
 use ratatui::Frame;
 use std::path::{Path, PathBuf};
@@ -22,6 +22,9 @@ pub trait Plugin: Send {
     fn name(&self) -> &str;
     fn init(&mut self, ctx: &mut PluginContext) -> Result<(), Box<dyn std::error::Error>>;
     fn handle_key(&mut self, _key: KeyEvent) -> bool {
+        false
+    }
+    fn handle_mouse(&mut self, _event: &MouseEvent) -> bool {
         false
     }
     fn render(&self, _f: &mut Frame, _area: Rect) {}

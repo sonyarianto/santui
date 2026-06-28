@@ -1,6 +1,6 @@
 use crate::protocol::{
-    Area, HostMsg, IpcKey, IpcKeyModifiers, PluginMsg, PluginRequest, RenderCmd, ThemeData,
-    UserData,
+    Area, HostMsg, IpcKey, IpcKeyModifiers, IpcMouseEvent, PluginMsg, PluginRequest, RenderCmd,
+    ThemeData, UserData,
 };
 use crate::render::render_commands;
 use crossterm::event::{KeyCode, KeyEvent};
@@ -541,6 +541,49 @@ impl Plugin for IpcPluginHost {
             },
             Duration::from_millis(5),
         );
+        self.consumed
+    }
+
+    fn handle_mouse(&mut self, event: &crossterm::event::MouseEvent) -> bool {
+        use crate::protocol::{MouseButton, MouseEventKind};
+        use crossterm::event::{MouseButton as Mb, MouseEventKind as Mek};
+        let button = match event.kind {
+            Mek::Down(btn) | Mek::Up(btn) | Mek::Drag(btn) => match btn {
+                Mb::Left => MouseButton::Left,
+                Mb::Right => MouseButton::Right,
+                Mb::Middle => MouseButton::Middle,
+            },
+            Mek::ScrollUp => MouseButton::Left,
+            Mek::ScrollDown => MouseButton::Left,
+            _ => return false,
+        };
+        let kind = match event.kind {
+            Mek::Down(_) => MouseEventKind::Down,
+            Mek::Up(_) => MouseEventKind::Up,
+            Mek::Drag(_) => MouseEventKind::Drag,
+            Mek::Moved => MouseEventKind::Moved,
+            Mek::ScrollUp => MouseEventKind::ScrollUp,
+            Mek::ScrollDown => MouseEventKind::ScrollDown,
+            Mek::ScrollLeft | Mek::ScrollRight => return false,
+        };
+        let ipc = IpcMouseEvent {
+            x: event.column,
+            y: event.row,
+            button,
+            kind,
+            modifiers: IpcKeyModifiers {
+                shift: event
+                    .modifiers
+                    .contains(crossterm::event::KeyModifiers::SHIFT),
+                ctrl: event
+                    .modifiers
+                    .contains(crossterm::event::KeyModifiers::CONTROL),
+                alt: event
+                    .modifiers
+                    .contains(crossterm::event::KeyModifiers::ALT),
+            },
+        };
+        self.send_recv(&HostMsg::Mouse { event: ipc });
         self.consumed
     }
 

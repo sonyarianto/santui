@@ -151,6 +151,8 @@ impl App {
             HostMsg::PaletteCommand { index: _ } => {}
 
             HostMsg::PluginMessage { .. } => {}
+
+            HostMsg::Mouse { .. } => {}
         }
 
         let commands = self.render_commands();

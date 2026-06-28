@@ -317,4 +317,11 @@ impl super::Santui {
             },
         }
     }
+
+    pub(super) fn handle_mouse(&mut self, event: crossterm::event::MouseEvent) {
+        let Some(idx) = self.plugin_manager.active() else {
+            return;
+        };
+        self.plugin_manager.handle_mouse(idx, &event);
+    }
 }

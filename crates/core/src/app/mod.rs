@@ -322,7 +322,11 @@ impl Santui {
 
         enable_raw_mode()?;
         let mut stdout = std::io::stdout();
-        execute!(stdout, crossterm::terminal::EnterAlternateScreen)?;
+        execute!(
+            stdout,
+            crossterm::terminal::EnterAlternateScreen,
+            crossterm::event::EnableMouseCapture,
+        )?;
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend)?;
         terminal.clear()?;
@@ -336,6 +340,7 @@ impl Santui {
                     std::io::stdout(),
                     crossterm::terminal::LeaveAlternateScreen,
                     crossterm::cursor::Show,
+                    crossterm::event::DisableMouseCapture,
                 );
             }
         }
@@ -408,11 +413,17 @@ impl Santui {
             terminal.draw(|f| self.render(f))?;
 
             if crossterm::event::poll(self.config_manager.tick_rate())? {
-                if let Event::Key(key) = crossterm::event::read()? {
-                    if key.kind != KeyEventKind::Press {
-                        continue;
+                match crossterm::event::read()? {
+                    Event::Key(key) => {
+                        if key.kind != KeyEventKind::Press {
+                            continue;
+                        }
+                        self.handle_key(key);
                     }
-                    self.handle_key(key);
+                    Event::Mouse(event) => {
+                        self.handle_mouse(event);
+                    }
+                    _ => {}
                 }
             }
         }

@@ -62,6 +62,32 @@ pub enum IpcKey {
     F(u8),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum MouseButton {
+    Left,
+    Right,
+    Middle,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum MouseEventKind {
+    Down,
+    Up,
+    Drag,
+    Moved,
+    ScrollDown,
+    ScrollUp,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct IpcMouseEvent {
+    pub x: u16,
+    pub y: u16,
+    pub button: MouseButton,
+    pub kind: MouseEventKind,
+    pub modifiers: IpcKeyModifiers,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserData {
     pub id: String,
@@ -98,6 +124,9 @@ pub enum HostMsg {
     Shutdown,
     UserUpdate {
         user: Option<UserData>,
+    },
+    Mouse {
+        event: IpcMouseEvent,
     },
     PaletteCommand {
         index: u32,
@@ -380,6 +409,15 @@ mod tests {
             },
             HostMsg::Resize {
                 area: Area { w: 100, h: 40 },
+            },
+            HostMsg::Mouse {
+                event: IpcMouseEvent {
+                    x: 10,
+                    y: 5,
+                    button: MouseButton::Left,
+                    kind: MouseEventKind::Down,
+                    modifiers: IpcKeyModifiers::default(),
+                },
             },
             HostMsg::Shutdown,
             HostMsg::UserUpdate { user: None },

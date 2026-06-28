@@ -119,6 +119,7 @@ fn main() {
             HostMsg::UserUpdate { .. } => {}
             HostMsg::PaletteCommand { .. } => {}
             HostMsg::PluginMessage { .. } => {}
+            HostMsg::Mouse { .. } => {}
         }
 
         // Every host message expects at least one response.
