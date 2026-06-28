@@ -37,7 +37,7 @@ This creates:
 
 ```
 my-plugin/
-├── Cargo.toml          # depends on santui-ipc + serde
+├── Cargo.toml          # depends on santui-ipc + serde + serde_json
 ├── README.md           # basic instructions (customise me!)
 └── src/
     └── main.rs         # plugin entry point with full IPC loop
@@ -142,7 +142,7 @@ fn respond(&self) {
 | `Border { x, y, w, h, fg, borders, bg?, title?, title_fg?, title_dash_fg? }` | Draw a box border (bitmask: 1=LEFT, 2=RIGHT, 4=TOP, 8=BOTTOM, 15=ALL) with optional fill and title |
 | `Paragraph { x, y, w, h, text, style, wrap }` | Rendered wrapped text within a rectangle |
 | `List { x, y, w, h, items, selected?, style, highlight_style }` | A scrollable list with selection highlighting |
-| `Table { x, y, w, h, header, header_style, rows, column_widths, selected?, style, highlight_style }` | A table with header and rows |
+| `Table { x, y, w, h, header, header_style, rows, column_widths, selected?, style, highlight_style, current_row?, current_style? }` | A table with header, rows, optional current-row highlight |
 
 Colours are `[u8; 3]` RGB arrays (e.g. `[255, 0, 0]` for red). Use `None` for `fg`/`bg` to inherit the terminal default.
 

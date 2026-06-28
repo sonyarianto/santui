@@ -29,10 +29,11 @@ crates/
 ├── db/            — central SQLite database for per-user plugin data
 ├── registry/      — plugin registry: manifest fetch, install, config
 ├── plugins/
-    │   └── radio-stream-player/   — radio plugin
-│       └── scraper/              — scrape radio stations into DB
-└── app/           — binary entry point (main.rs)
-website/           — VitePress docs site
+│   ├── radio-stream-player/   — radio plugin
+│   │   └── scraper/           — scrape radio stations into DB
+│   └── registry/             — plugin registry UI plugin
+├── app/           — binary entry point (main.rs)
+└── website/       — VitePress docs site
 ```
 
 ## Key Conventions

@@ -1,6 +1,6 @@
 # Themes
 
-Santui ships with **38 built-in themes** aligned to the [OpenCode](https://opencode.ai) color palettes. Each theme defines 10 semantic color keys mapped to the OpenCode palette system.
+Santui ships with **38 built-in themes** aligned to the [OpenCode](https://opencode.ai) color palettes. Each theme defines 12 semantic color keys mapped to the OpenCode palette system.
 
 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin: 24px 0;">
 
