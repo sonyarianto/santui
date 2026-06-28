@@ -89,6 +89,132 @@ pub fn load_all(conn: &Connection) -> Result<Vec<Station>, rusqlite::Error> {
     Ok(stations)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn setup_db() -> Connection {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE stations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                url TEXT NOT NULL,
+                country TEXT NOT NULL DEFAULT '',
+                genre TEXT NOT NULL DEFAULT ''
+            );",
+        )
+        .unwrap();
+        conn
+    }
+
+    fn insert(conn: &Connection, name: &str, url: &str, country: &str, genre: &str) {
+        conn.execute(
+            "INSERT INTO stations (name, url, country, genre) VALUES (?1, ?2, ?3, ?4)",
+            rusqlite::params![name, url, country, genre],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn load_all_returns_all() {
+        let conn = setup_db();
+        insert(&conn, "B", "http://b", "US", "Rock");
+        insert(&conn, "A", "http://a", "GB", "Pop");
+        let rows = load_all(&conn).unwrap();
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0].name, "A");
+        assert_eq!(rows[1].name, "B");
+    }
+
+    #[test]
+    fn load_all_empty() {
+        let conn = setup_db();
+        let rows = load_all(&conn).unwrap();
+        assert!(rows.is_empty());
+    }
+
+    #[test]
+    fn load_all_includes_all_fields() {
+        let conn = setup_db();
+        insert(&conn, "X", "http://x", "DE", "Jazz");
+        let rows = load_all(&conn).unwrap();
+        assert_eq!(rows[0].name, "X");
+        assert_eq!(rows[0].url, "http://x");
+        assert_eq!(rows[0].country, "DE");
+        assert_eq!(rows[0].genre, "Jazz");
+    }
+
+    #[test]
+    fn search_matches_name() {
+        let conn = setup_db();
+        insert(&conn, "Rock FM", "http://rock", "US", "Rock");
+        insert(&conn, "Pop FM", "http://pop", "GB", "Pop");
+        let rows = search(&conn, "Rock").unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].name, "Rock FM");
+    }
+
+    #[test]
+    fn search_matches_country() {
+        let conn = setup_db();
+        insert(&conn, "A", "http://a", "US", "");
+        insert(&conn, "B", "http://b", "GB", "");
+        let rows = search(&conn, "US").unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].name, "A");
+    }
+
+    #[test]
+    fn search_matches_genre() {
+        let conn = setup_db();
+        insert(&conn, "A", "http://a", "", "Rock");
+        insert(&conn, "B", "http://b", "", "Pop");
+        let rows = search(&conn, "Rock").unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].name, "A");
+    }
+
+    #[test]
+    fn search_case_insensitive() {
+        let conn = setup_db();
+        insert(&conn, "Rock FM", "http://rock", "US", "Rock");
+        let rows = search(&conn, "rock").unwrap();
+        assert_eq!(rows.len(), 1);
+    }
+
+    #[test]
+    fn search_no_match_returns_empty() {
+        let conn = setup_db();
+        insert(&conn, "Rock FM", "http://rock", "US", "Rock");
+        let rows = search(&conn, "NONEXISTENT").unwrap();
+        assert!(rows.is_empty());
+    }
+
+    #[test]
+    fn search_empty_db_returns_empty() {
+        let conn = setup_db();
+        let rows = search(&conn, "test").unwrap();
+        assert!(rows.is_empty());
+    }
+
+    #[test]
+    fn search_empty_query_matches_all() {
+        let conn = setup_db();
+        insert(&conn, "A", "http://a", "US", "");
+        insert(&conn, "B", "http://b", "GB", "");
+        let rows = search(&conn, "").unwrap();
+        assert_eq!(rows.len(), 2);
+    }
+
+    #[test]
+    fn load_all_no_table_returns_error() {
+        let conn = Connection::open_in_memory().unwrap();
+        let result = load_all(&conn);
+        assert!(result.is_err());
+    }
+}
+
 #[allow(dead_code)]
 pub fn search(conn: &Connection, query: &str) -> Result<Vec<Station>, rusqlite::Error> {
     let pattern = format!("%{}%", query);

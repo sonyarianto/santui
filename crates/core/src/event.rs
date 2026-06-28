@@ -91,3 +91,155 @@ impl Default for EventBus {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Mutex;
+
+    fn msg(from: &str, to: &str) -> Event {
+        Event::PluginMessage {
+            from: from.into(),
+            to: to.into(),
+            action: "test".into(),
+            data: "{}".into(),
+        }
+    }
+
+    #[test]
+    fn new_creates_empty_bus() {
+        let mut bus = EventBus::new();
+        assert!(bus.drain().is_empty());
+    }
+
+    #[test]
+    fn default_creates_empty_bus() {
+        let mut bus = EventBus::default();
+        assert!(bus.drain().is_empty());
+    }
+
+    #[test]
+    fn emit_and_drain_returns_event() {
+        let mut bus = EventBus::new();
+        bus.emit(msg("a", "b"));
+        let drained = bus.drain();
+        assert_eq!(drained.len(), 1);
+        assert_eq!(drained[0], msg("a", "b"));
+    }
+
+    #[test]
+    fn drain_returns_in_order() {
+        let mut bus = EventBus::new();
+        bus.emit(msg("a", "b"));
+        bus.emit(msg("c", "d"));
+        let drained = bus.drain();
+        assert_eq!(drained.len(), 2);
+        assert_eq!(drained[0], msg("a", "b"));
+        assert_eq!(drained[1], msg("c", "d"));
+    }
+
+    #[test]
+    fn drain_clears_queue() {
+        let mut bus = EventBus::new();
+        bus.emit(msg("a", "b"));
+        let first = bus.drain();
+        assert_eq!(first.len(), 1);
+        let second = bus.drain();
+        assert!(second.is_empty());
+    }
+
+    #[test]
+    fn drain_empty_returns_empty() {
+        let mut bus = EventBus::new();
+        assert!(bus.drain().is_empty());
+        assert!(bus.drain().is_empty());
+    }
+
+    #[test]
+    fn subscriber_receives_event() {
+        let mut bus = EventBus::new();
+        let count = std::sync::Arc::new(Mutex::new(0usize));
+        let c = count.clone();
+        bus.subscribe(Box::new(move |_| {
+            *c.lock().unwrap() += 1;
+        }));
+        bus.emit(msg("a", "b"));
+        assert_eq!(*count.lock().unwrap(), 1);
+        bus.emit(msg("c", "d"));
+        assert_eq!(*count.lock().unwrap(), 2);
+    }
+
+    #[test]
+    fn multiple_subscribers_all_called() {
+        let mut bus = EventBus::new();
+        let c1 = std::sync::Arc::new(Mutex::new(0usize));
+        let c2 = std::sync::Arc::new(Mutex::new(0usize));
+        let a1 = c1.clone();
+        let a2 = c2.clone();
+        bus.subscribe(Box::new(move |_| {
+            *a1.lock().unwrap() += 1;
+        }));
+        bus.subscribe(Box::new(move |_| {
+            *a2.lock().unwrap() += 1;
+        }));
+        bus.emit(msg("a", "b"));
+        assert_eq!(*c1.lock().unwrap(), 1);
+        assert_eq!(*c2.lock().unwrap(), 1);
+    }
+
+    #[test]
+    fn subscriber_receives_correct_event() {
+        let mut bus = EventBus::new();
+        let seen = std::sync::Arc::new(Mutex::new(String::new()));
+        let s = seen.clone();
+        bus.subscribe(Box::new(move |e| {
+            if let Event::PluginMessage { from, .. } = e {
+                *s.lock().unwrap() = from.clone();
+            }
+        }));
+        bus.emit(msg("hello", "world"));
+        assert_eq!(*seen.lock().unwrap(), "hello");
+    }
+
+    #[test]
+    fn max_pending_drops_oldest() {
+        let mut bus = EventBus::new();
+        for i in 0..super::MAX_PENDING {
+            bus.emit(msg(&format!("s{i}"), "t"));
+        }
+        bus.emit(msg("last", "t"));
+        let drained = bus.drain();
+        assert_eq!(drained.len(), super::MAX_PENDING);
+        if let Event::PluginMessage { from, .. } = &drained[0] {
+            assert_eq!(from, "s1");
+        } else {
+            panic!("expected PluginMessage");
+        }
+        if let Event::PluginMessage { from, .. } = &drained[drained.len() - 1] {
+            assert_eq!(from, "last");
+        } else {
+            panic!("expected PluginMessage");
+        }
+    }
+
+    #[test]
+    fn subscriber_called_before_queue_drain() {
+        let mut bus = EventBus::new();
+        let flag = std::sync::Arc::new(Mutex::new(false));
+        let f = flag.clone();
+        bus.subscribe(Box::new(move |_| {
+            *f.lock().unwrap() = true;
+        }));
+        bus.emit(msg("a", "b"));
+        assert!(*flag.lock().unwrap());
+    }
+
+    #[test]
+    fn debug_format() {
+        let mut bus = EventBus::new();
+        bus.subscribe(Box::new(|_| {}));
+        let s = format!("{:?}", bus);
+        assert!(s.contains("EventBus"));
+        assert!(s.contains("1 subscriber"));
+    }
+}

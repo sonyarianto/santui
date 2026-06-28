@@ -272,3 +272,149 @@ const COUNTRY_NAMES: &[(&str, &str)] = &[
     ("ZM", "Zambia"),
     ("ZW", "Zimbabwe"),
 ];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn country_name_first_entry() {
+        assert_eq!(country_name("AD"), "Andorra");
+    }
+
+    #[test]
+    fn country_name_last_entry() {
+        assert_eq!(country_name("ZW"), "Zimbabwe");
+    }
+
+    #[test]
+    fn country_name_middle_entries() {
+        assert_eq!(country_name("US"), "United States");
+        assert_eq!(country_name("GB"), "United Kingdom");
+        assert_eq!(country_name("JP"), "Japan");
+        assert_eq!(country_name("BR"), "Brazil");
+    }
+
+    #[test]
+    fn country_name_unknown_code_returns_code() {
+        assert_eq!(country_name("XX"), "XX");
+    }
+
+    #[test]
+    fn country_name_empty_returns_empty() {
+        assert_eq!(country_name(""), "");
+    }
+
+    #[test]
+    fn country_name_case_sensitive() {
+        assert_eq!(country_name("us"), "us");
+        assert_eq!(country_name("Us"), "Us");
+    }
+
+    #[test]
+    fn country_name_near_boundary() {
+        assert_eq!(country_name("AF"), "Afghanistan");
+        assert_eq!(country_name("AG"), "Antigua and Barbuda");
+    }
+
+    fn setup_db() -> rusqlite::Connection {
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE stations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                url TEXT NOT NULL,
+                country TEXT NOT NULL DEFAULT '',
+                genre TEXT NOT NULL DEFAULT ''
+            )",
+        )
+        .unwrap();
+        conn
+    }
+
+    #[test]
+    fn load_returns_all_stations() {
+        let conn = setup_db();
+        conn.execute(
+            "INSERT INTO stations (name, url, country) VALUES (?1, ?2, ?3)",
+            rusqlite::params!["Station A", "http://a", "US"],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO stations (name, url, country) VALUES (?1, ?2, ?3)",
+            rusqlite::params!["Station B", "http://b", "GB"],
+        )
+        .unwrap();
+        let stations = load(&conn);
+        assert_eq!(stations.len(), 2);
+        assert_eq!(stations[0].name, "Station A");
+        assert_eq!(stations[1].name, "Station B");
+    }
+
+    #[test]
+    fn load_empty_db_returns_empty_vec() {
+        let conn = setup_db();
+        let stations = load(&conn);
+        assert!(stations.is_empty());
+    }
+
+    #[test]
+    fn load_orders_by_name() {
+        let conn = setup_db();
+        conn.execute(
+            "INSERT INTO stations (name, url) VALUES (?1, ?2)",
+            rusqlite::params!["Zeta", "http://z"],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO stations (name, url) VALUES (?1, ?2)",
+            rusqlite::params!["Alpha", "http://a"],
+        )
+        .unwrap();
+        let stations = load(&conn);
+        assert_eq!(stations[0].name, "Alpha");
+        assert_eq!(stations[1].name, "Zeta");
+    }
+
+    #[test]
+    fn reload_returns_all_stations() {
+        let conn = setup_db();
+        conn.execute(
+            "INSERT INTO stations (name, url) VALUES (?1, ?2)",
+            rusqlite::params!["Test", "http://test"],
+        )
+        .unwrap();
+        let stations = reload(&conn);
+        assert_eq!(stations.len(), 1);
+        assert_eq!(stations[0].name, "Test");
+    }
+
+    #[test]
+    fn reload_empty_db_returns_empty() {
+        let conn = setup_db();
+        let stations = reload(&conn);
+        assert!(stations.is_empty());
+    }
+
+    #[test]
+    fn station_country_name_delegates() {
+        let s = Station {
+            name: "X".into(),
+            url: "http://x".into(),
+            country: "US".into(),
+            genre: String::new(),
+        };
+        assert_eq!(s.country_name(), "United States");
+    }
+
+    #[test]
+    fn station_country_name_unknown_code() {
+        let s = Station {
+            name: "X".into(),
+            url: "http://x".into(),
+            country: "XX".into(),
+            genre: String::new(),
+        };
+        assert_eq!(s.country_name(), "XX");
+    }
+}
