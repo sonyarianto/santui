@@ -343,6 +343,55 @@ impl PluginManager {
         }
     }
 
+    // ------------------------------------------------------------------
+    // Crash recovery
+    // ------------------------------------------------------------------
+
+    /// Recreate a plugin that has crashed using the stored factory.
+    /// Returns an error if the plugin is in-process (no binary path) or
+    /// no factory is registered.
+    pub fn restart_plugin(
+        &mut self,
+        idx: usize,
+        ctx: &mut PluginContext,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let path = match self.plugins[idx].binary_path() {
+            Some(p) => p.to_path_buf(),
+            None => return Err("cannot restart in-process plugin".into()),
+        };
+        let factory = self
+            .plugin_factory
+            .as_ref()
+            .ok_or_else::<Box<dyn std::error::Error>, _>(|| "no factory".into())?;
+        let id = self.plugins[idx].id().to_string();
+        let name = self.plugins[idx].name().to_string();
+
+        self.plugins[idx].shutdown();
+        self.plugins[idx] = factory(&id, &name, &path);
+        if let Some(caps) = self.plugin_capabilities.get(&id) {
+            self.plugins[idx].set_capabilities(caps.clone());
+        }
+        self.mtimes[idx] = stat_mtime(Some(&path));
+        self.plugins[idx].init(ctx)?;
+        self.refresh_commands();
+        log::info!("[santui] Restarted plugin `{name}`");
+        Ok(())
+    }
+
+    /// Restart all plugins that have crashed.  Returns the number of
+    /// successfully restarted plugins.
+    pub fn restart_crashed(&mut self, ctx: &mut PluginContext) -> usize {
+        let mut count = 0;
+        let mut i = 0;
+        while i < self.plugins.len() {
+            if !self.plugins[i].is_alive() && self.restart_plugin(i, ctx).is_ok() {
+                count += 1;
+            }
+            i += 1;
+        }
+        count
+    }
+
     /// Process a batch of events from the EventBus.
     pub fn process_events(&mut self, events: &[Event]) {
         for event in events {

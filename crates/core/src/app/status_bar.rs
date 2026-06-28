@@ -54,14 +54,20 @@ impl StatusBar<'_> {
             spans.push(Span::styled(" back", dim));
             Line::from(spans)
         } else {
-            Line::from(vec![
+            let mut spans = vec![
                 Span::styled("ctrl+p", key),
                 Span::styled(" commands • ", dim),
                 Span::styled("?", key),
                 Span::styled(" about • ", dim),
                 Span::styled("q", key),
                 Span::styled(" quit", dim),
-            ])
+            ];
+            if !self.plugin_errors.is_empty() {
+                spans.push(Span::styled(" • ", dim));
+                spans.push(Span::styled("r", key));
+                spans.push(Span::styled(" restart", dim));
+            }
+            Line::from(spans)
         };
 
         let p = Paragraph::new(line);
@@ -75,7 +81,10 @@ impl StatusBar<'_> {
             .alignment(Alignment::Right);
             f.render_widget(err_span, area);
         } else if !self.plugin_errors.is_empty() {
-            let msg = format!("⚠ plugin crashed: {}", self.plugin_errors.join(", "));
+            let msg = format!(
+                "⚠ plugin crashed: {} — r to restart",
+                self.plugin_errors.join(", ")
+            );
             let err_span = Paragraph::new(Line::from(vec![Span::styled(
                 msg,
                 Style::default().fg(self.theme.error),

@@ -259,6 +259,14 @@ impl super::Santui {
         match self.plugin_manager.active() {
             None => match key.code {
                 KeyCode::Char('q') => self.app_state.running = false,
+                KeyCode::Char('r') => {
+                    let mut ctx = crate::plugin::PluginContext {
+                        theme: self.app_state.theme.clone(),
+                        auth: self.auth.clone(),
+                        data_dir: self.plugin_manager.data_dir().to_path_buf(),
+                    };
+                    self.plugin_manager.restart_crashed(&mut ctx);
+                }
                 KeyCode::Char('?') => self.app_state.show_about = true,
                 KeyCode::Right | KeyCode::Char('l') => {
                     let carousel = self.plugin_manager.carousel_items();
