@@ -707,3 +707,432 @@ fn main() {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::state::PlayState;
+    use crate::state::RadioState;
+    use crate::stations::Station;
+
+    fn make_stations(n: usize) -> Vec<Station> {
+        (0..n)
+            .map(|i| Station {
+                name: format!("Station {i}"),
+                url: format!("http://example.com/{i}"),
+                country: String::new(),
+                genre: String::new(),
+            })
+            .collect()
+    }
+
+    fn default_theme() -> ThemeData {
+        ThemeData {
+            text: [220, 220, 220],
+            text_muted: [140, 140, 140],
+            accent: [157, 124, 216],
+            highlight: [250, 178, 131],
+            logo: [255, 185, 0],
+            background: [20, 20, 20],
+            background_panel: [20, 20, 20],
+            background_overlay: [10, 10, 10],
+            border: [250, 178, 131],
+            success: [127, 216, 143],
+            error: [224, 108, 117],
+            inverted_text: [20, 20, 20],
+        }
+    }
+
+    fn base_app_with(n: usize, db: Option<rusqlite::Connection>) -> App {
+        App {
+            state: RadioState::new(make_stations(n)),
+            theme: default_theme(),
+            area: Area { w: 80, h: 24 },
+            tx_cmd: None,
+            rx_msg: None,
+            tx_msg: None,
+            mpv_thread: None,
+            init_error: None,
+            dirty: true,
+            cached_commands: Vec::new(),
+            cached_json: None,
+            user: None,
+            db,
+        }
+    }
+
+    fn base_app() -> App {
+        base_app_with(5, None)
+    }
+
+    // ── search mode ────────────────────────────────────────────────────
+
+    #[test]
+    fn search_esc_exits_and_clears_query() {
+        let mut app = base_app();
+        app.state.search_mode = true;
+        app.state.query = "test".into();
+        assert!(app.handle_key(IpcKey::Esc));
+        assert!(!app.state.search_mode);
+        assert!(app.state.query.is_empty());
+    }
+
+    #[test]
+    fn search_enter_plays_selected() {
+        let mut app = base_app();
+        app.state.search_mode = true;
+        assert!(app.handle_key(IpcKey::Enter));
+        assert!(!app.state.search_mode);
+        assert_eq!(app.state.current_station, Some(0));
+        assert!(matches!(app.state.play_state, PlayState::Playing(_)));
+    }
+
+    #[test]
+    fn search_enter_with_empty_filtered_does_nothing() {
+        let mut app = base_app();
+        app.state.search_mode = true;
+        app.state.filtered.clear();
+        app.state.selected = 0;
+        assert!(app.handle_key(IpcKey::Enter));
+        assert!(!app.state.search_mode);
+        assert_eq!(app.state.current_station, None);
+    }
+
+    #[test]
+    fn search_backspace_removes_char() {
+        let mut app = base_app();
+        app.state.search_mode = true;
+        app.state.query = "abc".into();
+        assert!(app.handle_key(IpcKey::Backspace));
+        assert_eq!(app.state.query, "ab");
+    }
+
+    #[test]
+    fn search_backspace_empty_query_does_not_panic() {
+        let mut app = base_app();
+        app.state.search_mode = true;
+        assert!(app.handle_key(IpcKey::Backspace));
+        assert!(app.state.query.is_empty());
+    }
+
+    #[test]
+    fn search_char_adds_to_query() {
+        let mut app = base_app();
+        app.state.search_mode = true;
+        assert!(app.handle_key(IpcKey::Char('x')));
+        assert_eq!(app.state.query, "x");
+    }
+
+    #[test]
+    fn search_control_char_not_added() {
+        let mut app = base_app();
+        app.state.search_mode = true;
+        assert!(!app.handle_key(IpcKey::Char('\n')));
+        assert!(app.state.query.is_empty());
+    }
+
+    #[test]
+    fn search_char_applies_filter() {
+        let mut app = base_app();
+        app.state.search_mode = true;
+        app.handle_key(IpcKey::Char('0'));
+        assert_eq!(app.state.filtered.len(), 1);
+        assert_eq!(app.state.filtered[0], 0);
+    }
+
+    #[test]
+    fn search_up_moves_selection_back() {
+        let mut app = base_app();
+        app.state.search_mode = true;
+        app.state.selected = 2;
+        assert!(app.handle_key(IpcKey::Up));
+        assert_eq!(app.state.selected, 1);
+    }
+
+    #[test]
+    fn search_up_at_top_stays() {
+        let mut app = base_app();
+        app.state.search_mode = true;
+        app.state.selected = 0;
+        assert!(app.handle_key(IpcKey::Up));
+        assert_eq!(app.state.selected, 0);
+    }
+
+    #[test]
+    fn search_down_moves_selection_forward() {
+        let mut app = base_app();
+        app.state.search_mode = true;
+        assert!(app.handle_key(IpcKey::Down));
+        assert_eq!(app.state.selected, 1);
+    }
+
+    #[test]
+    fn search_down_at_end_stays() {
+        let mut app = base_app();
+        app.state.search_mode = true;
+        app.state.selected = 4;
+        assert!(app.handle_key(IpcKey::Down));
+        assert_eq!(app.state.selected, 4);
+    }
+
+    #[test]
+    fn search_unhandled_key_returns_false() {
+        let mut app = base_app();
+        app.state.search_mode = true;
+        assert!(!app.handle_key(IpcKey::F(1)));
+    }
+
+    // ── normal mode ────────────────────────────────────────────────────
+
+    #[test]
+    fn tab_toggles_lyrics_focus_when_showing() {
+        let mut app = base_app();
+        app.state.show_lyrics = true;
+        app.state.lyrics_focused = false;
+        assert!(app.handle_key(IpcKey::Tab));
+        assert!(app.state.lyrics_focused);
+        assert!(app.handle_key(IpcKey::Tab));
+        assert!(!app.state.lyrics_focused);
+    }
+
+    #[test]
+    fn tab_noop_when_lyrics_hidden() {
+        let mut app = base_app();
+        app.state.show_lyrics = false;
+        app.state.lyrics_focused = false;
+        assert!(app.handle_key(IpcKey::Tab));
+        assert!(!app.state.lyrics_focused);
+    }
+
+    #[test]
+    fn up_moves_selection_back() {
+        let mut app = base_app();
+        app.state.selected = 3;
+        assert!(app.handle_key(IpcKey::Up));
+        assert_eq!(app.state.selected, 2);
+    }
+
+    #[test]
+    fn up_when_lyrics_focused_scrolls_lyrics() {
+        let mut app = base_app();
+        app.state.show_lyrics = true;
+        app.state.lyrics_focused = true;
+        app.state.lyrics_text = "a\nb\nc".into();
+        app.state.lyrics_scroll = 2;
+        assert!(app.handle_key(IpcKey::Up));
+        assert_eq!(app.state.lyrics_scroll, 1);
+    }
+
+    #[test]
+    fn down_moves_selection_forward() {
+        let mut app = base_app();
+        assert!(app.handle_key(IpcKey::Down));
+        assert_eq!(app.state.selected, 1);
+    }
+
+    #[test]
+    fn down_when_lyrics_focused_scrolls_lyrics() {
+        let mut app = base_app();
+        app.state.show_lyrics = true;
+        app.state.lyrics_focused = true;
+        app.state.lyrics_text = (0..30)
+            .map(|i| format!("line {i}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(app.handle_key(IpcKey::Down));
+        assert_eq!(app.state.lyrics_scroll, 1);
+    }
+
+    #[test]
+    fn pageup_moves_selection_up() {
+        let mut app = base_app_with(30, None);
+        app.state.selected = 20;
+        assert!(app.handle_key(IpcKey::PageUp));
+        assert_eq!(app.state.selected, 4);
+    }
+
+    #[test]
+    fn pageup_when_lyrics_focused_scrolls_up() {
+        let mut app = base_app();
+        app.state.show_lyrics = true;
+        app.state.lyrics_focused = true;
+        app.state.lyrics_text = "a\nb\nc".into();
+        app.state.lyrics_scroll = 2;
+        assert!(app.handle_key(IpcKey::PageUp));
+        assert_eq!(app.state.lyrics_scroll, 1);
+    }
+
+    #[test]
+    fn pagedown_moves_selection_down() {
+        let mut app = base_app_with(30, None);
+        app.state.selected = 0;
+        assert!(app.handle_key(IpcKey::PageDown));
+        assert_eq!(app.state.selected, 16);
+    }
+
+    #[test]
+    fn pagedown_when_lyrics_focused_scrolls_down() {
+        let mut app = base_app();
+        app.state.show_lyrics = true;
+        app.state.lyrics_focused = true;
+        app.state.lyrics_text = (0..30)
+            .map(|i| format!("line {i}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(app.handle_key(IpcKey::PageDown));
+        assert_eq!(app.state.lyrics_scroll, 1);
+    }
+
+    #[test]
+    fn slash_enters_search_mode() {
+        let mut app = base_app();
+        assert!(app.handle_key(IpcKey::Char('/')));
+        assert!(app.state.search_mode);
+    }
+
+    #[test]
+    fn slash_noop_when_lyrics_focused() {
+        let mut app = base_app();
+        app.state.show_lyrics = true;
+        app.state.lyrics_focused = true;
+        assert!(app.handle_key(IpcKey::Char('/')));
+        assert!(!app.state.search_mode);
+    }
+
+    #[test]
+    fn enter_plays_selected_station() {
+        let mut app = base_app();
+        assert!(app.handle_key(IpcKey::Enter));
+        assert_eq!(app.state.current_station, Some(0));
+        assert!(matches!(app.state.play_state, PlayState::Playing(_)));
+    }
+
+    #[test]
+    fn enter_noop_when_lyrics_focused() {
+        let mut app = base_app();
+        app.state.show_lyrics = true;
+        app.state.lyrics_focused = true;
+        assert!(app.handle_key(IpcKey::Enter));
+        assert_eq!(app.state.current_station, None);
+        assert!(matches!(app.state.play_state, PlayState::Stopped));
+    }
+
+    #[test]
+    fn enter_with_empty_filtered_does_nothing() {
+        let mut app = base_app();
+        app.state.filtered.clear();
+        assert!(app.handle_key(IpcKey::Enter));
+        assert_eq!(app.state.current_station, None);
+    }
+
+    #[test]
+    fn r_reloads_stations_from_db() {
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE stations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                url TEXT NOT NULL,
+                country TEXT NOT NULL DEFAULT '',
+                genre TEXT NOT NULL DEFAULT ''
+            )",
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO stations (name, url) VALUES (?1, ?2)",
+            rusqlite::params!["ABC", "http://abc"],
+        )
+        .unwrap();
+
+        let mut app = base_app_with(3, Some(conn));
+        assert!(app.handle_key(IpcKey::Char('r')));
+        assert_eq!(app.state.stations.len(), 1);
+        assert_eq!(app.state.stations[0].name, "ABC");
+    }
+
+    #[test]
+    fn r_noop_when_lyrics_focused() {
+        let mut app = base_app();
+        app.state.show_lyrics = true;
+        app.state.lyrics_focused = true;
+        assert!(app.handle_key(IpcKey::Char('r')));
+        assert_eq!(app.state.stations.len(), 5);
+    }
+
+    #[test]
+    fn r_noop_when_no_db() {
+        let mut app = base_app();
+        assert_eq!(app.state.stations.len(), 5);
+        assert!(app.handle_key(IpcKey::Char('r')));
+        assert_eq!(app.state.stations.len(), 5);
+    }
+
+    #[test]
+    fn s_stops_playback() {
+        let mut app = base_app();
+        app.state.play_state = PlayState::Playing("test".into());
+        app.state.current_station = Some(0);
+        app.state.song_title = "some song".into();
+        assert!(app.handle_key(IpcKey::Char('s')));
+        assert!(matches!(app.state.play_state, PlayState::Stopped));
+        assert_eq!(app.state.current_station, None);
+        assert!(app.state.song_title.is_empty());
+    }
+
+    #[test]
+    fn plus_increases_volume() {
+        let mut app = base_app();
+        app.state.volume = 50;
+        assert!(app.handle_key(IpcKey::Char('+')));
+        assert_eq!(app.state.volume, 52);
+    }
+
+    #[test]
+    fn equals_increases_volume() {
+        let mut app = base_app();
+        app.state.volume = 50;
+        assert!(app.handle_key(IpcKey::Char('=')));
+        assert_eq!(app.state.volume, 52);
+    }
+
+    #[test]
+    fn minus_decreases_volume() {
+        let mut app = base_app();
+        app.state.volume = 50;
+        assert!(app.handle_key(IpcKey::Char('-')));
+        assert_eq!(app.state.volume, 48);
+    }
+
+    #[test]
+    fn l_toggles_lyrics() {
+        let mut app = base_app();
+        assert!(!app.state.show_lyrics);
+        assert!(app.handle_key(IpcKey::Char('l')));
+        assert!(app.state.show_lyrics);
+        assert!(app.state.lyrics_focused);
+        assert_eq!(app.state.lyrics_scroll, 0);
+    }
+
+    #[test]
+    fn unhandled_key_returns_false() {
+        let mut app = base_app();
+        assert!(!app.handle_key(IpcKey::Left));
+        assert!(!app.handle_key(IpcKey::Right));
+        assert!(!app.handle_key(IpcKey::Home));
+        assert!(!app.handle_key(IpcKey::End));
+        assert!(!app.handle_key(IpcKey::Insert));
+        assert!(!app.handle_key(IpcKey::Delete));
+        assert!(!app.handle_key(IpcKey::BackTab));
+        assert!(!app.handle_key(IpcKey::F(2)));
+    }
+
+    #[test]
+    fn handle_key_sets_dirty_and_clears_scan_msg() {
+        let mut app = base_app();
+        app.state.set_scan_msg("hello".into());
+        app.dirty = false;
+        assert!(app.handle_key(IpcKey::Char('/')));
+        assert!(app.dirty);
+        assert!(app.state.scan_msg.is_none());
+    }
+}
