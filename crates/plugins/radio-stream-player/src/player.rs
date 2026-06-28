@@ -161,7 +161,7 @@ impl Mpv {
         for (k, v) in [
             ("config", "no"),
             ("vo", "null"),
-            ("audio-client-name", "santui-radio-streaming-player"),
+            ("audio-client-name", "santui-radio-stream-player"),
             ("stream-lavf-o", "icy=1"),
         ] {
             if let Err(e) = mpv.set_option(k, v) {

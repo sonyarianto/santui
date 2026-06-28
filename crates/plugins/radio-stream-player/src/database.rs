@@ -16,7 +16,7 @@ fn app_data_dir() -> PathBuf {
 }
 
 pub fn db_path() -> PathBuf {
-    app_data_dir().join("radio_streaming_stations.db")
+    app_data_dir().join("radio_stream_stations.db")
 }
 
 fn migrate(conn: &Connection) -> Result<(), rusqlite::Error> {
@@ -46,7 +46,7 @@ pub fn open() -> Result<Connection, rusqlite::Error> {
             .ok()
             .and_then(|p| {
                 p.parent()
-                    .map(|d| d.join("native").join("radio_streaming_stations.db"))
+                    .map(|d| d.join("native").join("radio_stream_stations.db"))
             })
             .filter(|p| p.exists())
         {

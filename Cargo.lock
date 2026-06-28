@@ -1917,7 +1917,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "santui-radio-streaming-player"
+name = "santui-radio-stream-player"
 version = "0.2.17"
 dependencies = [
  "env_logger",
@@ -1931,7 +1931,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "santui-radio-streaming-scraper"
+name = "santui-radio-stream-scraper"
 version = "0.2.17"
 dependencies = [
  "env_logger",

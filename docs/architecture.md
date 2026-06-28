@@ -23,7 +23,7 @@ santui.exe (host)
        └─ reads PluginMsg { commands, hints, palette_commands, request, consumed } via stdout ◄──
             │ spawns & manages
             ▼
-       santui-radio-streaming-player.exe (headless, no ratatui)
+       santui-radio-stream-player.exe (headless, no ratatui)
          └─ pure JSON state machine: input → process → output RenderCmd list
 ```
 
@@ -54,7 +54,7 @@ Plugins are managed at runtime through the plugin registry (opened via `Ctrl+P` 
 
 **How palette "Plugins" are populated:**
 
-`refresh_dynamic_items()` in `PluginManager` iterates `reg.installed` directly (not `reg.available`), so enabled plugins appear in the palette immediately — even before the manifest is fetched. If the manifest has been loaded, the display name is taken from it; otherwise it's humanized from the binary filename (e.g. `santui-radio-streaming-player` → `Radio Streaming Player`).
+`refresh_dynamic_items()` in `PluginManager` iterates `reg.installed` directly (not `reg.available`), so enabled plugins appear in the palette immediately — even before the manifest is fetched. If the manifest has been loaded, the display name is taken from it; otherwise it's humanized from the binary filename (e.g. `santui-radio-stream-player` → `Radio Stream Player`).
 
 The call sites:
 
@@ -79,7 +79,7 @@ At build time, `cargo build --workspace` produces all workspace binaries includi
 
 ### Background-capable plugins
 
-Plugins that declare `"capabilities": ["background"]` in their manifest entry (e.g. the radio streaming player) survive `Esc` — instead of being shut down, they receive a `Blur` message and are hidden from the display. The audio (or any background activity) keeps running.
+Plugins that declare `"capabilities": ["background"]` in their manifest entry (e.g. the radio stream player) survive `Esc` — instead of being shut down, they receive a `Blur` message and are hidden from the display. The audio (or any background activity) keeps running.
 
 When the user re-selects the plugin from the palette/carousel, the host sends `Focus` — no re-spawn needed. On app exit, all plugins are shut down regardless of capability.
 

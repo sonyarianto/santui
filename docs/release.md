@@ -10,8 +10,8 @@ Update `version` in **all** `Cargo.toml` files + npm + website. They must all ma
 - `crates/auth/Cargo.toml`
 - `crates/registry/Cargo.toml`
 - `crates/db/Cargo.toml`
-- `crates/plugins/radio-streaming-player/Cargo.toml`
-- `crates/plugins/radio-streaming-player/scraper/Cargo.toml`
+- `crates/plugins/radio-stream-player/Cargo.toml`
+- `crates/plugins/radio-stream-player/scraper/Cargo.toml`
 - `crates/plugins/registry/Cargo.toml`
 - `crates/app/Cargo.toml`
 

@@ -1,10 +1,10 @@
 //! Scrapes internet radio stations from an online directory
-//! and saves them to the Santui radio streaming player's SQLite database.
+//! and saves them to the Santui radio stream player's SQLite database.
 //!
 //! ## Usage
 //!
 //! ```bash
-//! cargo run -p santui-radio-streaming-scraper
+//! cargo run -p santui-radio-stream-scraper
 //! ```
 //!
 //! Fetches the currently-playing station list from every country via the
@@ -12,8 +12,8 @@
 //! constraint + `INSERT OR IGNORE`. Run periodically to keep stations fresh.
 //!
 //! The database is shared with the radio plugin at:
-//! - **Windows**: `%APPDATA%\santui\radio_streaming_stations.db`
-//! - **Linux/macOS**: `~/.local/share/santui/radio_streaming_stations.db`
+//! - **Windows**: `%APPDATA%\santui\radio_stream_stations.db`
+//! - **Linux/macOS**: `~/.local/share/santui/radio_stream_stations.db`
 //!
 //! Press `r` in the radio player plugin to reload stations from the DB.
 
@@ -276,7 +276,7 @@ fn app_data_dir() -> PathBuf {
 }
 
 fn db_path() -> PathBuf {
-    app_data_dir().join("radio_streaming_stations.db")
+    app_data_dir().join("radio_stream_stations.db")
 }
 
 /// Returns true if a column exists on the stations table.

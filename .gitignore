@@ -2,7 +2,7 @@ target/
 plugins.json
 
 native/*
-!native/radio_streaming_stations.db
+!native/radio_stream_stations.db
 
 releases/
 

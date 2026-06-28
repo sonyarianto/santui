@@ -24,9 +24,9 @@ New-Item -ItemType Directory -Path "$Stage\native" -Force | Out-Null
 
 Copy-Item "$Target\santui.exe" $Stage
 Copy-Item "$Target\santui-registry-plugin.exe" $Stage
-Copy-Item "$Target\santui-radio-streaming-player.exe" $Stage
+Copy-Item "$Target\santui-radio-stream-player.exe" $Stage
 Copy-Item "$Root\native\libmpv-2.dll" "$Stage\native\"
-Copy-Item "$Root\native\radio_streaming_stations.db" "$Stage\native\"
+Copy-Item "$Root\native\radio_stream_stations.db" "$Stage\native\"
 
 # ── zip ──
 $ZipName = "santui-$Arch.zip"

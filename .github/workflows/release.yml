@@ -121,12 +121,12 @@ jobs:
           $plugins = @()
 
           $pluginNames = @(
-            @{id="radio-streaming-player"; name="Radio Streaming Player"; desc="Listen to thousands of radio stations worldwide"}
+            @{id="radio-stream-player"; name="Radio Stream Player"; desc="Listen to thousands of radio stations worldwide"}
           )
 
           foreach ($p in $pluginNames) {
             $filename = "$($p.id)-$target$ext"
-            # Binary in target/release/ uses santui- prefix (e.g. santui-radio-streaming-player.exe)
+            # Binary in target/release/ uses santui- prefix (e.g. santui-radio-stream-player.exe)
             $binPath = "target\release\santui-$($p.id)$ext"
             if (Test-Path $binPath) {
               $sha = (Get-FileHash -Algorithm SHA256 $binPath).Hash.ToLower()
@@ -156,7 +156,7 @@ jobs:
           EXT="${{ matrix.plugin_ext }}"
           REPO="${{ github.repository }}"
           TAG="${{ github.ref_name }}"
-          BINARY="${BINARY_DIR}/santui-radio-streaming-player${EXT}"
+          BINARY="${BINARY_DIR}/santui-radio-stream-player${EXT}"
 
           # Portable SHA256: works on Linux (sha256sum) and macOS (shasum -a 256)
           SHA256="$(sha256sum "$BINARY" 2>/dev/null | cut -d' ' -f1 || shasum -a 256 "$BINARY" 2>/dev/null | cut -d' ' -f1)"
@@ -165,12 +165,12 @@ jobs:
           cat > "plugins-${TARGET}.json" << JSON
           [
             {
-              "id": "radio-streaming-player",
-              "name": "Radio Streaming Player",
+              "id": "radio-stream-player",
+              "name": "Radio Stream Player",
               "description": "Listen to thousands of radio stations worldwide",
               "publisher": "Santui",
               "version": "${VERSION}",
-              "download_url": "https://github.com/${REPO}/releases/download/${TAG}/radio-streaming-player-${TARGET}${EXT}",
+              "download_url": "https://github.com/${REPO}/releases/download/${TAG}/radio-stream-player-${TARGET}${EXT}",
               "sha256": "${SHA256}",
               "size": ${SIZE},
               "capabilities": ["background"]
@@ -183,7 +183,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p plugin-binaries
-          for binary in "${BINARY_DIR}/santui-radio-streaming-player${{ matrix.plugin_ext }}"; do
+          for binary in "${BINARY_DIR}/santui-radio-stream-player${{ matrix.plugin_ext }}"; do
             if [ -f "$binary" ]; then
               name="$(basename "$binary")"
               # Strip .exe and also strip the santui- prefix so the filename
@@ -261,7 +261,7 @@ jobs:
         run: |
           echo "=== Checking for empty files ==="
           has_empty=0
-          for f in santui-* plugins-*.json radio-streaming-player-*; do
+          for f in santui-* plugins-*.json radio-stream-player-*; do
             if [ -f "$f" ]; then
               size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null)
               if [ "$size" -eq 0 ]; then
@@ -284,7 +284,7 @@ jobs:
           files: |
             santui-*
             plugins-*.json
-            radio-streaming-player-*
+            radio-stream-player-*
           fail_on_unmatched_files: false
           generate_release_notes: true
 

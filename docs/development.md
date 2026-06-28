@@ -52,7 +52,7 @@ santui/
 │   ├── registry/       — plugin registry: manifest fetch, install, config
 │   ├── db/             — central SQLite database for per-user plugin data
 │   ├── plugins/
-│   │   ├── radio-streaming-player/   — radio player plugin
+│   │   ├── radio-stream-player/   — radio player plugin
 │   │   │   └── scraper/              — radio station scraper
 │   │   └── registry/                 — plugin registry UI plugin
 │   └── app/            — binary entry point (main.rs)

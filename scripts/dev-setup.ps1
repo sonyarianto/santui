@@ -33,7 +33,7 @@ foreach ($bin in $pluginBinaries) {
     Write-Host "  [OK] $id  ($($bin.Length) bytes, sha256=$hash)"
     $plugins += @{
         id            = $id
-        name          = "Radio Streaming Player"
+        name          = "Radio Stream Player"
         description   = "Listen to thousands of radio stations worldwide"
         publisher     = "Santui"
         version       = $Version
