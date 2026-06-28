@@ -437,6 +437,9 @@ fn parse_genres(html: &str) -> Vec<String> {
     genres
 }
 
+/// How many already-genred stations to refresh per run.
+const REFRESH_PER_RUN: usize = 10;
+
 /// Fetch a station's detail page and extract genre tags.
 /// radio_id is `us.kmgl` — convert to `https://onlineradiobox.com/us/kmgl/`.
 /// Returns the genres string (comma-separated) on success.
@@ -458,48 +461,57 @@ fn enrich_station_genre(conn: &Connection, radio_id: &str) -> Result<String, Str
     }
     let joined = genres.join(", ");
     conn.execute(
-        "UPDATE stations SET genre = ?1 WHERE radio_id = ?2 AND genre = ''",
+        "UPDATE stations SET genre = ?1 WHERE radio_id = ?2",
         rusqlite::params![joined, radio_id],
     )
     .map_err(|e| format!("DB update failed: {e}"))?;
     Ok(joined)
 }
 
-/// Enrich a random sample of stations with no genre set.
+fn pick_radio_ids(conn: &Connection, where_clause: &str, limit: usize) -> Vec<String> {
+    let sql = format!(
+        "SELECT radio_id FROM stations WHERE radio_id != '' AND {where_clause} ORDER BY RANDOM() LIMIT ?1"
+    );
+    let mut stmt = conn.prepare(&sql).expect("prepare failed");
+    stmt.query_map(rusqlite::params![limit as i64], |row| row.get(0))
+        .expect("query failed")
+        .filter_map(|r| r.ok())
+        .collect()
+}
+
+/// Enrich a random sample of stations — fill new and refresh existing.
 fn enrich_genres(conn: &Connection) {
-    let total_no_genre: i64 = conn
-        .query_row(
-            "SELECT COUNT(*) FROM stations WHERE genre = ''",
-            [],
-            |row| row.get(0),
-        )
-        .unwrap_or(0);
-    if total_no_genre == 0 {
-        println!("All stations already have genres.");
+    let new_limit = GENRE_SAMPLE_SIZE - REFRESH_PER_RUN;
+    let mut rows: Vec<(String, &str)> = pick_radio_ids(conn, "genre = ''", new_limit)
+        .into_iter()
+        .map(|id| (id, "new"))
+        .collect();
+
+    let refresh_limit = GENRE_SAMPLE_SIZE - rows.len();
+    if refresh_limit > 0 {
+        let refreshes = pick_radio_ids(conn, "genre != ''", refresh_limit);
+        rows.extend(refreshes.into_iter().map(|id| (id, "refresh")));
+    }
+
+    if rows.is_empty() {
+        println!("No stations with radio_id to enrich.");
         return;
     }
 
-    let sample = std::cmp::min(GENRE_SAMPLE_SIZE, total_no_genre as usize);
-    println!("\nEnriching {sample}/{total_no_genre} stations without genre...");
-
-    let mut stmt = conn
-        .prepare(
-            "SELECT radio_id FROM stations WHERE genre = '' AND radio_id != '' ORDER BY RANDOM() LIMIT ?1",
-        )
-        .expect("prepare failed");
-    let rows: Vec<String> = stmt
-        .query_map(rusqlite::params![sample as i64], |row| row.get(0))
-        .expect("query failed")
-        .filter_map(|r| r.ok())
-        .collect();
+    println!(
+        "\nEnriching {} stations ({} new, {} refresh)...",
+        rows.len(),
+        rows.iter().filter(|(_, t)| *t == "new").count(),
+        rows.iter().filter(|(_, t)| *t == "refresh").count(),
+    );
 
     let mut enriched = 0usize;
     let mut failed = 0usize;
-    for radio_id in &rows {
+    for (radio_id, tag) in &rows {
         match enrich_station_genre(conn, radio_id) {
             Ok(genres) => {
                 enriched += 1;
-                println!("  📡  {radio_id}: {genres}");
+                println!("  📡  [{tag}] {radio_id}: {genres}");
             }
             Err(e) => {
                 log::warn!("  ⚠️  {radio_id}: {e}");
