@@ -597,7 +597,9 @@ impl Plugin for IpcPluginHost {
     }
 
     fn can_background(&self) -> bool {
-        self.id == "santui-radio-streaming-player"
+        // Matches the id set in registry.toml or dev-mode plugins.json,
+        // both of which use "radio-streaming-player".
+        self.id == "radio-streaming-player"
     }
 
     fn binary_path(&self) -> Option<&Path> {
