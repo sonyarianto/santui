@@ -4,11 +4,11 @@ use std::time::SystemTime;
 
 use crate::event::Event;
 use crate::plugin::{Plugin, PluginCmdItem, PluginContext, PluginFactory};
+use crate::registry_config::RegistryConfig;
 use crate::theme::Theme;
 use crossterm::event::KeyEvent;
 use ratatui::layout::Rect;
 use ratatui::Frame;
-use serde::{Deserialize, Serialize};
 
 /// Manages the lifecycle, dispatch, and palette-command registry for all
 /// loaded plugins.  Extracted from the monolithic `Santui` struct so that
@@ -464,35 +464,6 @@ impl PluginManager {
 impl Default for PluginManager {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-/// A plugin the user has installed (either enabled or disabled).
-/// Mirrors the type in `santui-registry` so core can read `registry.toml`
-/// without depending on that crate.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct InstalledPlugin {
-    pub enabled: bool,
-    pub version: String,
-    pub path: PathBuf,
-    #[serde(default)]
-    pub id: String,
-    #[serde(default)]
-    pub name: String,
-    #[serde(default)]
-    pub capabilities: Vec<String>,
-}
-
-/// Registry configuration file (`registry.toml`) contents.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct RegistryConfig {
-    pub plugins: Vec<InstalledPlugin>,
-}
-
-impl RegistryConfig {
-    pub fn load(path: &Path) -> Option<Self> {
-        let text = std::fs::read_to_string(path).ok()?;
-        toml::from_str(&text).ok()
     }
 }
 

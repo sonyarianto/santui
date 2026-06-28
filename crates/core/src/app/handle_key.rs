@@ -102,7 +102,7 @@ impl super::Santui {
                     } else {
                         // Plugin not loaded yet — read its binary path from registry.toml.
                         let cfg_path = self.plugin_manager.data_dir().join("registry.toml");
-                        if let Some(cfg) = super::plugin_manager::RegistryConfig::load(&cfg_path) {
+                        if let Some(cfg) = crate::registry_config::RegistryConfig::load(&cfg_path) {
                             if let Some(installed) = cfg.plugins.iter().find(|p| {
                                 p.path
                                     .file_stem()
@@ -141,7 +141,7 @@ impl super::Santui {
         if let Some(plugin_idx) = item.plugin_idx {
             // Plugin is already loaded — just activate it.
             self.plugin_manager.set_active(Some(plugin_idx));
-        } else if let Some(cfg) = super::plugin_manager::RegistryConfig::load(
+        } else if let Some(cfg) = crate::registry_config::RegistryConfig::load(
             &self.plugin_manager.data_dir().join("registry.toml"),
         ) {
             // Look up the binary path in registry.toml and spawn the plugin.

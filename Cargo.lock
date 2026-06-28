@@ -1946,6 +1946,7 @@ dependencies = [
 name = "santui-registry"
 version = "0.2.17"
 dependencies = [
+ "santui-core",
  "serde",
  "serde_json",
  "sha2",

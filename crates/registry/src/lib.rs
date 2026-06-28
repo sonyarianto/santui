@@ -1,6 +1,7 @@
 pub mod config;
 mod download;
 
+pub use config::InstalledPlugin;
 pub use download::download_plugin;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -21,25 +22,6 @@ pub struct PluginManifest {
     /// Publisher name (e.g. "Santui").
     #[serde(default)]
     pub publisher: String,
-    /// Declared capabilities (e.g. "background" for audio plugins).
-    #[serde(default)]
-    pub capabilities: Vec<String>,
-}
-
-/// A plugin the user has installed (either enabled or disabled).
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InstalledPlugin {
-    pub enabled: bool,
-    pub version: String,
-    pub path: PathBuf,
-    /// Plugin identifier (e.g. "santui-radio-streaming-player").
-    /// Persisted so the palette can show the plugin before the manifest is fetched.
-    #[serde(default)]
-    pub id: String,
-    /// Human-readable display name (e.g. "Radio Streaming Player").
-    /// Persisted so the palette can show the plugin before the manifest is fetched.
-    #[serde(default)]
-    pub name: String,
     /// Declared capabilities (e.g. "background" for audio plugins).
     #[serde(default)]
     pub capabilities: Vec<String>,

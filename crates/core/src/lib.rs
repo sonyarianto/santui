@@ -3,6 +3,7 @@ pub mod auth;
 pub mod config;
 pub mod event;
 pub mod plugin;
+pub mod registry_config;
 pub mod theme;
 pub mod widgets;
 
