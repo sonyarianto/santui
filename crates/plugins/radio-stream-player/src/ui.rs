@@ -368,3 +368,669 @@ pub fn render_ui(
 
     cmds
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::itunes::TrackInfo;
+    use crate::state::PlayState;
+    use crate::stations::Station;
+
+    fn make_stations(n: usize) -> Vec<Station> {
+        (0..n)
+            .map(|i| Station {
+                name: format!("Station {i}"),
+                url: format!("http://example.com/{i}"),
+                country: if i % 2 == 0 { "US".into() } else { "GB".into() },
+                genre: if i % 3 == 0 {
+                    "Rock".into()
+                } else {
+                    "Pop".into()
+                },
+            })
+            .collect()
+    }
+
+    fn default_theme() -> ThemeData {
+        ThemeData {
+            text: [220, 220, 220],
+            text_muted: [140, 140, 140],
+            accent: [157, 124, 216],
+            highlight: [250, 178, 131],
+            logo: [255, 185, 0],
+            background: [20, 20, 20],
+            background_panel: [20, 20, 20],
+            background_overlay: [10, 10, 10],
+            border: [250, 178, 131],
+            success: [127, 216, 143],
+            error: [224, 108, 117],
+            inverted_text: [20, 20, 20],
+        }
+    }
+
+    fn state_with(n: usize) -> RadioState {
+        RadioState::new(make_stations(n))
+    }
+
+    #[test]
+    fn small_area_returns_empty() {
+        let state = state_with(5);
+        let cmds = render_ui(&state, &default_theme(), 9, 2);
+        assert!(cmds.is_empty());
+        let cmds = render_ui(&state, &default_theme(), 10, 2);
+        assert!(cmds.is_empty());
+        let cmds = render_ui(&state, &default_theme(), 9, 3);
+        assert!(cmds.is_empty());
+    }
+
+    #[test]
+    fn contains_clear_command() {
+        let cmds = render_ui(&state_with(5), &default_theme(), 80, 24);
+        if let RenderCmd::Clear { x, y, w, h } = &cmds[0] {
+            assert_eq!(*x, 0);
+            assert_eq!(*y, 0);
+            assert_eq!(*w, 80);
+            assert_eq!(*h, 24);
+        } else {
+            panic!("first cmd should be Clear");
+        }
+    }
+
+    #[test]
+    fn contains_stations_panel_border() {
+        let cmds = render_ui(&state_with(5), &default_theme(), 80, 24);
+        let borders: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Border { .. }))
+            .collect();
+        assert_eq!(borders.len(), 2, "stations panel + now playing panel");
+        if let RenderCmd::Border { title, y, .. } = borders[0] {
+            assert_eq!(title.as_deref(), Some("Stations"));
+            assert_eq!(*y, 0);
+        }
+    }
+
+    #[test]
+    fn shows_total_stations_in_normal_mode() {
+        let cmds = render_ui(&state_with(5), &default_theme(), 80, 24);
+        let texts: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Text { .. }))
+            .collect();
+        let has_total = texts.iter().any(|t| {
+            if let RenderCmd::Text { text, .. } = t {
+                text.contains("Total stations: 5")
+            } else {
+                false
+            }
+        });
+        assert!(has_total);
+    }
+
+    #[test]
+    fn shows_search_bar_in_search_mode() {
+        let mut st = state_with(5);
+        st.search_mode = true;
+        st.query = "test".into();
+        st.filtered = vec![0, 3];
+        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let texts: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Text { .. }))
+            .collect();
+        let has_search = texts.iter().any(|t| {
+            if let RenderCmd::Text { text, .. } = t {
+                text.contains("Search: test")
+            } else {
+                false
+            }
+        });
+        assert!(has_search);
+        let has_count = texts.iter().any(|t| {
+            if let RenderCmd::Text { text, .. } = t {
+                text == "2/5"
+            } else {
+                false
+            }
+        });
+        assert!(has_count);
+    }
+
+    #[test]
+    fn shows_scan_msg_when_set() {
+        let mut st = state_with(5);
+        st.scan_msg = Some("Reloaded 5 stations".into());
+        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let texts: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Text { .. }))
+            .collect();
+        let has_msg = texts.iter().any(|t| {
+            if let RenderCmd::Text { text, .. } = t {
+                text == "Reloaded 5 stations"
+            } else {
+                false
+            }
+        });
+        assert!(has_msg);
+    }
+
+    #[test]
+    fn stopped_shows_no_station_selected() {
+        let st = state_with(5);
+        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let texts: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Text { .. }))
+            .collect();
+        let has_noop = texts.iter().any(|t| {
+            if let RenderCmd::Text { text, .. } = t {
+                text == "No station selected"
+            } else {
+                false
+            }
+        });
+        assert!(has_noop);
+    }
+
+    #[test]
+    fn playing_shows_station_name_green() {
+        let mut st = state_with(5);
+        st.play_state = PlayState::Playing("Station 1".into());
+        st.current_station = Some(1);
+        st.song_title = "Some Song".into();
+        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let texts: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Text { .. }))
+            .collect();
+        let has_name = texts.iter().any(|t| {
+            if let RenderCmd::Text { text, fg, bold, .. } = t {
+                text == "Station 1" && *fg == Some(default_theme().success) && *bold
+            } else {
+                false
+            }
+        });
+        assert!(has_name);
+        let has_title = texts.iter().any(|t| {
+            if let RenderCmd::Text { text, .. } = t {
+                text == "Some Song"
+            } else {
+                false
+            }
+        });
+        assert!(has_title);
+    }
+
+    #[test]
+    fn playing_with_track_info_shows_artist() {
+        let mut st = state_with(5);
+        st.play_state = PlayState::Playing("Station 0".into());
+        st.current_station = Some(0);
+        st.song_title = "Song Title".into();
+        st.track_info = Some(TrackInfo {
+            artist: Some("Artist Name".into()),
+            title: None,
+        });
+        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let texts: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Text { .. }))
+            .collect();
+        let has_artist = texts.iter().any(|t| {
+            if let RenderCmd::Text { text, .. } = t {
+                text == "Artist Name"
+            } else {
+                false
+            }
+        });
+        assert!(has_artist);
+    }
+
+    #[test]
+    fn playing_no_song_title_shows_no_metadata() {
+        let mut st = state_with(5);
+        st.play_state = PlayState::Playing("Station 0".into());
+        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let texts: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Text { .. }))
+            .collect();
+        let has_msg = texts.iter().any(|t| {
+            if let RenderCmd::Text { text, .. } = t {
+                text == "(no metadata)"
+            } else {
+                false
+            }
+        });
+        assert!(has_msg);
+    }
+
+    #[test]
+    fn error_shows_error_message() {
+        let mut st = state_with(5);
+        st.play_state = PlayState::Error("connection lost".into());
+        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let texts: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Text { .. }))
+            .collect();
+        let has_error = texts.iter().any(|t| {
+            if let RenderCmd::Text { text, .. } = t {
+                text == "⚠ Error"
+            } else {
+                false
+            }
+        });
+        assert!(has_error);
+        let has_detail = texts.iter().any(|t| {
+            if let RenderCmd::Text { text, .. } = t {
+                text == "connection lost"
+            } else {
+                false
+            }
+        });
+        assert!(has_detail);
+    }
+
+    #[test]
+    fn table_has_correct_headers() {
+        let cmds = render_ui(&state_with(5), &default_theme(), 80, 24);
+        let table = cmds
+            .iter()
+            .find(|c| matches!(c, RenderCmd::Table { .. }))
+            .unwrap();
+        if let RenderCmd::Table { header, .. } = table {
+            assert_eq!(header, &vec!["Name", "Genre", "Country"]);
+        } else {
+            panic!("expected Table");
+        }
+    }
+
+    #[test]
+    fn table_shows_station_rows() {
+        let cmds = render_ui(&state_with(5), &default_theme(), 80, 24);
+        let table = cmds
+            .iter()
+            .find(|c| matches!(c, RenderCmd::Table { .. }))
+            .unwrap();
+        if let RenderCmd::Table { rows, .. } = table {
+            assert_eq!(rows.len(), 5);
+            assert_eq!(rows[0][0], "Station 0");
+            assert_eq!(rows[0][1], "Rock");
+            assert_eq!(rows[0][2], "United States");
+            assert_eq!(rows[1][0], "Station 1");
+            assert_eq!(rows[1][1], "Pop");
+            assert_eq!(rows[1][2], "United Kingdom");
+        } else {
+            panic!("expected Table");
+        }
+    }
+
+    #[test]
+    fn table_selection_highlighted() {
+        let mut st = state_with(10);
+        st.selected = 3;
+        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let table = cmds
+            .iter()
+            .find(|c| matches!(c, RenderCmd::Table { .. }))
+            .unwrap();
+        if let RenderCmd::Table { selected, .. } = table {
+            assert_eq!(*selected, Some(3));
+        } else {
+            panic!("expected Table");
+        }
+    }
+
+    #[test]
+    fn table_current_row_marked() {
+        let mut st = state_with(10);
+        st.current_station = Some(5);
+        st.play_state = PlayState::Playing("Station 5".into());
+        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let table = cmds
+            .iter()
+            .find(|c| matches!(c, RenderCmd::Table { .. }))
+            .unwrap();
+        if let RenderCmd::Table {
+            current_row,
+            current_style,
+            ..
+        } = table
+        {
+            assert_eq!(*current_row, Some(5));
+            assert!(current_style.is_some());
+            assert_eq!(
+                current_style.as_ref().unwrap().fg,
+                Some(default_theme().success)
+            );
+        } else {
+            panic!("expected Table");
+        }
+    }
+
+    #[test]
+    fn lyrics_panel_shown_when_enabled() {
+        let mut st = state_with(5);
+        st.show_lyrics = true;
+        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let borders: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Border { .. }))
+            .collect();
+        assert_eq!(borders.len(), 3, "stations + now playing + lyrics panels");
+        let has_lyrics = borders.iter().any(|b| {
+            if let RenderCmd::Border { title, .. } = b {
+                title.as_deref() == Some("Lyrics")
+            } else {
+                false
+            }
+        });
+        assert!(has_lyrics);
+    }
+
+    #[test]
+    fn lyrics_loading_shows_searching_message() {
+        let mut st = state_with(5);
+        st.show_lyrics = true;
+        st.lyrics_loading = true;
+        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let texts: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Text { .. }))
+            .collect();
+        let has_msg = texts.iter().any(|t| {
+            if let RenderCmd::Text { text, .. } = t {
+                text == "Searching lyrics..."
+            } else {
+                false
+            }
+        });
+        assert!(has_msg);
+    }
+
+    #[test]
+    fn lyrics_empty_shows_no_lyrics_message() {
+        let mut st = state_with(5);
+        st.show_lyrics = true;
+        st.lyrics_text = String::new();
+        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let texts: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Text { .. }))
+            .collect();
+        let has_msg = texts.iter().any(|t| {
+            if let RenderCmd::Text { text, .. } = t {
+                text == "No lyrics found"
+            } else {
+                false
+            }
+        });
+        assert!(has_msg);
+    }
+
+    #[test]
+    fn lyrics_content_rendered() {
+        let mut st = state_with(5);
+        st.show_lyrics = true;
+        st.lyrics_text = "Line one\nLine two\nLine three".into();
+        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let texts: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Text { .. }))
+            .collect();
+        let has_line1 = texts.iter().any(|t| {
+            if let RenderCmd::Text { text, .. } = t {
+                text == "Line one"
+            } else {
+                false
+            }
+        });
+        let has_line2 = texts.iter().any(|t| {
+            if let RenderCmd::Text { text, .. } = t {
+                text == "Line two"
+            } else {
+                false
+            }
+        });
+        assert!(has_line1 && has_line2);
+    }
+
+    #[test]
+    fn lyrics_not_shown_when_disabled() {
+        let st = state_with(5);
+        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let borders: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Border { .. }))
+            .collect();
+        let has_lyrics = borders.iter().any(|b| {
+            if let RenderCmd::Border { title, .. } = b {
+                title.as_deref() == Some("Lyrics")
+            } else {
+                false
+            }
+        });
+        assert!(!has_lyrics);
+    }
+
+    #[test]
+    fn lyrics_hidden_when_area_too_narrow() {
+        let mut st = state_with(5);
+        st.show_lyrics = true;
+        let cmds2 = render_ui(&st, &default_theme(), 20, 24);
+        let borders2: Vec<&RenderCmd> = cmds2
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Border { .. }))
+            .collect();
+        let has_lyrics = borders2.iter().any(|b| {
+            if let RenderCmd::Border { title, .. } = b {
+                title.as_deref() == Some("Lyrics")
+            } else {
+                false
+            }
+        });
+        assert!(!has_lyrics, "lyrics hidden when right panel < 15 wide");
+    }
+
+    #[test]
+    fn split_layout_when_lyrics_shown() {
+        let mut st = state_with(5);
+        st.show_lyrics = true;
+        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let borders: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Border { .. }))
+            .collect();
+        assert_eq!(borders.len(), 3);
+        // First border (Stations) should have width = 80*3/5 = 48
+        if let RenderCmd::Border { w, .. } = borders[0] {
+            assert_eq!(*w, 48);
+        }
+        // Third border (Lyrics) should start at x = 48
+        if let RenderCmd::Border { x, .. } = borders[2] {
+            assert_eq!(*x, 48);
+        }
+    }
+
+    #[test]
+    fn now_playing_panel_contains_volume() {
+        let mut st = state_with(5);
+        st.volume = 75;
+        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let borders: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Border { .. }))
+            .collect();
+        assert!(borders.len() >= 2);
+        if let RenderCmd::Border { title, .. } = borders[1] {
+            let t = title.as_deref().unwrap_or("");
+            assert!(
+                t.contains("Vol: 75%"),
+                "expected Vol: 75% in title, got: {t}"
+            );
+        }
+    }
+
+    #[test]
+    fn table_columns_use_country_name() {
+        let mut st = state_with(3);
+        // Override country to known codes
+        st.stations[0].country = "DE".into();
+        st.stations[1].country = "FR".into();
+        st.stations[2].country = "XX".into();
+        st.apply_filter();
+        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let table = cmds
+            .iter()
+            .find(|c| matches!(c, RenderCmd::Table { .. }))
+            .unwrap();
+        if let RenderCmd::Table { rows, .. } = table {
+            assert_eq!(rows[0][2], "Germany");
+            assert_eq!(rows[1][2], "France");
+            assert_eq!(rows[2][2], "XX"); // unknown code returned as-is
+        }
+    }
+
+    #[test]
+    fn table_scroll_offset() {
+        let mut st = state_with(30);
+        st.scroll = 10;
+        st.selected = 12;
+        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let table = cmds
+            .iter()
+            .find(|c| matches!(c, RenderCmd::Table { .. }))
+            .unwrap();
+        if let RenderCmd::Table {
+            rows,
+            selected,
+            current_row,
+            ..
+        } = table
+        {
+            // With scroll=10, visible rows start at index 10
+            assert_eq!(rows[0][0], "Station 10");
+            assert_eq!(rows[2][0], "Station 12");
+            assert_eq!(*selected, Some(2)); // vis_selected = 12 - 10 = 2
+            assert_eq!(*current_row, None); // no current_station set
+        }
+    }
+
+    #[test]
+    fn table_empty_filtered_no_rows() {
+        let mut st = state_with(5);
+        st.filtered.clear();
+        // render_ui accesses state.filtered so with empty it should produce empty rows
+        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let table = cmds
+            .iter()
+            .find(|c| matches!(c, RenderCmd::Table { .. }))
+            .unwrap();
+        if let RenderCmd::Table { rows, .. } = table {
+            assert!(rows.is_empty());
+        }
+    }
+
+    #[test]
+    fn table_visible_count_limited_by_area() {
+        let st = state_with(100);
+        let cmds = render_ui(&st, &default_theme(), 80, 10);
+        let table = cmds
+            .iter()
+            .find(|c| matches!(c, RenderCmd::Table { .. }))
+            .unwrap();
+        if let RenderCmd::Table { rows, h, .. } = table {
+            // With small area height, less rows visible
+            assert!(rows.len() < 100);
+            assert!(*h > 0);
+        }
+    }
+
+    #[test]
+    fn now_playing_error_shows_red_text() {
+        let mut st = state_with(5);
+        st.play_state = PlayState::Error("stream failed".into());
+        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let texts: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Text { .. }))
+            .collect();
+        let has_error = texts.iter().any(|t| {
+            if let RenderCmd::Text { text, fg, .. } = t {
+                text == "⚠ Error" && *fg == Some(default_theme().error)
+            } else {
+                false
+            }
+        });
+        assert!(has_error);
+    }
+
+    #[test]
+    fn lyrics_scroll_shows_percentage() {
+        let mut st = state_with(5);
+        st.show_lyrics = true;
+        // Many lines so scroll is needed (area_h=24 → ly_h=22)
+        st.lyrics_text = (0..50)
+            .map(|i| format!("line {i}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        st.lyrics_scroll = 14;
+        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let texts: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Text { .. }))
+            .collect();
+        let has_pct = texts.iter().any(|t| {
+            if let RenderCmd::Text { text, .. } = t {
+                text == "50%" || text == "0%" || text.contains('%')
+            } else {
+                false
+            }
+        });
+        assert!(has_pct, "expected scroll percentage indicator");
+    }
+
+    #[test]
+    fn stations_panel_focused_when_lyrics_shown_and_not_lyrics_focused() {
+        let mut st = state_with(5);
+        st.show_lyrics = true;
+        st.lyrics_focused = false;
+        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let borders: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Border { .. }))
+            .collect();
+        // Stations panel (first border) should use accent when focused
+        if let RenderCmd::Border { fg, .. } = borders[0] {
+            assert_eq!(
+                *fg,
+                default_theme().accent,
+                "stations panel should use accent when focused"
+            );
+        }
+    }
+
+    #[test]
+    fn lyrics_panel_focused_when_lyrics_focused() {
+        let mut st = state_with(5);
+        st.show_lyrics = true;
+        st.lyrics_focused = true;
+        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let borders: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Border { .. }))
+            .collect();
+        // Lyrics panel is the third border
+        assert!(borders.len() >= 3);
+        if let RenderCmd::Border { title, fg, .. } = &borders[2] {
+            assert_eq!(title.as_deref(), Some("Lyrics"));
+            assert_eq!(
+                *fg,
+                default_theme().accent,
+                "lyrics panel should use accent when focused"
+            );
+        }
+    }
+}
