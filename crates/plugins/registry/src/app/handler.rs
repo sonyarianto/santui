@@ -380,3 +380,479 @@ impl App {
         });
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, PluginRequest, ThemeData};
+    use santui_registry::{InstalledPlugin, PluginManifest};
+    use std::sync::mpsc;
+
+    struct TestHarness {
+        app: App,
+        _dir: std::path::PathBuf,
+    }
+
+    impl TestHarness {
+        fn new(name: &str) -> Self {
+            let dir = std::env::temp_dir().join(format!("santui-reg-test-{name}"));
+            let _ = std::fs::create_dir_all(&dir);
+            let r = santui_registry::Registry::new(dir.clone());
+            let mut app = App::new();
+            app.registry = Some(r);
+            app.theme = ThemeData {
+                text: [220; 3],
+                text_muted: [140; 3],
+                accent: [150; 3],
+                highlight: [250; 3],
+                logo: [255; 3],
+                background: [20; 3],
+                background_panel: [20; 3],
+                background_overlay: [10; 3],
+                border: [250; 3],
+                success: [120; 3],
+                error: [220; 3],
+                inverted_text: [20; 3],
+            };
+            app.area = Area { w: 80, h: 24 };
+            TestHarness { app, _dir: dir }
+        }
+
+        fn with_available(&mut self, count: usize) {
+            if let Some(ref mut r) = self.app.registry {
+                for i in 0..count {
+                    r.available.push(PluginManifest {
+                        id: format!("p{i}"),
+                        name: format!("Plugin {i}"),
+                        description: format!("Description {i}"),
+                        version: "1.0".into(),
+                        download_url: "http://example.com/pkg".into(),
+                        sha256: "abc".into(),
+                        size: 100,
+                        publisher: "Publisher".into(),
+                        capabilities: vec![],
+                    });
+                }
+            }
+        }
+
+        fn key(&self, key: IpcKey) -> HostMsg {
+            HostMsg::Key {
+                key,
+                modifiers: IpcKeyModifiers::default(),
+            }
+        }
+    }
+
+    fn key_msg(key: IpcKey) -> HostMsg {
+        HostMsg::Key {
+            key,
+            modifiers: IpcKeyModifiers::default(),
+        }
+    }
+
+    #[test]
+    fn test_handle_focus_clears_detail_and_status() {
+        let mut app = App::new();
+        app.detail_idx = Some(0);
+        app.status = "hello".into();
+        app.status_ticks = 5;
+        app.handle(HostMsg::Focus);
+        assert!(app.detail_idx.is_none());
+        assert!(app.status.is_empty());
+        assert_eq!(app.status_ticks, 0);
+    }
+
+    #[test]
+    fn test_handle_blur_clears_detail_and_status() {
+        let mut app = App::new();
+        app.detail_idx = Some(0);
+        app.status = "hello".into();
+        app.handle(HostMsg::Blur);
+        assert!(app.detail_idx.is_none());
+        assert!(app.status.is_empty());
+    }
+
+    #[test]
+    fn test_handle_theme_change() {
+        let mut app = App::new();
+        let new_theme = ThemeData {
+            text: [100; 3],
+            text_muted: [101; 3],
+            accent: [102; 3],
+            highlight: [103; 3],
+            logo: [104; 3],
+            background: [105; 3],
+            background_panel: [106; 3],
+            background_overlay: [107; 3],
+            border: [108; 3],
+            success: [109; 3],
+            error: [110; 3],
+            inverted_text: [111; 3],
+        };
+        app.handle(HostMsg::ThemeChange {
+            theme: new_theme.clone(),
+        });
+        assert_eq!(app.theme.text, new_theme.text);
+        assert_eq!(app.theme.accent, new_theme.accent);
+    }
+
+    #[test]
+    fn test_handle_resize() {
+        let mut app = App::new();
+        app.handle(HostMsg::Resize {
+            area: Area { w: 120, h: 40 },
+        });
+        assert_eq!(app.area.w, 120);
+        assert_eq!(app.area.h, 40);
+    }
+
+    #[test]
+    fn test_handle_shutdown_returns_immediately() {
+        let mut app = App::new();
+        let resp = app.handle(HostMsg::Shutdown);
+        assert!(!resp.consumed);
+        assert!(resp.commands.is_empty());
+        assert!(resp.hints.is_empty());
+        assert!(resp.request.is_none());
+    }
+
+    #[test]
+    fn test_handle_key_up_moves_cursor() {
+        let mut h = TestHarness::new("up_moves");
+        h.with_available(5);
+        h.app.cursor = 3;
+        let resp = h.app.handle(h.key(IpcKey::Up));
+        assert_eq!(h.app.cursor, 2);
+        assert!(resp.consumed);
+    }
+
+    #[test]
+    fn test_handle_key_up_at_top_stays() {
+        let mut h = TestHarness::new("up_top");
+        h.with_available(5);
+        h.app.cursor = 0;
+        h.app.handle(h.key(IpcKey::Up));
+        assert_eq!(h.app.cursor, 0);
+    }
+
+    #[test]
+    fn test_handle_key_down_moves_cursor() {
+        let mut h = TestHarness::new("down_moves");
+        h.with_available(5);
+        h.app.cursor = 0;
+        h.app.handle(h.key(IpcKey::Down));
+        assert_eq!(h.app.cursor, 1);
+    }
+
+    #[test]
+    fn test_handle_key_down_at_bottom_stays() {
+        let mut h = TestHarness::new("down_bottom");
+        h.with_available(5);
+        h.app.cursor = 4;
+        h.app.handle(h.key(IpcKey::Down));
+        assert_eq!(h.app.cursor, 4);
+    }
+
+    #[test]
+    fn test_handle_key_enter_opens_detail() {
+        let mut h = TestHarness::new("enter_detail");
+        h.with_available(5);
+        h.app.cursor = 2;
+        h.app.handle(h.key(IpcKey::Enter));
+        assert_eq!(h.app.detail_idx, Some(2));
+        assert_eq!(h.app.action_cursor, 0);
+    }
+
+    #[test]
+    fn test_handle_key_enter_on_empty_list_does_nothing() {
+        let mut app = App::new();
+        app.handle(key_msg(IpcKey::Enter));
+        assert!(app.detail_idx.is_none());
+    }
+
+    #[test]
+    fn test_handle_key_esc_in_list_not_consumed() {
+        let mut app = App::new();
+        let resp = app.handle(key_msg(IpcKey::Esc));
+        assert!(!resp.consumed);
+    }
+
+    #[test]
+    fn test_handle_key_q_in_list_not_consumed() {
+        let mut app = App::new();
+        let resp = app.handle(key_msg(IpcKey::Char('q')));
+        assert!(!resp.consumed);
+    }
+
+    #[test]
+    fn test_handle_key_d_opens_detail() {
+        let mut h = TestHarness::new("d_detail");
+        h.with_available(3);
+        h.app.cursor = 1;
+        h.app.handle(h.key(IpcKey::Char('d')));
+        assert_eq!(h.app.detail_idx, Some(1));
+    }
+
+    #[test]
+    fn test_handle_key_unrecognized_in_list_not_consumed() {
+        let mut h = TestHarness::new("unrec");
+        h.with_available(3);
+        let resp = h.app.handle(h.key(IpcKey::Char('x')));
+        assert!(!resp.consumed);
+    }
+
+    #[test]
+    fn test_handle_key_esc_in_detail_goes_back() {
+        let mut h = TestHarness::new("esc_detail");
+        h.with_available(3);
+        h.app.cursor = 1;
+        h.app.handle(h.key(IpcKey::Enter));
+        assert_eq!(h.app.detail_idx, Some(1));
+        h.app.handle(h.key(IpcKey::Esc));
+        assert!(h.app.detail_idx.is_none());
+    }
+
+    #[test]
+    fn test_handle_key_backspace_in_detail_goes_back() {
+        let mut h = TestHarness::new("bs_detail");
+        h.with_available(3);
+        h.app.cursor = 1;
+        h.app.handle(h.key(IpcKey::Enter));
+        assert_eq!(h.app.detail_idx, Some(1));
+        h.app.handle(h.key(IpcKey::Backspace));
+        assert!(h.app.detail_idx.is_none());
+    }
+
+    #[test]
+    fn test_handle_key_up_in_detail_moves_action_cursor() {
+        let mut h = TestHarness::new("up_action");
+        h.with_available(3);
+        h.app.cursor = 0;
+        h.app.handle(h.key(IpcKey::Enter));
+        h.app.action_cursor = 2;
+        h.app.handle(h.key(IpcKey::Up));
+        assert_eq!(h.app.action_cursor, 1);
+    }
+
+    #[test]
+    fn test_handle_key_up_in_detail_at_top_stays() {
+        let mut h = TestHarness::new("up_action_top");
+        h.with_available(3);
+        h.app.cursor = 0;
+        h.app.handle(h.key(IpcKey::Enter));
+        h.app.action_cursor = 0;
+        h.app.handle(h.key(IpcKey::Up));
+        assert_eq!(h.app.action_cursor, 0);
+    }
+
+    #[test]
+    fn test_handle_key_down_in_detail_moves_action_cursor() {
+        let mut h = TestHarness::new("down_action");
+        h.with_available(1);
+        if let Some(ref mut r) = h.app.registry {
+            r.installed.push(InstalledPlugin {
+                enabled: true,
+                version: "1.0".into(),
+                path: std::path::PathBuf::from("p0.exe"),
+                id: "p0".into(),
+                name: "Plugin 0".into(),
+                capabilities: vec![],
+            });
+        }
+        // Now available_actions returns [Disable, Delete] = 2 actions
+        h.app.cursor = 0;
+        h.app.handle(h.key(IpcKey::Enter));
+        assert_eq!(h.app.action_cursor, 0);
+        h.app.handle(h.key(IpcKey::Down));
+        assert_eq!(h.app.action_cursor, 1);
+    }
+
+    #[test]
+    fn test_handle_key_enter_in_detail_triggers_install() {
+        let mut h = TestHarness::new("enter_install");
+        h.with_available(3);
+        h.app.cursor = 0;
+        h.app.handle(h.key(IpcKey::Enter));
+        assert_eq!(h.app.detail_idx, Some(0));
+        h.app.handle(h.key(IpcKey::Enter));
+        assert!(h.app.detail_idx.is_none());
+        assert!(h.app.download_rx.is_some());
+    }
+
+    #[test]
+    fn test_handle_tick_calls_tick_status() {
+        let mut app = App::new();
+        app.set_status("test".into());
+        app.handle(HostMsg::Tick);
+        assert_eq!(app.status_ticks, 1);
+    }
+
+    #[test]
+    fn test_handle_tick_processes_download_progress() {
+        let mut h = TestHarness::new("tick_progress");
+        let (tx, rx) = mpsc::channel();
+        tx.send(DownloadEvent::Progress(50, 100)).unwrap();
+        h.app.download_rx = Some(rx);
+        h.app.handle(HostMsg::Tick);
+        assert_eq!(h.app.download_progress, Some((50, 100)));
+    }
+
+    #[test]
+    fn test_handle_tick_processes_download_error() {
+        let mut h = TestHarness::new("tick_error");
+        let (tx, rx) = mpsc::channel();
+        tx.send(DownloadEvent::Error("fail".into())).unwrap();
+        h.app.download_rx = Some(rx);
+        h.app.pending_install_id = Some("p0".into());
+        h.app.handle(HostMsg::Tick);
+        assert!(h.app.download_rx.is_none());
+        assert!(h.app.status.contains("Error"));
+    }
+
+    #[test]
+    fn test_handle_tick_disconnected_channel() {
+        let mut h = TestHarness::new("tick_disc");
+        let (tx, rx) = mpsc::channel::<DownloadEvent>();
+        drop(tx);
+        h.app.download_rx = Some(rx);
+        h.app.handle(HostMsg::Tick);
+        assert!(h.app.download_rx.is_none());
+        assert!(h.app.status.contains("Error"));
+    }
+
+    #[test]
+    fn test_handle_tick_empty_channel_preserved() {
+        let mut h = TestHarness::new("tick_empty");
+        let (tx, rx) = mpsc::channel::<DownloadEvent>();
+        h.app.download_rx = Some(rx);
+        h.app.handle(HostMsg::Tick);
+        assert!(h.app.download_rx.is_some());
+        drop(tx);
+    }
+
+    #[test]
+    fn test_available_actions_no_registry() {
+        let app = App::new();
+        assert!(app.available_actions(0).is_empty());
+    }
+
+    #[test]
+    fn test_available_actions_out_of_bounds() {
+        let mut h = TestHarness::new("avail_oob");
+        assert!(h.app.available_actions(0).is_empty());
+        h.with_available(1);
+        assert!(h.app.available_actions(5).is_empty());
+    }
+
+    #[test]
+    fn test_available_actions_not_installed() {
+        let mut h = TestHarness::new("avail_ni");
+        h.with_available(1);
+        assert_eq!(h.app.available_actions(0), vec![Action::Install]);
+    }
+
+    #[test]
+    fn test_available_actions_installed_enabled() {
+        let mut h = TestHarness::new("avail_en");
+        h.with_available(1);
+        if let Some(ref mut r) = h.app.registry {
+            r.installed.push(InstalledPlugin {
+                enabled: true,
+                version: "1.0".into(),
+                path: std::path::PathBuf::from("p0.exe"),
+                id: "p0".into(),
+                name: "Plugin 0".into(),
+                capabilities: vec![],
+            });
+        }
+        let actions = h.app.available_actions(0);
+        assert_eq!(actions.len(), 2);
+        assert_eq!(actions[0], Action::Disable);
+        assert_eq!(actions[1], Action::Delete);
+    }
+
+    #[test]
+    fn test_available_actions_installed_disabled() {
+        let mut h = TestHarness::new("avail_dis");
+        h.with_available(1);
+        if let Some(ref mut r) = h.app.registry {
+            r.installed.push(InstalledPlugin {
+                enabled: false,
+                version: "1.0".into(),
+                path: std::path::PathBuf::from("p0.exe"),
+                id: "p0".into(),
+                name: "Plugin 0".into(),
+                capabilities: vec![],
+            });
+        }
+        let actions = h.app.available_actions(0);
+        assert_eq!(actions.len(), 2);
+        assert_eq!(actions[0], Action::Enable);
+        assert_eq!(actions[1], Action::Delete);
+    }
+
+    #[test]
+    fn test_available_actions_update_available() {
+        let mut h = TestHarness::new("avail_upd");
+        h.with_available(1);
+        if let Some(ref mut r) = h.app.registry {
+            r.installed.push(InstalledPlugin {
+                enabled: true,
+                version: "0.9".into(),
+                path: std::path::PathBuf::from("p0.exe"),
+                id: "p0".into(),
+                name: "Plugin 0".into(),
+                capabilities: vec![],
+            });
+        }
+        let actions = h.app.available_actions(0);
+        assert_eq!(actions.len(), 3);
+        assert_eq!(actions[0], Action::Disable);
+        assert_eq!(actions[1], Action::Update);
+        assert_eq!(actions[2], Action::Delete);
+    }
+
+    #[test]
+    fn test_consumed_true_on_handled_key() {
+        let mut h = TestHarness::new("cons_true");
+        h.with_available(3);
+        let resp = h.app.handle(h.key(IpcKey::Up));
+        assert!(resp.consumed);
+    }
+
+    #[test]
+    fn test_consumed_false_on_unhandled_key() {
+        let mut h = TestHarness::new("cons_false");
+        h.with_available(3);
+        let resp = h.app.handle(h.key(IpcKey::Char('z')));
+        assert!(!resp.consumed);
+    }
+
+    #[test]
+    fn test_consumed_false_on_focus() {
+        let mut app = App::new();
+        let resp = app.handle(HostMsg::Focus);
+        assert!(!resp.consumed);
+    }
+
+    #[test]
+    fn test_enable_triggers_plugins_changed() {
+        let mut h = TestHarness::new("enable_chg");
+        h.with_available(1);
+        if let Some(ref mut r) = h.app.registry {
+            r.installed.push(InstalledPlugin {
+                enabled: false,
+                version: "1.0".into(),
+                path: std::path::PathBuf::from("p0.exe"),
+                id: "p0".into(),
+                name: "Plugin 0".into(),
+                capabilities: vec![],
+            });
+        }
+        h.app.cursor = 0;
+        h.app.handle(h.key(IpcKey::Enter));
+        let resp = h.app.handle(h.key(IpcKey::Enter));
+        assert!(matches!(resp.request, Some(PluginRequest::PluginsChanged)));
+    }
+}

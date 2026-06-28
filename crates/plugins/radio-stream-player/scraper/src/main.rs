@@ -432,7 +432,7 @@ fn parse_genres(html: &str) -> Vec<String> {
         if !genre.is_empty() {
             genres.push(genre.to_string());
         }
-        pos = value_start + quote_end + after_close[quote_end..].find("</a>").unwrap_or(0) + 4;
+        pos = value_start + quote_end + after_close.find("</a>").unwrap_or(0) + 4;
     }
     genres
 }
@@ -543,6 +543,261 @@ fn enrich_genres(conn: &Connection) {
         }
         println!("Genre enrichment done — {enriched} enriched, {failed} failed");
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rusqlite::Connection;
+
+    #[test]
+    fn test_extract_attr_basic() {
+        let html =
+            r#"<div class="b-play station_play" stream="http://example.com" radioName="Test">"#;
+        assert_eq!(
+            extract_attr(html, "stream"),
+            Some("http://example.com".into())
+        );
+        assert_eq!(extract_attr(html, "radioName"), Some("Test".into()));
+    }
+
+    #[test]
+    fn test_extract_attr_not_found() {
+        assert_eq!(extract_attr("no attributes here", "stream"), None);
+    }
+
+    #[test]
+    fn test_extract_attr_empty_value() {
+        let html = r#"<div stream="">"#;
+        assert_eq!(extract_attr(html, "stream"), Some(String::new()));
+    }
+
+    #[test]
+    fn test_unescape_html_all_entities() {
+        assert_eq!(unescape_html("Rock &amp; Roll"), "Rock & Roll");
+        assert_eq!(unescape_html("It&#39;s"), "It's");
+        assert_eq!(unescape_html("&quot;Quote&quot;"), "\"Quote\"");
+        assert_eq!(unescape_html("A &lt; B &gt; C"), "A < B > C");
+    }
+
+    #[test]
+    fn test_unescape_html_unchanged() {
+        assert_eq!(unescape_html("Plain text"), "Plain text");
+    }
+
+    #[test]
+    fn test_unescape_html_empty() {
+        assert_eq!(unescape_html(""), "");
+    }
+
+    #[test]
+    fn test_extract_stations_single() {
+        let html = r#"<div class="b-play station_play" stream="http://example.com/stream" radioName="My Station" radioId="us.test">"#;
+        let stations = extract_stations(html);
+        assert_eq!(stations.len(), 1);
+        assert_eq!(
+            stations[0],
+            (
+                "My Station".into(),
+                "http://example.com/stream".into(),
+                "us.test".into()
+            )
+        );
+    }
+
+    #[test]
+    fn test_extract_stations_cleans_dist_param() {
+        let html = r#"<div class="b-play station_play" stream="http://example.com/stream?dist=onlineradiobox" radioName="Station A">"#;
+        let stations = extract_stations(html);
+        assert_eq!(stations[0].1, "http://example.com/stream");
+    }
+
+    #[test]
+    fn test_extract_stations_cleans_ref_param() {
+        let html = r#"<div class="b-play station_play" stream="http://example.com/stream?ref=onlineradiobox26" radioName="Station A">"#;
+        let stations = extract_stations(html);
+        assert_eq!(stations[0].1, "http://example.com/stream");
+    }
+
+    #[test]
+    fn test_extract_stations_cleans_ampersand_params() {
+        let html = r#"<div class="b-play station_play" stream="http://example.com/stream?a=1&dist=onlineradiobox" radioName="Station A">"#;
+        let stations = extract_stations(html);
+        assert_eq!(stations[0].1, "http://example.com/stream?a=1");
+    }
+
+    #[test]
+    fn test_extract_stations_multiple() {
+        let html = concat!(
+            r#"<div class="b-play station_play" stream="http://a.com/s" radioName="A" radioId="us.a"></div>"#,
+            r#"<div class="b-play station_play" stream="http://b.com/s" radioName="B" radioId="us.b"></div>"#,
+        );
+        let stations = extract_stations(html);
+        assert_eq!(stations.len(), 2);
+    }
+
+    #[test]
+    fn test_extract_stations_no_match() {
+        assert!(extract_stations("<html><body>no stations</body></html>").is_empty());
+    }
+
+    #[test]
+    fn test_extract_stations_empty_name_skipped() {
+        let html =
+            r#"<div class="b-play station_play" stream="http://example.com/s" radioName="">"#;
+        assert!(extract_stations(html).is_empty());
+    }
+
+    #[test]
+    fn test_extract_stations_empty_url_skipped() {
+        let html = r#"<div class="b-play station_play" stream="" radioName="Station A">"#;
+        assert!(extract_stations(html).is_empty());
+    }
+
+    #[test]
+    fn test_extract_stations_unescapes_name() {
+        let html = r#"<div class="b-play station_play" stream="http://example.com/s" radioName="Rock &amp; Roll">"#;
+        let stations = extract_stations(html);
+        assert_eq!(stations[0].0, "Rock & Roll");
+    }
+
+    #[test]
+    fn test_extract_stations_missing_radio_id_defaults_empty() {
+        let html =
+            r#"<div class="b-play station_play" stream="http://example.com/s" radioName="A">"#;
+        let stations = extract_stations(html);
+        assert_eq!(stations[0].2, "");
+    }
+
+    #[test]
+    fn test_parse_genres_basic() {
+        let html = r#"<ul class="station__tags" role="list"><li><a href="/us/kmgl/">pop</a></li><li><a href="/us/kmgl/">rock</a></li></ul>"#;
+        assert_eq!(parse_genres(html), vec!["pop", "rock"]);
+    }
+
+    #[test]
+    fn test_parse_genres_no_tags_section() {
+        assert!(parse_genres("<html><body>no tags</body></html>").is_empty());
+    }
+
+    #[test]
+    fn test_parse_genres_empty_li_skipped() {
+        let html = r#"<ul class="station__tags" role="list"><li><a href="/us/x/"> </a></li></ul>"#;
+        assert!(parse_genres(html).is_empty());
+    }
+
+    #[test]
+    fn test_has_column_found() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("CREATE TABLE stations (id INTEGER, name TEXT, genre TEXT);")
+            .unwrap();
+        assert!(has_column(&conn, "genre").unwrap());
+        assert!(has_column(&conn, "name").unwrap());
+        assert!(!has_column(&conn, "nonexistent").unwrap());
+    }
+
+    #[test]
+    fn test_migrate_adds_columns() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE stations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, url TEXT NOT NULL, country TEXT NOT NULL DEFAULT '');"
+        ).unwrap();
+        migrate(&conn).unwrap();
+        assert!(has_column(&conn, "genre").unwrap());
+        assert!(has_column(&conn, "radio_id").unwrap());
+    }
+
+    #[test]
+    fn test_migrate_idempotent() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE stations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, url TEXT NOT NULL, country TEXT NOT NULL DEFAULT '', genre TEXT NOT NULL DEFAULT '', radio_id TEXT NOT NULL DEFAULT '');"
+        ).unwrap();
+        migrate(&conn).unwrap();
+    }
+
+    #[test]
+    fn test_pick_radio_ids_empty() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE stations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, url TEXT NOT NULL, country TEXT NOT NULL DEFAULT '', genre TEXT NOT NULL DEFAULT '', radio_id TEXT NOT NULL DEFAULT '');"
+        ).unwrap();
+        assert!(pick_radio_ids(&conn, "genre = ''", 5).is_empty());
+    }
+
+    #[test]
+    fn test_pick_radio_ids_returns_matching() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE stations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, url TEXT NOT NULL, country TEXT NOT NULL DEFAULT '', genre TEXT NOT NULL DEFAULT '', radio_id TEXT NOT NULL DEFAULT '');"
+        ).unwrap();
+        conn.execute(
+            "INSERT INTO stations (name, url, radio_id, genre) VALUES ('test', 'http://example.com', 'us.test', '')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO stations (name, url, radio_id, genre) VALUES ('other', 'http://other.com', 'us.other', 'pop')",
+            [],
+        )
+        .unwrap();
+        let ids = pick_radio_ids(&conn, "genre = ''", 5);
+        assert_eq!(ids, vec!["us.test"]);
+    }
+
+    #[test]
+    fn test_pick_radio_ids_respects_limit() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE stations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, url TEXT NOT NULL, country TEXT NOT NULL DEFAULT '', genre TEXT NOT NULL DEFAULT '', radio_id TEXT NOT NULL DEFAULT '');"
+        ).unwrap();
+        for i in 0..5 {
+            conn.execute(
+                "INSERT INTO stations (name, url, radio_id, genre) VALUES (?1, 'http://a.com', ?2, '')",
+                rusqlite::params![format!("s{i}"), format!("us.{i}")],
+            )
+            .unwrap();
+        }
+        let ids = pick_radio_ids(&conn, "genre = ''", 3);
+        assert_eq!(ids.len(), 3);
+    }
+
+    #[test]
+    fn test_app_data_dir_returns_path() {
+        let path = app_data_dir();
+        assert!(path.ends_with("santui"));
+    }
+
+    #[test]
+    fn test_db_path_ends_with_correct_filename() {
+        let path = db_path();
+        assert!(path.ends_with("radio_stream_stations.db"));
+        assert!(path.to_string_lossy().contains("santui"));
+    }
+
+    #[test]
+    fn test_all_countries_has_entries() {
+        assert!(ALL_COUNTRIES.len() >= 200);
+        for &(code, _iso) in ALL_COUNTRIES {
+            assert_eq!(code.len(), 2, "Country code '{code}' is not 2 chars");
+        }
+    }
+
+    #[test]
+    fn test_all_countries_contains_known_codes() {
+        let url_codes: Vec<&str> = ALL_COUNTRIES.iter().map(|(c, _)| *c).collect();
+        assert!(url_codes.contains(&"us"));
+        assert!(url_codes.contains(&"de"));
+        assert!(url_codes.contains(&"jp"));
+        assert!(
+            url_codes.contains(&"uk"),
+            "uk is onlineradiobox's non-standard code for GB"
+        );
+        let iso_codes: Vec<&str> = ALL_COUNTRIES.iter().map(|(_, i)| *i).collect();
+        assert!(iso_codes.contains(&"GB"));
+        assert!(iso_codes.contains(&"US"));
+        assert!(iso_codes.contains(&"DE"));
+    }
 }
 
 fn main() {

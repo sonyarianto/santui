@@ -375,3 +375,72 @@ impl App {
         });
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use santui_ipc::protocol::Area;
+
+    #[test]
+    fn test_max_list_h_normal() {
+        assert_eq!(max_list_h(24), 14);
+    }
+
+    #[test]
+    fn test_max_list_h_minimum() {
+        assert_eq!(max_list_h(12), 3);
+    }
+
+    #[test]
+    fn test_max_list_h_small() {
+        assert_eq!(max_list_h(13), 3);
+    }
+
+    #[test]
+    fn test_hints_list_mode() {
+        let app = App::new();
+        let hints = app.hints();
+        assert_eq!(hints.len(), 2);
+        assert_eq!(hints[0], ("↑↓".into(), "navigate".into()));
+        assert_eq!(hints[1], ("↵".into(), "select".into()));
+    }
+
+    #[test]
+    fn test_hints_detail_mode() {
+        let mut app = App::new();
+        app.detail_idx = Some(0);
+        let hints = app.hints();
+        assert_eq!(hints.len(), 3);
+        assert_eq!(hints[0], ("↑↓".into(), "navigate".into()));
+        assert_eq!(hints[1], ("↵".into(), "select".into()));
+        assert_eq!(hints[2], ("esc".into(), "back".into()));
+    }
+
+    #[test]
+    fn test_fg_returns_some_color() {
+        let app = App::new();
+        assert_eq!(app.fg([100, 200, 50]), Some([100, 200, 50]));
+    }
+
+    #[test]
+    fn test_bg_returns_none() {
+        let app = App::new();
+        assert_eq!(app.bg(), None);
+    }
+
+    #[test]
+    fn test_render_commands_empty_app() {
+        let app = App::new();
+        let cmds = app.render_commands();
+        assert!(!cmds.is_empty());
+        assert!(cmds.iter().any(|c| matches!(c, RenderCmd::Border { .. })));
+    }
+
+    #[test]
+    fn test_render_commands_small_area_returns_empty() {
+        let mut app = App::new();
+        app.area = Area { w: 5, h: 2 };
+        let cmds = app.render_commands();
+        assert!(cmds.is_empty());
+    }
+}

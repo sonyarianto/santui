@@ -106,3 +106,95 @@ impl App {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_app_new_defaults() {
+        let app = App::new();
+        assert!(app.registry.is_none());
+        assert_eq!(app.cursor, 0);
+        assert_eq!(app.scroll, 0);
+        assert!(app.status.is_empty());
+        assert_eq!(app.status_ticks, 0);
+        assert!(app.detail_idx.is_none());
+        assert_eq!(app.action_cursor, 0);
+        assert_eq!(app.area.w, 80);
+        assert_eq!(app.area.h, 24);
+        assert!(app.plugins_dir.as_os_str().is_empty());
+        assert!(app.download_rx.is_none());
+        assert!(app.download_progress.is_none());
+        assert!(app.pending_install_id.is_none());
+        assert!(app.pending_install_name.is_none());
+        assert!(app.pending_install_version.is_none());
+        assert!(app.pending_install_capabilities.is_empty());
+    }
+
+    #[test]
+    fn test_available_count_no_registry() {
+        let app = App::new();
+        assert_eq!(app.available_count(), 0);
+    }
+
+    #[test]
+    fn test_set_status() {
+        let mut app = App::new();
+        assert!(app.status.is_empty());
+        app.set_status("hello".into());
+        assert_eq!(app.status, "hello");
+        assert_eq!(app.status_ticks, 0);
+    }
+
+    #[test]
+    fn test_set_status_overwrites_previous() {
+        let mut app = App::new();
+        app.set_status("first".into());
+        app.status_ticks = 10;
+        app.set_status("second".into());
+        assert_eq!(app.status, "second");
+        assert_eq!(app.status_ticks, 0);
+    }
+
+    #[test]
+    fn test_tick_status_auto_dismiss() {
+        let mut app = App::new();
+        app.set_status("test".into());
+        for _ in 0..20 {
+            app.tick_status();
+        }
+        assert_eq!(app.status, "test");
+        app.tick_status();
+        assert!(app.status.is_empty());
+    }
+
+    #[test]
+    fn test_tick_status_no_status() {
+        let mut app = App::new();
+        app.tick_status();
+        assert!(app.status.is_empty());
+        assert_eq!(app.status_ticks, 0);
+    }
+
+    #[test]
+    fn test_tick_status_increments_ticks() {
+        let mut app = App::new();
+        app.set_status("test".into());
+        app.tick_status();
+        assert_eq!(app.status_ticks, 1);
+        app.tick_status();
+        assert_eq!(app.status_ticks, 2);
+    }
+
+    #[test]
+    fn test_ensure_scroll_visible_no_registry() {
+        let mut app = App::new();
+        app.cursor = 5;
+        app.scroll = 10;
+        // With no registry, available_count is 0 so cursor stays unchanged
+        // but scroll is adjusted if cursor is above/below visible range
+        app.ensure_scroll_visible();
+        assert_eq!(app.cursor, 5);
+    }
+}

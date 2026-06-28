@@ -6,6 +6,23 @@ use santui_db::open_db;
 #[cfg(feature = "auth")]
 use santui_auth::AuthClient;
 
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_santui_crate_version_exists() {
+        let version = env!("CARGO_PKG_VERSION");
+        assert!(!version.is_empty());
+        let parts: Vec<&str> = version.split('.').collect();
+        assert_eq!(parts.len(), 3);
+    }
+
+    #[test]
+    fn test_santui_depends_on_core_crate() {
+        // Compile-time check: if santui-core is not resolvable this won't compile
+        let _ = santui_core::Santui::new();
+    }
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _ = env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))
         .format_timestamp(None)
