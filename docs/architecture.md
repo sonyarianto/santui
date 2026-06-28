@@ -5,7 +5,7 @@
 ### Core
 
 - **Santui** — main app struct; delegates to dedicated subsystems: `PluginManager`, `ThemeManager`, `PaletteController`, `RegistryScreen`, `StatusBar`, `ConfigManager`, and `EventBus`.
-- **Plugin trait** — all methods have default implementations; only `id()`, `name()`, and `init()` are required. Additional lifecycle hooks: `handle_key`, `render`, `tick`, `on_focus`/`on_blur`, `on_theme_change`, `on_user_update`, `status_hints`, `commands`, `handle_palette_command`, `on_plugin_message`.
+- **Plugin trait** — all methods have default implementations; only `id()`, `name()`, and `init()` are required. Additional lifecycle hooks: `handle_key`, `render`, `tick`, `on_focus`/`on_blur`, `on_theme_change`, `on_user_update`, `status_hints`, `commands`, `handle_palette_command`, `on_plugin_message`, `shutdown`, `binary_path`, `is_alive`, `can_background`, `set_capabilities`.
 - **Event loop** — `Santui::run()` drives tick, key dispatch, config polling, event bus draining, and render.
 - **Palette** — command palette overlay (`Ctrl+P`); combines built-in commands from `AppState.builtin_items` + dynamic plugin commands from `PluginCmdItem` + plugin-registered commands for enabled registry plugins. "Switch Theme" opens a searchable theme picker (via `ThemeManager`).
 - **About screen** — shown on `?` key; uses `render_about()`.
@@ -43,7 +43,7 @@ Plugins are managed at runtime through the plugin registry (opened via `Ctrl+P` 
 | Source | Format | Contents | When loaded |
 |--------|--------|----------|-------------|
 | `registry.toml` | TOML | `installed` — list of plugins the user installed, with `enabled`, `version`, `path` | At startup (in `Registry::new()`) |
-| Plugin manifest | JSON | `available` — full catalogue of plugins (`id`, `name`, `description`, `version`, `download_url`, `sha256`) | When the registry screen is opened (`fetch_manifest()` for PROD, `load_local_manifest()` for DEV) |
+| Plugin manifest | JSON | `available` — full catalogue of plugins (`id`, `name`, `description`, `version`, `download_url`, `sha256`, `size`, `publisher`, `capabilities`) | When the registry screen is opened (`fetch_manifest()` for PROD, `load_local_manifest()` for DEV) |
 
 **Install flow:**
 
@@ -76,6 +76,14 @@ The call sites:
 Everything else (install, enable/disable, TOML persistence, `refresh_dynamic_items`, plugin spawning) is identical between DEV and PROD.
 
 At build time, `cargo build --workspace` produces all workspace binaries including `santui.exe` (host) and any plugin binaries. For production packaging, see `scripts/package-release.ps1` (Windows) or `scripts/package-release-macos.sh` (macOS), which bundle the host binary, plugins, and native dependencies.
+
+### Background-capable plugins
+
+Plugins that declare `"capabilities": ["background"]` in their manifest entry (e.g. the radio streaming player) survive `Esc` — instead of being shut down, they receive a `Blur` message and are hidden from the display. The audio (or any background activity) keeps running.
+
+When the user re-selects the plugin from the palette/carousel, the host sends `Focus` — no re-spawn needed. On app exit, all plugins are shut down regardless of capability.
+
+The `can_background()` method on the `Plugin` trait defaults to `false`. `IpcPluginHost` overrides it to check the `capabilities` vec set at spawn time via `set_capabilities()`. The `PluginFactory` does not need to know about capabilities — they are applied after construction in `spawn_and_init()`.
 
 ### Theme
 

@@ -30,7 +30,7 @@ When building plugins, dev mode lets you test installation and native dependenci
 
 1. Builds the workspace (`cargo build --workspace`)
 2. Copies native assets from `native/` (e.g. `libmpv-2.dll`) into `target/debug/native/`
-3. Scans `target/debug/` for plugin binaries and generates `plugins.json` with real SHA-256 hashes and file sizes
+3. Scans `target/debug/` for plugin binaries and generates `plugins.json` with real SHA-256 hashes, file sizes, and declared capabilities (e.g. `"capabilities": ["background"]`)
 
 ### How dev mode works
 
