@@ -156,7 +156,7 @@ fn writer_loop(mut stdin: impl Write, high_rx: Receiver<String>, low_rx: Receive
         }
         // Then check low-priority with a short timeout so high-priority
         // messages are never stuck behind a long block.
-        match low_rx.recv_timeout(Duration::from_millis(10)) {
+        match low_rx.recv_timeout(Duration::from_millis(1)) {
             Ok(msg) => {
                 if writeln!(stdin, "{msg}").is_err() || stdin.flush().is_err() {
                     return;
@@ -510,8 +510,10 @@ impl Plugin for IpcPluginHost {
             _ => return false,
         };
         // Block briefly for the response so the consumed flag reflects this
-        // specific key event, not a stale response (e.g., from an earlier Tick).
-        self.send_recv_blocking_timeout(&HostMsg::Key { key: ipc_key }, Duration::from_millis(50));
+        // specific key event. 5ms covers the writer's 1ms low-priority wait
+        // window plus plugin processing and channel round-trip, while keeping
+        // the worst-case stall well under a 60fps frame (16.6ms).
+        self.send_recv_blocking_timeout(&HostMsg::Key { key: ipc_key }, Duration::from_millis(5));
         self.consumed
     }
 

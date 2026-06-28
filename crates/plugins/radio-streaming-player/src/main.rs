@@ -465,8 +465,7 @@ impl App {
                                 Ok(data) => {
                                     let _ = tx2.send(MpvMsg::Lyrics(data));
                                 }
-                                Err(e) => {
-                                    log::warn!("LRCLib error: {e}");
+                                Err(_) => {
                                     let _ = tx2.send(MpvMsg::Lyrics(None));
                                 }
                             }
