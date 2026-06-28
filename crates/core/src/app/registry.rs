@@ -22,4 +22,10 @@ impl Santui {
     pub fn register_default_plugin(&mut self, id: &str, name: &str, path: &Path) {
         self.plugin_manager.register_new(id, name, path);
     }
+
+    /// Mark a plugin as persistent (stays loaded on Esc).
+    /// Used for internal plugins like the registry.
+    pub fn set_plugin_persistent(&mut self, id: &str, persistent: bool) {
+        self.plugin_manager.set_persistent(id, persistent);
+    }
 }

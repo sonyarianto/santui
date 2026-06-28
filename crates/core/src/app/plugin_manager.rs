@@ -65,6 +65,12 @@ impl PluginManager {
     }
 
     /// Store the plugin factory so we can recreate plugins during hot-reload.
+    pub fn set_persistent(&mut self, id: &str, persistent: bool) {
+        if let Some(plugin) = self.plugins.iter_mut().find(|p| p.id() == id) {
+            plugin.set_persistent(persistent);
+        }
+    }
+
     pub fn set_factory(&mut self, factory: PluginFactory) {
         self.plugin_factory = Some(factory);
     }
@@ -199,8 +205,9 @@ impl PluginManager {
             return;
         }
 
-        // Keep the registry plugin loaded so its palette entry survives.
-        if self.plugins[idx].id() == "plugin-registry" {
+        // Persistent plugins (e.g., registry) stay loaded so their palette
+        // entries and background processes survive.
+        if self.plugins[idx].persistent() {
             self.plugins[idx].on_blur();
             self.active_idx = None;
             return;

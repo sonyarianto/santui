@@ -74,6 +74,19 @@ pub trait Plugin: Send {
     /// Set runtime capabilities (e.g. `"background"`) declared in the plugin manifest.
     /// Default is no-op; IPC plugins override this to store the value.
     fn set_capabilities(&mut self, _caps: Vec<String>) {}
+
+    /// Whether this plugin should stay loaded when the user presses Esc.
+    /// Persistent plugins are blurred but not shut down, keeping their
+    /// palette entries and background processes alive.
+    /// Default is `false`. Override to return `true` for plugins that
+    /// must not be unloaded (e.g., the registry plugin).
+    fn persistent(&self) -> bool {
+        false
+    }
+
+    /// Mark this plugin as persistent.  Default is no-op; IPC plugins
+    /// override this to store the value.
+    fn set_persistent(&mut self, _persistent: bool) {}
 }
 
 pub struct PluginContext {

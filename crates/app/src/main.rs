@@ -45,6 +45,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
         .unwrap_or_else(|| PathBuf::from("santui-registry-plugin"));
     app.register_default_plugin("plugin-registry", "Plugin Registry", &registry_bin);
+    app.set_plugin_persistent("plugin-registry", true);
 
     #[cfg(feature = "auth")]
     {

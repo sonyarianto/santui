@@ -55,6 +55,8 @@ pub struct IpcPluginHost {
     crashed: bool,
     /// Whether the last key event was consumed (handled) by the plugin.
     consumed: bool,
+    /// Whether this plugin stays loaded on Esc (e.g., the registry plugin).
+    persistent: bool,
 }
 
 impl IpcPluginHost {
@@ -93,6 +95,7 @@ impl IpcPluginHost {
             reader_thread: None,
             crashed: false,
             consumed: false,
+            persistent: false,
         }
     }
 
@@ -606,6 +609,14 @@ impl Plugin for IpcPluginHost {
 
     fn set_capabilities(&mut self, caps: Vec<String>) {
         self.capabilities = caps;
+    }
+
+    fn persistent(&self) -> bool {
+        self.persistent
+    }
+
+    fn set_persistent(&mut self, persistent: bool) {
+        self.persistent = persistent;
     }
 
     fn binary_path(&self) -> Option<&Path> {
