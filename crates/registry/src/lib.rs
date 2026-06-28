@@ -171,6 +171,7 @@ impl Registry {
 
         let target_path = self.plugins_dir.join(plugin_filename(&manifest.id));
 
+        self.installed.retain(|p| p.id != manifest.id);
         self.installed.push(InstalledPlugin {
             enabled: true,
             version: manifest.version.clone(),
@@ -294,6 +295,7 @@ impl Registry {
         target_path: PathBuf,
         capabilities: &[String],
     ) -> Result<(), String> {
+        self.installed.retain(|p| p.id != id);
         self.installed.push(InstalledPlugin {
             enabled: true,
             version: version.to_string(),
@@ -523,6 +525,16 @@ mod tests {
         assert_eq!(r.installed.len(), 1);
         assert_eq!(r.installed[0].id, "p1");
         assert!(r.installed[0].enabled);
+
+        // Adding the same id replaces rather than duplicates
+        r.add_installed("p1", "Plugin 1", "2.0", PathBuf::from("p1.exe"), &[])
+            .unwrap();
+        assert_eq!(
+            r.installed.len(),
+            1,
+            "duplicate id should replace, not append"
+        );
+        assert_eq!(r.installed[0].version, "2.0");
 
         // Config file was written
         let config_path = dir.join("registry.toml");
