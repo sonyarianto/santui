@@ -440,10 +440,10 @@ fn parse_genres(html: &str) -> Vec<String> {
 /// How many already-genred stations to refresh per run.
 const REFRESH_PER_RUN: usize = 10;
 
-/// Fetch a station's detail page and extract genre tags.
-/// radio_id is `us.kmgl` — convert to `https://onlineradiobox.com/us/kmgl/`.
+/// Fetch a station's detail page and parse genre tags (HTTP only, no DB).
+/// radio_id is `us.kmgl` — converted to `https://onlineradiobox.com/us/kmgl/`.
 /// Returns the genres string (comma-separated) on success.
-fn enrich_station_genre(conn: &Connection, radio_id: &str) -> Result<String, String> {
+fn fetch_and_parse_genre(radio_id: &str) -> Result<String, String> {
     let path = radio_id.replace('.', "/");
     let url = format!("https://onlineradiobox.com/{path}/");
     let mut resp = ureq::get(&url)
@@ -459,13 +459,7 @@ fn enrich_station_genre(conn: &Connection, radio_id: &str) -> Result<String, Str
     if genres.is_empty() {
         return Ok(String::new());
     }
-    let joined = genres.join(", ");
-    conn.execute(
-        "UPDATE stations SET genre = ?1 WHERE radio_id = ?2",
-        rusqlite::params![joined, radio_id],
-    )
-    .map_err(|e| format!("DB update failed: {e}"))?;
-    Ok(joined)
+    Ok(genres.join(", "))
 }
 
 fn pick_radio_ids(conn: &Connection, where_clause: &str, limit: usize) -> Vec<String> {
@@ -480,17 +474,18 @@ fn pick_radio_ids(conn: &Connection, where_clause: &str, limit: usize) -> Vec<St
 }
 
 /// Enrich a random sample of stations — fill new and refresh existing.
+/// HTTP fetches run concurrently, DB updates are serial.
 fn enrich_genres(conn: &Connection) {
     let new_limit = GENRE_SAMPLE_SIZE - REFRESH_PER_RUN;
-    let mut rows: Vec<(String, &str)> = pick_radio_ids(conn, "genre = ''", new_limit)
+    let mut rows: Vec<(String, String)> = pick_radio_ids(conn, "genre = ''", new_limit)
         .into_iter()
-        .map(|id| (id, "new"))
+        .map(|id| (id, "new".to_string()))
         .collect();
 
     let refresh_limit = GENRE_SAMPLE_SIZE - rows.len();
     if refresh_limit > 0 {
         let refreshes = pick_radio_ids(conn, "genre != ''", refresh_limit);
-        rows.extend(refreshes.into_iter().map(|id| (id, "refresh")));
+        rows.extend(refreshes.into_iter().map(|id| (id, "refresh".to_string())));
     }
 
     if rows.is_empty() {
@@ -498,28 +493,56 @@ fn enrich_genres(conn: &Connection) {
         return;
     }
 
+    let num_workers: usize = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(4);
+
     println!(
-        "\nEnriching {} stations ({} new, {} refresh)...",
+        "\nEnriching {} stations ({} new, {} refresh, {} workers)...",
         rows.len(),
-        rows.iter().filter(|(_, t)| *t == "new").count(),
-        rows.iter().filter(|(_, t)| *t == "refresh").count(),
+        rows.iter().filter(|(_, t)| t == "new").count(),
+        rows.iter().filter(|(_, t)| t == "refresh").count(),
+        num_workers,
     );
 
-    let mut enriched = 0usize;
-    let mut failed = 0usize;
-    for (radio_id, tag) in &rows {
-        match enrich_station_genre(conn, radio_id) {
-            Ok(genres) => {
-                enriched += 1;
-                println!("  📡  [{tag}] {radio_id}: {genres}");
-            }
-            Err(e) => {
-                log::warn!("  ⚠️  {radio_id}: {e}");
-                failed += 1;
+    let (tx, rx) = std::sync::mpsc::channel::<(String, String, Result<String, String>)>();
+
+    let chunk_size = rows.len().div_ceil(num_workers);
+    std::thread::scope(|s| {
+        for chunk in rows.chunks(chunk_size) {
+            let tx = tx.clone();
+            let chunk: Vec<(String, String)> = chunk.to_vec();
+            s.spawn(move || {
+                for (radio_id, tag) in &chunk {
+                    let result = fetch_and_parse_genre(radio_id);
+                    let _ = tx.send((radio_id.clone(), tag.clone(), result));
+                }
+            });
+        }
+        drop(tx);
+
+        let mut enriched = 0usize;
+        let mut failed = 0usize;
+        for (radio_id, tag, result) in rx {
+            match result {
+                Ok(genres) => {
+                    if !genres.is_empty() {
+                        let _ = conn.execute(
+                            "UPDATE stations SET genre = ?1 WHERE radio_id = ?2",
+                            rusqlite::params![genres, radio_id],
+                        );
+                    }
+                    enriched += 1;
+                    println!("  📡  [{tag}] {radio_id}: {genres}");
+                }
+                Err(e) => {
+                    log::warn!("  ⚠️  {radio_id}: {e}");
+                    failed += 1;
+                }
             }
         }
-    }
-    println!("Genre enrichment done — {enriched} enriched, {failed} failed");
+        println!("Genre enrichment done — {enriched} enriched, {failed} failed");
+    });
 }
 
 fn main() {
