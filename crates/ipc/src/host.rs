@@ -27,6 +27,7 @@ pub struct IpcPluginHost {
     id: String,
     name: String,
     binary_name: String,
+    capabilities: Vec<String>,
     data_dir: PathBuf,
     process: Option<Child>,
     /// Channel receiver for reading parsed responses from a background thread.
@@ -62,6 +63,7 @@ impl IpcPluginHost {
             id: id.to_string(),
             name: name.to_string(),
             binary_name: binary_base.to_string(),
+            capabilities: Vec::new(),
             data_dir: PathBuf::new(),
             process: None,
             response_rx: None,
@@ -597,9 +599,11 @@ impl Plugin for IpcPluginHost {
     }
 
     fn can_background(&self) -> bool {
-        // Matches the id set in registry.toml or dev-mode plugins.json,
-        // both of which use "radio-streaming-player".
-        self.id == "radio-streaming-player"
+        self.capabilities.iter().any(|c| c == "background")
+    }
+
+    fn set_capabilities(&mut self, caps: Vec<String>) {
+        self.capabilities = caps;
     }
 
     fn binary_path(&self) -> Option<&Path> {

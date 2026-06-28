@@ -119,6 +119,7 @@ impl super::Santui {
                                     &id,
                                     &name,
                                     &installed.path,
+                                    &installed.capabilities,
                                     &mut ctx,
                                 ) {
                                     self.plugin_manager.set_active(Some(idx));
@@ -160,6 +161,7 @@ impl super::Santui {
                     &item.id,
                     &item.name,
                     &installed.path,
+                    &installed.capabilities,
                     &mut ctx,
                 ) {
                     self.plugin_manager.set_active(Some(idx));

@@ -40,6 +40,7 @@ foreach ($bin in $pluginBinaries) {
         download_url  = "target/debug/$($bin.Name)"
         sha256        = $hash
         size          = $bin.Length
+        capabilities  = @("background")
     }
 }
 

@@ -21,6 +21,9 @@ pub struct PluginManifest {
     /// Publisher name (e.g. "Santui").
     #[serde(default)]
     pub publisher: String,
+    /// Declared capabilities (e.g. "background" for audio plugins).
+    #[serde(default)]
+    pub capabilities: Vec<String>,
 }
 
 /// A plugin the user has installed (either enabled or disabled).
@@ -37,6 +40,9 @@ pub struct InstalledPlugin {
     /// Persisted so the palette can show the plugin before the manifest is fetched.
     #[serde(default)]
     pub name: String,
+    /// Declared capabilities (e.g. "background" for audio plugins).
+    #[serde(default)]
+    pub capabilities: Vec<String>,
 }
 
 /// Top-level state: fetched manifest + local installed set.
@@ -189,6 +195,7 @@ impl Registry {
             path: target_path.clone(),
             id: manifest.id.clone(),
             name: manifest.name.clone(),
+            capabilities: manifest.capabilities.clone(),
         });
         self.save_config()?;
 
@@ -303,6 +310,7 @@ impl Registry {
         name: &str,
         version: &str,
         target_path: PathBuf,
+        capabilities: &[String],
     ) -> Result<(), String> {
         self.installed.push(InstalledPlugin {
             enabled: true,
@@ -310,6 +318,7 @@ impl Registry {
             path: target_path,
             id: id.to_string(),
             name: name.to_string(),
+            capabilities: capabilities.to_vec(),
         });
         self.save_config()
     }
@@ -448,6 +457,7 @@ mod tests {
             sha256: "abc123".into(),
             size: 42,
             publisher: "Santui".into(),
+            capabilities: vec!["background".into()],
         };
         let json = serde_json::to_string(&m).unwrap();
         let back: PluginManifest = serde_json::from_str(&json).unwrap();
@@ -455,6 +465,7 @@ mod tests {
         assert_eq!(back.name, m.name);
         assert_eq!(back.size, m.size);
         assert_eq!(back.publisher, m.publisher);
+        assert_eq!(back.capabilities, vec!["background".to_string()]);
     }
 
     #[test]
@@ -465,11 +476,13 @@ mod tests {
             path: PathBuf::from("/tmp/plugin.exe"),
             id: "test-plugin".into(),
             name: "Test Plugin".into(),
+            capabilities: vec!["background".into()],
         };
         let json = serde_json::to_string(&p).unwrap();
         let back: InstalledPlugin = serde_json::from_str(&json).unwrap();
         assert_eq!(back.id, p.id);
         assert!(back.enabled);
+        assert_eq!(back.capabilities, vec!["background".to_string()]);
     }
 
     #[test]
@@ -505,6 +518,7 @@ mod tests {
             path: PathBuf::from("test.exe"),
             id: "test".into(),
             name: "Test".into(),
+            capabilities: Vec::new(),
         });
 
         r.set_enabled(0, true).unwrap();
@@ -522,7 +536,7 @@ mod tests {
         let _ = std::fs::create_dir_all(&dir);
         let mut r = Registry::new(dir.clone());
 
-        r.add_installed("p1", "Plugin 1", "1.0", PathBuf::from("p1.exe"))
+        r.add_installed("p1", "Plugin 1", "1.0", PathBuf::from("p1.exe"), &[])
             .unwrap();
         assert_eq!(r.installed.len(), 1);
         assert_eq!(r.installed[0].id, "p1");
@@ -559,7 +573,7 @@ mod tests {
         // First instance — add a plugin
         {
             let mut r = Registry::new(dir.clone());
-            r.add_installed("p1", "P1", "1.0", PathBuf::from("p1.exe"))
+            r.add_installed("p1", "P1", "1.0", PathBuf::from("p1.exe"), &[])
                 .unwrap();
         }
 

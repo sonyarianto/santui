@@ -70,6 +70,10 @@ pub trait Plugin: Send {
     fn can_background(&self) -> bool {
         false
     }
+
+    /// Set runtime capabilities (e.g. `"background"`) declared in the plugin manifest.
+    /// Default is no-op; IPC plugins override this to store the value.
+    fn set_capabilities(&mut self, _caps: Vec<String>) {}
 }
 
 pub struct PluginContext {

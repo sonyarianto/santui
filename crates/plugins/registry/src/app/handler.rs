@@ -111,8 +111,9 @@ impl App {
                                 self.pending_install_name.take(),
                                 self.pending_install_version.take(),
                             ) {
+                                let caps = std::mem::take(&mut self.pending_install_capabilities);
                                 let target_path = self.plugins_dir.join(plugin_filename(&id));
-                                match reg.add_installed(&id, &name, &version, target_path) {
+                                match reg.add_installed(&id, &name, &version, target_path, &caps) {
                                     Ok(()) => {
                                         self.set_status(format!("{name} installed and enabled"));
                                         request = Some(PluginRequest::PluginsChanged);
@@ -346,6 +347,7 @@ impl App {
         self.pending_install_id = Some(id.clone());
         self.pending_install_name = Some(name.clone());
         self.pending_install_version = Some(version.clone());
+        self.pending_install_capabilities = plugin.capabilities.clone();
         self.download_progress = Some((0, 0));
         self.set_status(format!("Downloading {name}…"));
 

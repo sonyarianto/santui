@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
@@ -25,6 +25,8 @@ pub(crate) struct PluginManager {
     mtimes: Vec<Option<SystemTime>>,
     /// Dynamic palette items from enabled registry plugins: (category, plugin_id, name).
     dynamic_items: Vec<(String, String, String)>,
+    /// Capabilities declared in registry.toml, keyed by plugin id.
+    plugin_capabilities: HashMap<String, Vec<String>>,
     /// Santui data directory (~/.santui). Set from main.rs.
     data_dir: PathBuf,
     /// Last mtime of registry.toml, used for change detection.
@@ -44,6 +46,7 @@ impl PluginManager {
             plugin_factory: None,
             mtimes: Vec::new(),
             dynamic_items: Vec::new(),
+            plugin_capabilities: HashMap::new(),
             data_dir: PathBuf::new(),
             registry_mtime: None,
             reload_skip: 0,
@@ -117,6 +120,7 @@ impl PluginManager {
         id: &str,
         name: &str,
         binary_path: &std::path::Path,
+        capabilities: &[String],
         ctx: &mut PluginContext,
     ) -> Result<usize, Box<dyn std::error::Error>> {
         let factory = self
@@ -124,6 +128,7 @@ impl PluginManager {
             .as_ref()
             .ok_or_else::<Box<dyn std::error::Error>, _>(|| "no factory".into())?;
         let mut plugin = factory(id, name, binary_path);
+        plugin.set_capabilities(capabilities.to_vec());
         plugin.init(ctx)?;
         let idx = self.plugins.len();
         self.mtimes.push(stat_mtime(plugin.binary_path()));
@@ -292,6 +297,10 @@ impl PluginManager {
         // new one.  If init() fails below, at worst we are left without a
         // running plugin (the palette entry still exists).
         self.plugins[idx] = factory(&id, &name, &path);
+        // Restore capabilities from the cached map.
+        if let Some(caps) = self.plugin_capabilities.get(&id) {
+            self.plugins[idx].set_capabilities(caps.clone());
+        }
         // Clear stale commands before refreshing.
         self.mtimes[idx] = None;
 
@@ -386,12 +395,13 @@ impl PluginManager {
         self.read_registry_installed()
     }
 
-    /// Re-read `registry.toml` and rebuild `dynamic_items`.
+    /// Re-read `registry.toml` and rebuild `dynamic_items` and `plugin_capabilities`.
     /// Returns true if items changed.
     pub fn read_registry_installed(&mut self) -> bool {
         let path = self.data_dir.join("registry.toml");
         let cfg = RegistryConfig::load(&path);
         let old = std::mem::take(&mut self.dynamic_items);
+        self.plugin_capabilities.clear();
 
         if let Some(cfg) = cfg {
             for installed in &cfg.plugins {
@@ -427,6 +437,8 @@ impl PluginManager {
                         .collect::<Vec<_>>()
                         .join(" ")
                 };
+                self.plugin_capabilities
+                    .insert(id.clone(), installed.capabilities.clone());
                 if !self
                     .dynamic_items
                     .iter()
@@ -460,6 +472,8 @@ pub(crate) struct InstalledPlugin {
     pub id: String,
     #[serde(default)]
     pub name: String,
+    #[serde(default)]
+    pub capabilities: Vec<String>,
 }
 
 /// Registry configuration file (`registry.toml`) contents.

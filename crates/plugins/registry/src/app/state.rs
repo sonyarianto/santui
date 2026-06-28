@@ -34,6 +34,7 @@ pub struct App {
     pub(super) pending_install_id: Option<String>,
     pub(super) pending_install_name: Option<String>,
     pub(super) pending_install_version: Option<String>,
+    pub(super) pending_install_capabilities: Vec<String>,
 }
 
 impl App {
@@ -67,6 +68,7 @@ impl App {
             pending_install_id: None,
             pending_install_name: None,
             pending_install_version: None,
+            pending_install_capabilities: Vec::new(),
         }
     }
 
