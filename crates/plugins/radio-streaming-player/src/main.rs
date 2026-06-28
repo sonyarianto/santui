@@ -444,6 +444,15 @@ impl App {
                 changed = true;
                 match msg {
                     MpvMsg::Metadata(title) => {
+                        // Mpv can fire redundant PLAYBACK_RESTART or
+                        // PROPERTY_CHANGE events for the same radio stream
+                        // title (rebuffer, reconnect).  Skip to avoid
+                        // clearing lyrics and re-fetching unnecessarily — a
+                        // failed redundant fetch would overwrite good lyrics
+                        // with empty via MpvMsg::Lyrics(None).
+                        if title == self.state.song_title {
+                            continue;
+                        }
                         self.state.song_title = title.clone();
                         self.state.track_info = None;
                         self.state.clear_lyrics();
