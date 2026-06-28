@@ -143,8 +143,9 @@ pub fn render_ui(
     let scroll = state.scroll.min(state.filtered.len().saturating_sub(1));
     let visible_count = max_visible.min(state.filtered.len().saturating_sub(scroll));
 
-    let name_w = (inner_w * 3 / 4).max(10);
-    let country_w = inner_w.saturating_sub(name_w);
+    let name_w = (inner_w * 45 / 100).max(10);
+    let genre_w = (inner_w * 35 / 100).max(8);
+    let country_w = inner_w.saturating_sub(name_w + genre_w);
 
     let mut rows: Vec<Vec<String>> = Vec::with_capacity(visible_count);
     for i in 0..visible_count {
@@ -152,6 +153,7 @@ pub fn render_ui(
         let station = &state.stations[station_idx];
         rows.push(vec![
             ui::truncate(&station.name, name_w),
+            ui::truncate(&station.genre, genre_w),
             ui::truncate(station.country_name(), country_w),
         ]);
     }
@@ -173,14 +175,14 @@ pub fn render_ui(
         y: table_top,
         w: inner_w as u16,
         h: (visible_count + 1).max(1) as u16,
-        header: vec!["Name".into(), "Country".into()],
+        header: vec!["Name".into(), "Genre".into(), "Country".into()],
         header_style: TextStyle {
             fg: Some(theme.text_muted),
             bg: None,
             bold: true,
         },
         rows,
-        column_widths: vec![name_w as u16, country_w as u16],
+        column_widths: vec![name_w as u16, genre_w as u16, country_w as u16],
         selected: vis_selected,
         style: TextStyle {
             fg: Some(theme.text),
