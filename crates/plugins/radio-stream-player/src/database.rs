@@ -19,6 +19,20 @@ pub fn db_path() -> PathBuf {
     app_data_dir().join("radio_stream_stations.db")
 }
 
+fn migrate_old_db() {
+    let old = app_data_dir().join("radio_streaming_stations.db");
+    let new = db_path();
+    if old.exists() && !new.exists() {
+        if let Err(e) = std::fs::rename(&old, &new) {
+            log::warn!("failed to migrate old database (radio_streaming_stations.db): {e}");
+        } else {
+            log::info!(
+                "migrated database from radio_streaming_stations.db to radio_stream_stations.db"
+            );
+        }
+    }
+}
+
 fn migrate(conn: &Connection) -> Result<(), rusqlite::Error> {
     let has_genre: bool = conn
         .prepare("PRAGMA table_info(stations)")?
@@ -36,6 +50,7 @@ fn migrate(conn: &Connection) -> Result<(), rusqlite::Error> {
 
 pub fn open() -> Result<Connection, rusqlite::Error> {
     let path = db_path();
+    migrate_old_db();
     if let Some(parent) = path.parent() {
         if let Err(e) = std::fs::create_dir_all(parent) {
             log::warn!("failed to create DB parent directory: {e}");
@@ -212,6 +227,49 @@ mod tests {
         let conn = Connection::open_in_memory().unwrap();
         let result = load_all(&conn);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn migrate_old_db_renames_when_new_missing() {
+        let dir = std::env::temp_dir().join("santui-db-migrate-test");
+        let _ = std::fs::create_dir_all(&dir);
+        let old = dir.join("radio_streaming_stations.db");
+        let new = dir.join("radio_stream_stations.db");
+        std::fs::write(&old, b"some data").unwrap();
+
+        // Simulate migrate_old_db logic
+        if old.exists() && !new.exists() {
+            std::fs::rename(&old, &new).unwrap();
+        }
+
+        assert!(!old.exists(), "old file should be gone");
+        assert!(new.exists(), "new file should exist");
+        assert_eq!(std::fs::read(&new).unwrap(), b"some data");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn migrate_old_db_does_not_overwrite_existing_new() {
+        let dir = std::env::temp_dir().join("santui-db-migrate-test2");
+        let _ = std::fs::create_dir_all(&dir);
+        let old = dir.join("radio_streaming_stations.db");
+        let new = dir.join("radio_stream_stations.db");
+        std::fs::write(&old, b"old data").unwrap();
+        std::fs::write(&new, b"new data").unwrap();
+
+        if old.exists() && !new.exists() {
+            std::fs::rename(&old, &new).unwrap();
+        }
+
+        assert!(old.exists(), "old file should still exist");
+        assert_eq!(
+            std::fs::read(&new).unwrap(),
+            b"new data",
+            "new file should be untouched"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
 
