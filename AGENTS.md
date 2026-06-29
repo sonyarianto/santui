@@ -69,6 +69,10 @@ cd website && npm run build # static build
 #   website/.vitepress/config.ts      — nav link + footer
 #   website/public/install.ps1        — banner text
 #   website/index.md                  — tagline (if changed)
+#
+# IMPORTANT: plugins.json is gitignored but its version field must still be
+# updated so dev-mode (SANTUI_DEV=1) shows the correct version. Always sync
+# the version string in plugins.json alongside the other files.
 git add -A && git commit -m "chore: bump version to x.y.z"
 git tag vx.y.z && git push --tags
 # CI builds binaries, creates GitHub Release, publishes to npm and crates.io
