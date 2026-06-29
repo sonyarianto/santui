@@ -275,6 +275,7 @@ impl App {
                         let idx = self.state.current_filtered_index();
                         self.state.current_station = Some(idx);
                         self.state.play_state = state::PlayState::Playing(station.name.to_string());
+                        self.state.last_metadata.clear();
                         self.state.song_title.clear();
                         self.state.track_info = None;
                         self.state.clear_lyrics();
@@ -384,6 +385,7 @@ impl App {
                     let idx = self.state.current_filtered_index();
                     self.state.current_station = Some(idx);
                     self.state.play_state = state::PlayState::Playing(station.name.to_string());
+                    self.state.last_metadata.clear();
                     self.state.song_title.clear();
                     self.state.track_info = None;
                     self.state.clear_lyrics();
@@ -412,6 +414,7 @@ impl App {
                 send_cmd(self, MpvCmd::Stop);
                 self.state.play_state = state::PlayState::Stopped;
                 self.state.current_station = None;
+                self.state.last_metadata.clear();
                 self.state.song_title.clear();
                 self.state.track_info = None;
                 self.state.clear_lyrics();
@@ -450,9 +453,13 @@ impl App {
                         // clearing lyrics and re-fetching unnecessarily — a
                         // failed redundant fetch would overwrite good lyrics
                         // with empty via MpvMsg::Lyrics(None).
-                        if title == self.state.song_title {
+                        //
+                        // Use last_metadata (not song_title) as the dedup key
+                        // because TrackInfo may update song_title mid-stream.
+                        if title == self.state.last_metadata {
                             continue;
                         }
+                        self.state.last_metadata = title.clone();
                         self.state.song_title = title.clone();
                         self.state.track_info = None;
                         self.state.clear_lyrics();
