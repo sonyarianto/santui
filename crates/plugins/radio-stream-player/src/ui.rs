@@ -136,7 +136,7 @@ pub fn render_ui(
     let stations_h = area_h.saturating_sub(GAP + info_h);
 
     let stations_footer: Option<&[(&str, &str)]> = if state.search_mode {
-        Some(&[("↑↓", ""), ("↵", "play"), ("⌫", "delete")])
+        Some(&[("↑↓", "navigate"), ("↵", "play"), ("⌫", "delete")])
     } else {
         Some(&[
             ("↑↓", "navigate"),
