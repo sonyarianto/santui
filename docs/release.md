@@ -21,6 +21,10 @@ Update `version` in **all** `Cargo.toml` files + npm + website. They must all ma
 **Website:**
 - `website/.vitepress/config.ts` — nav link + footer
 - `website/public/install.ps1` — banner text
+- `website/index.md` — tagline (if changed)
+
+**Dev manifest:**
+- `plugins.json` — update the `version` field for dev-mode (gitignored — see `AGENTS.md`)
 
 **Dev-setup scripts** auto-detect version from `crates/core/Cargo.toml` — no manual update needed.
 

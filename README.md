@@ -91,9 +91,16 @@ Requires Rust 1.70+. No plugins included — install them from the Plugin Regist
 
 This builds everything, generates a local plugin manifest, and runs Santui in dev mode — identical flow to production, no release needed.
 
+### CLI flags
+
+| Flag | Action |
+|------|--------|
+| `--version` / `-V` | Print version and exit |
+| `--list-plugins` / `plugins` | List installed and available plugins, then exit |
+
 ## Configuration
 
-Santui stores its settings in `~/.santui/config.toml` (TOML format). Edit the file to set a default theme or custom colour overrides — changes are hot-reloaded automatically. See the full [Configuration reference](website/guide/configuration.md).
+Santui stores its settings in `~/.santui/config.toml` (TOML format). Edit the file to set a default theme or custom colour overrides — changes are hot-reloaded automatically. See the full [Configuration reference](https://santuiapp.vercel.app/guide/configuration).
 
 ## Documentation
 

@@ -28,9 +28,9 @@ santui.exe (host)
 ```
 
 - Host owns all ratatui/TUI rendering; plugin is headless with its own native deps (e.g. libmpv).
-- Plugin responds to host messages with a full render command list (`Vec<RenderCmd>`). A background reader thread continuously reads plugin stdout, keeping responses non-blocking. `tick()` sends the message and drains pending responses without waiting — only `init` (500ms) and `key` (50ms) block briefly for a response so the `consumed` flag is reliably captured from the correct key event.
+- Plugin responds to host messages with a full render command list (`Vec<RenderCmd>`). A background reader thread continuously reads plugin stdout, keeping responses non-blocking. `tick()` sends the message and drains pending responses without waiting — only `init` blocks briefly (500ms) for the first response. Key events are non-blocking: the host sends the key, drains pending responses, and uses the latest `consumed` flag. For `Esc`, the host uses an event-driven protocol resolved over ~10 frames (~1s).
 - Render commands (`Text`, `Clear`, `Rect`, `Dim`, `Border`, `Paragraph`, `List`, `Table`) are cached on the host and composited into the ratatui buffer each frame — no IPC round-trip on every frame.
-- To write a new plugin: create a binary crate depending on `santui-ipc` (protocol types only, no ratatui), implement stdin/stdout JSON loop, then add it to the plugin registry manifest for distribution (see `plugins.json` format in `crates/registry/src/lib.rs`). Plugins are discovered through the registry, installed to `~/.santui/plugins/`, and spawned on demand via the `PluginFactory` set in `main.rs`.
+- To write a new plugin: create a binary crate depending on `santui-ipc` (protocol types only, no ratatui), implement stdin/stdout JSON loop, then add it to the plugin registry manifest for distribution (see `plugins.json` format in `crates/registry/src/lib.rs`; note that `plugins.json` is gitignored — see `AGENTS.md`). Plugins are discovered through the registry, installed to `~/.santui/plugins/`, and spawned on demand via the `PluginFactory` set in `main.rs`.
 
 ### Plugin Registry
 
@@ -89,10 +89,10 @@ The `can_background()` method on the `Plugin` trait defaults to `false`. `IpcPlu
 
 `crates/core/src/theme.rs` defines `Theme` struct with 12 semantic color keys (`accent`, `highlight`, `logo`, `text`, `text_muted`, `background`, `background_panel`, `background_overlay`, `border`, `success`, `error`, `inverted_text`) + 38 OpenCode themes (from `THEMES` const array). `Default` = Santui (dark neutral `0x141414`, yellow primary `0xffb900`). Passed to plugins via `PluginContext.theme` during `init()`. Plugins override `on_theme_change()` to react to runtime theme switches. `Theme::all()` returns `Vec<(&'static str, Theme)>` for the picker. `text_muted` is computed as 60/40 blend of neutral/ink.
 
-#### Semantic colors
+#### Semantic colors (OpenCode theme example)
 
 - Accent: `Color::Rgb(157, 124, 216)` (#9d7cd8 purple)
-- Highlight bar: `Color::Rgb(250, 178, 131)` (#fab283 OpenCode primary)
+- Highlight bar: `Color::Rgb(250, 178, 131)` (#fab283 — OpenCode's primary; Santui default is #ffb900 gold)
 
 ## Architecture Roadmap Status
 

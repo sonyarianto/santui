@@ -75,6 +75,15 @@ Santui is keyboard-driven. Here are the keybindings:
 | `Enter` | Select item |
 | `Esc` | Back / close panel |
 
+### CLI flags
+
+Run `santui --help` for a full reference, or use these flags:
+
+| Flag | Action |
+|------|--------|
+| `--version` / `-V` | Print version and exit |
+| `--list-plugins` / `plugins` | List installed and available plugins, then exit |
+
 ## Plugin Registry
 
 Plugins extend Santui with new capabilities. Open `Ctrl+P` → **Plugin registry** to see what's available.

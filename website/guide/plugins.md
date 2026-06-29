@@ -13,7 +13,7 @@ santui.exe (host)
 
 - The host owns all rendering. Your plugin returns a list of `RenderCmd` values — `Text`, `Clear`, `Rect`, `Dim`, `Border`, `Paragraph`, `List`, and `Table`.
 - The host polls your plugin every frame via `Tick`. Response handling is non-blocking — the host never waits on your plugin.
-- Blocking calls — `Init` (500ms timeout) and `Key` (5ms timeout) — wait briefly for a response so the host can capture the `consumed` flag from the correct key event. If your plugin doesn't respond in time, the host treats the key as unhandled.
+- Only `Init` uses a blocking call (500ms timeout) so the host captures the first response. Key events are non-blocking: the host sends the key, drains any pending responses, and uses the latest `consumed` flag. For `Esc`, the host uses an event-driven protocol resolved over ~10 frames (~1s).
 
 ## Quick start
 
@@ -108,12 +108,13 @@ Add your own fields here. The `Init` message provides the current theme and term
 Every message expects at least one response on stdout. The template's `respond()` method builds a `PluginMsg`:
 
 ```rust
-fn respond(&self) {
+fn respond(&self, consumed: bool) {
     let msg = PluginMsg {
         commands: self.render(),
-        hints: vec![],
+        hints: vec![("Ctrl+P".into(), "commands".into())],
         palette_commands: vec![],
         request: None,
+        consumed,
     };
     let json = serde_json::to_string(&msg).expect("serialise PluginMsg");
     let mut out = io::stdout().lock();

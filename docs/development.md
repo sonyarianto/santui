@@ -8,7 +8,6 @@ Checks run in parallel on every commit touching `*.rs` files:
 
 - `cargo fmt --check`
 - `cargo clippy --workspace -- -D warnings`
-- `cargo check --workspace`
 
 If lefthook is not installed: `cargo install lefthook` or `npm i -g @evilmartians/lefthook`.
 
@@ -62,6 +61,15 @@ santui/
 ├── native/             — runtime native dependencies (mpv DLLs, station DB)
 └── Cargo.toml          — workspace root
 ```
+
+## CLI flags
+
+The built binary accepts the following flags:
+
+| Flag | Action |
+|------|--------|
+| `--version` / `-V` | Print version (`santui vX.Y.Z`) and exit |
+| `--list-plugins` / `plugins` | List installed and available plugins, then exit |
 
 ## Release packaging
 
