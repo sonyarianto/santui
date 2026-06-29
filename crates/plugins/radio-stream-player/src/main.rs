@@ -332,7 +332,7 @@ impl App {
             }
             IpcKey::Down => {
                 if self.state.show_lyrics && self.state.lyrics_focused {
-                    let panel_h = self.area.h.saturating_sub(2) as usize;
+                    let panel_h = self.state.lyrics_content_height(self.area.h);
                     self.state.lyrics_scroll_down(panel_h);
                 } else {
                     self.state.select_next();
@@ -355,7 +355,7 @@ impl App {
             }
             IpcKey::PageDown => {
                 if self.state.show_lyrics && self.state.lyrics_focused {
-                    let panel_h = self.area.h.saturating_sub(2) as usize;
+                    let panel_h = self.state.lyrics_content_height(self.area.h);
                     self.state.lyrics_scroll_down(panel_h);
                 } else {
                     let info_h = self.state.info_h();

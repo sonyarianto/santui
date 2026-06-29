@@ -1,4 +1,5 @@
 use crate::itunes::TrackInfo;
+use crate::lrclib;
 use crate::stations::Station;
 use std::time::Instant;
 
@@ -186,14 +187,45 @@ impl RadioState {
         self.lyrics_source.clear();
     }
 
+    /// Number of visible lines in the lyrics content area (inside panel borders,
+    /// below header, above footer).
+    pub fn lyrics_content_height(&self, area_h: u16) -> usize {
+        let footer_rows = if self.show_lyrics { 2 } else { 0 };
+        let hdr_rows = if !self.lyrics_text.is_empty() {
+            let has_title = if let Some(ref info) = self.track_info {
+                info.title.is_some() || !self.song_title.is_empty()
+            } else {
+                !self.song_title.is_empty()
+            };
+            let has_artist = if let Some(ref info) = self.track_info {
+                info.artist.is_some()
+            } else if !self.song_title.is_empty() {
+                lrclib::split_title(&self.song_title).0.is_some()
+            } else {
+                false
+            };
+            match (has_title, has_artist) {
+                (true, true) => 3,
+                (true, false) => 2,
+                (false, true) => 2,
+                (false, false) => 0,
+            }
+        } else {
+            0
+        };
+        area_h.saturating_sub(2 + footer_rows + hdr_rows) as usize
+    }
+
     pub fn lyrics_scroll_up(&mut self) {
         self.lyrics_scroll = self.lyrics_scroll.saturating_sub(1);
     }
 
     pub fn lyrics_scroll_down(&mut self, panel_h: usize) {
         let total = self.lyrics_text.lines().count();
-        let max_scroll = total.saturating_sub(panel_h);
-        self.lyrics_scroll = (self.lyrics_scroll + 1).min(max_scroll);
+        if total > panel_h {
+            let max_scroll = total.saturating_sub(panel_h);
+            self.lyrics_scroll = (self.lyrics_scroll + 1).min(max_scroll);
+        }
     }
 }
 

@@ -153,7 +153,6 @@ pub fn render_ui(
         None
     };
     let stations_footer_rows: u16 = if stations_footer.is_some() { 2 } else { 0 };
-    let lyrics_footer_rows: u16 = if lyrics_footer.is_some() { 2 } else { 0 };
 
     // ---- Stations panel (top-left) ----
     let stations_focused = state.show_lyrics && !state.lyrics_focused;
@@ -467,7 +466,7 @@ pub fn render_ui(
             }
             // Blank line at y=3 (both) or y=2 (title only) is implicit
 
-            let ly_h = area_h.saturating_sub(2 + lyrics_footer_rows + header_rows) as usize;
+            let ly_h = state.lyrics_content_height(area_h);
             let lines: Vec<&str> = state.lyrics_text.lines().collect();
             let scroll = state.lyrics_scroll.min(lines.len().saturating_sub(1));
             for i in 0..ly_h {
