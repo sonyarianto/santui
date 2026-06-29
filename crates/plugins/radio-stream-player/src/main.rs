@@ -279,6 +279,7 @@ impl App {
                         self.state.song_title.clear();
                         self.state.track_info = None;
                         self.state.clear_lyrics();
+                        self.state.lyrics_loading = true;
                         self.state.start_time = std::time::Instant::now();
                         send_cmd(self, MpvCmd::Stop);
                         send_cmd(self, MpvCmd::LoadUrl(station.url));
@@ -389,6 +390,7 @@ impl App {
                     self.state.song_title.clear();
                     self.state.track_info = None;
                     self.state.clear_lyrics();
+                    self.state.lyrics_loading = true;
                     self.state.start_time = std::time::Instant::now();
                     send_cmd(self, MpvCmd::Stop);
                     send_cmd(self, MpvCmd::LoadUrl(station.url));
