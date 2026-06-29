@@ -1,11 +1,11 @@
 [package]
 name = "santui-registry-plugin"
-version = "0.2.17"
+version = "0.2.18"
 edition = "2021"
 
 [dependencies]
-santui-ipc = { path = "../../ipc", version = "0.2.17", default-features = false }
-santui-registry = { path = "../../registry", version = "0.2.17" }
+santui-ipc = { path = "../../ipc", version = "0.2.18", default-features = false }
+santui-registry = { path = "../../registry", version = "0.2.18" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }

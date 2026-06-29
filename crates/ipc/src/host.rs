@@ -365,17 +365,25 @@ impl IpcPluginHost {
             .map(|d| d.join(&binary_name))
             .unwrap_or_else(|| std::path::PathBuf::from(&binary_name));
 
-        let mut child = Command::new(&binary_path)
-            .stdin(Stdio::piped())
+        let mut cmd = Command::new(&binary_path);
+        cmd.stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::inherit())
-            .spawn()
-            .map_err(|e| {
-                format!(
-                    "Failed to spawn plugin `{}`: {e}\n  → Run `cargo build --workspace` to build all plugins",
-                    binary_name
-                )
-            })?;
+            .stderr(Stdio::inherit());
+
+        // Tell plugins where the host's native/ directory lives so they can
+        // find bundled native dependencies (e.g. libmpv for radio-stream-player)
+        // even when installed via the plugin registry to a separate path.
+        if let Some(ref dir) = exe_dir {
+            let native_dir = dir.join("native");
+            cmd.env("SANTUI_NATIVE_DIR", native_dir);
+        }
+
+        let mut child = cmd.spawn().map_err(|e| {
+            format!(
+                "Failed to spawn plugin `{}`: {e}\n  → Run `cargo build --workspace` to build all plugins",
+                binary_name
+            )
+        })?;
 
         let reader = child.stdout.take().map(BufReader::new);
 

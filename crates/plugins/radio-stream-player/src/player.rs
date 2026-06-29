@@ -105,6 +105,17 @@ impl Mpv {
 
         let lib = match unsafe {
             native_try
+                // SANTUI_NATIVE_DIR — set by the host to point to its native/
+                // directory so registry-installed plugins can find bundled deps.
+                .or_else(|| {
+                    std::env::var_os("SANTUI_NATIVE_DIR").and_then(|d| {
+                        let dir = std::path::PathBuf::from(d);
+                        native_names.iter().find_map(|name| {
+                            let p = dir.join(name);
+                            Library::new(p.as_os_str()).ok()
+                        })
+                    })
+                })
                 .or_else(|| Library::new("libmpv-2.dll").ok())
                 .or_else(|| Library::new("mpv.dll").ok())
                 .or_else(|| Library::new("libmpv.so.2").ok())
@@ -120,8 +131,18 @@ impl Mpv {
         } {
             Some(l) => Arc::new(l),
             None => {
-                errors.push("libmpv not found".into());
-                return Err("libmpv not found".into());
+                let hint = if cfg!(target_os = "macos") {
+                    "Try: brew install mpv"
+                } else if cfg!(target_os = "linux") {
+                    "Install libmpv via your package manager (e.g. apt install libmpv2)"
+                } else if cfg!(target_os = "windows") {
+                    "Ensure libmpv-2.dll is in the native/ directory"
+                } else {
+                    "Install libmpv for your platform"
+                };
+                let msg = format!("libmpv not found. {hint}");
+                errors.push(msg.clone());
+                return Err(msg.into());
             }
         };
 
