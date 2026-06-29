@@ -74,7 +74,6 @@ impl App {
             });
         }
 
-        let has_progress = self.download_progress.is_some();
         if let Some((downloaded, total)) = self.download_progress {
             let bar_w = inner_w.saturating_sub(6).max(10);
             let pct = if total > 0 {
@@ -93,7 +92,7 @@ impl App {
             );
             cmds.push(RenderCmd::Text {
                 x: 2,
-                y: 3,
+                y: 2,
                 text: bar,
                 fg: Some(t.accent),
                 bg: None,
@@ -102,7 +101,7 @@ impl App {
         }
 
         if let Some(ref reg) = self.registry {
-            let list_top = if has_progress { 5u16 } else { 3u16 };
+            let list_top = 3u16;
             let list_h = max_list_h(ah) as usize;
 
             if reg.available.is_empty() {
@@ -118,9 +117,10 @@ impl App {
             }
 
             let publisher_w: usize = 10;
-            let status_w: usize = 13;
+            let installed_w: usize = 9;
+            let status_w: usize = 9;
             let ver_w: usize = 8;
-            let rem = inner_w.saturating_sub(publisher_w + status_w + ver_w);
+            let rem = inner_w.saturating_sub(publisher_w + installed_w + status_w + ver_w);
             let name_w = (rem * 4 / 10).max(5);
             let desc_w = rem.saturating_sub(name_w).max(5);
 
@@ -150,12 +150,13 @@ impl App {
                         && p.enabled
                 });
 
+                let installed = if is_installed { "Yes" } else { "No" };
                 let status = if is_enabled {
                     "Enabled"
                 } else if is_installed {
                     "Disabled"
                 } else {
-                    "Not Installed"
+                    "-"
                 };
 
                 let name_s = ui::truncate(&plugin.name, name_w);
@@ -163,7 +164,14 @@ impl App {
                 let publisher_s = ui::truncate(&plugin.publisher, publisher_w);
                 let ver_s = ui::truncate(&plugin.version, ver_w);
 
-                rows.push(vec![name_s, desc_s, publisher_s, ver_s, status.into()]);
+                rows.push(vec![
+                    name_s,
+                    desc_s,
+                    publisher_s,
+                    ver_s,
+                    installed.into(),
+                    status.into(),
+                ]);
             }
 
             let vis_selected = {
@@ -186,6 +194,7 @@ impl App {
                     "Description".into(),
                     "Publisher".into(),
                     "Version".into(),
+                    "Installed".into(),
                     "Status".into(),
                 ],
                 header_style: TextStyle {
@@ -199,6 +208,7 @@ impl App {
                     desc_w as u16,
                     publisher_w as u16,
                     ver_w as u16,
+                    installed_w as u16,
                     status_w as u16,
                 ],
                 selected: vis_selected,
