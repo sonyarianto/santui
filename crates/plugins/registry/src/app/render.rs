@@ -75,7 +75,7 @@ impl App {
         }
 
         if let Some((downloaded, total)) = self.download_progress {
-            let bar_w = inner_w.saturating_sub(6).max(10);
+            let bar_w = inner_w.saturating_sub(7).max(10);
             let pct = if total > 0 {
                 (downloaded as f64 / total as f64).min(1.0)
             } else {
