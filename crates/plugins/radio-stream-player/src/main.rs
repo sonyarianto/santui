@@ -374,8 +374,10 @@ impl App {
                     self.state.filtered = (0..self.state.stations.len()).collect();
                     self.state.selected = 0;
                     self.state.scroll = 0;
+                    true
+                } else {
+                    false
                 }
-                true
             }
             IpcKey::Enter => {
                 if self.state.lyrics_focused {
@@ -536,33 +538,17 @@ impl App {
         if self.state.search_mode {
             return vec![("↵".into(), "play".into()), ("⌫".into(), "delete".into())];
         }
-        let mut hints = if self.state.show_lyrics && self.state.lyrics_focused {
-            vec![
-                ("↑↓".into(), "scroll lyrics".into()),
-                ("pgup/pgdn".into(), "page".into()),
-                ("tab".into(), "stations".into()),
-                ("l".into(), "hide".into()),
-                ("+/-".into(), "volume".into()),
-            ]
-        } else {
-            vec![
-                ("↑↓".into(), "navigate".into()),
-                ("pgup/pgdn".into(), "page".into()),
-                ("/".into(), "search".into()),
-                ("↵".into(), "play".into()),
-                ("s".into(), "stop".into()),
-                ("r".into(), "reload".into()),
-                ("+/-".into(), "volume".into()),
-            ]
-        };
-        if self.state.show_lyrics && !self.state.lyrics_focused {
+        let mut hints: Vec<(String, String)> = Vec::new();
+        if self.state.show_lyrics && self.state.lyrics_focused {
+            hints.push(("tab".into(), "stations".into()));
+            hints.push(("l".into(), "hide".into()));
+        } else if self.state.show_lyrics {
             hints.push(("tab".into(), "lyrics".into()));
             hints.push(("l".into(), "hide".into()));
-        } else if !self.state.show_lyrics
-            && (!self.state.lyrics_text.is_empty() || self.state.lyrics_loading)
-        {
+        } else if !self.state.lyrics_text.is_empty() || self.state.lyrics_loading {
             hints.push(("l".into(), "lyrics".into()));
         }
+        hints.push(("+/-".into(), "volume".into()));
         hints
     }
 
@@ -995,7 +981,7 @@ mod tests {
         let mut app = base_app();
         app.state.show_lyrics = true;
         app.state.lyrics_focused = true;
-        assert!(app.handle_key(IpcKey::Char('/')));
+        assert!(!app.handle_key(IpcKey::Char('/')));
         assert!(!app.state.search_mode);
     }
 

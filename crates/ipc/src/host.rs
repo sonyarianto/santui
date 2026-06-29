@@ -21,6 +21,7 @@ use std::time::Duration;
 
 enum Priority {
     High,
+    #[allow(dead_code)]
     Low,
 }
 
@@ -311,8 +312,7 @@ impl IpcPluginHost {
 
     fn send_recv_blocking_timeout(&mut self, msg: &HostMsg, timeout: Duration) {
         self.send(msg, Priority::High);
-        // Drain any already-available responses first (e.g., Tick responses)
-        // so the blocking recv below picks up the response to *this* message.
+        // Drain stale responses so the blocking recv picks up the fresh one.
         self.drain_responses();
         if let Some(ref rx) = self.response_rx {
             if let Ok(resp) = rx.recv_timeout(timeout) {
@@ -322,13 +322,15 @@ impl IpcPluginHost {
                 self.pending_request = resp.request;
                 self.consumed = resp.consumed;
             }
+            // Drain any additional responses. If a stale Tick response was
+            // processed during recv_timeout, it arrived first in the channel
+            // and recv_timeout captured it (consumed=false). But this
+            // message's response is always processed last (FIFO) and is still
+            // in the channel, so drain_responses overwrites consumed with
+            // the correct value. If recv_timeout already got this message's
+            // response, drain_responses finds nothing and consumed is preserved.
+            self.drain_responses();
         }
-        // Drain any additional responses that piled up, but preserve
-        // consumed from the blocking recv so a stale Tick response
-        // cannot overwrite it.
-        let consumed = self.consumed;
-        self.drain_responses();
-        self.consumed = consumed;
     }
 }
 
@@ -623,8 +625,7 @@ impl Plugin for IpcPluginHost {
                 return;
             }
         }
-        // Non-blocking: just send Tick and consume any ready response.
-        self.send(&HostMsg::Tick, Priority::Low);
+        self.send(&HostMsg::Tick, Priority::High);
         self.drain_responses();
     }
 

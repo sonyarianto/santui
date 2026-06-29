@@ -15,7 +15,11 @@ fn draw_panel(
     h: u16,
     title: &str,
     focused: bool,
+    footer: Option<&[(&str, &str)]>,
 ) {
+    if w < 3 || h < 2 {
+        return;
+    }
     if focused {
         cmds.push(RenderCmd::Border {
             x,
@@ -31,6 +35,73 @@ fn draw_panel(
         });
     } else {
         ui::draw_panel(cmds, theme, x, y, w, h, title);
+    }
+
+    if let Some(hints) = footer {
+        let max_chars = w.saturating_sub(3) as usize;
+        let mut cx = x + 2;
+        let footer_y = y + h - 2;
+        let mut remaining = max_chars;
+        for (i, (key, desc)) in hints.iter().enumerate() {
+            if remaining == 0 {
+                break;
+            }
+            if i > 0 {
+                const SEP: &str = " • ";
+                let sep_w = SEP.chars().count();
+                if sep_w <= remaining {
+                    cmds.push(RenderCmd::Text {
+                        x: cx,
+                        y: footer_y,
+                        text: SEP.into(),
+                        fg: Some(theme.text_muted),
+                        bg: None,
+                        bold: false,
+                    });
+                    cx += sep_w as u16;
+                    remaining -= sep_w;
+                }
+            }
+            if remaining == 0 {
+                break;
+            }
+            let k: String = key.chars().take(remaining).collect();
+            if !k.is_empty() {
+                let kw = k.chars().count();
+                cmds.push(RenderCmd::Text {
+                    x: cx,
+                    y: footer_y,
+                    text: k,
+                    fg: Some(theme.text),
+                    bg: None,
+                    bold: false,
+                });
+                cx += kw as u16;
+                remaining -= kw;
+            }
+            if remaining == 0 {
+                break;
+            }
+            if !desc.is_empty() {
+                let desc_w = desc.chars().count();
+                let space_needed = 1 + desc_w;
+                if space_needed <= remaining {
+                    let d: String = desc.chars().take(remaining - 1).collect();
+                    let dw = d.chars().count();
+                    let display = format!(" {d}");
+                    cmds.push(RenderCmd::Text {
+                        x: cx,
+                        y: footer_y,
+                        text: display,
+                        fg: Some(theme.text_muted),
+                        bg: None,
+                        bold: false,
+                    });
+                    cx += (1 + dw) as u16;
+                    remaining -= 1 + dw;
+                }
+            }
+        }
     }
 }
 
@@ -64,6 +135,25 @@ pub fn render_ui(
     let info_h = state.info_h();
     let stations_h = area_h.saturating_sub(GAP + info_h);
 
+    let stations_footer: Option<&[(&str, &str)]> = if state.search_mode {
+        Some(&[("↑↓", ""), ("↵", "play"), ("⌫", "delete")])
+    } else {
+        Some(&[
+            ("↑↓", "navigate"),
+            ("↵", "play"),
+            ("s", "stop"),
+            ("r", "reload"),
+            ("/", "search"),
+        ])
+    };
+    let lyrics_footer: Option<&[(&str, &str)]> = if state.show_lyrics {
+        Some(&[("↑↓", "scroll"), ("l", "hide")])
+    } else {
+        None
+    };
+    let stations_footer_rows: u16 = if stations_footer.is_some() { 2 } else { 0 };
+    let lyrics_footer_rows: u16 = if lyrics_footer.is_some() { 2 } else { 0 };
+
     // ---- Stations panel (top-left) ----
     let stations_focused = state.show_lyrics && !state.lyrics_focused;
     draw_panel(
@@ -75,6 +165,7 @@ pub fn render_ui(
         stations_h,
         "Stations",
         stations_focused,
+        stations_footer,
     );
 
     let inner_w = left_w.saturating_sub(3) as usize;
@@ -137,7 +228,7 @@ pub fn render_ui(
 
     let table_top = TABLE_TOP;
     let header_h = HEADER_H;
-    let table_avail = stations_h.saturating_sub(table_top + header_h + 1);
+    let table_avail = stations_h.saturating_sub(table_top + header_h + 1 + stations_footer_rows);
     let max_visible = table_avail as usize;
 
     let scroll = state.scroll.min(state.filtered.len().saturating_sub(1));
@@ -213,6 +304,7 @@ pub fn render_ui(
         info_h,
         &format!("Now Playing │ Vol: {}%", state.volume),
         false,
+        None,
     );
 
     let r_inner_w = left_w.saturating_sub(3);
@@ -300,6 +392,7 @@ pub fn render_ui(
             area_h,
             "Lyrics",
             state.lyrics_focused,
+            lyrics_footer,
         );
 
         let ly_inner_w = ly_panel_w.saturating_sub(3);
@@ -325,7 +418,7 @@ pub fn render_ui(
                 ly_inner_w,
             );
         } else {
-            let ly_h = area_h.saturating_sub(2) as usize;
+            let ly_h = area_h.saturating_sub(2 + lyrics_footer_rows) as usize;
             let lines: Vec<&str> = state.lyrics_text.lines().collect();
             let scroll = state.lyrics_scroll.min(lines.len().saturating_sub(1));
             for i in 0..ly_h {
