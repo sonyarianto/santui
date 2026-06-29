@@ -59,6 +59,16 @@ pub struct IpcPluginHost {
     consumed: bool,
     /// Whether this plugin stays loaded on Esc (e.g., the registry plugin).
     persistent: bool,
+    /// Event-driven Esc: set to true when Esc is sent, cleared when response arrives.
+    esc_pending: bool,
+    /// Frames waited since esc_pending was set (timeout safeguard).
+    esc_pending_frames: u32,
+    /// response_count value when esc_pending was set.
+    last_resp_count: u64,
+    /// Total responses received (incremented in drain_responses).
+    response_count: u64,
+    /// Resolved consumed value from the pending Esc response.
+    esc_consumed: Option<bool>,
 }
 
 impl IpcPluginHost {
@@ -98,6 +108,11 @@ impl IpcPluginHost {
             crashed: false,
             consumed: false,
             persistent: false,
+            esc_pending: false,
+            esc_pending_frames: 0,
+            last_resp_count: 0,
+            response_count: 0,
+            esc_consumed: None,
         }
     }
 
@@ -225,6 +240,7 @@ impl IpcPluginHost {
                         self.cached_palette_commands = msg.palette_commands;
                         self.pending_request = msg.request;
                         self.consumed = msg.consumed;
+                        self.response_count += 1;
                     }
                     Err(mpsc::TryRecvError::Empty) => break,
                     Err(mpsc::TryRecvError::Disconnected) => {
@@ -540,17 +556,35 @@ impl Plugin for IpcPluginHost {
                 .contains(crossterm::event::KeyModifiers::CONTROL),
             alt: key.modifiers.contains(crossterm::event::KeyModifiers::ALT),
         };
-        // Block briefly for the response so the consumed flag reflects this
-        // specific key event. 5ms covers the writer's 1ms low-priority wait
-        // window plus plugin processing and channel round-trip, while keeping
-        // the worst-case stall well under a 60fps frame (16.6ms).
-        self.send_recv_blocking_timeout(
+
+        if matches!(key.code, KeyCode::Esc) {
+            // Event-driven Esc: send immediately, drain stale Tick responses,
+            // set esc_pending so tick() can resolve consumed on the next frame.
+            // Return true optimistically — the host defers the close decision
+            // until tick() resolves the pending Esc.
+            self.send(
+                &HostMsg::Key {
+                    key: ipc_key,
+                    modifiers,
+                },
+                Priority::High,
+            );
+            self.drain_responses();
+            self.esc_pending = true;
+            self.esc_pending_frames = 0;
+            self.last_resp_count = self.response_count;
+            return true;
+        }
+
+        // Non-Esc keys: host doesn't care about consumed, no blocking needed.
+        self.send(
             &HostMsg::Key {
                 key: ipc_key,
                 modifiers,
             },
-            Duration::from_millis(5),
+            Priority::High,
         );
+        self.drain_responses();
         self.consumed
     }
 
@@ -613,6 +647,25 @@ impl Plugin for IpcPluginHost {
     }
 
     fn tick(&mut self) {
+        if self.esc_pending {
+            // Don't send Tick while waiting for the Esc response.
+            // No Tick → any response in the channel must be from Esc.
+            // Drain once and check if a new response arrived.
+            self.esc_pending_frames += 1;
+            let before = self.response_count;
+            self.drain_responses();
+            if self.response_count > before {
+                // New response received → it's from Esc (no Ticks were sent).
+                self.esc_consumed = Some(self.consumed);
+                self.esc_pending = false;
+            } else if self.esc_pending_frames >= 10 {
+                // Timeout safeguard: ~1s at 100ms tick rate.
+                self.esc_consumed = Some(false);
+                self.esc_pending = false;
+            }
+            return;
+        }
+
         if let Ok((w, h)) = terminal::size() {
             let usable = Area {
                 w,
@@ -697,6 +750,10 @@ impl Plugin for IpcPluginHost {
 
     fn binary_path(&self) -> Option<&Path> {
         Some(Path::new(&self.binary_name))
+    }
+
+    fn take_pending_esc_result(&mut self) -> Option<bool> {
+        self.esc_consumed.take()
     }
 
     fn status_hints(&self) -> Vec<(String, String)> {

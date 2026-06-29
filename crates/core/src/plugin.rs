@@ -90,6 +90,14 @@ pub trait Plugin: Send {
     /// Mark this plugin as persistent.  Default is no-op; IPC plugins
     /// override this to store the value.
     fn set_persistent(&mut self, _persistent: bool) {}
+
+    /// Check if a pending Esc key response has been resolved.
+    /// Returns `Some(consumed)` if resolved, `None` if still pending
+    /// or no Esc was sent.
+    /// IPC plugins override this; in-process plugins don't need it.
+    fn take_pending_esc_result(&mut self) -> Option<bool> {
+        None
+    }
 }
 
 pub struct PluginContext {

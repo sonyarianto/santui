@@ -364,6 +364,17 @@ impl Santui {
             }
             self.plugin_manager.tick_all();
 
+            // Event-driven Esc: if the active plugin had a pending Esc response
+            // resolved on this tick, close the plugin if it was not consumed.
+            if let Some(idx) = self.plugin_manager.active() {
+                if let Some(consumed) = self.plugin_manager.drain_esc_result(idx) {
+                    if !consumed {
+                        self.plugin_manager.shutdown_and_remove(idx);
+                        self.app_state.home_selected = None;
+                    }
+                }
+            }
+
             // Poll for config changes (hot-reload).
             self.config_manager.poll();
             if self.config_manager.dirty {

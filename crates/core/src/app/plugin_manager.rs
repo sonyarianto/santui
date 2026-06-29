@@ -193,6 +193,16 @@ impl PluginManager {
         }
     }
 
+    /// Check if a pending Esc response has been resolved for plugin `idx`.
+    /// Returns `Some(consumed)` if resolved, `None` if still pending.
+    pub fn drain_esc_result(&mut self, idx: usize) -> Option<bool> {
+        if idx < self.plugins.len() {
+            self.plugins[idx].take_pending_esc_result()
+        } else {
+            None
+        }
+    }
+
     /// Shut down an IPC plugin and remove it from the managed set.
     ///
     /// Background-capable plugins (e.g., audio players) are kept alive — only
