@@ -33,8 +33,3 @@ jobs:
           cargo install cargo-audit --locked
           cargo audit
 
-      - name: Install & run cargo-outdated
-        continue-on-error: true
-        run: |
-          cargo install cargo-outdated --locked
-          cargo outdated --exit-code 1
