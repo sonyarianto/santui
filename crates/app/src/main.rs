@@ -2,9 +2,70 @@ use std::path::PathBuf;
 
 use santui_core::Santui;
 use santui_db::open_db;
+use santui_registry::Registry;
 
 #[cfg(feature = "auth")]
 use santui_auth::AuthClient;
+
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+fn data_dir() -> PathBuf {
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| ".".into());
+    PathBuf::from(home).join(".santui")
+}
+
+fn list_plugins() -> Result<(), Box<dyn std::error::Error>> {
+    let mut reg = Registry::new(data_dir());
+
+    println!("santui v{VERSION}");
+    println!();
+
+    // Installed plugins
+    println!("Installed plugins:");
+    if reg.installed.is_empty() {
+        println!("  (none)");
+    } else {
+        for p in &reg.installed {
+            let status = if p.enabled { "enabled" } else { "disabled" };
+            println!("  {} v{} [{}]", p.name, p.version, status);
+            if !p.capabilities.is_empty() {
+                println!("    capabilities: {}", p.capabilities.join(", "));
+            }
+        }
+    }
+
+    // Available plugins (best-effort manifest fetch)
+    println!();
+    match reg.fetch_manifest() {
+        Ok(()) => {
+            let installed_ids: std::collections::HashSet<&str> =
+                reg.installed.iter().map(|p| p.id.as_str()).collect();
+
+            let not_installed: Vec<&santui_registry::PluginManifest> = reg
+                .available
+                .iter()
+                .filter(|m| !installed_ids.contains(m.id.as_str()))
+                .collect();
+
+            println!("Available plugins ({} not installed):", not_installed.len());
+            if not_installed.is_empty() {
+                println!("  (all installed)");
+            } else {
+                for m in &not_installed {
+                    println!("  {} v{} — {}", m.name, m.version, m.description);
+                }
+            }
+        }
+        Err(e) => {
+            println!("Available plugins:");
+            println!("  (could not fetch manifest: {e})");
+        }
+    }
+
+    Ok(())
+}
 
 #[cfg(test)]
 mod tests {
@@ -18,12 +79,22 @@ mod tests {
 
     #[test]
     fn test_santui_depends_on_core_crate() {
-        // Compile-time check: if santui-core is not resolvable this won't compile
         let _ = santui_core::Santui::new();
     }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args: Vec<String> = std::env::args().collect();
+
+    if args.iter().any(|a| a == "--version" || a == "-V") {
+        println!("santui v{VERSION}");
+        return Ok(());
+    }
+
+    if args.iter().any(|a| a == "--list-plugins" || a == "plugins") {
+        return list_plugins();
+    }
+
     let _ = env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))
         .format_timestamp(None)
         .format_target(false)
@@ -33,16 +104,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize local database (per-user key-value storage for plugins).
     let _db = open_db()?;
 
-    // Initialize santui data directory (~/.santui).
-    let data_dir = {
-        let home = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .unwrap_or_else(|_| ".".into());
-        PathBuf::from(home).join(".santui")
-    };
-    let config_dir = data_dir.clone();
-    app.set_data_dir(data_dir);
-    app.set_config_dir(config_dir);
+    let dir = data_dir();
+    app.set_data_dir(dir.clone());
+    app.set_config_dir(dir);
 
     // Set plugin factory: uses IpcPluginHost for IPC-based plugin binaries.
     app.set_plugin_factory(std::sync::Arc::new(santui_ipc::IpcPluginHost::new_boxed));
