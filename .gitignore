@@ -1,5 +1,4 @@
 target/
-plugins.json
 
 native/*
 !native/radio_stream_stations.db
