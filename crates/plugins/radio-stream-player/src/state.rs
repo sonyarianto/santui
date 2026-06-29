@@ -32,6 +32,7 @@ pub struct RadioState {
     pub lyrics_loading: bool,
     pub lyrics_scroll: usize,
     pub lyrics_source: String,
+    pub metadata_seq: u64,
 }
 
 impl RadioState {
@@ -60,6 +61,7 @@ impl RadioState {
             lyrics_loading: false,
             lyrics_scroll: 0,
             lyrics_source: String::new(),
+            metadata_seq: 0,
         }
     }
 

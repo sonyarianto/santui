@@ -18,8 +18,8 @@ use santui_ipc::protocol::{Area, HostMsg, IpcKey, RenderCmd, ThemeData, UserData
 
 enum MpvMsg {
     Metadata(String),
-    TrackInfo(itunes::TrackInfo),
-    Lyrics(Option<lrclib::LyricsData>),
+    TrackInfo(u64, itunes::TrackInfo),
+    Lyrics(u64, Option<lrclib::LyricsData>),
     EndFile(u32),
 }
 
@@ -466,6 +466,8 @@ impl App {
                         self.state.track_info = None;
                         self.state.clear_lyrics();
                         self.state.lyrics_loading = true;
+                        self.state.metadata_seq += 1;
+                        let seq = self.state.metadata_seq;
                         let Some(tx) = self.tx_msg.clone() else {
                             continue;
                         };
@@ -473,7 +475,7 @@ impl App {
                         let title_for_itunes = title.clone();
                         thread::spawn(move || {
                             if let Ok(Some(info)) = itunes::lookup(&title_for_itunes) {
-                                let _ = tx.send(MpvMsg::TrackInfo(info));
+                                let _ = tx.send(MpvMsg::TrackInfo(seq, info));
                             }
                         });
                         thread::spawn(move || {
@@ -481,21 +483,27 @@ impl App {
                             let lyrics = lrclib::fetch(&track, artist.as_deref());
                             match lyrics {
                                 Ok(data) => {
-                                    let _ = tx2.send(MpvMsg::Lyrics(data));
+                                    let _ = tx2.send(MpvMsg::Lyrics(seq, data));
                                 }
                                 Err(_) => {
-                                    let _ = tx2.send(MpvMsg::Lyrics(None));
+                                    let _ = tx2.send(MpvMsg::Lyrics(seq, None));
                                 }
                             }
                         });
                     }
-                    MpvMsg::TrackInfo(info) => {
+                    MpvMsg::TrackInfo(seq, info) => {
+                        if seq != self.state.metadata_seq {
+                            continue;
+                        }
                         self.state.track_info = Some(info.clone());
                         if let Some(title) = &info.title {
                             self.state.song_title = title.clone();
                         }
                     }
-                    MpvMsg::Lyrics(data) => {
+                    MpvMsg::Lyrics(seq, data) => {
+                        if seq != self.state.metadata_seq {
+                            continue;
+                        }
                         match data {
                             Some(lyrics) => {
                                 self.state.lyrics_text = lyrics.text;
