@@ -41,7 +41,6 @@ struct App {
     init_error: Option<String>,
     dirty: bool,
     cached_commands: Vec<RenderCmd>,
-    cached_json: Option<String>,
     user: Option<UserData>,
     db: Option<rusqlite::Connection>,
 }
@@ -97,7 +96,6 @@ impl App {
             init_error,
             dirty: true,
             cached_commands: Vec::new(),
-            cached_json: None,
             user: None,
         }
     }
@@ -580,36 +578,26 @@ fn palette_commands() -> Vec<(String, String)> {
 }
 
 fn respond(app: &mut App, consumed: bool) {
-    if app.dirty || app.cached_json.is_none() {
-        let commands_val = match serde_json::to_value(app.render()) {
-            Ok(v) => v,
-            Err(e) => {
-                log::error!("failed to serialize render commands: {e}");
-                return;
-            }
-        };
-        let hints = app.status_hints();
-        let palette = palette_commands();
-        let json = serde_json::json!({
-            "commands": commands_val,
-            "hints": hints,
-            "palette_commands": palette,
-            "consumed": consumed,
-        });
-        app.cached_json = match serde_json::to_string(&json) {
-            Ok(s) => Some(s),
-            Err(e) => {
-                log::error!("failed to serialize PluginMsg: {e}");
-                return;
-            }
-        };
-        app.dirty = false;
-    }
-    let Some(json) = app.cached_json.as_deref() else {
+    let commands_val = match serde_json::to_value(app.render()) {
+        Ok(v) => v,
+        Err(e) => {
+            log::error!("failed to serialize render commands: {e}");
+            return;
+        }
+    };
+    let hints = app.status_hints();
+    let palette = palette_commands();
+    let json = serde_json::json!({
+        "commands": commands_val,
+        "hints": hints,
+        "palette_commands": palette,
+        "consumed": consumed,
+    });
+    let Ok(json_str) = serde_json::to_string(&json) else {
         return;
     };
     let mut out = std::io::stdout().lock();
-    let _ = writeln!(out, "{json}");
+    let _ = writeln!(out, "{json_str}");
     let _ = out.flush();
 }
 
@@ -741,7 +729,6 @@ mod tests {
             init_error: None,
             dirty: true,
             cached_commands: Vec::new(),
-            cached_json: None,
             user: None,
             db,
         }
