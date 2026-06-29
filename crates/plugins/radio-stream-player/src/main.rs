@@ -11,7 +11,7 @@ use std::thread;
 
 use ui::{HEADER_H, TABLE_TOP};
 
-const LIST_OVERHEAD: u16 = TABLE_TOP + HEADER_H + 1;
+const LIST_OVERHEAD: u16 = TABLE_TOP + HEADER_H + 1 + 2; // top + search + sep + header + bottom + footer (blank + hints)
 
 use player::Mpv;
 use santui_ipc::protocol::{Area, HostMsg, IpcKey, RenderCmd, ThemeData, UserData};
