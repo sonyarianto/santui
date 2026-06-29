@@ -1859,7 +1859,7 @@ checksum = "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f"
 
 [[package]]
 name = "santui"
-version = "0.2.20"
+version = "0.2.22"
 dependencies = [
  "env_logger",
  "log",
@@ -1872,7 +1872,7 @@ dependencies = [
 
 [[package]]
 name = "santui-auth"
-version = "0.2.20"
+version = "0.2.22"
 dependencies = [
  "dirs",
  "santui-core",
@@ -1884,7 +1884,7 @@ dependencies = [
 
 [[package]]
 name = "santui-core"
-version = "0.2.20"
+version = "0.2.22"
 dependencies = [
  "crossterm",
  "ctrlc",
@@ -1897,7 +1897,7 @@ dependencies = [
 
 [[package]]
 name = "santui-db"
-version = "0.2.20"
+version = "0.2.22"
 dependencies = [
  "rusqlite",
  "serde",
@@ -1906,7 +1906,7 @@ dependencies = [
 
 [[package]]
 name = "santui-ipc"
-version = "0.2.20"
+version = "0.2.22"
 dependencies = [
  "crossterm",
  "log",
@@ -1918,7 +1918,7 @@ dependencies = [
 
 [[package]]
 name = "santui-radio-stream-player"
-version = "0.2.20"
+version = "0.2.22"
 dependencies = [
  "env_logger",
  "libloading",
@@ -1932,7 +1932,7 @@ dependencies = [
 
 [[package]]
 name = "santui-radio-stream-scraper"
-version = "0.2.20"
+version = "0.2.22"
 dependencies = [
  "env_logger",
  "log",
@@ -1944,7 +1944,7 @@ dependencies = [
 
 [[package]]
 name = "santui-registry"
-version = "0.2.20"
+version = "0.2.22"
 dependencies = [
  "santui-core",
  "serde",
@@ -1956,7 +1956,7 @@ dependencies = [
 
 [[package]]
 name = "santui-registry-plugin"
-version = "0.2.20"
+version = "0.2.22"
 dependencies = [
  "env_logger",
  "log",

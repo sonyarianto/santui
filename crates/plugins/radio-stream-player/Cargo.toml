@@ -1,10 +1,10 @@
 [package]
 name = "santui-radio-stream-player"
-version = "0.2.21"
+version = "0.2.22"
 edition = "2021"
 
 [dependencies]
-santui-ipc = { path = "../../ipc", version = "0.2.21", default-features = false }
+santui-ipc = { path = "../../ipc", version = "0.2.22", default-features = false }
 libloading = "0.9"
 ureq = "3"
 serde = { workspace = true }
