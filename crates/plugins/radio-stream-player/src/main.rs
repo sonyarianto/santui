@@ -534,7 +534,11 @@ impl App {
 
     fn status_hints(&self) -> Vec<(String, String)> {
         if self.state.search_mode {
-            return vec![("↵".into(), "play".into()), ("⌫".into(), "delete".into())];
+            return vec![
+                ("↵".into(), "play".into()),
+                ("↑↓".into(), "navigate".into()),
+                ("⌫".into(), "delete".into()),
+            ];
         }
         let mut hints: Vec<(String, String)> = Vec::new();
         if self.state.show_lyrics && self.state.lyrics_focused {
