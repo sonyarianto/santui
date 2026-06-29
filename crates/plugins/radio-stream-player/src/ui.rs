@@ -1,3 +1,4 @@
+use crate::lrclib;
 use crate::state::{PlayState, RadioState};
 use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData, BORDER_ALL};
 use santui_ipc::ui;
@@ -397,6 +398,31 @@ pub fn render_ui(
 
         let ly_inner_w = ly_panel_w.saturating_sub(3);
 
+        // Title/artist header from iTunes (track_info) or station metadata (song_title)
+        let (header_title, header_artist) = if !state.lyrics_text.is_empty() {
+            if let Some(ref info) = state.track_info {
+                let title = info
+                    .title
+                    .clone()
+                    .or_else(|| (!state.song_title.is_empty()).then(|| state.song_title.clone()));
+                (title, info.artist.clone())
+            } else if !state.song_title.is_empty() {
+                let (artist, title) = lrclib::split_title(&state.song_title);
+                (Some(title), artist)
+            } else {
+                (None, None)
+            }
+        } else {
+            (None, None)
+        };
+        let header_rows = match (&header_title, &header_artist) {
+            (Some(_), Some(_)) => 3,
+            (Some(_), None) => 2,
+            (None, Some(_)) => 2,
+            (None, None) => 0,
+        };
+        let content_top = 1 + header_rows;
+
         if state.lyrics_loading {
             ui::text_at(
                 &mut cmds,
@@ -418,7 +444,30 @@ pub fn render_ui(
                 ly_inner_w,
             );
         } else {
-            let ly_h = area_h.saturating_sub(2 + lyrics_footer_rows) as usize;
+            // Render title header
+            if let Some(ref title) = header_title {
+                cmds.push(RenderCmd::Text {
+                    x: ly_x + 2,
+                    y: 1,
+                    text: title.chars().take(ly_inner_w as usize).collect(),
+                    fg: Some(theme.accent),
+                    bg: None,
+                    bold: true,
+                });
+            }
+            if let Some(ref artist) = header_artist {
+                cmds.push(RenderCmd::Text {
+                    x: ly_x + 2,
+                    y: 2,
+                    text: artist.chars().take(ly_inner_w as usize).collect(),
+                    fg: Some(theme.text_muted),
+                    bg: None,
+                    bold: false,
+                });
+            }
+            // Blank line at y=3 (both) or y=2 (title only) is implicit
+
+            let ly_h = area_h.saturating_sub(2 + lyrics_footer_rows + header_rows) as usize;
             let lines: Vec<&str> = state.lyrics_text.lines().collect();
             let scroll = state.lyrics_scroll.min(lines.len().saturating_sub(1));
             for i in 0..ly_h {
@@ -430,7 +479,7 @@ pub fn render_ui(
                 ui::text_at(
                     &mut cmds,
                     ly_x + 2,
-                    1 + i as u16,
+                    content_top + i as u16,
                     line,
                     theme.text,
                     None,
@@ -445,7 +494,7 @@ pub fn render_ui(
                     .map(|v| v.min(100))
                     .unwrap_or(0);
                 let scroll_text = format!("{pct}%");
-                let indicator_y = 1 + ly_h as u16 - 1;
+                let indicator_y = content_top + ly_h as u16 - 1;
                 let sx = ly_x + ly_panel_w.saturating_sub(scroll_text.len() as u16 + 2);
                 cmds.push(RenderCmd::Text {
                     x: sx,

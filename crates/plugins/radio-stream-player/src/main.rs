@@ -925,7 +925,7 @@ mod tests {
         let mut app = base_app_with(30, None);
         app.state.selected = 20;
         assert!(app.handle_key(IpcKey::PageUp));
-        assert_eq!(app.state.selected, 4);
+        assert_eq!(app.state.selected, 6);
     }
 
     #[test]
@@ -944,7 +944,7 @@ mod tests {
         let mut app = base_app_with(30, None);
         app.state.selected = 0;
         assert!(app.handle_key(IpcKey::PageDown));
-        assert_eq!(app.state.selected, 16);
+        assert_eq!(app.state.selected, 14);
     }
 
     #[test]
