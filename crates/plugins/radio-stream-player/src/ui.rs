@@ -138,13 +138,17 @@ pub fn render_ui(
 
     let stations_footer: Option<&[(&str, &str)]> = if state.search_mode {
         Some(&[("↑↓", "navigate"), ("↵", "play"), ("⌫", "delete")])
+    } else if state.lyrics_focused {
+        Some(&[("↑↓", "scroll"), ("l", "hide")])
     } else {
         Some(&[
             ("↑↓", "navigate"),
             ("↵", "play"),
-            ("s", "stop"),
-            ("r", "reload"),
+            ("space", "fav"),
             ("/", "search"),
+            ("s", "stop"),
+            ("f", "fav only"),
+            ("r", "reload"),
         ])
     };
     let lyrics_footer: Option<&[(&str, &str)]> = if state.show_lyrics {
@@ -209,7 +213,16 @@ pub fn render_ui(
                     msg.clone()
                 }
             }
-            None => format!("Total stations: {}", state.stations.len()),
+            None => {
+                let fav_count = state.favorites_count();
+                if state.show_favorites_only {
+                    format!("♥ {} favorites", state.filtered.len())
+                } else if fav_count > 0 {
+                    format!("Total stations: {}  ♥ {}", state.stations.len(), fav_count)
+                } else {
+                    format!("Total stations: {}", state.stations.len())
+                }
+            }
         };
         let top_x = left_w.saturating_sub(2u16.saturating_add(top_text.len() as u16));
         cmds.push(RenderCmd::Text {
@@ -234,16 +247,21 @@ pub fn render_ui(
     let scroll = state.scroll.min(state.filtered.len().saturating_sub(1));
     let visible_count = max_visible.min(state.filtered.len().saturating_sub(scroll));
 
-    let name_w = (inner_w * 45 / 100).max(10);
-    let genre_w = (inner_w * 35 / 100).max(8);
-    let country_w = inner_w.saturating_sub(name_w + genre_w);
+    let name_w = ((inner_w - 2) * 45 / 100).max(10);
+    let genre_w = ((inner_w - 2) * 35 / 100).max(8);
+    let country_w = inner_w.saturating_sub(2 + name_w + genre_w);
 
     let mut rows: Vec<Vec<String>> = Vec::with_capacity(visible_count);
     for i in 0..visible_count {
         let station_idx = state.filtered[scroll + i];
         let station = &state.stations[station_idx];
+        let fav = if state.is_favorite(&station.url) {
+            "♥ "
+        } else {
+            "  "
+        };
         rows.push(vec![
-            ui::truncate(&station.name, name_w),
+            ui::truncate(&format!("{fav}{}", station.name), name_w),
             ui::truncate(&station.genre, genre_w),
             ui::truncate(station.country_name(), country_w),
         ]);
@@ -797,10 +815,10 @@ mod tests {
             .unwrap();
         if let RenderCmd::Table { rows, .. } = table {
             assert_eq!(rows.len(), 5);
-            assert_eq!(rows[0][0], "Station 0");
+            assert_eq!(rows[0][0], "  Station 0");
             assert_eq!(rows[0][1], "Rock");
             assert_eq!(rows[0][2], "United States");
-            assert_eq!(rows[1][0], "Station 1");
+            assert_eq!(rows[1][0], "  Station 1");
             assert_eq!(rows[1][1], "Pop");
             assert_eq!(rows[1][2], "United Kingdom");
         } else {
@@ -1052,8 +1070,8 @@ mod tests {
         } = table
         {
             // With scroll=10, visible rows start at index 10
-            assert_eq!(rows[0][0], "Station 10");
-            assert_eq!(rows[2][0], "Station 12");
+            assert_eq!(rows[0][0], "  Station 10");
+            assert_eq!(rows[2][0], "  Station 12");
             assert_eq!(*selected, Some(2)); // vis_selected = 12 - 10 = 2
             assert_eq!(*current_row, None); // no current_station set
         }

@@ -9,7 +9,7 @@ use ratatui::layout::Rect;
 use ratatui::Frame;
 use santui_core::auth::User;
 use santui_core::theme::Theme;
-use santui_core::{AuthHandle, Plugin, PluginCmdItem, PluginContext};
+use santui_core::{AuthHandle, DbAccess, Plugin, PluginCmdItem, PluginContext};
 use std::cell::Cell;
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
@@ -238,7 +238,12 @@ impl IpcPluginHost {
                         self.cached_commands = msg.commands;
                         self.cached_hints = msg.hints;
                         self.cached_palette_commands = msg.palette_commands;
-                        self.pending_request = msg.request;
+                        // Only overwrite pending_request with Some — a
+                        // Tick response (always None) must not clear a
+                        // DbSet that was set by a delayed Key response.
+                        if msg.request.is_some() {
+                            self.pending_request = msg.request;
+                        }
                         self.consumed = msg.consumed;
                         self.response_count += 1;
                     }
@@ -452,42 +457,73 @@ impl IpcPluginHost {
     }
 
     /// Process any pending request from the plugin.
-    /// Returns true if the plugin's render cache is now stale and should be re-queried.
-    pub fn process_request(&mut self, auth: &Arc<dyn AuthHandle>) -> bool {
+    fn process_pending_requests_inner(
+        &mut self,
+        db: &mut dyn DbAccess,
+        auth: Option<&Arc<dyn AuthHandle>>,
+    ) {
         let req = match self.pending_request.take() {
             Some(r) => r,
-            None => return false,
+            None => return,
         };
         match req {
             PluginRequest::SignIn { provider } => {
-                match auth.sign_in(&provider) {
-                    Ok(user) => {
-                        self.send_recv(&HostMsg::UserUpdate {
-                            user: Some(user_to_data(&user)),
-                        });
-                    }
-                    Err(e) => {
-                        log::error!("[santui] Sign-in failed: {e}");
-                        self.send_recv(&HostMsg::UserUpdate { user: None });
+                if let Some(auth) = auth {
+                    match auth.sign_in(&provider) {
+                        Ok(user) => {
+                            self.send_recv(&HostMsg::UserUpdate {
+                                user: Some(user_to_data(&user)),
+                            });
+                        }
+                        Err(e) => {
+                            log::error!("[santui] Sign-in failed: {e}");
+                            self.send_recv(&HostMsg::UserUpdate { user: None });
+                        }
                     }
                 }
-                true
             }
             PluginRequest::SignOut => {
-                auth.sign_out();
+                if let Some(auth) = auth {
+                    auth.sign_out();
+                }
                 self.send_recv(&HostMsg::UserUpdate { user: None });
-                true
             }
             PluginRequest::PluginsChanged => {
                 // The host picks up changes by polling registry.toml.
                 // Nothing else to do here — the flag is for the host loop.
-                true
+            }
+            PluginRequest::DbGet { key } => {
+                let user_id = auth
+                    .and_then(|a| a.current_user())
+                    .map(|u| u.id.clone())
+                    .unwrap_or_else(|| "_".to_string());
+                let value = db.get_value(&self.name, &user_id, &key);
+                self.send_recv(&HostMsg::DbValue { key, value });
+            }
+            PluginRequest::DbSet { key, value } => {
+                let user_id = auth
+                    .and_then(|a| a.current_user())
+                    .map(|u| u.id.clone())
+                    .unwrap_or_else(|| "_".to_string());
+                db.set_value(&self.name, &user_id, &key, &value);
+                self.send_recv(&HostMsg::DbValue {
+                    key,
+                    value: Some(value),
+                });
             }
         }
     }
 }
 
 impl Plugin for IpcPluginHost {
+    fn process_pending_requests(
+        &mut self,
+        db: &mut dyn DbAccess,
+        auth: Option<&Arc<dyn AuthHandle>>,
+    ) {
+        self.process_pending_requests_inner(db, auth);
+    }
+
     fn id(&self) -> &str {
         &self.id
     }
@@ -1328,6 +1364,14 @@ mod tests {
         }
     }
 
+    struct NullDbAccess;
+    impl DbAccess for NullDbAccess {
+        fn get_value(&self, _plugin: &str, _user_id: &str, _key: &str) -> Option<String> {
+            None
+        }
+        fn set_value(&mut self, _plugin: &str, _user_id: &str, _key: &str, _value: &str) {}
+    }
+
     #[test]
     fn test_process_request_sign_in_triggers_user_update() {
         let mut host = IpcPluginHost::new("id", "name", "bin");
@@ -1362,8 +1406,8 @@ mod tests {
             })
             .unwrap();
 
-        let changed = host.process_request(&auth);
-        assert!(changed);
+        let mut db = NullDbAccess;
+        host.process_pending_requests(&mut db, Some(&auth));
         assert!(host.pending_request.is_none());
         assert!(!host.crashed);
     }
@@ -1390,8 +1434,8 @@ mod tests {
             .unwrap();
 
         let auth: Arc<dyn AuthHandle> = Arc::new(MockAuth::new());
-        let changed = host.process_request(&auth);
-        assert!(changed);
+        let mut db = NullDbAccess;
+        host.process_pending_requests(&mut db, Some(&auth));
     }
 
     #[test]
@@ -1400,8 +1444,8 @@ mod tests {
         host.pending_request = Some(PluginRequest::PluginsChanged);
 
         let auth: Arc<dyn AuthHandle> = Arc::new(MockAuth::new());
-        let changed = host.process_request(&auth);
-        assert!(changed);
+        let mut db = NullDbAccess;
+        host.process_pending_requests(&mut db, Some(&auth));
         assert!(host.pending_request.is_none());
     }
 
@@ -1409,7 +1453,8 @@ mod tests {
     fn test_process_request_no_pending_returns_false() {
         let mut host = IpcPluginHost::new("id", "name", "bin");
         let auth: Arc<dyn AuthHandle> = Arc::new(MockAuth::new());
-        assert!(!host.process_request(&auth));
+        let mut db = NullDbAccess;
+        host.process_pending_requests(&mut db, Some(&auth));
     }
 
     #[test]

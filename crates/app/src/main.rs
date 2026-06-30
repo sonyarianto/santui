@@ -1,13 +1,44 @@
 use std::path::PathBuf;
 
-use santui_core::Santui;
+use santui_core::{DbAccess, Santui};
 use santui_db::open_db;
 use santui_registry::Registry;
 
 #[cfg(feature = "auth")]
 use santui_auth::AuthClient;
 
+use rusqlite::Connection;
+
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// Wraps the central santui.db connection for plugin key-value access.
+struct SantuiDb {
+    conn: Option<Connection>,
+}
+
+impl DbAccess for SantuiDb {
+    fn get_value(&self, plugin: &str, user_id: &str, key: &str) -> Option<String> {
+        let conn = self.conn.as_ref()?;
+        conn.query_row(
+            "SELECT value FROM user_data WHERE plugin = ?1 AND user_id = ?2 AND key = ?3",
+            rusqlite::params![plugin, user_id, key],
+            |row| row.get::<_, String>(0),
+        )
+        .ok()
+    }
+
+    fn set_value(&mut self, plugin: &str, user_id: &str, key: &str, value: &str) {
+        let conn = match self.conn.as_ref() {
+            Some(c) => c,
+            None => return,
+        };
+        let _ = conn.execute(
+            "INSERT INTO user_data (plugin, user_id, key, value) VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(plugin, user_id, key) DO UPDATE SET value = excluded.value",
+            rusqlite::params![plugin, user_id, key, value],
+        );
+    }
+}
 
 fn data_dir() -> PathBuf {
     let home = std::env::var("HOME")
@@ -101,8 +132,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .try_init();
     let mut app = Santui::new();
 
-    // Initialize local database (per-user key-value storage for plugins).
-    let _db = open_db()?;
+    // Initialize central database for plugin user data.
+    let conn = open_db().ok();
+    let db = Box::new(SantuiDb { conn });
+    app.set_db(db);
 
     let dir = data_dir();
     std::fs::create_dir_all(&dir)?;

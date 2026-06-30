@@ -1968,6 +1968,7 @@ version = "0.2.23"
 dependencies = [
  "env_logger",
  "log",
+ "rusqlite",
  "santui-auth",
  "santui-core",
  "santui-db",

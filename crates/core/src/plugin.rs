@@ -1,4 +1,5 @@
 use crate::auth::{AuthHandle, User};
+use crate::db_access::DbAccess;
 use crate::theme::Theme;
 use crossterm::event::{KeyEvent, MouseEvent};
 use ratatui::layout::Rect;
@@ -97,6 +98,17 @@ pub trait Plugin: Send {
     /// IPC plugins override this; in-process plugins don't need it.
     fn take_pending_esc_result(&mut self) -> Option<bool> {
         None
+    }
+
+    /// Process any pending requests from the plugin (e.g. DB read/write,
+    /// authentication). Called once per main loop iteration.
+    /// The default implementation is a no-op. IPC plugins override this
+    /// to forward `PluginRequest` variants to the host.
+    fn process_pending_requests(
+        &mut self,
+        _db: &mut dyn DbAccess,
+        _auth: Option<&Arc<dyn AuthHandle>>,
+    ) {
     }
 }
 
