@@ -5,7 +5,7 @@
 ### Core
 
 - **Santui** — main app struct; delegates to dedicated subsystems: `PluginManager`, `ThemeManager`, `PaletteController`, `RegistryScreen`, `StatusBar`, `ConfigManager`, and `EventBus`.
-- **Plugin trait** — all methods have default implementations; only `id()`, `name()`, and `init()` are required. Additional lifecycle hooks: `handle_key`, `render`, `tick`, `on_focus`/`on_blur`, `on_theme_change`, `on_user_update`, `status_hints`, `commands`, `handle_palette_command`, `on_plugin_message`, `shutdown`, `binary_path`, `is_alive`, `can_background`, `set_capabilities`.
+- **Plugin trait** — all methods have default implementations; only `id()`, `name()`, and `init()` are required. Additional lifecycle hooks: `handle_key`, `render`, `tick`, `process_pending_requests`, `on_focus`/`on_blur`, `on_theme_change`, `on_user_update`, `status_hints`, `commands`, `handle_palette_command`, `on_plugin_message`, `shutdown`, `binary_path`, `is_alive`, `can_background`, `set_capabilities`.
 - **Event loop** — `Santui::run()` drives tick, key dispatch, config polling, event bus draining, and render.
 - **Palette** — command palette overlay (`Ctrl+P`); combines built-in commands from `AppState.builtin_items` + dynamic plugin commands from `PluginCmdItem` + plugin-registered commands for enabled registry plugins. "Switch Theme" opens a searchable theme picker (via `ThemeManager`).
 - **About screen** — shown on `?` key; uses `render_about()`.
@@ -19,8 +19,8 @@ Plugins run as separate processes via `IpcPluginHost`, which implements the `Plu
 ```
 santui.exe (host)
   └─ IpcPluginHost (implements Plugin trait)
-       ├─ sends HostMsg (Init, Key, Tick, Resize, ...) via stdin  ──►
-       └─ reads PluginMsg { commands, hints, palette_commands, request, consumed } via stdout ◄──
+        ├─ sends HostMsg (Init, Key, Tick, Resize, DbValue, ...) via stdin  ──►
+        └─ reads PluginMsg { commands, hints, palette_commands, request, consumed } via stdout ◄──
             │ spawns & manages
             ▼
        santui-radio-stream-player.exe (headless, no ratatui)
@@ -104,6 +104,7 @@ santui.exe (host)
   ├── PluginManager          ← plugin lifecycle, IPC, event bus (Phase 2.1 ✅)
   │    ├── Vec<Box<dyn Plugin>>
   │    ├── IpcPluginHost
+  │    ├── db: Box<dyn DbAccess>  ← per-user key-value store
   │    └── EventBus           ← plugin-to-plugin messaging (Phase 2.2 ✅)
   ├── PaletteController       ← dynamic command registry (Phase 1.1 ✅)
   ├── StatusBar               ← own module (Phase 1.3 ✅)

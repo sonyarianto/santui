@@ -120,6 +120,13 @@ fn main() {
             HostMsg::PaletteCommand { .. } => {}
             HostMsg::PluginMessage { .. } => {}
             HostMsg::Mouse { .. } => {}
+            HostMsg::DbValue { key, value } => {
+                // Restore persisted state from `value` (e.g. JSON),
+                // or handle `value == None` as "no data yet".
+                // If your plugin uses DbGet/DbSet requests, use this
+                // arm to update your state from the database response.
+                let _ = (key, value);
+            }
         }
 
         // Every host message expects at least one response.

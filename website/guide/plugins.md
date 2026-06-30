@@ -7,7 +7,7 @@ Plugins extend Santui with new capabilities. They run as **separate processes** 
 ```
 santui.exe (host)
   └─ IpcPluginHost (implements Plugin trait)
-       ├─ sends HostMsg (Init, Key, Tick, Resize, ...) via plugin's stdin
+        ├─ sends HostMsg (Init, Key, Tick, Resize, DbValue, ...) via plugin's stdin
        └─ reads PluginMsg { commands, hints, palette_commands, request, consumed } from plugin's stdout
 ```
 
@@ -101,6 +101,7 @@ Add your own fields here. The `Init` message provides the current theme and term
 | `UserUpdate` | User signed in or out |
 | `PaletteCommand` | User selected a palette command from `palette_commands` |
 | `PluginMessage` | Another plugin sent a message |
+| `DbValue` | Response to a `PluginRequest::DbGet` or `DbSet` — contains `key` and `value` from the database |
 | `Shutdown` | Santui is closing — exit cleanly |
 
 ### Responding
@@ -130,7 +131,7 @@ fn respond(&self, consumed: bool) {
 | `commands` | `Vec<RenderCmd>` | Things to draw on screen this frame |
 | `hints` | `Vec<(String, String)>` | Status bar hints (label, description) |
 | `palette_commands` | `Vec<(String, String)>` | Commands shown in `Ctrl+P` palette |
-| `request` | `Option<PluginRequest>` | Request auth (`SignIn` / `SignOut`) |
+| `request` | `Option<PluginRequest>` | Request auth (`SignIn` / `SignOut`) or DB persistence (`DbGet` / `DbSet`) |
 | `consumed` | `bool` | `true` when the plugin handled a key event internally (e.g., closing a sub-dialog on Esc). Defaults to `false` for backward compatibility. |
 
 ### Render commands
@@ -229,6 +230,48 @@ PluginMsg {
 
 When the user completes the flow, `HostMsg::UserUpdate { user: Some(...) }` is sent with the user data.
 
+## Persisting data
+
+Plugins can persist per-user key-value data to the central `santui.db` via `PluginRequest::DbGet` and `DbSet`:
+
+```rust
+// Read stored data
+PluginMsg {
+    commands: vec![],
+    hints: vec![],
+    palette_commands: vec![],
+    request: Some(PluginRequest::DbGet {
+        key: "favorites".into(),
+    }),
+    consumed: false,
+}
+
+// Write data
+PluginMsg {
+    commands: vec![],
+    hints: vec![],
+    palette_commands: vec![],
+    request: Some(PluginRequest::DbSet {
+        key: "favorites".into(),
+        value: r#"["http://example.com/1"]"#.into(),
+    }),
+    consumed: false,
+}
+```
+
+The host responds with `HostMsg::DbValue { key, value }` — handle it in your event loop:
+
+```rust
+HostMsg::DbValue { key, value } => {
+    match value {
+        Some(v) => { /* restore state from JSON in v */ }
+        None => { /* no data yet */ }
+    }
+}
+```
+
+Under the hood, the host stores data in the `user_data` table keyed by `(plugin, user_id, key)`. If the user is signed in, `user_id` is the authenticated user's ID; otherwise it falls back to `"_"`. This means data persists per-user and per-plugin automatically.
+
 ## Status bar hints
 
 Return hints to show key bindings in the status bar:
@@ -240,7 +283,7 @@ hints: vec![
 ],
 ```
 
-> **Radio Stream Player** requires [libmpv](https://mpv.io/installation/) for audio playback. On Windows it's bundled in the release archive; on macOS/Linux install via `apt`/`brew`/`pacman`.
+> **Radio Stream Player** requires [libmpv](https://mpv.io/installation/) for audio playback. On Windows it's bundled in the release archive; on macOS/Linux install via `apt`/`brew`/`pacman`. It also demonstrates data persistence — station favorites are stored in the central `santui.db` via `DbGet`/`DbSet`.
 
 ## Next steps
 
