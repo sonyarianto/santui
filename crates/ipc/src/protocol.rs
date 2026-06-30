@@ -136,6 +136,13 @@ pub enum HostMsg {
         action: String,
         data: String,
     },
+    /// Response to a `PluginRequest::DbGet` or `DbSet`.
+    /// `value` is `None` when the requested key does not exist.
+    DbValue {
+        key: String,
+        #[serde(default)]
+        value: Option<String>,
+    },
 }
 
 /// Serializable style information for IPC render commands.
@@ -250,6 +257,17 @@ pub enum PluginRequest {
     /// Signal that the registry plugin has modified the installed plugin list.
     /// The host should re-read `registry.toml` and refresh the palette.
     PluginsChanged,
+    /// Request the host to read a value from the central user_data table.
+    /// The host responds with a `HostMsg::DbValue`.
+    DbGet {
+        key: String,
+    },
+    /// Request the host to write a value to the central user_data table.
+    /// The host responds with a `HostMsg::DbValue` containing the stored value.
+    DbSet {
+        key: String,
+        value: String,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -11,6 +11,7 @@ mod theme_manager;
 
 use crate::auth::AuthHandle;
 use crate::config::ConfigManager;
+use crate::db_access::DbAccess;
 use crate::plugin::{Plugin, PluginContext};
 use crate::widgets::DimOverlay;
 use crossterm::event::{Event, KeyEventKind};
@@ -166,6 +167,8 @@ pub struct Santui {
     pub(super) event_bus: crate::event::EventBus,
     /// Authentication handle (set by main.rs before run()).
     pub(super) auth: Option<Arc<dyn AuthHandle>>,
+    /// Central database access for plugin user data.
+    pub(super) db: Option<Box<dyn DbAccess>>,
     /// Centralized application state.
     pub(super) app_state: app_state::AppState,
     /// Manages theme selection, preview, and theme-picker UI state.
@@ -196,6 +199,7 @@ impl Santui {
             plugin_manager: plugin_manager::PluginManager::new(),
             event_bus: crate::event::EventBus::new(),
             auth: None,
+            db: None,
             app_state: app_state::AppState::new(theme),
             theme_manager,
             palette_controller: palette_controller::PaletteController::new(),
@@ -214,6 +218,12 @@ impl Santui {
 
     pub fn set_auth(&mut self, auth: Arc<dyn AuthHandle>) {
         self.auth = Some(auth);
+    }
+
+    /// Set the central database access for plugins.
+    /// Call before `run()`.
+    pub fn set_db(&mut self, db: Box<dyn DbAccess>) {
+        self.db = Some(db);
     }
 
     /// Set the config directory and load (or create) `config.toml`.
@@ -353,6 +363,12 @@ impl Santui {
         };
         self.plugin_manager.init_all(&mut ctx)?;
 
+        // Process any pending requests from init responses (e.g. DbGet).
+        if let Some(ref mut db) = self.db {
+            self.plugin_manager
+                .process_all_requests(db.as_mut(), &self.auth);
+        }
+
         // Populate palette "Plugins" category from registry.toml.
         self.plugin_manager.read_registry_installed();
 
@@ -363,6 +379,12 @@ impl Santui {
                 break;
             }
             self.plugin_manager.tick_all();
+
+            // Process pending plugin requests (DB read/write, auth, etc.).
+            if let Some(ref mut db) = self.db {
+                self.plugin_manager
+                    .process_all_requests(db.as_mut(), &self.auth);
+            }
 
             // Event-driven Esc: if the active plugin had a pending Esc response
             // resolved on this tick, close the plugin if it was not consumed.
@@ -424,6 +446,13 @@ impl Santui {
                         continue;
                     }
                     self.handle_key(key);
+
+                    // Process pending plugin requests from key responses
+                    // (e.g. DbSet on Space press).
+                    if let Some(ref mut db) = self.db {
+                        self.plugin_manager
+                            .process_all_requests(db.as_mut(), &self.auth);
+                    }
                 }
             }
         }

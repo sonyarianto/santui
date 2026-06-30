@@ -1,6 +1,7 @@
 use crate::itunes::TrackInfo;
 use crate::lrclib;
 use crate::stations::Station;
+use std::collections::HashSet;
 use std::time::Instant;
 
 pub enum PlayState {
@@ -33,6 +34,8 @@ pub struct RadioState {
     pub lyrics_scroll: usize,
     pub lyrics_source: String,
     pub metadata_seq: u64,
+    pub favorites: HashSet<String>,
+    pub show_favorites_only: bool,
 }
 
 impl RadioState {
@@ -62,12 +65,14 @@ impl RadioState {
             lyrics_scroll: 0,
             lyrics_source: String::new(),
             metadata_seq: 0,
+            favorites: HashSet::new(),
+            show_favorites_only: false,
         }
     }
 
     pub fn apply_filter(&mut self) {
         let q = self.query.to_lowercase();
-        if q.is_empty() {
+        if q.is_empty() && !self.show_favorites_only {
             self.filtered = (0..self.stations.len()).collect();
         } else {
             self.filtered = self
@@ -75,21 +80,47 @@ impl RadioState {
                 .iter()
                 .enumerate()
                 .filter(|(_, s)| {
-                    s.name.to_lowercase().contains(&q)
+                    let matches_query = q.is_empty()
+                        || s.name.to_lowercase().contains(&q)
                         || s.country.to_lowercase().contains(&q)
                         || s.country_name().to_lowercase().contains(&q)
-                        || s.genre.to_lowercase().contains(&q)
+                        || s.genre.to_lowercase().contains(&q);
+                    let matches_fav = !self.show_favorites_only || self.favorites.contains(&s.url);
+                    matches_query && matches_fav
                 })
                 .map(|(i, _)| i)
                 .collect();
         }
         self.selected = self.selected.min(self.filtered.len().saturating_sub(1));
-        self.scroll = 0;
     }
 
     pub fn set_query(&mut self, query: String) {
         self.query = query;
         self.apply_filter();
+        self.scroll = 0;
+    }
+
+    pub fn is_favorite(&self, url: &str) -> bool {
+        self.favorites.contains(url)
+    }
+
+    pub fn toggle_favorite(&mut self, url: &str) -> bool {
+        if self.favorites.contains(url) {
+            self.favorites.remove(url);
+            false
+        } else {
+            self.favorites.insert(url.to_string());
+            true
+        }
+    }
+
+    pub fn set_favorites(&mut self, favs: HashSet<String>) {
+        self.favorites = favs;
+        self.apply_filter();
+    }
+
+    pub fn favorites_count(&self) -> usize {
+        self.favorites.len()
     }
 
     pub fn ensure_scroll_visible(&mut self, max_visible: usize) {

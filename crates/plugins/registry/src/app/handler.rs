@@ -151,6 +151,7 @@ impl App {
             HostMsg::PaletteCommand { index: _ } => {}
 
             HostMsg::PluginMessage { .. } => {}
+            HostMsg::DbValue { .. } => {}
 
             HostMsg::Mouse { .. } => {}
         }

@@ -14,7 +14,7 @@ use ui::{HEADER_H, TABLE_TOP};
 const LIST_OVERHEAD: u16 = TABLE_TOP + HEADER_H + 1 + 2; // top + search + sep + header + bottom + footer (blank + hints)
 
 use player::Mpv;
-use santui_ipc::protocol::{Area, HostMsg, IpcKey, RenderCmd, ThemeData, UserData};
+use santui_ipc::protocol::{Area, HostMsg, IpcKey, PluginRequest, RenderCmd, ThemeData, UserData};
 
 enum MpvMsg {
     Metadata(String),
@@ -43,6 +43,7 @@ struct App {
     cached_commands: Vec<RenderCmd>,
     user: Option<UserData>,
     db: Option<rusqlite::Connection>,
+    pending_request: Option<PluginRequest>,
 }
 
 fn send_cmd(app: &App, cmd: MpvCmd) {
@@ -97,6 +98,9 @@ impl App {
             dirty: true,
             cached_commands: Vec::new(),
             user: None,
+            pending_request: Some(PluginRequest::DbGet {
+                key: "favorites".into(),
+            }),
         }
     }
 
@@ -371,7 +375,7 @@ impl App {
                 if !self.state.lyrics_focused {
                     self.state.search_mode = true;
                     self.state.query.clear();
-                    self.state.filtered = (0..self.state.stations.len()).collect();
+                    self.state.apply_filter();
                     self.state.selected = 0;
                     self.state.scroll = 0;
                     true
@@ -436,6 +440,44 @@ impl App {
                 self.state.show_lyrics = !self.state.show_lyrics;
                 self.state.lyrics_scroll = 0;
                 self.state.lyrics_focused = self.state.show_lyrics;
+                true
+            }
+            IpcKey::Char(' ') => {
+                if self.state.lyrics_focused {
+                    return false;
+                }
+                let station_url = self.state.selected_station().map(|s| s.url.clone());
+                if let Some(url) = station_url {
+                    let is_fav = self.state.toggle_favorite(&url);
+                    let favs_json =
+                        serde_json::to_string(&self.state.favorites.iter().collect::<Vec<_>>())
+                            .unwrap_or_default();
+                    self.pending_request = Some(PluginRequest::DbSet {
+                        key: "favorites".into(),
+                        value: favs_json,
+                    });
+                    self.state.set_scan_msg(if is_fav {
+                        "♥ Added to favorites".into()
+                    } else {
+                        "Removed from favorites".into()
+                    });
+                    self.state.apply_filter();
+                }
+                true
+            }
+            IpcKey::Char('f') => {
+                if self.state.lyrics_focused {
+                    return false;
+                }
+                self.state.show_favorites_only = !self.state.show_favorites_only;
+                self.state.apply_filter();
+                self.state.selected = 0;
+                self.state.scroll = 0;
+                if self.state.show_favorites_only {
+                    self.state.set_scan_msg("♥ Showing favorites only".into());
+                } else {
+                    self.state.set_scan_msg("Showing all stations".into());
+                }
                 true
             }
             _ => false,
@@ -549,6 +591,17 @@ impl App {
         }
     }
 
+    fn handle_db_value(&mut self, key: &str, value: Option<String>) {
+        if key == "favorites" {
+            let favs: std::collections::HashSet<String> = match value {
+                Some(json) => serde_json::from_str(&json).unwrap_or_default(),
+                None => std::collections::HashSet::new(),
+            };
+            self.state.set_favorites(favs);
+            self.dirty = true;
+        }
+    }
+
     fn status_hints(&self) -> Vec<(String, String)> {
         if self.state.search_mode {
             return vec![
@@ -608,10 +661,12 @@ fn respond(app: &mut App, consumed: bool) {
     };
     let hints = app.status_hints();
     let palette = palette_commands();
+    let request = app.pending_request.take();
     let json = serde_json::json!({
         "commands": commands_val,
         "hints": hints,
         "palette_commands": palette,
+        "request": request,
         "consumed": consumed,
     });
     let Ok(json_str) = serde_json::to_string(&json) else {
@@ -693,6 +748,10 @@ fn main() {
                         app.dirty = true;
                         respond(&mut app, false);
                     }
+                    HostMsg::DbValue { key, value } => {
+                        app.handle_db_value(&key, value);
+                        respond(&mut app, false);
+                    }
                     HostMsg::Shutdown => {
                         app.handle_shutdown();
                         break;
@@ -709,6 +768,24 @@ mod tests {
     use crate::state::PlayState;
     use crate::state::RadioState;
     use crate::stations::Station;
+    use rusqlite::Connection;
+
+    /// Create an in-memory SQLite db with the same `user_data` schema as
+    /// santui.db.  Returns the connection.
+    fn user_data_db() -> Connection {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS user_data (
+                plugin  TEXT NOT NULL,
+                user_id TEXT NOT NULL,
+                key     TEXT NOT NULL,
+                value   TEXT NOT NULL,
+                PRIMARY KEY (plugin, user_id, key)
+            )",
+        )
+        .unwrap();
+        conn
+    }
 
     fn make_stations(n: usize) -> Vec<Station> {
         (0..n)
@@ -752,6 +829,7 @@ mod tests {
             cached_commands: Vec::new(),
             user: None,
             db,
+            pending_request: None,
         }
     }
 
@@ -1128,5 +1206,129 @@ mod tests {
         assert!(app.handle_key(IpcKey::Char('/')));
         assert!(app.dirty);
         assert!(app.state.scan_msg.is_none());
+    }
+
+    // ── favorites persistence ───────────────────────────────────────────
+
+    #[test]
+    fn handle_db_value_loads_favorites() {
+        let mut app = base_app_with(5, None);
+        let favs = r#"["http://example.com/1","http://example.com/3"]"#;
+        app.handle_db_value("favorites", Some(favs.to_string()));
+
+        assert_eq!(app.state.favorites_count(), 2);
+        assert!(app.state.is_favorite("http://example.com/1"));
+        assert!(app.state.is_favorite("http://example.com/3"));
+        assert!(!app.state.is_favorite("http://example.com/0"));
+        assert!(!app.state.is_favorite("http://example.com/2"));
+    }
+
+    #[test]
+    fn handle_db_value_none_clears_favorites() {
+        let mut app = base_app_with(5, None);
+        // Pre-populate with some favorites
+        let mut favs = std::collections::HashSet::new();
+        favs.insert("http://example.com/1".into());
+        app.state.set_favorites(favs);
+        assert_eq!(app.state.favorites_count(), 1);
+
+        // Simulate DbValue with None (no data in DB yet)
+        app.handle_db_value("favorites", None);
+        assert_eq!(app.state.favorites_count(), 0);
+    }
+
+    #[test]
+    fn handle_db_value_ignores_other_keys() {
+        let mut app = base_app_with(5, None);
+        app.handle_db_value("some_other_key", Some(r#"["http://example.com/1"]"#.into()));
+        assert_eq!(app.state.favorites_count(), 0);
+    }
+
+    #[test]
+    fn favorites_survive_restart_roundtrip() {
+        // This test simulates the full delete+reinstall cycle:
+        //   1. User saves favorites (DbSet)
+        //   2. Plugin is killed and restarted
+        //   3. Host reads from DB (DbGet) and sends DbValue
+        //   4. Plugin loads the favorites
+
+        // Step 1: create an in-memory DB with user_data schema (like santui.db)
+        let conn = user_data_db();
+
+        // Simulate the host's DbSet handler — store favorites for
+        // (plugin="radio-stream-player", user_id="_", key="favorites")
+        let stored_json = r#"["http://example.com/1","http://example.com/3"]"#;
+        conn.execute(
+            "INSERT INTO user_data (plugin, user_id, key, value)
+             VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(plugin, user_id, key) DO UPDATE SET value = excluded.value",
+            rusqlite::params!["radio-stream-player", "_", "favorites", stored_json],
+        )
+        .unwrap();
+
+        // Step 2: simulate plugin restart — create a fresh App
+        let mut app = base_app_with(5, None);
+
+        // Step 3: simulate the host's DbGet handler — read from DB
+        let value_from_db: Option<String> = conn
+            .query_row(
+                "SELECT value FROM user_data
+                 WHERE plugin = ?1 AND user_id = ?2 AND key = ?3",
+                rusqlite::params!["radio-stream-player", "_", "favorites"],
+                |row| row.get(0),
+            )
+            .ok();
+
+        // Step 4: simulate the host sending HostMsg::DbValue
+        app.handle_db_value("favorites", value_from_db);
+
+        // Verify favorites survived
+        assert_eq!(app.state.favorites_count(), 2);
+        assert!(app.state.is_favorite("http://example.com/1"));
+        assert!(app.state.is_favorite("http://example.com/3"));
+        assert!(!app.state.is_favorite("http://example.com/0"));
+
+        // Step 5: verify interactive operations still work
+        // Space on station 0 adds it as favorite
+        app.pending_request = None;
+        assert!(app.handle_key(IpcKey::Char(' ')));
+        assert!(app.state.is_favorite("http://example.com/0"));
+        assert_eq!(app.state.favorites_count(), 3);
+
+        // Verify the DbSet request has the correct JSON
+        match &app.pending_request {
+            Some(PluginRequest::DbSet { key, value }) => {
+                assert_eq!(key, "favorites");
+                let parsed: Vec<String> = serde_json::from_str(value).unwrap_or_default();
+                assert!(parsed.contains(&"http://example.com/0".to_string()));
+                assert!(parsed.contains(&"http://example.com/1".to_string()));
+                assert!(parsed.contains(&"http://example.com/3".to_string()));
+                assert_eq!(parsed.len(), 3);
+            }
+            other => panic!("expected Some(DbSet), got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn favorites_filter_combines_with_query() {
+        let mut app = base_app_with(5, None);
+        let favs = r#"["http://example.com/1","http://example.com/3"]"#;
+        app.handle_db_value("favorites", Some(favs.to_string()));
+
+        // Enable favorites-only filter
+        app.state.show_favorites_only = true;
+        app.state.apply_filter();
+        assert_eq!(app.state.filtered.len(), 2);
+
+        // Combine with text query — station 1 has name "Station 1", station 3 is "Station 3"
+        app.state.query = "3".into();
+        app.state.apply_filter();
+        assert_eq!(app.state.filtered.len(), 1);
+        assert_eq!(app.state.filtered[0], 3);
+
+        // Clear query, should go back to both favorites
+        app.state.query.clear();
+        app.state.apply_filter();
+        assert_eq!(app.state.filtered.len(), 2);
     }
 }

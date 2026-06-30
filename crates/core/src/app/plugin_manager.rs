@@ -2,6 +2,8 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
+use crate::auth::AuthHandle;
+use crate::db_access::DbAccess;
 use crate::event::Event;
 use crate::plugin::{Plugin, PluginCmdItem, PluginContext, PluginFactory};
 use crate::registry_config::RegistryConfig;
@@ -9,6 +11,7 @@ use crate::theme::Theme;
 use crossterm::event::KeyEvent;
 use ratatui::layout::Rect;
 use ratatui::Frame;
+use std::sync::Arc;
 
 /// Manages the lifecycle, dispatch, and palette-command registry for all
 /// loaded plugins.  Extracted from the monolithic `Santui` struct so that
@@ -27,6 +30,9 @@ pub(crate) struct PluginManager {
     dynamic_items: Vec<(String, String, String)>,
     /// Capabilities declared in registry.toml, keyed by plugin id.
     plugin_capabilities: HashMap<String, Vec<String>>,
+    /// Plugin ids that were installed via the registry (from registry.toml).
+    /// Used by `reap_unregistered` to avoid killing built-in plugins.
+    registry_plugin_ids: HashSet<String>,
     /// Santui data directory (~/.santui). Set from main.rs.
     data_dir: PathBuf,
     /// Last mtime of registry.toml, used for change detection.
@@ -47,6 +53,7 @@ impl PluginManager {
             mtimes: Vec::new(),
             dynamic_items: Vec::new(),
             plugin_capabilities: HashMap::new(),
+            registry_plugin_ids: HashSet::new(),
             data_dir: PathBuf::new(),
             registry_mtime: None,
             reload_skip: 0,
@@ -112,6 +119,19 @@ impl PluginManager {
             if !p.is_alive() {
                 self.crashed_plugins.push(p.name().to_string());
             }
+        }
+    }
+
+    /// Process any pending `PluginRequest`s for all plugins.
+    /// Called once per main loop iteration (after tick and after key events).
+    pub fn process_all_requests(
+        &mut self,
+        db: &mut dyn DbAccess,
+        auth: &Option<Arc<dyn AuthHandle>>,
+    ) {
+        let auth_ref = auth.as_ref();
+        for p in &mut self.plugins {
+            p.process_pending_requests(db, auth_ref);
         }
     }
 
@@ -469,11 +489,10 @@ impl PluginManager {
         let old = std::mem::take(&mut self.dynamic_items);
         self.plugin_capabilities.clear();
 
-        if let Some(cfg) = cfg {
+        let old_registry_ids = std::mem::take(&mut self.registry_plugin_ids);
+
+        if let Some(ref cfg) = cfg {
             for installed in &cfg.plugins {
-                if !installed.enabled {
-                    continue;
-                }
                 let id = if !installed.id.is_empty() {
                     installed.id.clone()
                 } else {
@@ -487,6 +506,10 @@ impl PluginManager {
                         None => continue,
                     }
                 };
+                self.registry_plugin_ids.insert(id.clone());
+                if !installed.enabled {
+                    continue;
+                }
                 let name = if !installed.name.is_empty() {
                     installed.name.clone()
                 } else {
@@ -514,9 +537,37 @@ impl PluginManager {
                         .push(("Plugins".into(), id.clone(), name));
                 }
             }
+            self.reap_unregistered(&old_registry_ids);
         }
 
         self.dynamic_items != old
+    }
+
+    /// Shut down and remove any loaded out-of-process plugins that were
+    /// previously installed via the registry but are no longer present in the
+    /// new config (deleted or disabled).  `old_ids` is the set of registry
+    /// plugin ids from the *previous* read.
+    fn reap_unregistered(&mut self, old_ids: &HashSet<String>) {
+        let current: HashSet<&str> = self
+            .dynamic_items
+            .iter()
+            .map(|(_, id, _)| id.as_str())
+            .collect();
+        let mut i = self.plugins.len();
+        while i > 0 {
+            i -= 1;
+            let id = self.plugins[i].id();
+            if self.plugins[i].binary_path().is_some()
+                && old_ids.contains(id)
+                && !current.contains(id)
+            {
+                self.plugins[i].on_blur();
+                self.plugins[i].shutdown();
+                self.plugins.remove(i);
+                self.mtimes.remove(i);
+            }
+        }
+        self.refresh_commands();
     }
 }
 
