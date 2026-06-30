@@ -105,6 +105,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _db = open_db()?;
 
     let dir = data_dir();
+    std::fs::create_dir_all(&dir)?;
+    if !dir.join("config.toml").exists() {
+        santui_core::config::Config::default().save_to(&dir)?;
+    }
     app.set_data_dir(dir.clone());
     app.set_config_dir(dir);
 
