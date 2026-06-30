@@ -13,6 +13,7 @@ serde = { workspace = true }
 toml = "0.8"
 log = { workspace = true }
 ctrlc = { version = "3.5", features = ["termination"] }
+notify = "7"
 
 [dev-dependencies]
 proptest = "1"

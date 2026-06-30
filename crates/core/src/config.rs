@@ -1,5 +1,9 @@
+use std::fmt;
 use std::path::PathBuf;
+use std::sync::mpsc;
 use std::time::{Duration, SystemTime};
+
+use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 
 /// Top-level Santui configuration, deserialized from `config.toml`.
 #[derive(Debug, Clone, Default, serde::Deserialize, serde::Serialize)]
@@ -72,12 +76,12 @@ impl Config {
     }
 }
 
-/// Watches `config.toml` for changes via periodic timestamp polling.
+/// Watches `config.toml` for changes via filesystem notifications, with
+/// periodic mtime polling as a fallback.
 ///
 /// Call [`ConfigManager::poll`] once per frame in the main loop.  When the
 /// file has been modified externally `dirty` is set to `true` and the new
 /// config is available via [`ConfigManager::config`].
-#[derive(Debug)]
 pub struct ConfigManager {
     dir: PathBuf,
     config: Config,
@@ -88,13 +92,63 @@ pub struct ConfigManager {
     error: Option<String>,
     /// Main loop tick rate (how often the UI refreshes and polls for input).
     tick_rate: Duration,
-    /// Throttle: only poll the filesystem every N frames.
+    /// Throttle: only poll the filesystem every N frames (fallback path).
     poll_skip: u32,
+    /// Filesystem watcher (kept alive for the lifetime of the manager).
+    _watcher: Option<RecommendedWatcher>,
+    /// Channel receiver for filesystem events.
+    event_rx: Option<mpsc::Receiver<notify::Result<notify::Event>>>,
+}
+
+impl fmt::Debug for ConfigManager {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ConfigManager")
+            .field("dir", &self.dir)
+            .field("config", &self.config)
+            .field("last_modified", &self.last_modified)
+            .field("dirty", &self.dirty)
+            .field("error", &self.error)
+            .field("tick_rate", &self.tick_rate)
+            .field("poll_skip", &self.poll_skip)
+            .finish()
+    }
 }
 
 impl ConfigManager {
-    /// Create a new manager, immediately loading the config from `dir`.
+    /// Create a new manager, immediately loading the config from `dir` and
+    /// attempting to set up a filesystem watcher.
     pub fn new(dir: PathBuf) -> Self {
+        let last_modified = dir
+            .join("config.toml")
+            .metadata()
+            .ok()
+            .and_then(|m| m.modified().ok());
+        let (config, error) = match Config::try_load_from(&dir) {
+            Ok(cfg) => (cfg, None),
+            Err(e) => (Config::default(), Some(e)),
+        };
+
+        let (watcher, event_rx) = Self::try_create_watcher(&dir);
+
+        ConfigManager {
+            dir,
+            config,
+            last_modified,
+            dirty: false,
+            error,
+            tick_rate: Duration::from_millis(100),
+            poll_skip: 0,
+            _watcher: watcher,
+            event_rx,
+        }
+    }
+
+    /// Create a new manager without a filesystem watcher (polling only).
+    /// Behaviour is identical to [`new`](Self::new) but skips the watcher
+    /// setup entirely.  Useful in tests where deterministic poll timing is
+    /// required.
+    #[cfg(test)]
+    pub fn new_polling_only(dir: PathBuf) -> Self {
         let last_modified = dir
             .join("config.toml")
             .metadata()
@@ -112,16 +166,80 @@ impl ConfigManager {
             error,
             tick_rate: Duration::from_millis(100),
             poll_skip: 0,
+            _watcher: None,
+            event_rx: None,
+        }
+    }
+
+    /// Try to set up a filesystem watcher on the config directory.
+    /// Returns `None` on any failure (e.g. platform not supported).
+    fn try_create_watcher(
+        dir: &std::path::Path,
+    ) -> (
+        Option<RecommendedWatcher>,
+        Option<mpsc::Receiver<notify::Result<notify::Event>>>,
+    ) {
+        let (tx, rx) = mpsc::channel();
+        match RecommendedWatcher::new(tx, notify::Config::default()) {
+            Ok(mut w) => match w.watch(dir, RecursiveMode::NonRecursive) {
+                Ok(()) => {
+                    log::info!("[santui] Filesystem watcher active on {:?}", dir);
+                    (Some(w), Some(rx))
+                }
+                Err(e) => {
+                    log::warn!("[santui] Failed to watch config dir: {e}; falling back to polling");
+                    (None, None)
+                }
+            },
+            Err(e) => {
+                log::warn!(
+                    "[santui] Failed to create filesystem watcher: {e}; falling back to polling"
+                );
+                (None, None)
+            }
         }
     }
 
     /// Re-read config from disk.  Call this once per frame.
+    ///
+    /// When a filesystem watcher is active, events are drained immediately
+    /// (no throttling).  The mtime-based polling fallback runs every 30 frames
+    /// on platforms without a working watcher.
     pub fn poll(&mut self) {
+        // Drain filesystem events immediately when watcher is available.
+        if let Some(ref rx) = self.event_rx {
+            let mut changed = false;
+            while let Ok(Ok(event)) = rx.try_recv() {
+                if Self::event_matches_config(&event) {
+                    changed = true;
+                }
+            }
+            if changed {
+                return self.reload();
+            }
+        }
+
+        // Polling fallback throttle.
         self.poll_skip = self.poll_skip.saturating_sub(1);
         if self.poll_skip > 0 {
             return;
         }
         self.poll_skip = 30;
+        self.reload_if_modified();
+    }
+
+    /// Check whether a notify event applies to `config.toml`.
+    fn event_matches_config(event: &notify::Event) -> bool {
+        matches!(event.kind, EventKind::Create(_) | EventKind::Modify(_))
+            && event
+                .paths
+                .iter()
+                .any(|p| p.file_name().is_some_and(|n| n == "config.toml"))
+    }
+
+    /// Check if the file has been modified (by comparing mtime against
+    /// `last_modified`) and reload if so.  This is the polling fallback.
+    fn reload_if_modified(&mut self) {
         let path = self.dir.join("config.toml");
         let modified = match path.metadata().ok().and_then(|m| m.modified().ok()) {
             Some(t) => t,
@@ -135,6 +253,15 @@ impl ConfigManager {
             return;
         }
         self.last_modified = Some(modified);
+        self.reload_inner();
+    }
+
+    /// Reload config from disk and update error/dirty state.
+    fn reload(&mut self) {
+        self.reload_if_modified();
+    }
+
+    fn reload_inner(&mut self) {
         match Config::try_load_from(&self.dir) {
             Ok(cfg) => {
                 self.config = cfg;
@@ -193,7 +320,7 @@ impl ConfigManager {
     }
 
     /// Write the in-memory config to disk and sync the modification timestamp
-    /// so the next `poll()` doesn't re-detect our own write.
+    /// so reload calls don't re-detect our own write.
     fn persist(&mut self) {
         if let Err(e) = self.config.save_to(&self.dir) {
             log::error!("[santui] Failed to save config: {e}");
@@ -349,7 +476,7 @@ mod tests {
         let tmp = TempDir::new();
         let p = tmp.path().join("config.toml");
         std::fs::write(&p, r#"theme = "Nord""#).unwrap();
-        let mut mgr = ConfigManager::new(tmp.path().to_path_buf());
+        let mut mgr = ConfigManager::new_polling_only(tmp.path().to_path_buf());
         mgr.poll_skip = 5;
         mgr.ack();
         std::fs::write(&p, r#"theme = "Dracula""#).unwrap();
@@ -360,10 +487,46 @@ mod tests {
     #[test]
     fn config_manager_poll_no_file_returns_early() {
         let tmp = TempDir::new();
-        let mut mgr = ConfigManager::new(tmp.path().to_path_buf());
+        let mut mgr = ConfigManager::new_polling_only(tmp.path().to_path_buf());
         mgr.poll_skip = 0;
         // File doesn't exist, metadata returns None → poll returns early.
         mgr.poll();
         assert!(!mgr.dirty);
+    }
+
+    #[test]
+    fn config_manager_watcher_detects_external_change() {
+        let tmp = TempDir::new();
+        let p = tmp.path().join("config.toml");
+        std::fs::write(&p, r#"theme = "Nord""#).unwrap();
+        let mut mgr = ConfigManager::new(tmp.path().to_path_buf());
+        mgr.ack();
+        assert!(!mgr.dirty);
+
+        // Write a different config externally; the watcher should pick it up
+        // on the next poll (regardless of poll_skip).
+        std::fs::write(&p, r#"theme = "Dracula""#).unwrap();
+        mgr.poll();
+        assert!(mgr.dirty, "watcher should detect external change");
+        assert_eq!(mgr.config().theme.as_deref(), Some("Dracula"));
+    }
+
+    #[test]
+    fn config_manager_watcher_ignores_own_write() {
+        let tmp = TempDir::new();
+        let p = tmp.path().join("config.toml");
+        std::fs::write(&p, r#"theme = "Nord""#).unwrap();
+        let mut mgr = ConfigManager::new(tmp.path().to_path_buf());
+        mgr.ack();
+        assert!(!mgr.dirty);
+
+        // persist() sets last_modified, so the watcher event should not
+        // trigger a reload.
+        mgr.save_theme("Dracula");
+        assert!(!mgr.dirty, "own write should not set dirty");
+
+        // Reading the file back should show the saved value.
+        let loaded = Config::load_from(tmp.path());
+        assert_eq!(loaded.theme.as_deref(), Some("Dracula"));
     }
 }
