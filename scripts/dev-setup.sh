@@ -62,6 +62,11 @@ for bin in "$OUTDIR"/santui-*.exe "$OUTDIR"/santui-*; do
             pdesc="Real-time CPU, memory, disk, network, and process monitor"
             pcaps='[]'
             ;;
+        world-clock)
+            pname="World Clock"
+            pdesc="World timezone clock with grid, detail view, search, and custom labels"
+            pcaps='[]'
+            ;;
     esac
 
     echo "  [OK] $id  ($size bytes, sha256=$hash)"

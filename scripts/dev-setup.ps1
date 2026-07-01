@@ -30,6 +30,7 @@ $pluginBinaries = Get-ChildItem -LiteralPath $OutDir -Filter "santui-*.exe" | Wh
 $pluginMeta = @{
     "radio-stream-player" = @("Radio Stream Player", "Listen to thousands of radio stations worldwide", @("background"))
     "system-monitor"      = @("System Monitor", "Real-time CPU, memory, disk, network, and process monitor", @())
+    "world-clock"         = @("World Clock", "World timezone clock with grid, detail view, search, and custom labels", @())
 }
 
 $plugins = @()
