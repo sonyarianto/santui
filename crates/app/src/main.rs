@@ -210,6 +210,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
+    if args.iter().any(|a| a == "--help" || a == "-h") {
+        println!("Santui v{VERSION}");
+        println!();
+        println!("Usage: santui [COMMAND]");
+        println!();
+        println!("Commands:");
+        println!("  reset           Delete all data and start fresh");
+        println!();
+        println!("Flags:");
+        println!("  --version, -V           Print version and exit");
+        println!("  --list-plugins, plugins  List installed/available plugins and exit");
+        println!("  --help, -h              Show this help message");
+        return Ok(());
+    }
+
     if args.iter().any(|a| a == "--list-plugins" || a == "plugins") {
         return list_plugins();
     }
