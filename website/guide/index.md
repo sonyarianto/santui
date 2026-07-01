@@ -19,7 +19,27 @@ irm https://santuiapp.vercel.app/install.ps1 | iex
 
 This extracts to `%LOCALAPPDATA%\santui\current` and adds to your PATH.
 
-### macOS / Linux
+### macOS
+
+**npm** (recommended) — works everywhere with no extra setup. After installing, type `santui` to launch:
+
+```bash
+npm install -g santui
+santui
+```
+
+**Install script** — downloads binary to `~/.local/share/santui/current` and adds it to your PATH:
+
+```bash
+curl -fsSL https://santuiapp.vercel.app/install.sh | sh
+```
+
+> **macOS users:** Install [libmpv](https://mpv.io/installation/) for the Radio Stream Player:
+> ```bash
+> brew install mpv
+> ```
+
+### Linux
 
 **npm** (recommended) — works everywhere with no extra setup. After installing, type `santui` to launch:
 

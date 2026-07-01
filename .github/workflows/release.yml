@@ -94,16 +94,18 @@ jobs:
       - name: Prepare macOS artifacts
         if: startsWith(matrix.os, 'macos')
         run: |
-          mkdir -p staging
+          mkdir -p staging/native
           cp "${BINARY_DIR}/santui" staging/
           cp "${BINARY_DIR}/santui-registry-plugin" staging/
+          cp native/radio_stream_stations.db staging/native/
 
       - name: Prepare Linux artifacts
         if: matrix.os == 'ubuntu-latest'
         run: |
-          mkdir -p staging
+          mkdir -p staging/native
           cp target/release/santui staging/
           cp target/release/santui-registry-plugin staging/
+          cp native/radio_stream_stations.db staging/native/
 
       - name: Get version
         shell: bash
