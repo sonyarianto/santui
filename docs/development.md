@@ -70,6 +70,7 @@ The built binary accepts the following flags:
 |------|--------|
 | `--version` / `-V` | Print version (`santui vX.Y.Z`) and exit |
 | `--list-plugins` / `plugins` | List installed and available plugins, then exit |
+| `reset` | Delete all data (config, plugins, database) and start fresh |
 
 ## Release packaging
 

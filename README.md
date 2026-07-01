@@ -97,10 +97,11 @@ This builds everything, generates a local plugin manifest, and runs Santui in de
 |------|--------|
 | `--version` / `-V` | Print version and exit |
 | `--list-plugins` / `plugins` | List installed and available plugins, then exit |
+| `reset` | Delete all data (config, plugins, database) and start fresh |
 
 ## Configuration
 
-Santui stores its settings in `~/.santui/config.toml` (TOML format). Edit the file to set a default theme or custom colour overrides — changes are hot-reloaded automatically. See the full [Configuration reference](https://santuiapp.vercel.app/guide/configuration).
+Santui stores its settings in `config.toml` (TOML format) in the platform-standard data directory (`%APPDATA%/santui` on Windows, `~/.local/share/santui` on Linux, or `~/.santui` in dev mode). Edit the file to set a default theme or custom colour overrides — changes are hot-reloaded automatically. See the full [Configuration reference](https://santuiapp.vercel.app/guide/configuration).
 
 ## Documentation
 

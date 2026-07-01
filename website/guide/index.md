@@ -103,6 +103,7 @@ Run `santui --help` for a full reference, or use these flags:
 |------|--------|
 | `--version` / `-V` | Print version and exit |
 | `--list-plugins` / `plugins` | List installed and available plugins, then exit |
+| `reset` | Delete all data (config, plugins, database) and start fresh |
 
 ## Plugin Registry
 
