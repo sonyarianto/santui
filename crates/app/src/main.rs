@@ -1,3 +1,4 @@
+use std::io::Write;
 use std::path::PathBuf;
 
 use santui_core::{DbAccess, Santui};
@@ -93,6 +94,43 @@ fn copy_dir_recursively(src: &std::path::Path, dst: &std::path::Path) -> std::io
     Ok(())
 }
 
+fn reset() -> Result<(), Box<dyn std::error::Error>> {
+    let data_dir = resolve_data_dir();
+    let db_dir = santui_db::data_dir();
+
+    println!("This will permanently delete all Santui data:");
+    println!("  Config, plugins, registry: {:?}", data_dir);
+    if db_dir != data_dir {
+        println!("  Database & auth tokens: {:?}", db_dir);
+    }
+    print!("Are you sure? (y/N): ");
+    std::io::stdout().flush()?;
+
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input)?;
+    if !(input.trim().eq_ignore_ascii_case("y") || input.trim().eq_ignore_ascii_case("yes")) {
+        println!("Reset cancelled.");
+        return Ok(());
+    }
+
+    let mut deleted = false;
+    if data_dir.exists() {
+        std::fs::remove_dir_all(&data_dir)?;
+        deleted = true;
+    }
+    if db_dir != data_dir && db_dir.exists() {
+        std::fs::remove_dir_all(&db_dir)?;
+        deleted = true;
+    }
+
+    if deleted {
+        println!("Santui data cleared. Run `santui` to start fresh.");
+    } else {
+        println!("No Santui data found.");
+    }
+    Ok(())
+}
+
 fn list_plugins() -> Result<(), Box<dyn std::error::Error>> {
     let mut reg = Registry::new(resolve_data_dir());
 
@@ -162,6 +200,10 @@ mod tests {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
+
+    if args.iter().any(|a| a == "reset") {
+        return reset();
+    }
 
     if args.iter().any(|a| a == "--version" || a == "-V") {
         println!("santui v{VERSION}");
