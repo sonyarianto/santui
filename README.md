@@ -31,7 +31,7 @@ Plugins are **standalone binaries** distributed through the Plugin Registry. Ope
 
 | Plugin | What it does | Needs |
 |---|---|---|
-| **Radio Stream Player** | Browse stations by country, search, stream internet radio, **save favorites** (press `f`) | [libmpv](https://mpv.io/installation/) |
+| **Radio Stream Player** | Browse stations by country, search, stream internet radio, **save favorites** | [libmpv](https://mpv.io/installation/) |
 
 *More coming. Want to build one? See [docs/architecture.md](docs/architecture.md).*
 

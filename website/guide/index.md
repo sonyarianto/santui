@@ -116,7 +116,7 @@ From the registry you can:
 - **Enable / Disable** — toggle plugins on and off
 - **Installed plugins** appear in your command palette under the **Modules** category
 
-To get started, install the **Radio Stream Player** plugin from the registry, enable it, then open `Ctrl+P` and select it to start browsing thousands of radio stations. Press `f` while hovering a station to save it as a favorite.
+To get started, install the **Radio Stream Player** plugin from the registry, enable it, then open `Ctrl+P` and select it to start browsing thousands of radio stations with support for saving favorites.
 
 > **Radio Stream Player** requires [libmpv](https://mpv.io/installation/) for audio playback. On Windows it's bundled in the release archive; on macOS/Linux install via `apt`/`brew`/`pacman`.
 
