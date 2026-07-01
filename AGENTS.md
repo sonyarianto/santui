@@ -77,6 +77,8 @@ cd website && npm run build # static build
 # dev-mode (SANTUI_DEV=1) shows the correct version, but DO NOT commit
 # it (git add -A skips it automatically).
 git add -A && git commit -m "chore: bump version to x.y.z"
+git cliff -o CHANGELOG.md   # auto-generate changelog from conventional commits
+git add -A && git commit -m "chore: bump version to x.y.z"
 git tag vx.y.z && git push --tags
 # CI builds binaries, creates GitHub Release, publishes to npm and crates.io
 ```

@@ -28,7 +28,15 @@ Update `version` in **all** `Cargo.toml` files + npm + website. They must all ma
 
 **Dev-setup scripts** auto-detect version from `crates/core/Cargo.toml` — no manual update needed.
 
-## 2. Tag and push
+## 2. Generate changelog
+
+```bash
+git cliff -o CHANGELOG.md
+```
+
+Inspect `CHANGELOG.md`, commit any adjustments, then:
+
+## 3. Tag and push
 
 ```bash
 git add -A && git commit -m "chore: bump version to x.y.z"
