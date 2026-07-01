@@ -480,6 +480,12 @@ impl App {
                 }
                 true
             }
+            IpcKey::Char('c') if !self.state.lyrics_focused && !self.state.query.is_empty() => {
+                self.state.set_query(String::new());
+                self.state.selected = 0;
+                self.state.scroll = 0;
+                true
+            }
             _ => false,
         }
     }
@@ -619,6 +625,9 @@ impl App {
             hints.push(("l".into(), "hide".into()));
         } else if !self.state.lyrics_text.is_empty() || self.state.lyrics_loading {
             hints.push(("l".into(), "lyrics".into()));
+        }
+        if !self.state.query.is_empty() {
+            hints.push(("c".into(), "clear".into()));
         }
         hints.push(("+/-".into(), "volume".into()));
         hints
@@ -1053,6 +1062,34 @@ mod tests {
             .join("\n");
         assert!(app.handle_key(IpcKey::PageDown));
         assert_eq!(app.state.lyrics_scroll, 1);
+    }
+
+    #[test]
+    fn c_clears_filter_when_query_non_empty() {
+        let mut app = base_app();
+        app.state.query = "gold".into();
+        app.state.apply_filter();
+        assert!(app.state.filtered.len() < 5);
+        assert!(app.handle_key(IpcKey::Char('c')));
+        assert!(app.state.query.is_empty());
+        assert_eq!(app.state.filtered.len(), 5);
+        assert_eq!(app.state.selected, 0);
+    }
+
+    #[test]
+    fn c_noop_when_query_empty() {
+        let mut app = base_app();
+        assert!(app.state.query.is_empty());
+        assert!(!app.handle_key(IpcKey::Char('c')));
+    }
+
+    #[test]
+    fn c_noop_when_lyrics_focused() {
+        let mut app = base_app();
+        app.state.query = "gold".into();
+        app.state.show_lyrics = true;
+        app.state.lyrics_focused = true;
+        assert!(!app.handle_key(IpcKey::Char('c')));
     }
 
     #[test]

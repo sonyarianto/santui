@@ -138,6 +138,17 @@ pub fn render_ui(
 
     let stations_footer: Option<&[(&str, &str)]> = if state.search_mode {
         Some(&[("↑↓", "navigate"), ("↵", "play"), ("⌫", "delete")])
+    } else if !state.query.is_empty() {
+        Some(&[
+            ("↑↓", "navigate"),
+            ("↵", "play"),
+            ("space", "fav"),
+            ("c", "clear"),
+            ("/", "search"),
+            ("s", "stop"),
+            ("f", "fav only"),
+            ("r", "reload"),
+        ])
     } else if state.lyrics_focused {
         Some(&[("↑↓", "scroll"), ("l", "hide")])
     } else {
@@ -174,7 +185,7 @@ pub fn render_ui(
 
     let inner_w = left_w.saturating_sub(3) as usize;
 
-    // ---- Top line: search bar, scan message, or total station count ----
+    // ---- Top line: search bar, scan message, filter indicator, or total station count ----
     if state.search_mode {
         let cursor = if state.tick_counter % 6 < 3 {
             '█'
@@ -203,25 +214,54 @@ pub fn render_ui(
             bg: None,
             bold: false,
         });
+    } else if let Some(ref msg) = state.scan_msg {
+        let max_w = left_w.saturating_sub(3) as usize;
+        let top_text = if msg.len() > max_w {
+            format!("{}…", &msg[..max_w.saturating_sub(1)])
+        } else {
+            msg.clone()
+        };
+        let top_x = left_w.saturating_sub(2u16.saturating_add(top_text.len() as u16));
+        cmds.push(RenderCmd::Text {
+            x: top_x,
+            y: 1,
+            text: top_text,
+            fg: Some(theme.accent),
+            bg: None,
+            bold: false,
+        });
+    } else if !state.query.is_empty() {
+        let left_text = format!("Filter: \"{}\"", state.query);
+        let right_text = format!("{}/{}", state.filtered.len(), state.stations.len());
+        let right_len = right_text.len();
+        let max_left = inner_w.saturating_sub(right_len + 1);
+        let display_left: String = left_text.chars().take(max_left).collect();
+        let right_x = left_w.saturating_sub(2u16.saturating_add(right_text.len() as u16));
+        cmds.push(RenderCmd::Text {
+            x: 2,
+            y: 1,
+            text: display_left,
+            fg: Some(theme.accent),
+            bg: None,
+            bold: false,
+        });
+        cmds.push(RenderCmd::Text {
+            x: right_x,
+            y: 1,
+            text: right_text,
+            fg: Some(theme.text_muted),
+            bg: None,
+            bold: false,
+        });
     } else {
-        let top_text = match state.scan_msg {
-            Some(ref msg) => {
-                let max_w = left_w.saturating_sub(3) as usize;
-                if msg.len() > max_w {
-                    format!("{}…", &msg[..max_w.saturating_sub(1)])
-                } else {
-                    msg.clone()
-                }
-            }
-            None => {
-                let fav_count = state.favorites_count();
-                if state.show_favorites_only {
-                    format!("♥ {} favorites", state.filtered.len())
-                } else if fav_count > 0 {
-                    format!("Total stations: {}  ♥ {}", state.stations.len(), fav_count)
-                } else {
-                    format!("Total stations: {}", state.stations.len())
-                }
+        let top_text = {
+            let fav_count = state.favorites_count();
+            if state.show_favorites_only {
+                format!("♥ {} favorites", state.filtered.len())
+            } else if fav_count > 0 {
+                format!("Total stations: {}  ♥ {}", state.stations.len(), fav_count)
+            } else {
+                format!("Total stations: {}", state.stations.len())
             }
         };
         let top_x = left_w.saturating_sub(2u16.saturating_add(top_text.len() as u16));
@@ -229,11 +269,7 @@ pub fn render_ui(
             x: top_x,
             y: 1,
             text: top_text,
-            fg: if state.scan_msg.is_some() {
-                Some(theme.accent)
-            } else {
-                Some(theme.text_muted)
-            },
+            fg: Some(theme.text_muted),
             bg: None,
             bold: false,
         });
@@ -653,6 +689,34 @@ mod tests {
             }
         });
         assert!(has_count);
+    }
+
+    #[test]
+    fn shows_filter_indicator_when_query_non_empty() {
+        let mut st = state_with(5);
+        st.query = "gold".into();
+        st.filtered = vec![0, 2, 4];
+        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let texts: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Text { .. }))
+            .collect();
+        let has_filter = texts.iter().any(|t| {
+            if let RenderCmd::Text { text, .. } = t {
+                text.contains("Filter:")
+            } else {
+                false
+            }
+        });
+        assert!(has_filter, "should show \"Filter: …\" indicator");
+        let has_count = texts.iter().any(|t| {
+            if let RenderCmd::Text { text, .. } = t {
+                text == "3/5"
+            } else {
+                false
+            }
+        });
+        assert!(has_count, "should show filtered count");
     }
 
     #[test]
