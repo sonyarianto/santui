@@ -48,6 +48,15 @@ fn old_data_dir() -> PathBuf {
     PathBuf::from(home).join(".santui")
 }
 
+/// Resolve the data directory: `~/.santui` in dev mode, platform-standard in production.
+fn resolve_data_dir() -> PathBuf {
+    if std::env::var("SANTUI_DEV").as_deref() == Ok("1") {
+        old_data_dir()
+    } else {
+        santui_db::data_dir()
+    }
+}
+
 /// Migrate files from old `~/.santui` to the platform-standard data directory.
 fn migrate_data_dir(old: &std::path::Path, new: &std::path::Path) {
     let entries = match std::fs::read_dir(old) {
@@ -85,7 +94,7 @@ fn copy_dir_recursively(src: &std::path::Path, dst: &std::path::Path) -> std::io
 }
 
 fn list_plugins() -> Result<(), Box<dyn std::error::Error>> {
-    let mut reg = Registry::new(santui_db::data_dir());
+    let mut reg = Registry::new(resolve_data_dir());
 
     println!("santui v{VERSION}");
     println!();
@@ -174,16 +183,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db = Box::new(SantuiDb { conn });
     app.set_db(db);
 
-    let dir = santui_db::data_dir();
-    let old_dir = old_data_dir();
-
-    // One-time migration from old ~/.santui to platform-standard directory.
-    // santui.db and auth-tokens.json already live in the platform-standard dir,
-    // so only config, registry, and plugins need migration.
-    if old_dir != dir && old_dir.exists() && !dir.join("config.toml").exists() {
-        log::info!("migrating data from {:?} to {:?}", old_dir, dir);
-        migrate_data_dir(&old_dir, &dir);
-    }
+    let dev = std::env::var("SANTUI_DEV").as_deref() == Ok("1");
+    let dir = if dev {
+        old_data_dir()
+    } else {
+        let dir = santui_db::data_dir();
+        let old_dir = old_data_dir();
+        if old_dir != dir && old_dir.exists() && !dir.join("config.toml").exists() {
+            log::info!("migrating data from {:?} to {:?}", old_dir, dir);
+            migrate_data_dir(&old_dir, &dir);
+        }
+        dir
+    };
 
     std::fs::create_dir_all(&dir)?;
     if !dir.join("config.toml").exists() {
