@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use super::Santui;
 
 impl Santui {
-    /// Set the santui data directory (e.g. `~/.santui`).
+    /// Set the santui data directory.
     /// Called from main.rs before `run()`.
     pub fn set_data_dir(&mut self, dir: PathBuf) {
         self.plugin_manager.set_data_dir(dir);

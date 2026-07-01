@@ -115,7 +115,7 @@ pub trait Plugin: Send {
 pub struct PluginContext {
     pub theme: Theme,
     pub auth: Option<Arc<dyn AuthHandle>>,
-    /// Santui data directory (e.g. `~/.santui`). Plugins can use this
+    /// Santui data directory (platform-standard, e.g. `%APPDATA%/santui` on Windows). Plugins can use this
     /// for persistent storage. The registry plugin uses it to find
     /// installed plugins and `registry.toml`.
     pub data_dir: PathBuf,

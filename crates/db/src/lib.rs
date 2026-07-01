@@ -1,7 +1,7 @@
 use rusqlite::{Connection, Result};
 use std::path::PathBuf;
 
-fn data_dir() -> PathBuf {
+pub fn data_dir() -> PathBuf {
     if cfg!(target_os = "windows") {
         std::env::var_os("APPDATA")
             .map(PathBuf::from)

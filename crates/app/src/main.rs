@@ -40,15 +40,52 @@ impl DbAccess for SantuiDb {
     }
 }
 
-fn data_dir() -> PathBuf {
+/// The old data directory location (`~/.santui`) used for one-time migration.
+fn old_data_dir() -> PathBuf {
     let home = std::env::var("HOME")
         .or_else(|_| std::env::var("USERPROFILE"))
         .unwrap_or_else(|_| ".".into());
     PathBuf::from(home).join(".santui")
 }
 
+/// Migrate files from old `~/.santui` to the platform-standard data directory.
+fn migrate_data_dir(old: &std::path::Path, new: &std::path::Path) {
+    let entries = match std::fs::read_dir(old) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        let src = entry.path();
+        let dst = new.join(&name);
+        if src.is_dir() {
+            if let Err(e) = copy_dir_recursively(&src, &dst) {
+                log::warn!("failed to migrate directory {:?}: {e}", name);
+            }
+        } else if let Err(e) = std::fs::copy(&src, &dst) {
+            log::warn!("failed to migrate file {:?}: {e}", name);
+        }
+    }
+}
+
+fn copy_dir_recursively(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(dst)?;
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let file_type = entry.file_type()?;
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
+        if file_type.is_dir() {
+            copy_dir_recursively(&src_path, &dst_path)?;
+        } else {
+            std::fs::copy(&src_path, &dst_path)?;
+        }
+    }
+    Ok(())
+}
+
 fn list_plugins() -> Result<(), Box<dyn std::error::Error>> {
-    let mut reg = Registry::new(data_dir());
+    let mut reg = Registry::new(santui_db::data_dir());
 
     println!("santui v{VERSION}");
     println!();
@@ -137,7 +174,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db = Box::new(SantuiDb { conn });
     app.set_db(db);
 
-    let dir = data_dir();
+    let dir = santui_db::data_dir();
+    let old_dir = old_data_dir();
+
+    // One-time migration from old ~/.santui to platform-standard directory.
+    // santui.db and auth-tokens.json already live in the platform-standard dir,
+    // so only config, registry, and plugins need migration.
+    if old_dir != dir && old_dir.exists() && !dir.join("config.toml").exists() {
+        log::info!("migrating data from {:?} to {:?}", old_dir, dir);
+        migrate_data_dir(&old_dir, &dir);
+    }
+
     std::fs::create_dir_all(&dir)?;
     if !dir.join("config.toml").exists() {
         santui_core::config::Config::default().save_to(&dir)?;

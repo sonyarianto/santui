@@ -103,7 +103,7 @@ pub enum HostMsg {
     Init {
         theme: ThemeData,
         area: Area,
-        /// Path to the santui config directory (~/.santui).
+        /// Path to the santui config directory (platform-standard).
         /// Used by the registry plugin for filesystem operations.
         data_dir: String,
     },

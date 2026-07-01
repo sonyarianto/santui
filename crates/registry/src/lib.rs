@@ -44,7 +44,7 @@ pub struct Registry {
 }
 
 impl Registry {
-    /// Create a new registry rooted at `base_dir` (e.g. `~/.santui`).
+    /// Create a new registry rooted at `base_dir` (the santui data directory).
     pub fn new(base_dir: PathBuf) -> Self {
         let plugins_dir = base_dir.join("plugins");
         let config_path = base_dir.join("registry.toml");

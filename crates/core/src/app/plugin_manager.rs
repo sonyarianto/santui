@@ -33,7 +33,7 @@ pub(crate) struct PluginManager {
     /// Plugin ids that were installed via the registry (from registry.toml).
     /// Used by `reap_unregistered` to avoid killing built-in plugins.
     registry_plugin_ids: HashSet<String>,
-    /// Santui data directory (~/.santui). Set from main.rs.
+    /// Santui data directory (platform-standard). Set from main.rs.
     data_dir: PathBuf,
     /// Last mtime of registry.toml, used for change detection.
     registry_mtime: Option<SystemTime>,
@@ -61,7 +61,7 @@ impl PluginManager {
         }
     }
 
-    /// Store the santui data directory (~/.santui).
+    /// Store the santui data directory.
     pub fn set_data_dir(&mut self, dir: PathBuf) {
         self.data_dir = dir;
     }
