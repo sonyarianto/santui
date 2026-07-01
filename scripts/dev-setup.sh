@@ -47,9 +47,26 @@ for bin in "$OUTDIR"/santui-*.exe "$OUTDIR"/santui-*; do
     size=$(stat -f%z "$bin" 2>/dev/null || stat -c%s "$bin" 2>/dev/null)
     hash=$($SHA_CMD "$bin" | cut -d' ' -f1)
 
+    # Plugin metadata: maps binary id -> (display name, description, capabilities)
+    local pname="$id"
+    local pdesc="$id"
+    local pcaps="[]"
+    case "$id" in
+        radio-stream-player)
+            pname="Radio Stream Player"
+            pdesc="Listen to thousands of radio stations worldwide"
+            pcaps='["background"]'
+            ;;
+        system-monitor)
+            pname="System Monitor"
+            pdesc="Real-time CPU, memory, disk, network, and process monitor"
+            pcaps='[]'
+            ;;
+    esac
+
     echo "  [OK] $id  ($size bytes, sha256=$hash)"
     PLUGINS+=("$(cat << JSON
-{"id":"$id","name":"Radio Stream Player","publisher":"Santui","description":"Listen to thousands of radio stations worldwide","version":"$VERSION","download_url":"target/debug/$name","sha256":"$hash","size":$size}
+{"id":"$id","name":"$pname","publisher":"Santui","description":"$pdesc","version":"$VERSION","download_url":"target/debug/$name","sha256":"$hash","size":$size,"capabilities":$pcaps}
 JSON
 )")
 done

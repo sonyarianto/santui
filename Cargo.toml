@@ -6,6 +6,7 @@ members = [
     "crates/registry",
     "crates/db",
     "crates/plugins/radio-stream-player",
+    "crates/plugins/system-monitor",
     "crates/plugins/radio-stream-player/scraper",
     "crates/plugins/registry",
     "crates/app",

@@ -26,21 +26,29 @@ $pluginBinaries = Get-ChildItem -LiteralPath $OutDir -Filter "santui-*.exe" | Wh
     $_.Name -notmatch 'scraper|registry-plugin'
 }
 
+# Plugin metadata: maps binary id -> (display name, description, capabilities)
+$pluginMeta = @{
+    "radio-stream-player" = @("Radio Stream Player", "Listen to thousands of radio stations worldwide", @("background"))
+    "system-monitor"      = @("System Monitor", "Real-time CPU, memory, disk, network, and process monitor", @())
+}
+
 $plugins = @()
 foreach ($bin in $pluginBinaries) {
     $id = $bin.BaseName -replace '^santui-', ''
     $hash = (Get-FileHash -LiteralPath $bin.FullName -Algorithm SHA256).Hash
     Write-Host "  [OK] $id  ($($bin.Length) bytes, sha256=$hash)"
+    $meta = $pluginMeta[$id]
+    if (-not $meta) { $meta = @($id, $id, @()) }
     $plugins += @{
         id            = $id
-        name          = "Radio Stream Player"
-        description   = "Listen to thousands of radio stations worldwide"
+        name          = $meta[0]
+        description   = $meta[1]
         publisher     = "Santui"
         version       = $Version
         download_url  = "target/debug/$($bin.Name)"
         sha256        = $hash
         size          = $bin.Length
-        capabilities  = @("background")
+        capabilities  = $meta[2]
     }
 }
 

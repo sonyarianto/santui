@@ -155,7 +155,7 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                 if *bold {
                     style = style.add_modifier(Modifier::BOLD);
                 }
-                let rect = clipped(area, *x, *y, text.len() as u16, 1);
+                let rect = clipped(area, *x, *y, text.chars().count() as u16, 1);
                 f.render_widget(Paragraph::new(text.as_str()).style(style), rect);
             }
             RenderCmd::Rect { x, y, w, h, bg } => {

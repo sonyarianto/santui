@@ -1,0 +1,16 @@
+[package]
+name = "santui-system-monitor"
+version = "0.2.26"
+edition = "2021"
+
+[[bin]]
+name = "santui-system-monitor"
+path = "src/main.rs"
+
+[dependencies]
+santui-ipc = { path = "../../ipc", version = "0.2.26", default-features = false }
+sysinfo = { version = "0.30", default-features = false }
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+env_logger = { workspace = true }
