@@ -21,23 +21,23 @@ fn draw_panel(
     if w < 3 || h < 2 {
         return;
     }
-    if focused {
-        let title = format!("● {}", title.trim());
-        cmds.push(RenderCmd::Border {
-            x,
-            y,
-            w,
-            h,
-            fg: theme.accent,
-            bg: None,
-            borders: BORDER_ALL,
-            title: Some(title),
-            title_fg: Some(theme.text),
-            title_dash_fg: Some(theme.accent),
-        });
+    let t = if focused {
+        format!("● {}", title.trim())
     } else {
-        ui::draw_panel(cmds, theme, x, y, w, h, title);
-    }
+        title.trim().to_string()
+    };
+    cmds.push(RenderCmd::Border {
+        x,
+        y,
+        w,
+        h,
+        fg: theme.border,
+        bg: None,
+        borders: BORDER_ALL,
+        title: Some(t),
+        title_fg: Some(theme.text),
+        title_dash_fg: Some(theme.border),
+    });
 
     if let Some(hints) = footer {
         let max_chars = w.saturating_sub(3) as usize;
@@ -1278,12 +1278,12 @@ mod tests {
             .iter()
             .filter(|c| matches!(c, RenderCmd::Border { .. }))
             .collect();
-        // Stations panel (first border) should use accent when focused
+        // Stations panel (first border) should use border color when focused
         if let RenderCmd::Border { fg, .. } = borders[0] {
             assert_eq!(
                 *fg,
-                default_theme().accent,
-                "stations panel should use accent when focused"
+                default_theme().border,
+                "stations panel should use border color when focused"
             );
         }
     }
@@ -1304,8 +1304,8 @@ mod tests {
             assert_eq!(title.as_deref(), Some("● Lyrics"));
             assert_eq!(
                 *fg,
-                default_theme().accent,
-                "lyrics panel should use accent when focused"
+                default_theme().border,
+                "lyrics panel should use border color when focused"
             );
         }
     }

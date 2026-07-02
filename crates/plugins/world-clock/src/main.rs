@@ -21,7 +21,10 @@ struct App {
 impl Default for App {
     fn default() -> Self {
         Self {
-            state: WorldTimeState::default(),
+            state: WorldTimeState {
+                clocks: WorldTimeState::default_clocks(),
+                ..WorldTimeState::default()
+            },
             theme: ThemeData {
                 text: [220; 3],
                 text_muted: [140; 3],
@@ -420,6 +423,16 @@ mod tests {
         App::default()
     }
 
+    fn empty_app() -> App {
+        App {
+            state: WorldTimeState {
+                clocks: Vec::new(),
+                ..WorldTimeState::default()
+            },
+            ..App::default()
+        }
+    }
+
     #[test]
     fn initial_screen_is_grid() {
         let app = base_app();
@@ -483,7 +496,7 @@ mod tests {
 
     #[test]
     fn handle_key_d_with_empty_clocks_does_nothing() {
-        let mut app = base_app();
+        let mut app = empty_app();
         assert!(app.handle_key(IpcKey::Char('d')));
         assert!(app.state.clocks.is_empty());
     }
@@ -571,7 +584,7 @@ mod tests {
 
     #[test]
     fn search_enter_adds_clock() {
-        let mut app = base_app();
+        let mut app = empty_app();
         app.state.screen = Screen::Search;
         app.state.search_results = vec![Tz::Europe__London];
         app.state.search_cursor = 0;
@@ -583,7 +596,7 @@ mod tests {
 
     #[test]
     fn search_enter_does_not_duplicate() {
-        let mut app = base_app();
+        let mut app = empty_app();
         app.state.screen = Screen::Search;
         app.state.clocks.push(state::ClockEntry {
             tz: Tz::Europe__London,
@@ -635,7 +648,7 @@ mod tests {
 
     #[test]
     fn handle_db_value_ignores_other_keys() {
-        let mut app = base_app();
+        let mut app = empty_app();
         app.handle_db_value("other", Some(r#"[]"#.into()));
         assert!(app.state.clocks.is_empty());
     }

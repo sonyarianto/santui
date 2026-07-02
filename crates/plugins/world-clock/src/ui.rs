@@ -4,23 +4,11 @@ use santui_ipc::protocol::{RenderCmd, ThemeData, BORDER_ALL};
 
 use crate::state::{Screen, WorldTimeState};
 
-fn local_hour(tz: Tz) -> u32 {
-    chrono::Utc::now().with_timezone(&tz).hour()
-}
-
-fn border_color_for_hour(hour: u32, theme: &ThemeData) -> [u8; 3] {
-    match hour {
-        9..=16 => theme.success,
-        7..=8 | 17..=18 => theme.highlight,
-        _ => theme.text_muted,
-    }
-}
-
 fn fmt_offset(tz: Tz) -> String {
     let dt = chrono::Utc::now().with_timezone(&tz);
-    let offset_min = dt.offset().fix().local_minus_utc();
-    let hours = offset_min / 60;
-    let mins = offset_min.abs() % 60;
+    let offset_secs = dt.offset().fix().local_minus_utc();
+    let hours = offset_secs / 3600;
+    let mins = (offset_secs.abs() / 60) % 60;
     let sign = if hours >= 0 { '+' } else { '-' };
     format!("{}{:02}:{:02}", sign, hours.abs(), mins)
 }
@@ -73,28 +61,32 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
         let cy = row * ch;
 
         let is_selected = i == state.selected;
-        let hour = local_hour(clock.tz);
-        let border_fg = if is_selected {
-            theme.accent
-        } else {
-            border_color_for_hour(hour, theme)
-        };
 
         cmds.push(RenderCmd::Border {
             x: cx,
             y: cy,
             w: cw,
             h: ch,
-            fg: border_fg,
+            fg: theme.border,
             bg: None,
             borders: BORDER_ALL,
-            title: None,
-            title_fg: None,
-            title_dash_fg: None,
+            title: if is_selected {
+                Some("●".into())
+            } else {
+                None
+            },
+            title_fg: if is_selected { Some(theme.text) } else { None },
+            title_dash_fg: Some(theme.border),
         });
 
         let dt = chrono::Utc::now().with_timezone(&clock.tz);
         let offset_str = fmt_offset(clock.tz);
+        let hour = dt.hour();
+        let dot_fg = match hour {
+            9..=16 => theme.success,
+            7..=8 | 17..=18 => theme.highlight,
+            _ => theme.text_muted,
+        };
 
         cmds.push(RenderCmd::Text {
             x: cx + 2,
@@ -123,12 +115,20 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
             bold: true,
         });
 
-        let date_str = dt.format("%A %d %b %Y").to_string();
+        let date_str = dt.format("%a, %-d %b %Y").to_string();
         cmds.push(RenderCmd::Text {
             x: cx + 2,
             y: cy + 5,
             text: date_str,
             fg: Some(theme.text_muted),
+            bg: None,
+            bold: false,
+        });
+        cmds.push(RenderCmd::Text {
+            x: cx + cw - 3,
+            y: cy + 5,
+            text: "●".into(),
+            fg: Some(dot_fg),
             bg: None,
             bold: false,
         });
