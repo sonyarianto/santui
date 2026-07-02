@@ -134,15 +134,6 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
         });
     }
 
-    cmds.push(RenderCmd::Text {
-        x: 1,
-        y: h.saturating_sub(1),
-        text: " ↑↓←→ nav  enter detail  a add  d delete  r rename".into(),
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-    });
-
     cmds
 }
 
@@ -251,15 +242,6 @@ fn render_detail(
         bold: false,
     });
 
-    cmds.push(RenderCmd::Text {
-        x: 1,
-        y: h.saturating_sub(1),
-        text: " esc back  tab next".into(),
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-    });
-
     cmds
 }
 
@@ -326,15 +308,6 @@ fn render_search(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> V
         });
     }
 
-    cmds.push(RenderCmd::Text {
-        x: 1,
-        y: h.saturating_sub(1),
-        text: " enter add  esc cancel  ↑↓ navigate".into(),
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-    });
-
     cmds
 }
 
@@ -385,15 +358,6 @@ fn render_rename(
         y: popup_y + 1,
         text: santui_ipc::ui::truncate(&input_text, popup_w.saturating_sub(4) as usize),
         fg: Some(theme.text),
-        bg: None,
-        bold: false,
-    });
-
-    cmds.push(RenderCmd::Text {
-        x: 1,
-        y: h.saturating_sub(1),
-        text: " enter save  esc cancel".into(),
-        fg: Some(theme.text_muted),
         bg: None,
         bold: false,
     });

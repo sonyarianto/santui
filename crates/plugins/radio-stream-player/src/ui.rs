@@ -22,6 +22,7 @@ fn draw_panel(
         return;
     }
     if focused {
+        let title = format!("● {}", title.trim());
         cmds.push(RenderCmd::Border {
             x,
             y,
@@ -30,7 +31,7 @@ fn draw_panel(
             fg: theme.accent,
             bg: None,
             borders: BORDER_ALL,
-            title: Some(title.trim().into()),
+            title: Some(title),
             title_fg: Some(theme.text),
             title_dash_fg: Some(theme.accent),
         });
@@ -356,10 +357,20 @@ pub fn render_ui(
         np_y,
         left_w,
         info_h,
-        &format!("Now Playing │ Vol: {}%", state.volume),
+        "Now Playing",
         false,
         None,
     );
+    // Volume on the top border line (trailing title dash serves as separator)
+    let vol_text = format!(" Vol: {}% ", state.volume);
+    cmds.push(RenderCmd::Text {
+        x: 5u16.saturating_add("Now Playing".len() as u16),
+        y: np_y,
+        text: vol_text,
+        fg: Some(theme.text),
+        bg: None,
+        bold: false,
+    });
 
     let r_inner_w = left_w.saturating_sub(3);
 
@@ -1082,18 +1093,18 @@ mod tests {
         let mut st = state_with(5);
         st.volume = 75;
         let cmds = render_ui(&st, &default_theme(), 80, 24);
-        let borders: Vec<&RenderCmd> = cmds
+        let texts: Vec<&RenderCmd> = cmds
             .iter()
-            .filter(|c| matches!(c, RenderCmd::Border { .. }))
+            .filter(|c| matches!(c, RenderCmd::Text { .. }))
             .collect();
-        assert!(borders.len() >= 2);
-        if let RenderCmd::Border { title, .. } = borders[1] {
-            let t = title.as_deref().unwrap_or("");
-            assert!(
-                t.contains("Vol: 75%"),
-                "expected Vol: 75% in title, got: {t}"
-            );
-        }
+        let has_vol = texts.iter().any(|c| {
+            if let RenderCmd::Text { text, .. } = c {
+                text.contains("Vol: 75%")
+            } else {
+                false
+            }
+        });
+        assert!(has_vol, "expected a Text cmd containing Vol: 75%");
     }
 
     #[test]
@@ -1248,7 +1259,7 @@ mod tests {
         // Lyrics panel is the third border
         assert!(borders.len() >= 3);
         if let RenderCmd::Border { title, fg, .. } = &borders[2] {
-            assert_eq!(title.as_deref(), Some("Lyrics"));
+            assert_eq!(title.as_deref(), Some("● Lyrics"));
             assert_eq!(
                 *fg,
                 default_theme().accent,
