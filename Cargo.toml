@@ -11,6 +11,8 @@ members = [
     "crates/plugins/radio-stream-player/scraper",
     "crates/plugins/registry",
     "crates/plugins/weather",
+    "crates/plugins/rss-reader",
+    "crates/plugins/clipboard-history",
     "crates/app",
 ]
 resolver = "2"

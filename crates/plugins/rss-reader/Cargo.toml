@@ -1,0 +1,17 @@
+[package]
+name = "santui-rss-reader"
+version = "0.2.26"
+edition = "2021"
+
+[[bin]]
+name = "santui-rss-reader"
+path = "src/main.rs"
+
+[dependencies]
+santui-ipc  = { path = "../../ipc",  version = "0.2.26", default-features = false }
+ureq        = { version = "2.9", features = ["json"] }
+feed-rs     = "1.3"
+serde       = { workspace = true }
+serde_json  = { workspace = true }
+log         = { workspace = true }
+env_logger  = { workspace = true }

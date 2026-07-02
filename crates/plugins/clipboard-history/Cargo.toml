@@ -1,0 +1,16 @@
+[package]
+name = "santui-clipboard-history"
+version = "0.2.26"
+edition = "2021"
+
+[[bin]]
+name = "santui-clipboard-history"
+path = "src/main.rs"
+
+[dependencies]
+santui-ipc  = { path = "../../ipc",  version = "0.2.26", default-features = false }
+arboard     = "3.3"
+serde       = { workspace = true }
+serde_json  = { workspace = true }
+log         = { workspace = true }
+env_logger  = { workspace = true }

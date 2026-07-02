@@ -1154,6 +1154,7 @@ mod tests {
             palette_commands: vec![("P".into(), "A".into())],
             request: Some(PluginRequest::SignOut),
             consumed: true,
+            plugin_message: None,
         })
         .unwrap();
 
@@ -1180,6 +1181,7 @@ mod tests {
             palette_commands: vec![],
             request: None,
             consumed: false,
+            plugin_message: None,
         })
         .unwrap();
 
@@ -1197,6 +1199,7 @@ mod tests {
             palette_commands: vec![],
             request: None,
             consumed: true,
+            plugin_message: None,
         })
         .unwrap();
 
@@ -1238,6 +1241,7 @@ mod tests {
                 palette_commands: vec![],
                 request: None,
                 consumed: true,
+                plugin_message: None,
             })
             .unwrap();
 
@@ -1272,6 +1276,7 @@ mod tests {
                 palette_commands: vec![],
                 request: None,
                 consumed: false,
+                plugin_message: None,
             })
             .unwrap();
 
@@ -1283,6 +1288,7 @@ mod tests {
                 palette_commands: vec![],
                 request: None,
                 consumed: true,
+                plugin_message: None,
             })
             .unwrap();
 
@@ -1403,6 +1409,7 @@ mod tests {
                 palette_commands: vec![],
                 request: None,
                 consumed: false,
+                plugin_message: None,
             })
             .unwrap();
 
@@ -1430,6 +1437,7 @@ mod tests {
                 palette_commands: vec![],
                 request: None,
                 consumed: false,
+                plugin_message: None,
             })
             .unwrap();
 
@@ -1475,6 +1483,7 @@ mod tests {
                 palette_commands: vec![],
                 request: None,
                 consumed: true,
+                plugin_message: None,
             })
             .unwrap();
 
