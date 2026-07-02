@@ -270,6 +270,15 @@ pub enum PluginRequest {
     },
 }
 
+/// Outgoing plugin-to-plugin message sent by a plugin to another plugin.
+/// The host fills in the `from` field before forwarding.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PluginMessage {
+    pub to: String,
+    pub action: String,
+    pub data: serde_json::Value,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PluginMsg {
     pub commands: Vec<RenderCmd>,
@@ -278,6 +287,10 @@ pub struct PluginMsg {
     pub palette_commands: Vec<(String, String)>,
     #[serde(default)]
     pub request: Option<PluginRequest>,
+    /// Outgoing plugin-to-plugin message.
+    /// The host forwards this to the target plugin.
+    #[serde(default)]
+    pub plugin_message: Option<PluginMessage>,
     /// Whether the last host message was consumed (handled) by the plugin.
     /// Used by the host to decide whether to fall back to default handling
     /// (e.g. Esc → close plugin if the plugin did not consume it).
@@ -529,6 +542,7 @@ mod tests {
             hints: vec![("key".into(), "desc".into())],
             palette_commands: vec![],
             request: None,
+            plugin_message: None,
             consumed: false,
         };
         let json = serde_json::to_string(&msg).unwrap();
@@ -536,6 +550,7 @@ mod tests {
         assert_eq!(decoded.commands.len(), 1);
         assert_eq!(decoded.hints.len(), 1);
         assert!(decoded.request.is_none());
+        assert!(decoded.plugin_message.is_none());
     }
 
     #[test]
@@ -547,6 +562,7 @@ mod tests {
             request: Some(PluginRequest::SignIn {
                 provider: "google".into(),
             }),
+            plugin_message: None,
             consumed: false,
         };
         let json = serde_json::to_string(&msg).unwrap();

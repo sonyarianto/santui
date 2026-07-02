@@ -142,6 +142,7 @@ impl App {
                     hints: vec![],
                     palette_commands: vec![],
                     request: None,
+                    plugin_message: None,
                     consumed: false,
                 }
             }
@@ -165,6 +166,7 @@ impl App {
             hints,
             palette_commands,
             request,
+            plugin_message: None,
             consumed,
         }
     }
