@@ -2179,6 +2179,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-weather"
+version = "0.2.26"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde",
+ "serde_json",
+ "ureq",
+]
+
+[[package]]
 name = "santui-world-clock"
 version = "0.2.26"
 dependencies = [
