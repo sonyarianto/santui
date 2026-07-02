@@ -1,0 +1,5 @@
+[advisories]
+# quick-xml 0.37.x — used transitively by feed-rs 2.x.
+# feed-rs pins to quick-xml 0.37; upstream must bump before we can adopt 0.41.
+# Remove these ignores once feed-rs publishes a version using quick-xml >= 0.41.
+ignore = ["RUSTSEC-2026-0194", "RUSTSEC-2026-0195"]

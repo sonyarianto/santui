@@ -195,7 +195,7 @@ fn render_item_list(
         } else {
             String::new()
         };
-        let feed_w = feed_label.len();
+        let feed_w = feed_label.chars().count();
         let title_w = max_w.saturating_sub(2 + time_w + feed_w);
         let truncated_title = if title_w > 1 {
             let t: String = item
@@ -318,7 +318,7 @@ fn render_item_view(
         cmds.push(RenderCmd::Paragraph {
             x: 2,
             y: row,
-            w: w.saturating_sub(3),
+            w: w.saturating_sub(4),
             h: para_h,
             text: item.item.summary.clone(),
             style: TextStyle {

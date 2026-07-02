@@ -82,7 +82,7 @@ fn render_list(state: &ClipState, theme: &ThemeData, w: u16, h: u16) -> Vec<Rend
 
             let prefix = if is_selected { "▶ " } else { "  " };
             let line = format!("{}{}", prefix, entry.preview);
-            let line_len = line.len();
+            let line_len = line.chars().count();
 
             cmds.push(RenderCmd::Text {
                 x: 2,
