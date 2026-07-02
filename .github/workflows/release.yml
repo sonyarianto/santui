@@ -123,7 +123,12 @@ jobs:
           $plugins = @()
 
           $pluginNames = @(
-            @{id="radio-stream-player"; name="Radio Stream Player"; desc="Listen to thousands of radio stations worldwide"}
+            @{id="radio-stream-player"; name="Radio Stream Player"; desc="Listen to thousands of radio stations worldwide"; caps=@("background")}
+            @{id="weather";             name="Weather";             desc="Current conditions, hourly & 7-day forecast, location search, auto-refresh"; caps=@()}
+            @{id="rss-reader";          name="RSS Reader";          desc="Subscribe to and read RSS/Atom feeds"; caps=@()}
+            @{id="clipboard-history";   name="Clipboard History";   desc="Track and search clipboard history"; caps=@()}
+            @{id="system-monitor";      name="System Monitor";      desc="Real-time CPU, memory, disk, network, and process monitor"; caps=@()}
+            @{id="world-clock";         name="World Clock";         desc="World timezone clock with grid, detail view, search, and custom labels"; caps=@()}
           )
 
           foreach ($p in $pluginNames) {
@@ -142,7 +147,7 @@ jobs:
                 download_url = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/$filename"
                 sha256 = $sha
                 size = $size
-                capabilities = @("background")
+                capabilities = $p.caps
               }
             }
           }
@@ -152,55 +157,60 @@ jobs:
 
       - name: Generate plugins.json (Unix)
         if: matrix.os != 'windows-latest'
+        shell: bash
         run: |
           VERSION="${{ env.VERSION }}"
           TARGET="${{ matrix.target }}"
           EXT="${{ matrix.plugin_ext }}"
           REPO="${{ github.repository }}"
           TAG="${{ github.ref_name }}"
-          BINARY="${BINARY_DIR}/santui-radio-stream-player${EXT}"
 
           # Portable SHA256: works on Linux (sha256sum) and macOS (shasum -a 256)
-          SHA256="$(sha256sum "$BINARY" 2>/dev/null | cut -d' ' -f1 || shasum -a 256 "$BINARY" 2>/dev/null | cut -d' ' -f1)"
-          SIZE="$(stat -c%s "$BINARY" 2>/dev/null || stat -f%z "$BINARY" 2>/dev/null)"
+          sha() {
+            sha256sum "$1" 2>/dev/null | cut -d' ' -f1 || shasum -a 256 "$1" 2>/dev/null | cut -d' ' -f1
+          }
 
-          cat > "plugins-${TARGET}.json" << JSON
-          [
-            {
-              "id": "radio-stream-player",
-              "name": "Radio Stream Player",
-              "description": "Listen to thousands of radio stations worldwide",
-              "publisher": "Santui",
-              "version": "${VERSION}",
-              "download_url": "https://github.com/${REPO}/releases/download/${TAG}/radio-stream-player-${TARGET}${EXT}",
-              "sha256": "${SHA256}",
-              "size": ${SIZE},
-              "capabilities": ["background"]
-            }
-          ]
-          JSON
+          entries=""
+          add_plugin() {
+            local id="$1" name="$2" desc="$3" caps="$4"
+            local bin="${BINARY_DIR}/santui-${id}${EXT}"
+            [ -f "$bin" ] || return
+            local hash="$(sha "$bin")"
+            local size="$(stat -c%s "$bin" 2>/dev/null || stat -f%z "$bin" 2>/dev/null)"
+            local dl="https://github.com/${REPO}/releases/download/${TAG}/${id}-${TARGET}${EXT}"
+            [ -n "$entries" ] && entries="$entries,"
+            entries="$entries{\"id\":\"$id\",\"name\":\"$name\",\"description\":\"$desc\",\"publisher\":\"Santui\",\"version\":\"$VERSION\",\"download_url\":\"$dl\",\"sha256\":\"$hash\",\"size\":$size,\"capabilities\":$caps}"
+          }
+
+          add_plugin "radio-stream-player" "Radio Stream Player" "Listen to thousands of radio stations worldwide" '["background"]'
+          add_plugin "weather"             "Weather"             "Current conditions, hourly & 7-day forecast, location search, auto-refresh" '[]'
+          add_plugin "rss-reader"          "RSS Reader"          "Subscribe to and read RSS/Atom feeds" '[]'
+          add_plugin "clipboard-history"   "Clipboard History"   "Track and search clipboard history" '[]'
+          add_plugin "system-monitor"      "System Monitor"      "Real-time CPU, memory, disk, network, and process monitor" '[]'
+          add_plugin "world-clock"         "World Clock"         "World timezone clock with grid, detail view, search, and custom labels" '[]'
+
+          printf '[%s]\n' "$entries" > "plugins-${TARGET}.json"
           echo "Generated plugins-${TARGET}.json"
 
       - name: Collect plugin binaries for upload
         shell: bash
         run: |
           mkdir -p plugin-binaries
-          for binary in "${BINARY_DIR}/santui-radio-stream-player${{ matrix.plugin_ext }}"; do
-            if [ -f "$binary" ]; then
-              name="$(basename "$binary")"
-              # Strip .exe and also strip the santui- prefix so the filename
-              # matches the download_url in plugins.json and the release glob.
-              stem="${name%.exe}"
-              id="${stem#santui-}"
-              target_name="${id}-${{ matrix.target }}${{ matrix.plugin_ext }}"
-              cp "$binary" "plugin-binaries/$target_name"
-              size="$(stat -c%s "plugin-binaries/$target_name" 2>/dev/null || stat -f%z "plugin-binaries/$target_name" 2>/dev/null)"
-              if [ -z "$size" ] || [ "$size" -eq 0 ]; then
-                echo "❌ ERROR: plugin binary $target_name has size 0 or could not read size"
-                exit 1
-              fi
-              echo "Collected plugin: $target_name ($size bytes)"
+          for binary in "${BINARY_DIR}"/santui-*-plugin${{ matrix.plugin_ext }} "${BINARY_DIR}"/santui-{radio-stream-player,weather,rss-reader,clipboard-history,system-monitor,world-clock}${{ matrix.plugin_ext }}; do
+            [ -f "$binary" ] || continue
+            name="$(basename "$binary")"
+            # Strip .exe and also strip the santui- prefix so the filename
+            # matches the download_url in plugins.json and the release glob.
+            stem="${name%.exe}"
+            id="${stem#santui-}"
+            target_name="${id}-${{ matrix.target }}${{ matrix.plugin_ext }}"
+            cp "$binary" "plugin-binaries/$target_name"
+            size="$(stat -c%s "plugin-binaries/$target_name" 2>/dev/null || stat -f%z "plugin-binaries/$target_name" 2>/dev/null)"
+            if [ -z "$size" ] || [ "$size" -eq 0 ]; then
+              echo "❌ ERROR: plugin binary $target_name has size 0 or could not read size"
+              exit 1
             fi
+            echo "Collected plugin: $target_name ($size bytes)"
           done
 
       - name: Package Windows
@@ -287,6 +297,11 @@ jobs:
             santui-*
             plugins-*.json
             radio-stream-player-*
+            weather-*
+            rss-reader-*
+            clipboard-history-*
+            system-monitor-*
+            world-clock-*
           fail_on_unmatched_files: false
           generate_release_notes: true
 

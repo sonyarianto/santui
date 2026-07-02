@@ -67,6 +67,21 @@ for bin in "$OUTDIR"/santui-*.exe "$OUTDIR"/santui-*; do
             pdesc="World timezone clock with grid, detail view, search, and custom labels"
             pcaps='[]'
             ;;
+        weather)
+            pname="Weather"
+            pdesc="Current conditions, hourly & 7-day forecast, location search, auto-refresh"
+            pcaps='[]'
+            ;;
+        rss-reader)
+            pname="RSS Reader"
+            pdesc="Subscribe to and read RSS/Atom feeds"
+            pcaps='[]'
+            ;;
+        clipboard-history)
+            pname="Clipboard History"
+            pdesc="Track and search clipboard history"
+            pcaps='[]'
+            ;;
     esac
 
     echo "  [OK] $id  ($size bytes, sha256=$hash)"

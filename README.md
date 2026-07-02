@@ -32,8 +32,14 @@ Plugins are **standalone binaries** distributed through the Plugin Registry. Ope
 | Plugin | What it does | Needs |
 |---|---|---|
 | **Radio Stream Player** | Browse stations by country, search, stream internet radio, **save favorites** | [libmpv](https://mpv.io/installation/) |
+| **RSS Reader** | Subscribe to and read RSS/Atom feeds | — |
+| **Clipboard History** | Track and search clipboard history | — |
+| **System Monitor** | Monitor CPU, memory, disk, and network | — |
+| **World Clock** | Timezone converter and world clock | — |
+| **Weather** | Current conditions, hourly & 7-day forecast, location search, auto-refresh | — |
+| **Plugin Registry** | Browse, install, and manage plugins | — |
 
-*More coming. Want to build one? See [docs/architecture.md](docs/architecture.md).*
+*Want to build your own? See [docs/architecture.md](docs/architecture.md).*
 
 ## Quick start
 

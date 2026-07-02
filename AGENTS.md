@@ -31,7 +31,12 @@ crates/
 ├── plugins/
 │   ├── radio-stream-player/   — radio plugin
 │   │   └── scraper/           — scrape radio stations into DB
-│   └── registry/             — plugin registry UI plugin
+│   ├── registry/             — plugin registry UI plugin
+│   ├── rss-reader/           — RSS feed reader
+│   ├── clipboard-history/    — clipboard history manager
+│   ├── system-monitor/       — system resource monitor
+│   ├── world-clock/          — world clock / timezone converter
+│   └── weather/              — weather forecaster
 ├── app/           — binary entry point (main.rs)
 └── website/       — VitePress docs site
 ```

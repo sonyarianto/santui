@@ -53,7 +53,12 @@ santui/
 │   ├── plugins/
 │   │   ├── radio-stream-player/   — radio player plugin
 │   │   │   └── scraper/              — radio station scraper
-│   │   └── registry/                 — plugin registry UI plugin
+│   │   ├── registry/                 — plugin registry UI plugin
+│   │   ├── rss-reader/               — RSS feed reader
+│   │   ├── clipboard-history/        — clipboard history manager
+│   │   ├── system-monitor/           — system resource monitor
+│   │   ├── world-clock/              — world clock / timezone converter
+│   │   └── weather/                  — weather forecaster
 │   └── app/            — binary entry point (main.rs)
 ├── website/            — VitePress docs site
 ├── docs/               — architecture & dev docs
