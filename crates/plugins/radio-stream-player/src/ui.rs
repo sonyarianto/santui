@@ -198,7 +198,7 @@ pub fn render_ui(
         let right_len = right_text.len();
         let max_left = inner_w.saturating_sub(right_len + 1);
         let display_left: String = left_text.chars().take(max_left).collect();
-        let right_x = left_w.saturating_sub(2u16.saturating_add(right_text.len() as u16));
+        let right_x = left_w.saturating_sub(right_text.len() as u16);
         cmds.push(RenderCmd::Text {
             x: 2,
             y: 1,
@@ -222,7 +222,7 @@ pub fn render_ui(
         } else {
             msg.clone()
         };
-        let top_x = left_w.saturating_sub(2u16.saturating_add(top_text.len() as u16));
+        let top_x = left_w.saturating_sub(top_text.len() as u16);
         cmds.push(RenderCmd::Text {
             x: top_x,
             y: 1,
@@ -237,7 +237,7 @@ pub fn render_ui(
         let right_len = right_text.len();
         let max_left = inner_w.saturating_sub(right_len + 1);
         let display_left: String = left_text.chars().take(max_left).collect();
-        let right_x = left_w.saturating_sub(2u16.saturating_add(right_text.len() as u16));
+        let right_x = left_w.saturating_sub(right_text.len() as u16);
         cmds.push(RenderCmd::Text {
             x: 2,
             y: 1,
@@ -265,7 +265,7 @@ pub fn render_ui(
                 format!("Total stations: {}", state.stations.len())
             }
         };
-        let top_x = left_w.saturating_sub(2u16.saturating_add(top_text.len() as u16));
+        let top_x = left_w.saturating_sub(top_text.len() as u16);
         cmds.push(RenderCmd::Text {
             x: top_x,
             y: 1,
