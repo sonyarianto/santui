@@ -51,7 +51,7 @@ impl App {
         if aw < 10 || ah < 3 {
             return;
         }
-        let inner_w = (aw.saturating_sub(3)) as usize;
+        let inner_w = (aw.saturating_sub(4)) as usize;
 
         ui::draw_panel(cmds, t, 0, 0, aw, ah, "Plugins");
 
@@ -63,7 +63,7 @@ impl App {
             self.status.clone()
         };
         if !info.is_empty() {
-            let info_x = aw.saturating_sub(info.len() as u16 + 1);
+            let info_x = aw.saturating_sub(info.len() as u16 + 2);
             cmds.push(RenderCmd::Text {
                 x: info_x,
                 y: 1,
