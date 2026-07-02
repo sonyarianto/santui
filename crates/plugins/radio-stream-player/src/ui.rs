@@ -184,7 +184,7 @@ pub fn render_ui(
         stations_footer,
     );
 
-    let inner_w = left_w.saturating_sub(3) as usize;
+    let inner_w = left_w.saturating_sub(4) as usize;
 
     // ---- Top line: search bar, scan message, filter indicator, or total station count ----
     if state.search_mode {
@@ -198,7 +198,7 @@ pub fn render_ui(
         let right_len = right_text.len();
         let max_left = inner_w.saturating_sub(right_len + 1);
         let display_left: String = left_text.chars().take(max_left).collect();
-        let right_x = left_w.saturating_sub(right_text.len() as u16);
+        let right_x = left_w.saturating_sub(2u16.saturating_add(right_text.len() as u16));
         cmds.push(RenderCmd::Text {
             x: 2,
             y: 1,
@@ -216,13 +216,14 @@ pub fn render_ui(
             bold: false,
         });
     } else if let Some(ref msg) = state.scan_msg {
-        let max_w = left_w.saturating_sub(3) as usize;
-        let top_text = if msg.len() > max_w {
-            format!("{}…", &msg[..max_w.saturating_sub(1)])
+        let max_w = left_w.saturating_sub(4) as usize;
+        let top_text = if msg.chars().count() > max_w {
+            let truncated: String = msg.chars().take(max_w.saturating_sub(1)).collect();
+            format!("{}…", truncated)
         } else {
             msg.clone()
         };
-        let top_x = left_w.saturating_sub(top_text.len() as u16);
+        let top_x = left_w.saturating_sub(2u16.saturating_add(top_text.chars().count() as u16));
         cmds.push(RenderCmd::Text {
             x: top_x,
             y: 1,
@@ -237,7 +238,7 @@ pub fn render_ui(
         let right_len = right_text.len();
         let max_left = inner_w.saturating_sub(right_len + 1);
         let display_left: String = left_text.chars().take(max_left).collect();
-        let right_x = left_w.saturating_sub(right_text.len() as u16);
+        let right_x = left_w.saturating_sub(2u16.saturating_add(right_text.len() as u16));
         cmds.push(RenderCmd::Text {
             x: 2,
             y: 1,
@@ -255,17 +256,15 @@ pub fn render_ui(
             bold: false,
         });
     } else {
-        let top_text = {
-            let fav_count = state.favorites_count();
-            if state.show_favorites_only {
-                format!("♥ {} favorites", state.filtered.len())
-            } else if fav_count > 0 {
-                format!("Total stations: {}  ♥ {}", state.stations.len(), fav_count)
-            } else {
-                format!("Total stations: {}", state.stations.len())
-            }
+        let fav_count = state.favorites_count();
+        let top_text = if state.show_favorites_only {
+            format!("♥ {} favorites", state.filtered.len())
+        } else if fav_count > 0 {
+            format!("Total stations: {}  ♥ {}", state.stations.len(), fav_count)
+        } else {
+            format!("Total stations: {}", state.stations.len())
         };
-        let top_x = left_w.saturating_sub(top_text.len() as u16);
+        let top_x = left_w.saturating_sub(2u16.saturating_add(top_text.chars().count() as u16));
         cmds.push(RenderCmd::Text {
             x: top_x,
             y: 1,
@@ -274,6 +273,28 @@ pub fn render_ui(
             bg: None,
             bold: false,
         });
+
+        if state.show_favorites_only {
+            cmds.push(RenderCmd::Text {
+                x: top_x,
+                y: 1,
+                text: "♥".into(),
+                fg: Some([255, 60, 60]),
+                bg: None,
+                bold: false,
+            });
+        } else if fav_count > 0 {
+            let digit_count = state.stations.len().to_string().chars().count();
+            let heart_x = top_x + 18 + digit_count as u16;
+            cmds.push(RenderCmd::Text {
+                x: heart_x,
+                y: 1,
+                text: "♥".into(),
+                fg: Some([255, 60, 60]),
+                bg: None,
+                bold: false,
+            });
+        }
     }
 
     let table_top = TABLE_TOP;
@@ -348,6 +369,27 @@ pub fn render_ui(
         }),
     });
 
+    // Red heart overlay for favorite stations (table already renders "♥ " in the name cell)
+    let heart_red = [255, 60, 60];
+    for i in 0..visible_count {
+        let station_idx = state.filtered[scroll + i];
+        if state.is_favorite(&state.stations[station_idx].url) {
+            let bg = if vis_selected == Some(i) {
+                Some(theme.highlight)
+            } else {
+                None
+            };
+            cmds.push(RenderCmd::Text {
+                x: 2,
+                y: table_top + 1 + i as u16,
+                text: "♥".into(),
+                fg: Some(heart_red),
+                bg,
+                bold: false,
+            });
+        }
+    }
+
     // ---- Now Playing panel (bottom-left) ----
     let np_y = stations_h + GAP;
     draw_panel(
@@ -372,7 +414,7 @@ pub fn render_ui(
         bold: false,
     });
 
-    let r_inner_w = left_w.saturating_sub(3);
+    let r_inner_w = left_w.saturating_sub(4);
 
     match &state.play_state {
         PlayState::Stopped => {
@@ -460,7 +502,7 @@ pub fn render_ui(
             lyrics_footer,
         );
 
-        let ly_inner_w = ly_panel_w.saturating_sub(3);
+        let ly_inner_w = ly_panel_w.saturating_sub(4);
 
         // Title/artist header from iTunes (track_info) or station metadata (song_title)
         let (header_title, header_artist) = if !state.lyrics_text.is_empty() {
