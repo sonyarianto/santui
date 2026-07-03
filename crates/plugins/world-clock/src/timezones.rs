@@ -88,3 +88,55 @@ pub fn city_name(tz: Tz) -> String {
         .unwrap_or("")
         .replace('_', " ")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn search_tokyo() {
+        let results = search("tokyo");
+        assert!(results.contains(&chrono_tz::Tz::Asia__Tokyo));
+    }
+
+    #[test]
+    fn search_case_insensitive() {
+        let results = search("LONDON");
+        assert!(results.contains(&chrono_tz::Tz::Europe__London));
+    }
+
+    #[test]
+    fn search_partial_match() {
+        let results = search("tok");
+        assert!(results.contains(&chrono_tz::Tz::Asia__Tokyo));
+    }
+
+    #[test]
+    fn search_empty_returns_all() {
+        let results = search("");
+        assert_eq!(results.len(), ALL.len());
+    }
+
+    #[test]
+    fn search_no_match_returns_empty() {
+        let results = search("zzzzzznotacity");
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn city_name_strips_prefix() {
+        let name = city_name(chrono_tz::Tz::Asia__Tokyo);
+        assert_eq!(name, "Tokyo");
+    }
+
+    #[test]
+    fn city_name_utc() {
+        let name = city_name(chrono_tz::Tz::UTC);
+        assert!(!name.is_empty());
+    }
+
+    #[test]
+    fn all_list_not_empty() {
+        assert!(!ALL.is_empty());
+    }
+}

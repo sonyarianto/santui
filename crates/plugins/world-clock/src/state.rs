@@ -101,3 +101,71 @@ impl WorldTimeState {
         entries
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn add_clock_deduplicates() {
+        let mut s = WorldTimeState::default();
+        s.add_clock(chrono_tz::Tz::Asia__Tokyo);
+        s.add_clock(chrono_tz::Tz::Asia__Tokyo);
+        assert_eq!(s.clocks.len(), 1);
+    }
+
+    #[test]
+    fn add_clock_allows_different_timezones() {
+        let mut s = WorldTimeState::default();
+        s.add_clock(chrono_tz::Tz::Asia__Tokyo);
+        s.add_clock(chrono_tz::Tz::Europe__London);
+        assert_eq!(s.clocks.len(), 2);
+    }
+
+    #[test]
+    fn remove_selected_removes_correct_entry() {
+        let mut s = WorldTimeState::default();
+        s.add_clock(chrono_tz::Tz::Asia__Tokyo);
+        s.add_clock(chrono_tz::Tz::Europe__London);
+        s.selected = 0;
+        s.remove_selected();
+        assert_eq!(s.clocks.len(), 1);
+        assert_eq!(s.clocks[0].tz, chrono_tz::Tz::Europe__London);
+    }
+
+    #[test]
+    fn remove_selected_clamps_cursor() {
+        let mut s = WorldTimeState::default();
+        s.add_clock(chrono_tz::Tz::Asia__Tokyo);
+        s.selected = 0;
+        s.remove_selected();
+        assert_eq!(s.selected, 0);
+        assert!(s.clocks.is_empty());
+    }
+
+    #[test]
+    fn serialize_deserialize_roundtrip() {
+        let mut s = WorldTimeState::default();
+        s.add_clock(chrono_tz::Tz::Asia__Tokyo);
+        s.add_clock(chrono_tz::Tz::America__New_York);
+        let json = s.serialize_clocks();
+        let mut s2 = WorldTimeState::default();
+        s2.load_clocks(&json);
+        assert_eq!(s2.clocks.len(), 2);
+        assert_eq!(s2.clocks[0].tz, chrono_tz::Tz::Asia__Tokyo);
+    }
+
+    #[test]
+    fn load_clocks_invalid_json_does_not_panic() {
+        let mut s = WorldTimeState::default();
+        s.load_clocks("not valid json");
+        assert!(s.clocks.is_empty());
+    }
+
+    #[test]
+    fn default_clocks_not_empty() {
+        let clocks = WorldTimeState::default_clocks();
+        assert!(!clocks.is_empty());
+        assert_eq!(clocks[0].tz, chrono_tz::Tz::UTC);
+    }
+}

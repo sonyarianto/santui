@@ -366,3 +366,79 @@ fn render_rename(
 }
 
 use crate::timezones;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::state::{Screen, WorldTimeState};
+
+    fn test_theme() -> ThemeData {
+        ThemeData {
+            text: [220; 3],
+            text_muted: [140; 3],
+            accent: [180; 3],
+            highlight: [220; 3],
+            logo: [255; 3],
+            background: [0; 3],
+            background_panel: [20; 3],
+            background_overlay: [10; 3],
+            border: [150; 3],
+            success: [0; 3],
+            error: [255; 3],
+            inverted_text: [255; 3],
+        }
+    }
+
+    fn state_with_clocks() -> WorldTimeState {
+        let mut s = WorldTimeState::default();
+        s.add_clock(chrono_tz::Tz::Asia__Tokyo);
+        s.add_clock(chrono_tz::Tz::Europe__London);
+        s
+    }
+
+    #[test]
+    fn grid_renders_clock_cards() {
+        let s = state_with_clocks();
+        let cmds = render_ui(&s, &test_theme(), 120, 30);
+        assert!(!cmds.is_empty());
+        let has_tokyo = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("Tokyo")));
+        assert!(has_tokyo);
+    }
+
+    #[test]
+    fn grid_renders_london() {
+        let s = state_with_clocks();
+        let cmds = render_ui(&s, &test_theme(), 120, 30);
+        let has_london = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("London")));
+        assert!(has_london);
+    }
+
+    #[test]
+    fn search_overlay_renders_on_search_screen() {
+        let mut s = state_with_clocks();
+        s.screen = Screen::Search;
+        s.search_query = "tok".into();
+        s.apply_search();
+        let cmds = render_ui(&s, &test_theme(), 120, 30);
+        assert!(!cmds.is_empty());
+    }
+
+    #[test]
+    fn empty_state_does_not_panic() {
+        let s = WorldTimeState::default();
+        let cmds = render_ui(&s, &test_theme(), 120, 30);
+        let _ = cmds;
+    }
+
+    #[test]
+    fn detail_view_does_not_panic() {
+        let mut s = state_with_clocks();
+        s.screen = Screen::Detail(0);
+        let cmds = render_ui(&s, &test_theme(), 120, 30);
+        assert!(!cmds.is_empty());
+    }
+}

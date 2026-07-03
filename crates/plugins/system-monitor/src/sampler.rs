@@ -189,4 +189,9 @@ mod tests {
     fn fmt_bytes_zero() {
         assert_eq!(fmt_bytes(0), "0 B");
     }
+
+    #[test]
+    fn fmt_bytes_terabytes() {
+        assert_eq!(fmt_bytes(1_500_000_000_000), "1.4 TB");
+    }
 }

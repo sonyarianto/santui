@@ -97,7 +97,7 @@ fn config_save_roundtrip() {
             error: None,
             inverted_text: None,
         }),
-        keybindings: None,
+        keybindings: santui_core::config::KeyBindings::default(),
         plugins: None,
     };
     cfg.save_to(tmp.path()).unwrap();

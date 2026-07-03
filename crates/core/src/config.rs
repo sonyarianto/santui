@@ -12,9 +12,9 @@ pub struct Config {
     pub theme: Option<String>,
     /// Custom theme color overrides.
     pub custom_theme: Option<CustomThemeColors>,
-    /// Key-binding overrides (reserved — schema defined for future use).
+    /// Key-binding overrides.
     #[serde(default)]
-    pub keybindings: Option<KeyBindings>,
+    pub keybindings: KeyBindings,
     /// Plugin-specific settings (reserved — schema defined for future use).
     #[serde(default)]
     pub plugins: Option<PluginConfig>,
@@ -40,9 +40,70 @@ pub struct CustomThemeColors {
     pub inverted_text: Option<String>,
 }
 
-/// Key-binding overrides (reserved for future use).
+/// Key-binding overrides.
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-pub struct KeyBindings {}
+pub struct KeyBindings {
+    /// Key to open the command palette. Default: Ctrl+P.
+    /// Format: "ctrl+p", "ctrl+space", "alt+p"
+    #[serde(default = "KeyBindings::default_open_palette")]
+    pub open_palette: String,
+
+    /// Key to quit the application. Default: "q"
+    #[serde(default = "KeyBindings::default_quit")]
+    pub quit: String,
+
+    /// Key to show the about screen. Default: "?"
+    #[serde(default = "KeyBindings::default_about")]
+    pub about: String,
+}
+
+impl Default for KeyBindings {
+    fn default() -> Self {
+        Self {
+            open_palette: Self::default_open_palette(),
+            quit: Self::default_quit(),
+            about: Self::default_about(),
+        }
+    }
+}
+
+impl KeyBindings {
+    fn default_open_palette() -> String {
+        "ctrl+p".into()
+    }
+
+    fn default_quit() -> String {
+        "q".into()
+    }
+
+    fn default_about() -> String {
+        "?".into()
+    }
+
+    /// Parse "ctrl+p" → (KeyCode::Char('p'), KeyModifiers::CONTROL).
+    pub fn parse_key(
+        s: &str,
+    ) -> Option<(crossterm::event::KeyCode, crossterm::event::KeyModifiers)> {
+        let s = s.to_lowercase();
+        let parts: Vec<&str> = s.split('+').collect();
+        let key_str = *parts.last()?;
+        let mut mods = crossterm::event::KeyModifiers::NONE;
+        for part in &parts[..parts.len().saturating_sub(1)] {
+            match *part {
+                "ctrl" => mods |= crossterm::event::KeyModifiers::CONTROL,
+                "alt" => mods |= crossterm::event::KeyModifiers::ALT,
+                "shift" => mods |= crossterm::event::KeyModifiers::SHIFT,
+                _ => return None,
+            }
+        }
+        let code = match key_str {
+            "space" => crossterm::event::KeyCode::Char(' '),
+            s if s.len() == 1 => crossterm::event::KeyCode::Char(s.chars().next()?),
+            _ => return None,
+        };
+        Some((code, mods))
+    }
+}
 
 /// Plugin-specific configuration (reserved for future use).
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
@@ -338,6 +399,7 @@ impl ConfigManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crossterm::event::{KeyCode, KeyModifiers};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static NEXT_ID: AtomicUsize = AtomicUsize::new(0);
@@ -372,7 +434,9 @@ mod tests {
         let cfg = Config::default();
         assert!(cfg.theme.is_none());
         assert!(cfg.custom_theme.is_none());
-        assert!(cfg.keybindings.is_none());
+        assert_eq!(cfg.keybindings.open_palette, "ctrl+p");
+        assert_eq!(cfg.keybindings.quit, "q");
+        assert_eq!(cfg.keybindings.about, "?");
         assert!(cfg.plugins.is_none());
     }
 
@@ -420,7 +484,7 @@ mod tests {
                 error: None,
                 inverted_text: None,
             }),
-            keybindings: None,
+            keybindings: KeyBindings::default(),
             plugins: None,
         };
         cfg.save_to(tmp.path()).unwrap();
@@ -528,5 +592,75 @@ mod tests {
         // Reading the file back should show the saved value.
         let loaded = Config::load_from(tmp.path());
         assert_eq!(loaded.theme.as_deref(), Some("Dracula"));
+    }
+
+    // ------------------------------------------------------------------
+    // KeyBindings tests
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn keybindings_default_values() {
+        let kb = KeyBindings::default();
+        assert_eq!(kb.open_palette, "ctrl+p");
+        assert_eq!(kb.quit, "q");
+        assert_eq!(kb.about, "?");
+    }
+
+    #[test]
+    fn parse_key_ctrl_p() {
+        let (code, mods) = KeyBindings::parse_key("ctrl+p").unwrap();
+        assert_eq!(code, KeyCode::Char('p'));
+        assert!(mods.contains(KeyModifiers::CONTROL));
+    }
+
+    #[test]
+    fn parse_key_plain_char() {
+        let (code, mods) = KeyBindings::parse_key("q").unwrap();
+        assert_eq!(code, KeyCode::Char('q'));
+        assert!(mods.is_empty());
+    }
+
+    #[test]
+    fn parse_key_question_mark() {
+        let (code, mods) = KeyBindings::parse_key("?").unwrap();
+        assert_eq!(code, KeyCode::Char('?'));
+        assert!(mods.is_empty());
+    }
+
+    #[test]
+    fn parse_key_ctrl_space() {
+        let (code, mods) = KeyBindings::parse_key("ctrl+space").unwrap();
+        assert_eq!(code, KeyCode::Char(' '));
+        assert!(mods.contains(KeyModifiers::CONTROL));
+    }
+
+    #[test]
+    fn parse_key_invalid_returns_none() {
+        assert!(KeyBindings::parse_key("xyz+abc").is_none());
+    }
+
+    #[test]
+    fn keybindings_deserialize_from_toml() {
+        let toml_str = r#"
+            [keybindings]
+            open_palette = "alt+p"
+            quit = "ctrl+q"
+            about = "shift+/"
+        "#;
+        let cfg: Config = toml::from_str(toml_str).unwrap();
+        assert_eq!(cfg.keybindings.open_palette, "alt+p");
+        assert_eq!(cfg.keybindings.quit, "ctrl+q");
+        assert_eq!(cfg.keybindings.about, "shift+/");
+    }
+
+    #[test]
+    fn keybindings_missing_from_toml_uses_defaults() {
+        let toml_str = r#"
+            theme = "Nord"
+        "#;
+        let cfg: Config = toml::from_str(toml_str).unwrap();
+        assert_eq!(cfg.keybindings.open_palette, "ctrl+p");
+        assert_eq!(cfg.keybindings.quit, "q");
+        assert_eq!(cfg.keybindings.about, "?");
     }
 }

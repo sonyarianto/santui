@@ -14,7 +14,7 @@ use crate::config::ConfigManager;
 use crate::db_access::DbAccess;
 use crate::plugin::{Plugin, PluginContext};
 use crate::widgets::DimOverlay;
-use crossterm::event::{Event, KeyEventKind};
+use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 use crossterm::execute;
 use crossterm::terminal::enable_raw_mode;
 use ratatui::backend::CrosstermBackend;
@@ -177,12 +177,44 @@ pub struct Santui {
     palette_controller: palette_controller::PaletteController,
     /// Hot-reloadable configuration manager.
     pub(super) config_manager: crate::config::ConfigManager,
+    /// Resolved key bindings (parsed from config at startup and on hot-reload).
+    pub(super) bindings: ResolvedBindings,
     /// Starfield background animation.
     pub(super) starfield: starfield::Starfield,
     /// Pre-built splash logo lines, invalidated on theme change.
     cached_logo: Option<Vec<ratatui::text::Line<'static>>>,
     /// Cached terminal height, updated on resize.
     term_h: u16,
+}
+
+/// Parsed key bindings used at runtime, resolved once from [`Config`](crate::config::Config).
+#[derive(Debug, Clone, Copy)]
+pub(super) struct ResolvedBindings {
+    pub open_palette: (KeyCode, KeyModifiers),
+    pub quit: (KeyCode, KeyModifiers),
+    pub about: (KeyCode, KeyModifiers),
+}
+
+impl ResolvedBindings {
+    fn from_config(kb: &crate::config::KeyBindings) -> Self {
+        Self {
+            open_palette: parse_binding(
+                &kb.open_palette,
+                KeyCode::Char('p'),
+                KeyModifiers::CONTROL,
+            ),
+            quit: parse_binding(&kb.quit, KeyCode::Char('q'), KeyModifiers::NONE),
+            about: parse_binding(&kb.about, KeyCode::Char('?'), KeyModifiers::NONE),
+        }
+    }
+}
+
+fn parse_binding(
+    s: &str,
+    default_code: KeyCode,
+    default_mods: KeyModifiers,
+) -> (KeyCode, KeyModifiers) {
+    crate::config::KeyBindings::parse_key(s).unwrap_or((default_code, default_mods))
 }
 
 impl Default for Santui {
@@ -204,6 +236,7 @@ impl Santui {
             theme_manager,
             palette_controller: palette_controller::PaletteController::new(),
             config_manager: ConfigManager::new(std::path::PathBuf::new()),
+            bindings: ResolvedBindings::from_config(&crate::config::KeyBindings::default()),
             starfield: starfield::Starfield::new(),
             cached_logo: None,
             term_h: 24,
@@ -310,6 +343,7 @@ impl Santui {
             self.event_bus.emit(crate::event::Event::ThemeChanged(t));
         }
 
+        self.bindings = ResolvedBindings::from_config(&self.config_manager.config().keybindings);
         self.config_manager.ack();
     }
 

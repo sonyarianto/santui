@@ -427,4 +427,56 @@ mod tests {
         app.handle_palette_command(5);
         assert_eq!(app.state.screen, Screen::ProcessList);
     }
+
+    #[test]
+    fn handle_key_2_opens_mem_detail() {
+        let mut app = base_app();
+        let consumed = app.handle_key(IpcKey::Char('2'));
+        assert!(consumed);
+        assert_eq!(app.state.screen, Screen::MemDetail);
+    }
+
+    #[test]
+    fn handle_key_3_opens_disk_detail() {
+        let mut app = base_app();
+        let consumed = app.handle_key(IpcKey::Char('3'));
+        assert!(consumed);
+        assert_eq!(app.state.screen, Screen::DiskDetail);
+    }
+
+    #[test]
+    fn handle_key_4_opens_net_detail() {
+        let mut app = base_app();
+        let consumed = app.handle_key(IpcKey::Char('4'));
+        assert!(consumed);
+        assert_eq!(app.state.screen, Screen::NetDetail);
+    }
+
+    #[test]
+    fn palette_command_1_opens_cpu_detail() {
+        let mut app = base_app();
+        app.handle_palette_command(1);
+        assert_eq!(app.state.screen, Screen::CpuDetail);
+    }
+
+    #[test]
+    fn palette_command_2_opens_mem_detail() {
+        let mut app = base_app();
+        app.handle_palette_command(2);
+        assert_eq!(app.state.screen, Screen::MemDetail);
+    }
+
+    #[test]
+    fn palette_command_3_opens_disk_detail() {
+        let mut app = base_app();
+        app.handle_palette_command(3);
+        assert_eq!(app.state.screen, Screen::DiskDetail);
+    }
+
+    #[test]
+    fn palette_command_4_opens_net_detail() {
+        let mut app = base_app();
+        app.handle_palette_command(4);
+        assert_eq!(app.state.screen, Screen::NetDetail);
+    }
 }

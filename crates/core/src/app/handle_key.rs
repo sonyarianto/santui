@@ -97,77 +97,62 @@ impl super::Santui {
             super::ItemIndex::Dynamic(di) => {
                 if let Some((_cat, id, name)) = self.plugin_manager.dynamic_items().get(di).cloned()
                 {
-                    if let Some(existing) = self.plugin_manager.find_by_id(&id) {
-                        self.plugin_manager.set_active(Some(existing));
-                    } else {
-                        // Plugin not loaded yet — read its binary path from registry.toml.
-                        let cfg_path = self.plugin_manager.data_dir().join("registry.toml");
-                        if let Some(cfg) = crate::registry_config::RegistryConfig::load(&cfg_path) {
-                            if let Some(installed) = cfg.plugins.iter().find(|p| {
-                                p.path
-                                    .file_stem()
-                                    .and_then(|s| s.to_str())
-                                    .map(|s| s.trim_end_matches(".exe"))
-                                    .is_some_and(|stem| stem == id)
-                            }) {
-                                let mut ctx = crate::plugin::PluginContext {
-                                    theme: self.app_state.theme.clone(),
-                                    auth: self.auth.clone(),
-                                    data_dir: self.plugin_manager.data_dir().to_path_buf(),
-                                };
-                                if let Ok(idx) = self.plugin_manager.spawn_and_init(
-                                    &id,
-                                    &name,
-                                    &installed.path,
-                                    &installed.capabilities,
-                                    &mut ctx,
-                                ) {
-                                    self.plugin_manager.set_active(Some(idx));
-                                }
-                            }
-                        }
-                    }
+                    self.activate_plugin_by_id(&id, &name);
                 }
             }
         }
     }
 
-    fn activate_carousel_item(&mut self, ci: usize) {
-        let carousel = self.plugin_manager.carousel_items();
-        let Some(item) = carousel.get(ci) else {
-            return;
+    fn activate_plugin_by_id(&mut self, id: &str, name: &str) -> bool {
+        if let Some(existing) = self.plugin_manager.find_by_id(id) {
+            self.plugin_manager.set_active(Some(existing));
+            return true;
+        }
+
+        let cfg_path = self.plugin_manager.data_dir().join("registry.toml");
+        let Some(cfg) = crate::registry_config::RegistryConfig::load(&cfg_path) else {
+            return false;
+        };
+        let Some(installed) = cfg.plugins.iter().find(|p| {
+            p.path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .map(|s| s.trim_end_matches(".exe"))
+                .is_some_and(|stem| stem == id)
+        }) else {
+            return false;
         };
 
-        if let Some(plugin_idx) = item.plugin_idx {
-            // Plugin is already loaded — just activate it.
-            self.plugin_manager.set_active(Some(plugin_idx));
-        } else if let Some(cfg) = crate::registry_config::RegistryConfig::load(
-            &self.plugin_manager.data_dir().join("registry.toml"),
+        let mut ctx = crate::plugin::PluginContext {
+            theme: self.app_state.theme.clone(),
+            auth: self.auth.clone(),
+            data_dir: self.plugin_manager.data_dir().to_path_buf(),
+        };
+
+        match self.plugin_manager.spawn_and_init(
+            id,
+            name,
+            &installed.path,
+            &installed.capabilities,
+            &mut ctx,
         ) {
-            // Look up the binary path in registry.toml and spawn the plugin.
-            if let Some(installed) = cfg.plugins.iter().find(|p| {
-                p.path
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .map(|s| s.trim_end_matches(".exe"))
-                    == Some(item.id.as_str())
-            }) {
-                let mut ctx = crate::plugin::PluginContext {
-                    theme: self.app_state.theme.clone(),
-                    auth: self.auth.clone(),
-                    data_dir: self.plugin_manager.data_dir().to_path_buf(),
-                };
-                if let Ok(idx) = self.plugin_manager.spawn_and_init(
-                    &item.id,
-                    &item.name,
-                    &installed.path,
-                    &installed.capabilities,
-                    &mut ctx,
-                ) {
-                    self.plugin_manager.set_active(Some(idx));
-                }
+            Ok(idx) => {
+                self.plugin_manager.set_active(Some(idx));
+                true
             }
+            Err(_) => false,
         }
+    }
+
+    fn activate_carousel_item(&mut self, ci: usize) {
+        let (id, name) = {
+            let carousel = self.plugin_manager.carousel_items();
+            let Some(item) = carousel.get(ci) else {
+                return;
+            };
+            (item.id.clone(), item.name.clone())
+        };
+        self.activate_plugin_by_id(&id, &name);
     }
 
     fn handle_key_theme_picker(&mut self, key: KeyEvent) {
@@ -250,7 +235,8 @@ impl super::Santui {
     }
 
     fn handle_key_normal(&mut self, key: KeyEvent) {
-        if matches!(key.code, KeyCode::Char('p') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL))
+        if key.code == self.bindings.open_palette.0
+            && key.modifiers.contains(self.bindings.open_palette.1)
         {
             self.palette_controller.open();
             return;
@@ -258,7 +244,11 @@ impl super::Santui {
 
         match self.plugin_manager.active() {
             None => match key.code {
-                KeyCode::Char('q') => self.app_state.running = false,
+                _ if key.code == self.bindings.quit.0
+                    && key.modifiers.contains(self.bindings.quit.1) =>
+                {
+                    self.app_state.running = false;
+                }
                 KeyCode::Char('r') => {
                     let mut ctx = crate::plugin::PluginContext {
                         theme: self.app_state.theme.clone(),
@@ -267,7 +257,11 @@ impl super::Santui {
                     };
                     self.plugin_manager.restart_crashed(&mut ctx);
                 }
-                KeyCode::Char('?') => self.app_state.show_about = true,
+                _ if key.code == self.bindings.about.0
+                    && key.modifiers.contains(self.bindings.about.1) =>
+                {
+                    self.app_state.show_about = true;
+                }
                 KeyCode::Right | KeyCode::Char('l') => {
                     let carousel = self.plugin_manager.carousel_items();
                     let n = carousel.len();
@@ -318,7 +312,11 @@ impl super::Santui {
                     // still quit via Ctrl+C or by pressing Esc then q.
                     self.plugin_manager.handle_key(idx, key);
                 }
-                KeyCode::Char('?') => self.app_state.show_about = true,
+                _ if key.code == self.bindings.about.0
+                    && key.modifiers.contains(self.bindings.about.1) =>
+                {
+                    self.app_state.show_about = true;
+                }
                 _ => {
                     self.plugin_manager.handle_key(idx, key);
                 }

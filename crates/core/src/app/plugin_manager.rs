@@ -41,6 +41,8 @@ pub(crate) struct PluginManager {
     reload_skip: u32,
     /// Names of plugins that have crashed since last check.
     crashed_plugins: Vec<String>,
+    /// Cached carousel items, rebuilt on demand.
+    carousel_cache: Option<Vec<CarouselItem>>,
 }
 
 impl PluginManager {
@@ -58,6 +60,7 @@ impl PluginManager {
             registry_mtime: None,
             reload_skip: 0,
             crashed_plugins: Vec::new(),
+            carousel_cache: None,
         }
     }
 
@@ -89,6 +92,7 @@ impl PluginManager {
     pub fn register(&mut self, plugin: Box<dyn Plugin + Send>) {
         self.mtimes.push(stat_mtime(plugin.binary_path()));
         self.plugins.push(plugin);
+        self.invalidate_carousel_cache();
     }
 
     /// Create and register a plugin from the factory without initialising it.
@@ -159,6 +163,7 @@ impl PluginManager {
         let idx = self.plugins.len();
         self.mtimes.push(stat_mtime(plugin.binary_path()));
         self.plugins.push(plugin);
+        self.invalidate_carousel_cache();
         Ok(idx)
     }
 
@@ -262,6 +267,7 @@ impl PluginManager {
         if self.active_idx == Some(idx) {
             self.active_idx = None;
         }
+        self.invalidate_carousel_cache();
     }
 
     /// Dispatch a palette command that originated from the given plugin.
@@ -484,6 +490,7 @@ impl PluginManager {
     /// Re-read `registry.toml` and rebuild `dynamic_items` and `plugin_capabilities`.
     /// Returns true if items changed.
     pub fn read_registry_installed(&mut self) -> bool {
+        self.invalidate_carousel_cache();
         let path = self.data_dir.join("registry.toml");
         let cfg = RegistryConfig::load(&path);
         let old = std::mem::take(&mut self.dynamic_items);
@@ -583,25 +590,33 @@ impl Default for PluginManager {
 pub struct CarouselItem {
     pub id: String,
     pub name: String,
-    /// Index into `self.plugins` if the plugin is already loaded.
-    pub plugin_idx: Option<usize>,
 }
 
 impl PluginManager {
+    fn invalidate_carousel_cache(&mut self) {
+        self.carousel_cache = None;
+    }
+
+    /// Return the cached carousel items, rebuilding if necessary.
+    pub fn carousel_items(&mut self) -> &[CarouselItem] {
+        if self.carousel_cache.is_none() {
+            self.carousel_cache = Some(self.build_carousel_items());
+        }
+        self.carousel_cache.as_deref().unwrap()
+    }
+
     /// Build a unified carousel list from loaded plugins + enabled registry items.
     ///
     /// Order:
     /// 1. All currently loaded plugins (in registration order).
     /// 2. Enabled registry plugins whose id is not already loaded (deduplicated).
-    pub fn carousel_items(&self) -> Vec<CarouselItem> {
+    fn build_carousel_items(&self) -> Vec<CarouselItem> {
         let mut items: Vec<CarouselItem> = self
             .plugins
             .iter()
-            .enumerate()
-            .map(|(i, p)| CarouselItem {
+            .map(|p| CarouselItem {
                 id: p.id().to_string(),
                 name: p.name().to_string(),
-                plugin_idx: Some(i),
             })
             .collect();
 
@@ -612,7 +627,6 @@ impl PluginManager {
                 items.push(CarouselItem {
                     id: id.clone(),
                     name: name.clone(),
-                    plugin_idx: None,
                 });
             }
         }
