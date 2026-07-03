@@ -1,13 +1,13 @@
 # Configuration
 
-Santui stores its configuration in a **TOML** file at `~/.santui/config.toml`. The file is created automatically on first launch with default values, but you can edit it to customise the theme or set persistent overrides.
+Santui stores its configuration in a **TOML** file. The file is created automatically on first launch with default values, but you can edit it to customise the theme or set persistent overrides.
 
 ## Location
 
 | Platform | Path |
 |----------|------|
-| Linux / macOS | `~/.santui/config.toml` |
-| Windows | `%USERPROFILE%\.santui\config.toml` |
+| Linux / macOS | `~/.local/share/santui/config.toml` |
+| Windows | `%APPDATA%\santui\config.toml` |
 
 ## Schema
 
@@ -35,8 +35,11 @@ success = "#44cc66"
 error = "#ff4444"
 inverted_text = "#222222"
 
-# Key-binding overrides (reserved for future use).
+# Key-binding overrides.
 [keybindings]
+# open_palette = "ctrl+p"
+# quit = "q"
+# about = "?"
 
 # Plugin-specific settings (reserved for future use).
 [plugins]
@@ -70,9 +73,15 @@ Available colour keys:
 | `error` | Error indicators |
 | `inverted_text` | Text on dark backgrounds |
 
-### `[keybindings]` (reserved)
+### `[keybindings]`
 
-Schema defined for future key-binding customisation. Currently unused.
+Override default key bindings. Each value is a string in the format `"ctrl+key"`, `"alt+key"`, or `"shift+key"` (or a bare key for unmodified binds). Supported fields:
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `open_palette` | `"ctrl+p"` | Open the command palette |
+| `quit` | `"q"` | Quit the application |
+| `about` | `"?"` | Show the about screen |
 
 ### `[plugins]` (reserved)
 
