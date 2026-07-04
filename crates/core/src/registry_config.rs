@@ -32,7 +32,11 @@ impl RegistryConfig {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| format!("Create config dir: {e}"))?;
         }
-        std::fs::write(path, &text).map_err(|e| format!("Write config: {e}"))?;
+        // Atomic write via temp-file + rename to avoid corrupting the config
+        // file if the process crashes mid-write.
+        let tmp = path.with_extension("tmp");
+        std::fs::write(&tmp, &text).map_err(|e| format!("Write config: {e}"))?;
+        std::fs::rename(&tmp, path).map_err(|e| format!("Rename config: {e}"))?;
         Ok(())
     }
 }

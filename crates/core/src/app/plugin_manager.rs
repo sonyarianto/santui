@@ -266,6 +266,19 @@ impl PluginManager {
             self.plugins.remove(idx);
             self.mtimes.remove(idx);
             self.refresh_commands();
+
+            // Adjust active_idx for the shift caused by removal.
+            // Without this, an active_idx > idx becomes a stale/out-of-bounds
+            // pointer after the Vec compacts.
+            if let Some(active) = self.active_idx {
+                if active > idx {
+                    self.active_idx = Some(active - 1);
+                } else if active == idx {
+                    self.active_idx = None;
+                }
+            }
+            self.invalidate_carousel_cache();
+            return;
         }
 
         if self.active_idx == Some(idx) {

@@ -382,17 +382,35 @@ impl ConfigManager {
 
     /// Write the in-memory config to disk and sync the modification timestamp
     /// so reload calls don't re-detect our own write.
+    ///
+    /// Uses a temp-file + atomic rename to eliminate the TOCTOU window between
+    /// writing and reading back the mtime (see AGENTS.md: no fragile solutions).
     fn persist(&mut self) {
-        if let Err(e) = self.config.save_to(&self.dir) {
-            log::error!("[santui] Failed to save config: {e}");
+        let path = self.dir.join("config.toml");
+        let tmp_path = self.dir.join("config.toml.tmp");
+
+        let content = match toml::to_string_pretty(&self.config) {
+            Ok(c) => c,
+            Err(e) => {
+                log::error!("[santui] Failed to serialize config: {e}");
+                return;
+            }
+        };
+
+        if let Err(e) = std::fs::write(&tmp_path, &content) {
+            log::error!("[santui] Failed to write config: {e}");
+            let _ = std::fs::remove_file(&tmp_path);
             return;
         }
-        self.last_modified = self
-            .dir
-            .join("config.toml")
-            .metadata()
-            .ok()
-            .and_then(|m| m.modified().ok());
+
+        // Capture mtime before the atomic rename — no window for an external
+        // writer to slip in between our write and our metadata read.
+        self.last_modified = tmp_path.metadata().ok().and_then(|m| m.modified().ok());
+
+        if let Err(e) = std::fs::rename(&tmp_path, &path) {
+            log::error!("[santui] Failed to rename config: {e}");
+            let _ = std::fs::remove_file(&tmp_path);
+        }
     }
 }
 

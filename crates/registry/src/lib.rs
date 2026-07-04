@@ -159,8 +159,8 @@ impl Registry {
 
     /// Download and install a plugin from the manifest (blocking).
     /// Reports progress via `on_progress(downloaded, total)`.
-    /// Config is persisted *before* the binary write so a crash mid-install
-    /// leaves a recoverable entry rather than a zombie binary.
+    /// Binary is downloaded *before* the config is persisted, ensuring that a
+    /// crash mid-install never leaves a config entry pointing at a missing binary.
     pub fn install(
         &mut self,
         manifest: &PluginManifest,
@@ -171,37 +171,32 @@ impl Registry {
 
         let target_path = self.plugins_dir.join(plugin_filename(&manifest.id));
 
-        self.installed.retain(|p| p.id != manifest.id);
-        self.installed.push(InstalledPlugin {
-            enabled: true,
-            version: manifest.version.clone(),
-            path: target_path.clone(),
-            id: manifest.id.clone(),
-            name: manifest.name.clone(),
-            capabilities: manifest.capabilities.clone(),
-        });
-        self.save_config()?;
-
-        let result = if self.dev_mode {
+        // Download binary first — don't touch the config until it's on disk.
+        if self.dev_mode {
             let src = Path::new(&manifest.download_url);
             std::fs::copy(src, &target_path)
                 .map_err(|e| format!("Failed to copy plugin binary from {}: {e}", src.display()))?;
             self.copy_native_deps(src)?;
-            Ok(())
         } else {
             download_plugin(
                 &manifest.download_url,
                 &manifest.sha256,
                 &target_path,
                 on_progress,
-            )
-        };
-
-        if let Err(e) = result {
-            self.installed.pop();
-            self.save_config()?;
-            return Err(e);
+            )?;
         }
+
+        // Binary is on disk. Now persist the config entry.
+        self.installed.retain(|p| p.id != manifest.id);
+        self.installed.push(InstalledPlugin {
+            enabled: true,
+            version: manifest.version.clone(),
+            path: target_path,
+            id: manifest.id.clone(),
+            name: manifest.name.clone(),
+            capabilities: manifest.capabilities.clone(),
+        });
+        self.save_config()?;
 
         Ok(())
     }
