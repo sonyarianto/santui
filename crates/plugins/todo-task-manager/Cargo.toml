@@ -1,0 +1,17 @@
+[package]
+name = "santui-todo-task-manager"
+version = "0.2.26"
+edition = "2021"
+
+[[bin]]
+name = "santui-todo-task-manager"
+path = "src/main.rs"
+
+[dependencies]
+santui-ipc = { path = "../../ipc", version = "0.2.26", default-features = false }
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+env_logger = { workspace = true }
+chrono = { version = "0.4", features = ["clock", "serde"] }
+arboard = "3"

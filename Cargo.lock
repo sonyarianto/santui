@@ -2318,6 +2318,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-bookmark-launcher"
+version = "0.2.26"
+dependencies = [
+ "arboard",
+ "chrono",
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "santui-clipboard-history"
 version = "0.2.26"
 dependencies = [
@@ -2341,6 +2354,19 @@ dependencies = [
  "ratatui",
  "serde",
  "toml",
+]
+
+[[package]]
+name = "santui-cron-expression-helper"
+version = "0.2.26"
+dependencies = [
+ "arboard",
+ "chrono",
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -2556,6 +2582,19 @@ dependencies = [
  "serde",
  "serde_json",
  "sysinfo",
+]
+
+[[package]]
+name = "santui-todo-task-manager"
+version = "0.2.26"
+dependencies = [
+ "arboard",
+ "chrono",
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

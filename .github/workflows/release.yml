@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
 
 env:
@@ -23,22 +23,22 @@ jobs:
 
           - os: macos-latest
             target: aarch64-apple-darwin
-            ext: ''
+            ext: ""
             archive: tar.gz
-            plugin_ext: ''
+            plugin_ext: ""
 
           - os: macos-latest
             target: x86_64-apple-darwin
-            ext: ''
+            ext: ""
             archive: tar.gz
-            plugin_ext: ''
+            plugin_ext: ""
             cross_compile: true
 
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            ext: ''
+            ext: ""
             archive: tar.gz
-            plugin_ext: ''
+            plugin_ext: ""
 
     runs-on: ${{ matrix.os }}
 
@@ -132,6 +132,9 @@ jobs:
             @{id="unit-converter";      name="Unit Converter";      desc="Offline converter for common measurement units"; caps=@()}
             @{id="regex-tester";        name="Regex Tester";        desc="Interactive regular expression tester with captures and replacement preview"; caps=@()}
             @{id="json-yaml-formatter"; name="JSON/YAML Formatter"; desc="Format, validate, minify, and convert JSON and YAML snippets"; caps=@()}
+            @{id="todo-task-manager";  name="Todo Task Manager";  desc="Local-first task manager with priorities, due dates, tags, and search"; caps=@()}
+            @{id="bookmark-launcher";  name="Bookmark Launcher";  desc="Search, open, and copy URLs, paths, command snippets, and notes"; caps=@()}
+            @{id="cron-expression-helper"; name="Cron Expression Helper"; desc="Validate cron expressions, explain schedules, and preview upcoming runs"; caps=@()}
           )
 
           foreach ($p in $pluginNames) {
@@ -195,6 +198,9 @@ jobs:
           add_plugin "unit-converter"      "Unit Converter"      "Offline converter for common measurement units" '[]'
           add_plugin "regex-tester"        "Regex Tester"        "Interactive regular expression tester with captures and replacement preview" '[]'
           add_plugin "json-yaml-formatter" "JSON/YAML Formatter" "Format, validate, minify, and convert JSON and YAML snippets" '[]'
+          add_plugin "todo-task-manager"  "Todo Task Manager"  "Local-first task manager with priorities, due dates, tags, and search" '[]'
+          add_plugin "bookmark-launcher"  "Bookmark Launcher"  "Search, open, and copy URLs, paths, command snippets, and notes" '[]'
+          add_plugin "cron-expression-helper" "Cron Expression Helper" "Validate cron expressions, explain schedules, and preview upcoming runs" '[]'
 
           printf '[%s]\n' "$entries" > "plugins-${TARGET}.json"
           echo "Generated plugins-${TARGET}.json"
@@ -203,7 +209,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p plugin-binaries
-          for binary in "${BINARY_DIR}"/santui-*-plugin${{ matrix.plugin_ext }} "${BINARY_DIR}"/santui-{radio-stream-player,weather,rss-reader,clipboard-history,hacker-news-reader,system-monitor,world-clock,unit-converter,regex-tester,json-yaml-formatter}${{ matrix.plugin_ext }}; do
+          for binary in "${BINARY_DIR}"/santui-*-plugin${{ matrix.plugin_ext }} "${BINARY_DIR}"/santui-{radio-stream-player,weather,rss-reader,clipboard-history,hacker-news-reader,system-monitor,world-clock,unit-converter,regex-tester,json-yaml-formatter,todo-task-manager,bookmark-launcher,cron-expression-helper}${{ matrix.plugin_ext }}; do
             [ -f "$binary" ] || continue
             name="$(basename "$binary")"
             # Strip .exe and also strip the santui- prefix so the filename
@@ -280,7 +286,7 @@ jobs:
         run: |
           echo "=== Checking for empty files ==="
           has_empty=0
-          for f in santui-* plugins-*.json radio-stream-player-* unit-converter-* regex-tester-* json-yaml-formatter-*; do
+          for f in santui-* plugins-*.json radio-stream-player-* unit-converter-* regex-tester-* json-yaml-formatter-* todo-task-manager-* bookmark-launcher-* cron-expression-helper-*; do
             if [ -f "$f" ]; then
               size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null)
               if [ "$size" -eq 0 ]; then
@@ -312,6 +318,9 @@ jobs:
             unit-converter-*
             regex-tester-*
             json-yaml-formatter-*
+            todo-task-manager-*
+            bookmark-launcher-*
+            cron-expression-helper-*
           fail_on_unmatched_files: false
           generate_release_notes: true
 

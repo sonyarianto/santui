@@ -24,6 +24,9 @@ members = [
     "crates/plugins/unit-converter",
     "crates/plugins/regex-tester",
     "crates/plugins/json-yaml-formatter",
+    "crates/plugins/todo-task-manager",
+    "crates/plugins/bookmark-launcher",
+    "crates/plugins/cron-expression-helper",
     "crates/app",
 ]
 resolver = "2"
