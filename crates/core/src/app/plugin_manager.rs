@@ -156,6 +156,7 @@ impl PluginManager {
         capabilities: &[String],
         ctx: &mut PluginContext,
     ) -> Result<usize, Box<dyn std::error::Error>> {
+        validate_binary_path(binary_path, &self.data_dir)?;
         let factory = self
             .plugin_factory
             .as_ref()
@@ -672,4 +673,46 @@ impl PluginManager {
 fn stat_mtime(path: Option<&Path>) -> Option<SystemTime> {
     path.and_then(|p| std::fs::metadata(p).ok())
         .and_then(|m| m.modified().ok())
+}
+
+/// Security: ensure `binary_path` resolves to a known-good directory so that
+/// a tampered `registry.toml` cannot point to an arbitrary system binary.
+///
+/// Allowed directories:
+/// - `<data_dir>` (covers `data_dir/plugins/` for registry-installed plugins)
+/// - The santui executable directory (covers built-in plugins shipped alongside
+///   `santui.exe`, including the `target/debug/` layout in dev mode).
+fn validate_binary_path(
+    binary_path: &Path,
+    data_dir: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let canonical = binary_path
+        .canonicalize()
+        .map_err(|_| format!("binary path does not exist: {}", binary_path.display()))?;
+    if !canonical.is_file() {
+        return Err(format!("binary path is not a file: {}", binary_path.display()).into());
+    }
+
+    let data_dir_canon = data_dir
+        .canonicalize()
+        .unwrap_or_else(|_| data_dir.to_path_buf());
+    if canonical.starts_with(&data_dir_canon) {
+        return Ok(());
+    }
+
+    if let Some(exe_dir) = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+        .and_then(|d| d.canonicalize().ok())
+    {
+        if canonical.starts_with(&exe_dir) {
+            return Ok(());
+        }
+    }
+
+    Err(format!(
+        "binary path {} is not within the santui data directory or executable directory",
+        binary_path.display()
+    )
+    .into())
 }
