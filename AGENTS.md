@@ -44,7 +44,19 @@ crates/
 │   ├── music-preview/        — iTunes track search and preview
 │   ├── pomodoro-timer/       — focus timer with work/break sessions
 │   ├── quick-notes/          — scratch pad and note manager
-│   └── ssh-manager/          — SSH connection manager
+│   ├── ssh-manager/          — SSH connection manager
+│   ├── unit-converter/       — unit conversion utility
+│   ├── regex-tester/         — regex playground
+│   ├── json-yaml-formatter/  — JSON/YAML format/convert
+│   ├── todo-task-manager/    — task and todo manager
+│   ├── bookmark-launcher/    — bookmark quick-launcher
+│   ├── cron-expression-helper/ — cron expression builder
+│   ├── calendar-agenda/      — monthly calendar with events
+│   ├── package-version-monitor/ — dependency version checker
+│   ├── dictionary-thesaurus/ — dictionary and thesaurus
+│   ├── git-repository-dashboard/ — Git repo status dashboard
+│   ├── quran-reader/         — Quran reader with translations
+│   └── iptv-player/          — IPTV playlist browser and player
 ├── app/           — binary entry point (main.rs)
 └── website/       — VitePress docs site
 ```

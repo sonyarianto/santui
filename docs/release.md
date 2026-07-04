@@ -27,6 +27,18 @@ Update `version` in **all** `Cargo.toml` files + npm + website. They must all ma
 - `crates/plugins/pomodoro-timer/Cargo.toml`
 - `crates/plugins/quick-notes/Cargo.toml`
 - `crates/plugins/ssh-manager/Cargo.toml`
+- `crates/plugins/unit-converter/Cargo.toml`
+- `crates/plugins/regex-tester/Cargo.toml`
+- `crates/plugins/json-yaml-formatter/Cargo.toml`
+- `crates/plugins/todo-task-manager/Cargo.toml`
+- `crates/plugins/bookmark-launcher/Cargo.toml`
+- `crates/plugins/cron-expression-helper/Cargo.toml`
+- `crates/plugins/calendar-agenda/Cargo.toml`
+- `crates/plugins/package-version-monitor/Cargo.toml`
+- `crates/plugins/dictionary-thesaurus/Cargo.toml`
+- `crates/plugins/git-repository-dashboard/Cargo.toml`
+- `crates/plugins/quran-reader/Cargo.toml`
+- `crates/plugins/iptv-player/Cargo.toml`
 
 **NPM:**
 - `packages/npm/package.json`

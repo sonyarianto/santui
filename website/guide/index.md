@@ -128,6 +128,18 @@ Plugins extend Santui with new capabilities. Open `Ctrl+P` → **Plugin registry
 | **Pomodoro Timer** | Focus timer with work/break sessions and daily stats | — |
 | **Quick Notes** | Lightweight scratch pad for capturing and searching notes | — |
 | **SSH Manager** | Manage and connect to SSH hosts | — |
+| **Unit Converter** | Convert between units of length, mass, temperature, and more | — |
+| **Regex Tester** | Test and debug regular expressions with real-time matching | — |
+| **JSON/YAML Formatter** | Format, validate, and convert between JSON and YAML | — |
+| **Todo & Task Manager** | Manage tasks with priorities, due dates, and categories | — |
+| **Bookmark Launcher** | Organize and quick-launch bookmarks | — |
+| **Cron Expression Helper** | Build and validate cron schedule expressions | — |
+| **Calendar Agenda** | View monthly calendar with event management | — |
+| **Package Version Monitor** | Check dependency versions across ecosystems | — |
+| **Dictionary / Thesaurus** | Look up definitions, examples, synonyms, and antonyms | — |
+| **Git Repository Dashboard** | Track local Git repositories, branch status, and changes | — |
+| **Quran Reader** | Read Quran text and translations with recitation playback | — |
+| **IPTV Player** | Browse IPTV playlists and play channels in a native mpv window | [libmpv](https://mpv.io/installation/) |
 
 From the registry you can:
 
