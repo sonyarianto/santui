@@ -10,6 +10,9 @@ use santui_ipc::protocol::{
 use state::{generate_id, unix_now, Screen, SshState};
 use ui::render_ui;
 
+// Keep the original key so existing saved SSH hosts survive the plugin rename.
+const STORAGE_KEY: &str = "ssh-bookmarks";
+
 struct App {
     state: SshState,
     theme: ThemeData,
@@ -42,7 +45,7 @@ impl Default for App {
             dirty: true,
             cached_commands: Vec::new(),
             pending_request: Some(PluginRequest::DbGet {
-                key: "ssh-bookmarks".into(),
+                key: STORAGE_KEY.into(),
             }),
             pending_plugin_message: None,
         }
@@ -391,7 +394,7 @@ impl App {
     }
 
     fn handle_db_value(&mut self, key: &str, value: Option<String>) {
-        if key == "ssh-bookmarks" {
+        if key == STORAGE_KEY {
             if let Some(json) = value {
                 if let Ok(data) = serde_json::from_str::<state::SshData>(&json) {
                     self.state.data = data;
@@ -404,7 +407,7 @@ impl App {
 
     fn schedule_db_save(&mut self) {
         self.pending_request = Some(PluginRequest::DbSet {
-            key: "ssh-bookmarks".into(),
+            key: STORAGE_KEY.into(),
             value: serde_json::to_string(&self.state.data).unwrap(),
         });
     }
@@ -478,8 +481,8 @@ impl App {
 
 fn palette_commands() -> Vec<(String, String)> {
     vec![
-        ("SSH".into(), "Open SSH bookmarks".into()),
-        ("SSH".into(), "New bookmark".into()),
+        ("SSH".into(), "Open SSH Manager".into()),
+        ("SSH".into(), "New SSH host".into()),
     ]
 }
 
@@ -529,7 +532,7 @@ fn main() {
                 let msg: HostMsg = match serde_json::from_str(&line) {
                     Ok(m) => m,
                     Err(e) => {
-                        log::error!("[ssh-bookmarks] parse error: {e}: {line}");
+                        log::error!("[ssh-manager] parse error: {e}: {line}");
                         continue;
                     }
                 };
@@ -723,7 +726,7 @@ mod tests {
             bookmarks: vec![test_bm("Loaded", "10.0.0.1", "root")],
         };
         let json = serde_json::to_string(&data).unwrap();
-        app.handle_db_value("ssh-bookmarks", Some(json));
+        app.handle_db_value(STORAGE_KEY, Some(json));
         assert_eq!(app.state.data.bookmarks.len(), 1);
         assert_eq!(app.state.data.bookmarks[0].name, "Loaded");
     }
@@ -731,7 +734,7 @@ mod tests {
     #[test]
     fn handle_db_value_none_empty_vec() {
         let mut app = app_with_bookmarks(vec![test_bm("Alpha", "10.0.0.1", "root")]);
-        app.handle_db_value("ssh-bookmarks", None);
+        app.handle_db_value(STORAGE_KEY, None);
         assert_eq!(app.state.data.bookmarks.len(), 1);
         assert_eq!(app.state.data.bookmarks[0].name, "Alpha");
     }

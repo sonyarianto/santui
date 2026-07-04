@@ -27,7 +27,7 @@ fn render_list(state: &SshState, theme: &ThemeData, w: u16, h: u16) -> Vec<Rende
     let mut cmds = Vec::new();
 
     let title = format!(
-        "SSH Bookmarks ({}/{})",
+        "SSH Manager ({}/{})",
         state.filtered_indices.len(),
         state.data.bookmarks.len()
     );
@@ -89,9 +89,9 @@ fn render_list(state: &SshState, theme: &ThemeData, w: u16, h: u16) -> Vec<Rende
             x: 2,
             y: row + 2,
             text: if state.data.bookmarks.is_empty() {
-                "No bookmarks. Press n to create one.".into()
+                "No SSH hosts. Press n to create one.".into()
             } else {
-                "No matching bookmarks.".into()
+                "No matching SSH hosts.".into()
             },
             fg: Some(theme.text_muted),
             bg: None,
@@ -321,7 +321,7 @@ mod tests {
         let state = SshState::default();
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_msg = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("No bookmarks")),
+            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("No SSH hosts")),
         );
         assert!(has_msg);
     }

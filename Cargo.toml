@@ -19,7 +19,7 @@ members = [
     "crates/plugins/pomodoro-timer",
     "crates/plugins/music-preview",
     "crates/plugins/http-client",
-    "crates/plugins/ssh-bookmark-manager",
+    "crates/plugins/ssh-manager",
     "crates/plugins/habit-tracker",
     "crates/app",
 ]

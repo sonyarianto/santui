@@ -26,7 +26,7 @@ Update `version` in **all** `Cargo.toml` files + npm + website. They must all ma
 - `crates/plugins/music-preview/Cargo.toml`
 - `crates/plugins/pomodoro-timer/Cargo.toml`
 - `crates/plugins/quick-notes/Cargo.toml`
-- `crates/plugins/ssh-bookmark-manager/Cargo.toml`
+- `crates/plugins/ssh-manager/Cargo.toml`
 
 **NPM:**
 - `packages/npm/package.json`

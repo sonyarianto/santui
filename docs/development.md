@@ -66,7 +66,7 @@ santui/
 │   │   ├── music-preview/            — iTunes track search and preview
 │   │   ├── pomodoro-timer/           — focus timer
 │   │   ├── quick-notes/              — scratch pad and note manager
-│   │   └── ssh-bookmark-manager/     — SSH connection bookmark manager
+│   │   └── ssh-manager/              — SSH connection manager
 │   └── app/            — binary entry point (main.rs)
 ├── website/            — VitePress docs site
 ├── docs/               — architecture & dev docs

@@ -45,7 +45,7 @@ Plugins are **standalone binaries** distributed through the Plugin Registry. Ope
 | **Music Preview** | Search and preview tracks from the iTunes catalog | — |
 | **Pomodoro Timer** | Focus timer with work/break sessions and daily stats | — |
 | **Quick Notes** | Lightweight scratch pad for capturing and searching notes | — |
-| **SSH Bookmarks** | Manage and connect to SSH hosts | — |
+| **SSH Manager** | Manage and connect to SSH hosts | — |
 
 *Want to build your own? See [docs/architecture.md](docs/architecture.md).*
 
