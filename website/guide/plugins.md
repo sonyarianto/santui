@@ -289,5 +289,5 @@ hints: vec![
 ## Next steps
 
 - Browse the [IPC protocol source](https://github.com/sonyarianto/santui/blob/main/crates/ipc/src/protocol.rs) for the full type definitions
-- See the [Radio Stream Player](https://github.com/sonyarianto/santui/tree/main/crates/plugins/radio-stream-player) for a production plugin example
+- See the [Radio Stream Player](https://github.com/sonyarianto/santui/tree/main/crates/plugins/radio-stream-player) or [Hacker News Reader](https://github.com/sonyarianto/santui/tree/main/crates/plugins/hacker-news-reader) for production plugin examples
 - Read [`docs/architecture.md`](https://github.com/sonyarianto/santui/blob/main/docs/architecture.md) for the plugin architecture overview

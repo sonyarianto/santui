@@ -61,7 +61,7 @@ santui/
 │   │   ├── weather/                  — weather forecaster
 │   │   ├── currency-converter/       — real-time currency converter
 │   │   ├── habit-tracker/            — habit tracker with heatmaps
-│   │   ├── hackernews-reader/        — Hacker News story reader
+│   │   ├── hacker-news-reader/       — Hacker News story reader
 │   │   ├── http-client/              — HTTP request composer
 │   │   ├── music-preview/            — iTunes track search and preview
 │   │   ├── pomodoro-timer/           — focus timer

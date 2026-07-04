@@ -21,7 +21,7 @@ Update `version` in **all** `Cargo.toml` files + npm + website. They must all ma
 - `crates/plugins/weather/Cargo.toml`
 - `crates/plugins/currency-converter/Cargo.toml`
 - `crates/plugins/habit-tracker/Cargo.toml`
-- `crates/plugins/hackernews-reader/Cargo.toml`
+- `crates/plugins/hacker-news-reader/Cargo.toml`
 - `crates/plugins/http-client/Cargo.toml`
 - `crates/plugins/music-preview/Cargo.toml`
 - `crates/plugins/pomodoro-timer/Cargo.toml`

@@ -400,7 +400,7 @@ fn main() {
                 let msg: HostMsg = match serde_json::from_str(&line) {
                     Ok(m) => m,
                     Err(e) => {
-                        log::error!("[hackernews] parse error: {e}: {line}");
+                        log::error!("[hacker-news-reader] parse error: {e}: {line}");
                         continue;
                     }
                 };

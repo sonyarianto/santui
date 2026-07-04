@@ -186,6 +186,7 @@ jobs:
           add_plugin "weather"             "Weather"             "Current conditions, hourly & 7-day forecast, location search, auto-refresh" '[]'
           add_plugin "rss-reader"          "RSS Reader"          "Subscribe to and read RSS/Atom feeds" '[]'
           add_plugin "clipboard-history"   "Clipboard History"   "Track and search clipboard history" '[]'
+          add_plugin "hacker-news-reader"  "Hacker News Reader"  "Browse top, new, and best stories from Hacker News" '[]'
           add_plugin "system-monitor"      "System Monitor"      "Real-time CPU, memory, disk, network, and process monitor" '[]'
           add_plugin "world-clock"         "World Clock"         "World timezone clock with grid, detail view, search, and custom labels" '[]'
 
@@ -196,7 +197,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p plugin-binaries
-          for binary in "${BINARY_DIR}"/santui-*-plugin${{ matrix.plugin_ext }} "${BINARY_DIR}"/santui-{radio-stream-player,weather,rss-reader,clipboard-history,system-monitor,world-clock}${{ matrix.plugin_ext }}; do
+          for binary in "${BINARY_DIR}"/santui-*-plugin${{ matrix.plugin_ext }} "${BINARY_DIR}"/santui-{radio-stream-player,weather,rss-reader,clipboard-history,hacker-news-reader,system-monitor,world-clock}${{ matrix.plugin_ext }}; do
             [ -f "$binary" ] || continue
             name="$(basename "$binary")"
             # Strip .exe and also strip the santui- prefix so the filename
@@ -360,4 +361,3 @@ jobs:
           done
           echo "» Publishing santui …"
           cargo publish -p santui
-

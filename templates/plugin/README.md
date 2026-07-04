@@ -47,6 +47,7 @@ can discover and install it:
     "version": "0.1.0",
     "download_url": "target/debug/{{project-name}}.exe",
     "sha256": "",
-    "size": 0
+    "size": 0,
+    "capabilities": []
 }
 ```

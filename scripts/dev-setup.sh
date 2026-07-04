@@ -82,6 +82,11 @@ for bin in "$OUTDIR"/santui-*.exe "$OUTDIR"/santui-*; do
             pdesc="Track and search clipboard history"
             pcaps='[]'
             ;;
+        hacker-news-reader)
+            pname="Hacker News Reader"
+            pdesc="Browse top, new, and best stories from Hacker News"
+            pcaps='[]'
+            ;;
     esac
 
     echo "  [OK] $id  ($size bytes, sha256=$hash)"

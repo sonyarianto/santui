@@ -109,6 +109,26 @@ Run `santui --help` for a full reference, or use these flags:
 
 Plugins extend Santui with new capabilities. Open `Ctrl+P` → **Plugin registry** to see what's available.
 
+### Available now
+
+| Plugin | What it does | Needs |
+|---|---|---|
+| **Radio Stream Player** | Browse stations by country, search, stream internet radio, **save favorites** | [libmpv](https://mpv.io/installation/) |
+| **RSS Reader** | Subscribe to and read RSS/Atom feeds | — |
+| **Clipboard History** | Track and search clipboard history | — |
+| **System Monitor** | Monitor CPU, memory, disk, and network | — |
+| **World Clock** | Timezone converter and world clock | — |
+| **Weather** | Current conditions, hourly & 7-day forecast, location search, auto-refresh | — |
+| **Plugin Registry** | Browse, install, and manage plugins | — |
+| **Currency Converter** | Convert between currencies with live exchange rates | — |
+| **Habit Tracker** | Track daily habits with streaks and heatmap visualization | — |
+| **Hacker News Reader** | Browse top, new, and best stories from Hacker News | — |
+| **HTTP Client** | Compose and send HTTP requests, view responses | — |
+| **Music Preview** | Search and preview tracks from the iTunes catalog | — |
+| **Pomodoro Timer** | Focus timer with work/break sessions and daily stats | — |
+| **Quick Notes** | Lightweight scratch pad for capturing and searching notes | — |
+| **SSH Manager** | Manage and connect to SSH hosts | — |
+
 From the registry you can:
 
 - **Browse** available plugins with descriptions and version info
@@ -116,7 +136,7 @@ From the registry you can:
 - **Enable / Disable** — toggle plugins on and off
 - **Installed plugins** appear in your command palette under the **Modules** category
 
-To get started, install a plugin from the registry — try **Radio Stream Player** for internet radio, **Weather** for forecasts, **System Monitor** for resource usage, or **World Clock** for timezone conversion. Then open `Ctrl+P` and select it to start using it.
+To get started, install a plugin from the registry — try **Radio Stream Player** for internet radio, **Hacker News Reader** for tech stories, **Weather** for forecasts, **System Monitor** for resource usage, or **World Clock** for timezone conversion. Then open `Ctrl+P` and select it to start using it.
 
 > **Radio Stream Player** requires [libmpv](https://mpv.io/installation/) for audio playback. On Windows it's bundled in the release archive; on macOS/Linux install via `apt`/`brew`/`pacman`.
 

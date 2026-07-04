@@ -2377,7 +2377,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "santui-hackernews-reader"
+name = "santui-hacker-news-reader"
 version = "0.2.26"
 dependencies = [
  "env_logger",

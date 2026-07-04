@@ -15,7 +15,7 @@ members = [
     "crates/plugins/currency-converter",
     "crates/plugins/quick-notes",
     "crates/plugins/clipboard-history",
-    "crates/plugins/hackernews-reader",
+    "crates/plugins/hacker-news-reader",
     "crates/plugins/pomodoro-timer",
     "crates/plugins/music-preview",
     "crates/plugins/http-client",

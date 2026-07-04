@@ -34,6 +34,7 @@ $pluginMeta = @{
     "weather"             = @("Weather", "Current conditions, hourly & 7-day forecast, location search, auto-refresh", @())
     "rss-reader"          = @("RSS Reader", "Subscribe to and read RSS/Atom feeds", @())
     "clipboard-history"   = @("Clipboard History", "Track and search clipboard history", @())
+    "hacker-news-reader"  = @("Hacker News Reader", "Browse top, new, and best stories from Hacker News", @())
 }
 
 $plugins = @()

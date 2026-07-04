@@ -1,10 +1,10 @@
 [package]
-name = "santui-hackernews-reader"
+name = "santui-hacker-news-reader"
 version = "0.2.26"
 edition = "2021"
 
 [[bin]]
-name = "santui-hackernews-reader"
+name = "santui-hacker-news-reader"
 path = "src/main.rs"
 
 [dependencies]
