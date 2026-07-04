@@ -23,90 +23,52 @@ fi
 # -- generate plugins.json --
 echo ">> Generating plugins.json ..."
 
-# Determine SHA-256 command
-if command -v shasum &>/dev/null; then
-    SHA_CMD="shasum -a 256"
-elif command -v sha256sum &>/dev/null; then
-    SHA_CMD="sha256sum"
-else
-    echo "  [!] No SHA-256 tool found (install coreutils or shasum)"
-    exit 1
-fi
+python3 -c "
+import json, hashlib, os, glob, sys
 
-PLUGINS=()
-for bin in "$OUTDIR"/santui-*.exe "$OUTDIR"/santui-*; do
-    [ -f "$bin" ] || continue
-    name="$(basename "$bin")"
-    # Skip the main santui binary and scraper
-    case "$name" in
-        santui.exe|santui|santui-*-scraper|santui-*-scraper.exe|santui-registry-plugin|santui-registry-plugin.exe) continue ;;
-    esac
+root = os.environ['ROOT']
+outdir = os.environ['OUTDIR']
+version = os.environ['VERSION']
 
-    id="${name#santui-}"
-    id="${id%.exe}"
-    size=$(stat -f%z "$bin" 2>/dev/null || stat -c%s "$bin" 2>/dev/null)
-    hash=$($SHA_CMD "$bin" | cut -d' ' -f1)
+with open(os.path.join(root, 'plugins-manifest.json')) as f:
+    manifest = {p['id']: p for p in json.load(f)}
 
-    # Plugin metadata: maps binary id -> (display name, description, capabilities)
-    pname="$id"
-    pdesc="$id"
-    pcaps="[]"
-    case "$id" in
-        radio-stream-player)
-            pname="Radio Stream Player"
-            pdesc="Listen to thousands of radio stations worldwide"
-            pcaps='["background"]'
-            ;;
-        system-monitor)
-            pname="System Monitor"
-            pdesc="Real-time CPU, memory, disk, network, and process monitor"
-            pcaps='[]'
-            ;;
-        world-clock)
-            pname="World Clock"
-            pdesc="World timezone clock with grid, detail view, search, and custom labels"
-            pcaps='[]'
-            ;;
-        weather)
-            pname="Weather"
-            pdesc="Current conditions, hourly & 7-day forecast, location search, auto-refresh"
-            pcaps='[]'
-            ;;
-        rss-reader)
-            pname="RSS Reader"
-            pdesc="Subscribe to and read RSS/Atom feeds"
-            pcaps='[]'
-            ;;
-        clipboard-history)
-            pname="Clipboard History"
-            pdesc="Track and search clipboard history"
-            pcaps='[]'
-            ;;
-        hacker-news-reader)
-            pname="Hacker News Reader"
-            pdesc="Browse top, new, and best stories from Hacker News"
-            pcaps='[]'
-            ;;
-    esac
+plugins = []
+for binpath in sorted(glob.glob(os.path.join(outdir, 'santui-*'))):
+    name = os.path.basename(binpath)
+    if name in ('santui', 'santui.exe'):
+        continue
+    if '-scraper' in name or 'registry-plugin' in name:
+        continue
+    stem = name[:-4] if name.endswith('.exe') else name
+    pid = stem[len('santui-'):]
+    p = manifest.get(pid)
+    if not p:
+        continue
+    sha = hashlib.sha256()
+    with open(binpath, 'rb') as bf:
+        while True:
+            chunk = bf.read(65536)
+            if not chunk:
+                break
+            sha.update(chunk)
+    size = os.path.getsize(binpath)
+    plugins.append({
+        'id': pid,
+        'name': p['name'],
+        'publisher': 'Santui',
+        'description': p['description'],
+        'version': version,
+        'download_url': f'target/debug/{name}',
+        'sha256': sha.hexdigest(),
+        'size': size,
+        'capabilities': p.get('capabilities', [])
+    })
+    print(f'  [OK] {pid}  ({size} bytes, sha256={sha.hexdigest()})')
 
-    echo "  [OK] $id  ($size bytes, sha256=$hash)"
-    PLUGINS+=("$(cat << JSON
-{"id":"$id","name":"$pname","publisher":"Santui","description":"$pdesc","version":"$VERSION","download_url":"target/debug/$name","sha256":"$hash","size":$size,"capabilities":$pcaps}
-JSON
-)")
-done
+with open(os.path.join(root, 'plugins.json'), 'w') as f:
+    json.dump(plugins, f, indent=2)
 
-# Build JSON array
-JOINED=""
-for p in "${PLUGINS[@]}"; do
-    if [ -n "$JOINED" ]; then
-        JOINED="$JOINED,$p"
-    else
-        JOINED="$p"
-    fi
-done
-JSON="[$JOINED]"
-
-printf '%s' "$JSON" > "$ROOT/plugins.json"
-count="${#PLUGINS[@]}"
-echo "[OK] plugins.json generated ($count plugin$( [ "$count" -ne 1 ] && echo 's' ))"
+s = 's' if len(plugins) != 1 else ''
+print(f'[OK] plugins.json generated ({len(plugins)} plugin{s})')
+"

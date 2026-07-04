@@ -122,30 +122,9 @@ jobs:
           $ext = "${{ matrix.plugin_ext }}"
           $plugins = @()
 
-          $pluginNames = @(
-            @{id="radio-stream-player"; name="Radio Stream Player"; desc="Listen to thousands of radio stations worldwide"; caps=@("background")}
-            @{id="weather";             name="Weather";             desc="Current conditions, hourly & 7-day forecast, location search, auto-refresh"; caps=@()}
-            @{id="rss-reader";          name="RSS Reader";          desc="Subscribe to and read RSS/Atom feeds"; caps=@()}
-            @{id="clipboard-history";   name="Clipboard History";   desc="Track and search clipboard history"; caps=@()}
-            @{id="system-monitor";      name="System Monitor";      desc="Real-time CPU, memory, disk, network, and process monitor"; caps=@()}
-            @{id="world-clock";         name="World Clock";         desc="World timezone clock with grid, detail view, search, and custom labels"; caps=@()}
-            @{id="unit-converter";      name="Unit Converter";      desc="Offline converter for common measurement units"; caps=@()}
-            @{id="regex-tester";        name="Regex Tester";        desc="Interactive regular expression tester with captures and replacement preview"; caps=@()}
-            @{id="json-yaml-formatter"; name="JSON/YAML Formatter"; desc="Format, validate, minify, and convert JSON and YAML snippets"; caps=@()}
-            @{id="todo-task-manager";  name="Todo Task Manager";  desc="Local-first task manager with priorities, due dates, tags, and search"; caps=@()}
-            @{id="bookmark-launcher";  name="Bookmark Launcher";  desc="Search, open, and copy URLs, paths, command snippets, and notes"; caps=@()}
-            @{id="cron-expression-helper"; name="Cron Expression Helper"; desc="Validate cron expressions, explain schedules, and preview upcoming runs"; caps=@()}
-            @{id="calendar-agenda";   name="Calendar Agenda";   desc="Display local ICS calendars as a searchable daily agenda"; caps=@()}
-            @{id="package-version-monitor"; name="Package Version Monitor"; desc="Scan manifests and check dependency versions across ecosystems"; caps=@()}
-            @{id="dictionary-thesaurus"; name="Dictionary/Thesaurus"; desc="Look up definitions, examples, synonyms, and antonyms"; caps=@()}
-            @{id="git-repository-dashboard"; name="Git Repository Dashboard"; desc="Track local Git repositories, branch status, changes, and recent commits"; caps=@()}
-            @{id="quran-reader"; name="Quran"; desc="Read Quran text and translations with recitation playback"; caps=@("background")}
-            @{id="iptv-player"; name="IPTV Player"; desc="Browse IPTV playlists and play channels in a native mpv window"; caps=@("background")}
-          )
-
-          foreach ($p in $pluginNames) {
+          $manifest = Get-Content plugins-manifest.json | ConvertFrom-Json
+          foreach ($p in $manifest) {
             $filename = "$($p.id)-$target$ext"
-            # Binary in target/release/ uses santui- prefix (e.g. santui-radio-stream-player.exe)
             $binPath = "target\release\santui-$($p.id)$ext"
             if (Test-Path $binPath) {
               $sha = (Get-FileHash -Algorithm SHA256 $binPath).Hash.ToLower()
@@ -153,13 +132,13 @@ jobs:
               $plugins += [PSCustomObject]@{
                 id = $p.id
                 name = $p.name
-                description = $p.desc
+                description = $p.description
                 publisher = "Santui"
                 version = $version
                 download_url = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/$filename"
                 sha256 = $sha
                 size = $size
-                capabilities = $p.caps
+                capabilities = $p.capabilities
               }
             }
           }
@@ -171,57 +150,68 @@ jobs:
         if: matrix.os != 'windows-latest'
         shell: bash
         run: |
-          VERSION="${{ env.VERSION }}"
-          TARGET="${{ matrix.target }}"
-          EXT="${{ matrix.plugin_ext }}"
-          REPO="${{ github.repository }}"
-          TAG="${{ github.ref_name }}"
+          export VERSION="${{ env.VERSION }}"
+          export TARGET="${{ matrix.target }}"
+          export EXT="${{ matrix.plugin_ext }}"
+          export REPO="${{ github.repository }}"
+          export TAG="${{ github.ref_name }}"
 
-          # Portable SHA256: works on Linux (sha256sum) and macOS (shasum -a 256)
-          sha() {
-            sha256sum "$1" 2>/dev/null | cut -d' ' -f1 || shasum -a 256 "$1" 2>/dev/null | cut -d' ' -f1
-          }
+          python3 -c "
+import json, hashlib, os, sys
 
-          entries=""
-          add_plugin() {
-            local id="$1" name="$2" desc="$3" caps="$4"
-            local bin="${BINARY_DIR}/santui-${id}${EXT}"
-            [ -f "$bin" ] || return
-            local hash="$(sha "$bin")"
-            local size="$(stat -c%s "$bin" 2>/dev/null || stat -f%z "$bin" 2>/dev/null)"
-            local dl="https://github.com/${REPO}/releases/download/${TAG}/${id}-${TARGET}${EXT}"
-            [ -n "$entries" ] && entries="$entries,"
-            entries="$entries{\"id\":\"$id\",\"name\":\"$name\",\"description\":\"$desc\",\"publisher\":\"Santui\",\"version\":\"$VERSION\",\"download_url\":\"$dl\",\"sha256\":\"$hash\",\"size\":$size,\"capabilities\":$caps}"
-          }
+version = os.environ['VERSION']
+target = os.environ['TARGET']
+ext = os.environ['EXT']
+repo = os.environ['REPO']
+tag = os.environ['TAG']
+binary_dir = os.environ.get('BINARY_DIR', 'target/release')
 
-          add_plugin "radio-stream-player" "Radio Stream Player" "Listen to thousands of radio stations worldwide" '["background"]'
-          add_plugin "weather"             "Weather"             "Current conditions, hourly & 7-day forecast, location search, auto-refresh" '[]'
-          add_plugin "rss-reader"          "RSS Reader"          "Subscribe to and read RSS/Atom feeds" '[]'
-          add_plugin "clipboard-history"   "Clipboard History"   "Track and search clipboard history" '[]'
-          add_plugin "hacker-news-reader"  "Hacker News Reader"  "Browse top, new, and best stories from Hacker News" '[]'
-          add_plugin "system-monitor"      "System Monitor"      "Real-time CPU, memory, disk, network, and process monitor" '[]'
-          add_plugin "world-clock"         "World Clock"         "World timezone clock with grid, detail view, search, and custom labels" '[]'
-          add_plugin "unit-converter"      "Unit Converter"      "Offline converter for common measurement units" '[]'
-          add_plugin "regex-tester"        "Regex Tester"        "Interactive regular expression tester with captures and replacement preview" '[]'
-          add_plugin "json-yaml-formatter" "JSON/YAML Formatter" "Format, validate, minify, and convert JSON and YAML snippets" '[]'
-          add_plugin "todo-task-manager"  "Todo Task Manager"  "Local-first task manager with priorities, due dates, tags, and search" '[]'
-          add_plugin "bookmark-launcher"  "Bookmark Launcher"  "Search, open, and copy URLs, paths, command snippets, and notes" '[]'
-          add_plugin "cron-expression-helper" "Cron Expression Helper" "Validate cron expressions, explain schedules, and preview upcoming runs" '[]'
-          add_plugin "calendar-agenda"   "Calendar Agenda"   "Display local ICS calendars as a searchable daily agenda" '[]'
-          add_plugin "package-version-monitor" "Package Version Monitor" "Scan manifests and check dependency versions across ecosystems" '[]'
-          add_plugin "dictionary-thesaurus" "Dictionary/Thesaurus" "Look up definitions, examples, synonyms, and antonyms" '[]'
-          add_plugin "git-repository-dashboard" "Git Repository Dashboard" "Track local Git repositories, branch status, changes, and recent commits" '[]'
-          add_plugin "quran-reader" "Quran" "Read Quran text and translations with recitation playback" '["background"]'
-          add_plugin "iptv-player" "IPTV Player" "Browse IPTV playlists and play channels in a native mpv window" '["background"]'
+with open('plugins-manifest.json') as f:
+    manifest = json.load(f)
 
-          printf '[%s]\n' "$entries" > "plugins-${TARGET}.json"
-          echo "Generated plugins-${TARGET}.json"
+plugins = []
+for p in manifest:
+    pid = p['id']
+    binpath = os.path.join(binary_dir, f'santui-{pid}{ext}')
+    if not os.path.isfile(binpath):
+        continue
+    sha = hashlib.sha256()
+    with open(binpath, 'rb') as bf:
+        while True:
+            chunk = bf.read(65536)
+            if not chunk:
+                break
+            sha.update(chunk)
+    size = os.path.getsize(binpath)
+    dl = f'https://github.com/{repo}/releases/download/{tag}/{pid}-{target}{ext}'
+    plugins.append({
+        'id': pid,
+        'name': p['name'],
+        'description': p['description'],
+        'publisher': 'Santui',
+        'version': version,
+        'download_url': dl,
+        'sha256': sha.hexdigest(),
+        'size': size,
+        'capabilities': p.get('capabilities', [])
+    })
+
+with open(f'plugins-{target}.json', 'w') as f:
+    json.dump(plugins, f, indent=2)
+print(f'Generated plugins-{target}.json with {len(plugins)} plugin(s)')
+"
 
       - name: Collect plugin binaries for upload
         shell: bash
         run: |
           mkdir -p plugin-binaries
-          for binary in "${BINARY_DIR}"/santui-*-plugin${{ matrix.plugin_ext }} "${BINARY_DIR}"/santui-{radio-stream-player,weather,rss-reader,clipboard-history,hacker-news-reader,system-monitor,world-clock,unit-converter,regex-tester,json-yaml-formatter,todo-task-manager,bookmark-launcher,cron-expression-helper,calendar-agenda,package-version-monitor,dictionary-thesaurus,git-repository-dashboard,quran-reader,iptv-player}${{ matrix.plugin_ext }}; do
+          # Collect binaries for every plugin listed in the central manifest
+          for binary in "${BINARY_DIR}"/santui-*-plugin${{ matrix.plugin_ext }} $(python3 -c "
+import json, os
+with open('plugins-manifest.json') as f:
+    ids = [p['id'] for p in json.load(f)]
+print(' '.join(os.path.join(os.environ.get('BINARY_DIR', 'target/release'), f'santui-{pid}${{ matrix.plugin_ext }}') for pid in ids))
+"); do
             [ -f "$binary" ] || continue
             name="$(basename "$binary")"
             # Strip .exe and also strip the santui- prefix so the filename

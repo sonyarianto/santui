@@ -26,15 +26,12 @@ $pluginBinaries = Get-ChildItem -LiteralPath $OutDir -Filter "santui-*.exe" | Wh
     $_.Name -notmatch 'scraper|registry-plugin'
 }
 
-# Plugin metadata: maps binary id -> (display name, description, capabilities)
-$pluginMeta = @{
-    "radio-stream-player" = @("Radio Stream Player", "Listen to thousands of radio stations worldwide", @("background"))
-    "system-monitor"      = @("System Monitor", "Real-time CPU, memory, disk, network, and process monitor", @())
-    "world-clock"         = @("World Clock", "World timezone clock with grid, detail view, search, and custom labels", @())
-    "weather"             = @("Weather", "Current conditions, hourly & 7-day forecast, location search, auto-refresh", @())
-    "rss-reader"          = @("RSS Reader", "Subscribe to and read RSS/Atom feeds", @())
-    "clipboard-history"   = @("Clipboard History", "Track and search clipboard history", @())
-    "hacker-news-reader"  = @("Hacker News Reader", "Browse top, new, and best stories from Hacker News", @())
+# Load plugin metadata from central manifest
+$manifestPath = Join-Path $Root "plugins-manifest.json"
+$manifest = Get-Content $manifestPath | ConvertFrom-Json
+$pluginMeta = @{}
+foreach ($p in $manifest) {
+    $pluginMeta[$p.id] = @($p.name, $p.description, [array]$p.capabilities)
 }
 
 $plugins = @()
