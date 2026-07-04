@@ -385,10 +385,28 @@ impl IpcPluginHost {
         }
 
         let mut child = cmd.spawn().map_err(|e| {
-            format!(
-                "Failed to spawn plugin `{}`: {e}\n  → Run `cargo build --workspace` to build all plugins",
-                binary_name
-            )
+            let hint = match e.kind() {
+                std::io::ErrorKind::NotFound => {
+                    format!(
+                        "Binary `{}` not found at `{}`.\n  → Run `cargo build --workspace` to build all plugins",
+                        binary_name,
+                        binary_path.display()
+                    )
+                }
+                std::io::ErrorKind::PermissionDenied => {
+                    format!(
+                        "Permission denied when launching `{}`.\n  → Check that the binary has execute permissions",
+                        binary_path.display()
+                    )
+                }
+                _ => {
+                    format!(
+                        "Failed to spawn plugin `{bin}`: {e}",
+                        bin = binary_name
+                    )
+                }
+            };
+            format!("Failed to spawn plugin `{}`:\n  {hint}", binary_name)
         })?;
 
         let reader = child.stdout.take().map(BufReader::new);

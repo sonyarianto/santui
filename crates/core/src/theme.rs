@@ -523,7 +523,10 @@ impl Theme {
 
 impl Default for Theme {
     fn default() -> Self {
-        let d = &THEMES[1];
+        let d = THEMES
+            .iter()
+            .find(|t| t.name == "Santui")
+            .expect("Santui theme not found in THEMES");
         Self {
             accent: rgb(d.accent),
             highlight: rgb(d.primary),
