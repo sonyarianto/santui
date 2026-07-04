@@ -134,7 +134,7 @@ impl CurrencyState {
         )
     }
 
-    #[expect(dead_code)]
+    #[allow(dead_code)]
     pub fn has_favorite(&self, source: &str, target: &str) -> bool {
         self.favorite_pairs
             .iter()
