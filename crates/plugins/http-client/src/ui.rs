@@ -584,7 +584,7 @@ fn count_header_lines(text: &str, max_h: u16) -> u16 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::client::{HttpMethod, HttpResponse};
+    use crate::client::HttpResponse;
     use crate::state::{ClientState, FetchState, RequestEntry, Screen};
 
     fn test_theme() -> ThemeData {
