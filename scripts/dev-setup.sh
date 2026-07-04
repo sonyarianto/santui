@@ -48,9 +48,9 @@ for bin in "$OUTDIR"/santui-*.exe "$OUTDIR"/santui-*; do
     hash=$($SHA_CMD "$bin" | cut -d' ' -f1)
 
     # Plugin metadata: maps binary id -> (display name, description, capabilities)
-    local pname="$id"
-    local pdesc="$id"
-    local pcaps="[]"
+    pname="$id"
+    pdesc="$id"
+    pcaps="[]"
     case "$id" in
         radio-stream-player)
             pname="Radio Stream Player"
