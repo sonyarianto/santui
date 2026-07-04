@@ -1,0 +1,17 @@
+[package]
+name = "santui-regex-tester"
+version = "0.2.26"
+edition = "2021"
+
+[[bin]]
+name = "santui-regex-tester"
+path = "src/main.rs"
+
+[dependencies]
+santui-ipc = { path = "../../ipc", version = "0.2.26", default-features = false }
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+env_logger = { workspace = true }
+regex = "1"
+arboard = "3"

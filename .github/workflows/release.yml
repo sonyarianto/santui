@@ -129,6 +129,9 @@ jobs:
             @{id="clipboard-history";   name="Clipboard History";   desc="Track and search clipboard history"; caps=@()}
             @{id="system-monitor";      name="System Monitor";      desc="Real-time CPU, memory, disk, network, and process monitor"; caps=@()}
             @{id="world-clock";         name="World Clock";         desc="World timezone clock with grid, detail view, search, and custom labels"; caps=@()}
+            @{id="unit-converter";      name="Unit Converter";      desc="Offline converter for common measurement units"; caps=@()}
+            @{id="regex-tester";        name="Regex Tester";        desc="Interactive regular expression tester with captures and replacement preview"; caps=@()}
+            @{id="json-yaml-formatter"; name="JSON/YAML Formatter"; desc="Format, validate, minify, and convert JSON and YAML snippets"; caps=@()}
           )
 
           foreach ($p in $pluginNames) {
@@ -189,6 +192,9 @@ jobs:
           add_plugin "hacker-news-reader"  "Hacker News Reader"  "Browse top, new, and best stories from Hacker News" '[]'
           add_plugin "system-monitor"      "System Monitor"      "Real-time CPU, memory, disk, network, and process monitor" '[]'
           add_plugin "world-clock"         "World Clock"         "World timezone clock with grid, detail view, search, and custom labels" '[]'
+          add_plugin "unit-converter"      "Unit Converter"      "Offline converter for common measurement units" '[]'
+          add_plugin "regex-tester"        "Regex Tester"        "Interactive regular expression tester with captures and replacement preview" '[]'
+          add_plugin "json-yaml-formatter" "JSON/YAML Formatter" "Format, validate, minify, and convert JSON and YAML snippets" '[]'
 
           printf '[%s]\n' "$entries" > "plugins-${TARGET}.json"
           echo "Generated plugins-${TARGET}.json"
@@ -197,7 +203,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p plugin-binaries
-          for binary in "${BINARY_DIR}"/santui-*-plugin${{ matrix.plugin_ext }} "${BINARY_DIR}"/santui-{radio-stream-player,weather,rss-reader,clipboard-history,hacker-news-reader,system-monitor,world-clock}${{ matrix.plugin_ext }}; do
+          for binary in "${BINARY_DIR}"/santui-*-plugin${{ matrix.plugin_ext }} "${BINARY_DIR}"/santui-{radio-stream-player,weather,rss-reader,clipboard-history,hacker-news-reader,system-monitor,world-clock,unit-converter,regex-tester,json-yaml-formatter}${{ matrix.plugin_ext }}; do
             [ -f "$binary" ] || continue
             name="$(basename "$binary")"
             # Strip .exe and also strip the santui- prefix so the filename
@@ -274,7 +280,7 @@ jobs:
         run: |
           echo "=== Checking for empty files ==="
           has_empty=0
-          for f in santui-* plugins-*.json radio-stream-player-*; do
+          for f in santui-* plugins-*.json radio-stream-player-* unit-converter-* regex-tester-* json-yaml-formatter-*; do
             if [ -f "$f" ]; then
               size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null)
               if [ "$size" -eq 0 ]; then
@@ -303,6 +309,9 @@ jobs:
             clipboard-history-*
             system-monitor-*
             world-clock-*
+            unit-converter-*
+            regex-tester-*
+            json-yaml-formatter-*
           fail_on_unmatched_files: false
           generate_release_notes: true
 

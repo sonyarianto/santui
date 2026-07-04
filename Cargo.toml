@@ -21,6 +21,9 @@ members = [
     "crates/plugins/http-client",
     "crates/plugins/ssh-manager",
     "crates/plugins/habit-tracker",
+    "crates/plugins/unit-converter",
+    "crates/plugins/regex-tester",
+    "crates/plugins/json-yaml-formatter",
     "crates/app",
 ]
 resolver = "2"

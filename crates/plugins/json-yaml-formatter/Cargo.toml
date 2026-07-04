@@ -1,0 +1,16 @@
+[package]
+name = "santui-json-yaml-formatter"
+version = "0.2.26"
+edition = "2021"
+
+[[bin]]
+name = "santui-json-yaml-formatter"
+path = "src/main.rs"
+
+[dependencies]
+santui-ipc = { path = "../../ipc", version = "0.2.26", default-features = false }
+serde_json = { workspace = true }
+log = { workspace = true }
+env_logger = { workspace = true }
+serde_yaml = "0.9"
+arboard = "3"
