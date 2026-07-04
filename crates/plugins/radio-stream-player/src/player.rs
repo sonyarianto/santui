@@ -182,6 +182,8 @@ impl Mpv {
         for (k, v) in [
             ("config", "no"),
             ("vo", "null"),
+            ("terminal", "no"),
+            ("msg-level", "all=no"),
             ("audio-client-name", "santui-radio-stream-player"),
             ("stream-lavf-o", "icy=1"),
         ] {

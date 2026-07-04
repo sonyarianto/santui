@@ -748,6 +748,15 @@ fn main() {
         .format_timestamp(None)
         .format_target(false)
         .try_init();
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::io::AsRawFd;
+        if let Ok(null) = std::fs::File::open("/dev/null") {
+            unsafe { libc::dup2(null.as_raw_fd(), libc::STDERR_FILENO); }
+        }
+    }
+
     let mut reader = BufReader::new(std::io::stdin().lock());
 
     let mut app = App::new();

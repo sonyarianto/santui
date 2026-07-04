@@ -158,6 +158,8 @@ impl Mpv {
 
         for (k, v) in [
             ("config", "no"),
+            ("terminal", "no"),
+            ("msg-level", "all=no"),
             ("audio-client-name", "santui-iptv-player"),
         ] {
             if let Err(e) = mpv.set_option(k, v) {
