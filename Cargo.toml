@@ -27,6 +27,9 @@ members = [
     "crates/plugins/todo-task-manager",
     "crates/plugins/bookmark-launcher",
     "crates/plugins/cron-expression-helper",
+    "crates/plugins/calendar-agenda",
+    "crates/plugins/package-version-monitor",
+    "crates/plugins/dictionary-thesaurus",
     "crates/app",
 ]
 resolver = "2"

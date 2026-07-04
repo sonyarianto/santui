@@ -2331,6 +2331,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-calendar-agenda"
+version = "0.2.26"
+dependencies = [
+ "arboard",
+ "chrono",
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "santui-clipboard-history"
 version = "0.2.26"
 dependencies = [
@@ -2388,6 +2401,20 @@ dependencies = [
  "rusqlite",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "santui-dictionary-thesaurus"
+version = "0.2.26"
+dependencies = [
+ "arboard",
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde",
+ "serde_json",
+ "ureq 3.3.0",
+ "urlencoding",
 ]
 
 [[package]]
@@ -2459,6 +2486,21 @@ dependencies = [
  "santui-ipc",
  "serde",
  "serde_json",
+ "ureq 3.3.0",
+]
+
+[[package]]
+name = "santui-package-version-monitor"
+version = "0.2.26"
+dependencies = [
+ "arboard",
+ "chrono",
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde",
+ "serde_json",
+ "toml",
  "ureq 3.3.0",
 ]
 
@@ -3219,6 +3261,12 @@ dependencies = [
  "serde",
  "serde_derive",
 ]
+
+[[package]]
+name = "urlencoding"
+version = "2.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "daf8dba3b7eb870caf1ddeed7bc9d2a049f3cfdfae7cb521b087cc33ae4c49da"
 
 [[package]]
 name = "utf8-zero"

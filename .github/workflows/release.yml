@@ -135,6 +135,9 @@ jobs:
             @{id="todo-task-manager";  name="Todo Task Manager";  desc="Local-first task manager with priorities, due dates, tags, and search"; caps=@()}
             @{id="bookmark-launcher";  name="Bookmark Launcher";  desc="Search, open, and copy URLs, paths, command snippets, and notes"; caps=@()}
             @{id="cron-expression-helper"; name="Cron Expression Helper"; desc="Validate cron expressions, explain schedules, and preview upcoming runs"; caps=@()}
+            @{id="calendar-agenda";   name="Calendar Agenda";   desc="Display local ICS calendars as a searchable daily agenda"; caps=@()}
+            @{id="package-version-monitor"; name="Package Version Monitor"; desc="Scan manifests and check dependency versions across ecosystems"; caps=@()}
+            @{id="dictionary-thesaurus"; name="Dictionary/Thesaurus"; desc="Look up definitions, examples, synonyms, and antonyms"; caps=@()}
           )
 
           foreach ($p in $pluginNames) {
@@ -201,6 +204,9 @@ jobs:
           add_plugin "todo-task-manager"  "Todo Task Manager"  "Local-first task manager with priorities, due dates, tags, and search" '[]'
           add_plugin "bookmark-launcher"  "Bookmark Launcher"  "Search, open, and copy URLs, paths, command snippets, and notes" '[]'
           add_plugin "cron-expression-helper" "Cron Expression Helper" "Validate cron expressions, explain schedules, and preview upcoming runs" '[]'
+          add_plugin "calendar-agenda"   "Calendar Agenda"   "Display local ICS calendars as a searchable daily agenda" '[]'
+          add_plugin "package-version-monitor" "Package Version Monitor" "Scan manifests and check dependency versions across ecosystems" '[]'
+          add_plugin "dictionary-thesaurus" "Dictionary/Thesaurus" "Look up definitions, examples, synonyms, and antonyms" '[]'
 
           printf '[%s]\n' "$entries" > "plugins-${TARGET}.json"
           echo "Generated plugins-${TARGET}.json"
@@ -209,7 +215,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p plugin-binaries
-          for binary in "${BINARY_DIR}"/santui-*-plugin${{ matrix.plugin_ext }} "${BINARY_DIR}"/santui-{radio-stream-player,weather,rss-reader,clipboard-history,hacker-news-reader,system-monitor,world-clock,unit-converter,regex-tester,json-yaml-formatter,todo-task-manager,bookmark-launcher,cron-expression-helper}${{ matrix.plugin_ext }}; do
+          for binary in "${BINARY_DIR}"/santui-*-plugin${{ matrix.plugin_ext }} "${BINARY_DIR}"/santui-{radio-stream-player,weather,rss-reader,clipboard-history,hacker-news-reader,system-monitor,world-clock,unit-converter,regex-tester,json-yaml-formatter,todo-task-manager,bookmark-launcher,cron-expression-helper,calendar-agenda,package-version-monitor,dictionary-thesaurus}${{ matrix.plugin_ext }}; do
             [ -f "$binary" ] || continue
             name="$(basename "$binary")"
             # Strip .exe and also strip the santui- prefix so the filename
@@ -286,7 +292,7 @@ jobs:
         run: |
           echo "=== Checking for empty files ==="
           has_empty=0
-          for f in santui-* plugins-*.json radio-stream-player-* unit-converter-* regex-tester-* json-yaml-formatter-* todo-task-manager-* bookmark-launcher-* cron-expression-helper-*; do
+          for f in santui-* plugins-*.json radio-stream-player-* unit-converter-* regex-tester-* json-yaml-formatter-* todo-task-manager-* bookmark-launcher-* cron-expression-helper-* calendar-agenda-* package-version-monitor-* dictionary-thesaurus-*; do
             if [ -f "$f" ]; then
               size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null)
               if [ "$size" -eq 0 ]; then
@@ -321,6 +327,9 @@ jobs:
             todo-task-manager-*
             bookmark-launcher-*
             cron-expression-helper-*
+            calendar-agenda-*
+            package-version-monitor-*
+            dictionary-thesaurus-*
           fail_on_unmatched_files: false
           generate_release_notes: true
 
