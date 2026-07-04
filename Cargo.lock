@@ -2418,6 +2418,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-git-repository-dashboard"
+version = "0.2.26"
+dependencies = [
+ "arboard",
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "santui-habit-tracker"
 version = "0.2.26"
 dependencies = [

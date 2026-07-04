@@ -30,6 +30,7 @@ members = [
     "crates/plugins/calendar-agenda",
     "crates/plugins/package-version-monitor",
     "crates/plugins/dictionary-thesaurus",
+    "crates/plugins/git-repository-dashboard",
     "crates/app",
 ]
 resolver = "2"
