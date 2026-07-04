@@ -27,8 +27,9 @@ Your plugin communicates with the Santui host over JSON lines on stdin/stdout:
   DbValue)
 - **stdout** — sends `PluginMsg` containing `commands` (RenderCmd list),
   `hints` (status-bar hints), `palette_commands` (Ctrl+P entries),
-  `consumed` (whether a key was handled internally), and
-  an optional `request` (SignIn / SignOut / DbGet / DbSet)
+  `consumed` (whether a key was handled internally),
+  an optional `request` (SignIn / SignOut / DbGet / DbSet / PluginsChanged / LaunchPlugin),
+  and an optional `plugin_message` (plugin-to-plugin messaging)
 
 See the `santui-ipc` crate documentation for the full protocol spec.
 

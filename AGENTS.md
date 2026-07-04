@@ -36,7 +36,15 @@ crates/
 │   ├── clipboard-history/    — clipboard history manager
 │   ├── system-monitor/       — system resource monitor
 │   ├── world-clock/          — world clock / timezone converter
-│   └── weather/              — weather forecaster
+│   ├── weather/              — weather forecaster
+│   ├── currency-converter/   — real-time currency converter
+│   ├── habit-tracker/        — habit tracker with heatmaps
+│   ├── hackernews-reader/    — Hacker News story reader
+│   ├── http-client/          — HTTP request composer
+│   ├── music-preview/        — iTunes track search and preview
+│   ├── pomodoro-timer/       — focus timer with work/break sessions
+│   ├── quick-notes/          — scratch pad and note manager
+│   └── ssh-bookmark-manager/ — SSH connection bookmark manager
 ├── app/           — binary entry point (main.rs)
 └── website/       — VitePress docs site
 ```

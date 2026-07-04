@@ -8,7 +8,7 @@ Plugins extend Santui with new capabilities. They run as **separate processes** 
 santui.exe (host)
   └─ IpcPluginHost (implements Plugin trait)
         ├─ sends HostMsg (Init, Key, Tick, Resize, DbValue, ...) via plugin's stdin
-       └─ reads PluginMsg { commands, hints, palette_commands, request, consumed } from plugin's stdout
+       └─ reads PluginMsg { commands, hints, palette_commands, request, plugin_message, consumed } from plugin's stdout
 ```
 
 - The host owns all rendering. Your plugin returns a list of `RenderCmd` values — `Text`, `Clear`, `Rect`, `Dim`, `Border`, `Paragraph`, `List`, and `Table`.
@@ -131,7 +131,8 @@ fn respond(&self, consumed: bool) {
 | `commands` | `Vec<RenderCmd>` | Things to draw on screen this frame |
 | `hints` | `Vec<(String, String)>` | Status bar hints (label, description) |
 | `palette_commands` | `Vec<(String, String)>` | Commands shown in `Ctrl+P` palette |
-| `request` | `Option<PluginRequest>` | Request auth (`SignIn` / `SignOut`) or DB persistence (`DbGet` / `DbSet`) |
+| `request` | `Option<PluginRequest>` | Request auth (`SignIn` / `SignOut`), DB persistence (`DbGet` / `DbSet`), signal registry changes (`PluginsChanged`), or launch another plugin (`LaunchPlugin`) |
+| `plugin_message` | `Option<PluginMessage>` | Outgoing plugin-to-plugin message. The host forwards this to the target plugin |
 | `consumed` | `bool` | `true` when the plugin handled a key event internally (e.g., closing a sub-dialog on Esc). Defaults to `false` for backward compatibility. |
 
 ### Render commands

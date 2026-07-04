@@ -38,6 +38,14 @@ Plugins are **standalone binaries** distributed through the Plugin Registry. Ope
 | **World Clock** | Timezone converter and world clock | — |
 | **Weather** | Current conditions, hourly & 7-day forecast, location search, auto-refresh | — |
 | **Plugin Registry** | Browse, install, and manage plugins | — |
+| **Currency Converter** | Convert between currencies with live exchange rates | — |
+| **Habit Tracker** | Track daily habits with streaks and heatmap visualization | — |
+| **Hacker News Reader** | Browse top, new, and best stories from Hacker News | — |
+| **HTTP Client** | Compose and send HTTP requests, view responses | — |
+| **Music Preview** | Search and preview tracks from the iTunes catalog | — |
+| **Pomodoro Timer** | Focus timer with work/break sessions and daily stats | — |
+| **Quick Notes** | Lightweight scratch pad for capturing and searching notes | — |
+| **SSH Bookmarks** | Manage and connect to SSH hosts | — |
 
 *Want to build your own? See [docs/architecture.md](docs/architecture.md).*
 
