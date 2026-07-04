@@ -67,7 +67,7 @@ pub fn send_request(
 
     let resp = match method {
         HttpMethod::GET => {
-            let mut req = ureq::get(url).header("User-Agent", "santui-http-client/0.2.26");
+            let mut req = ureq::get(url).header("User-Agent", "santui-http-client/0.2.27");
             for (k, v) in headers {
                 if !k.is_empty() {
                     req = req.header(k, v);
@@ -76,7 +76,7 @@ pub fn send_request(
             req.call().map_err(|e| e.to_string())
         }
         HttpMethod::DELETE => {
-            let mut req = ureq::delete(url).header("User-Agent", "santui-http-client/0.2.26");
+            let mut req = ureq::delete(url).header("User-Agent", "santui-http-client/0.2.27");
             for (k, v) in headers {
                 if !k.is_empty() {
                     req = req.header(k, v);
@@ -85,7 +85,7 @@ pub fn send_request(
             req.call().map_err(|e| e.to_string())
         }
         HttpMethod::HEAD => {
-            let mut req = ureq::head(url).header("User-Agent", "santui-http-client/0.2.26");
+            let mut req = ureq::head(url).header("User-Agent", "santui-http-client/0.2.27");
             for (k, v) in headers {
                 if !k.is_empty() {
                     req = req.header(k, v);
@@ -94,7 +94,7 @@ pub fn send_request(
             req.call().map_err(|e| e.to_string())
         }
         HttpMethod::OPTIONS => {
-            let mut req = ureq::options(url).header("User-Agent", "santui-http-client/0.2.26");
+            let mut req = ureq::options(url).header("User-Agent", "santui-http-client/0.2.27");
             for (k, v) in headers {
                 if !k.is_empty() {
                     req = req.header(k, v);
@@ -103,7 +103,7 @@ pub fn send_request(
             req.call().map_err(|e| e.to_string())
         }
         HttpMethod::POST => {
-            let mut req = ureq::post(url).header("User-Agent", "santui-http-client/0.2.26");
+            let mut req = ureq::post(url).header("User-Agent", "santui-http-client/0.2.27");
             for (k, v) in headers {
                 if !k.is_empty() {
                     req = req.header(k, v);
@@ -112,7 +112,7 @@ pub fn send_request(
             req.send(body).map_err(|e| e.to_string())
         }
         HttpMethod::PUT => {
-            let mut req = ureq::put(url).header("User-Agent", "santui-http-client/0.2.26");
+            let mut req = ureq::put(url).header("User-Agent", "santui-http-client/0.2.27");
             for (k, v) in headers {
                 if !k.is_empty() {
                     req = req.header(k, v);
@@ -121,7 +121,7 @@ pub fn send_request(
             req.send(body).map_err(|e| e.to_string())
         }
         HttpMethod::PATCH => {
-            let mut req = ureq::patch(url).header("User-Agent", "santui-http-client/0.2.26");
+            let mut req = ureq::patch(url).header("User-Agent", "santui-http-client/0.2.27");
             for (k, v) in headers {
                 if !k.is_empty() {
                     req = req.header(k, v);

@@ -2293,7 +2293,7 @@ dependencies = [
 
 [[package]]
 name = "santui"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "env_logger",
  "log",
@@ -2307,7 +2307,7 @@ dependencies = [
 
 [[package]]
 name = "santui-auth"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "dirs",
  "santui-core",
@@ -2319,7 +2319,7 @@ dependencies = [
 
 [[package]]
 name = "santui-bookmark-launcher"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "arboard",
  "chrono",
@@ -2332,7 +2332,7 @@ dependencies = [
 
 [[package]]
 name = "santui-calendar-agenda"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "arboard",
  "chrono",
@@ -2345,7 +2345,7 @@ dependencies = [
 
 [[package]]
 name = "santui-clipboard-history"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "arboard",
  "env_logger",
@@ -2357,7 +2357,7 @@ dependencies = [
 
 [[package]]
 name = "santui-core"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "crossterm",
  "ctrlc",
@@ -2371,7 +2371,7 @@ dependencies = [
 
 [[package]]
 name = "santui-cron-expression-helper"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "arboard",
  "chrono",
@@ -2384,7 +2384,7 @@ dependencies = [
 
 [[package]]
 name = "santui-currency-converter"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "env_logger",
  "log",
@@ -2396,7 +2396,7 @@ dependencies = [
 
 [[package]]
 name = "santui-db"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "rusqlite",
  "serde",
@@ -2405,7 +2405,7 @@ dependencies = [
 
 [[package]]
 name = "santui-dictionary-thesaurus"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "arboard",
  "env_logger",
@@ -2419,7 +2419,7 @@ dependencies = [
 
 [[package]]
 name = "santui-git-repository-dashboard"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "arboard",
  "env_logger",
@@ -2431,7 +2431,7 @@ dependencies = [
 
 [[package]]
 name = "santui-habit-tracker"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "chrono",
  "env_logger",
@@ -2443,7 +2443,7 @@ dependencies = [
 
 [[package]]
 name = "santui-hacker-news-reader"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "env_logger",
  "log",
@@ -2455,7 +2455,7 @@ dependencies = [
 
 [[package]]
 name = "santui-http-client"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "env_logger",
  "log",
@@ -2467,7 +2467,7 @@ dependencies = [
 
 [[package]]
 name = "santui-ipc"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "crossterm",
  "log",
@@ -2479,9 +2479,10 @@ dependencies = [
 
 [[package]]
 name = "santui-iptv-player"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "env_logger",
+ "libc",
  "libloading",
  "log",
  "santui-ipc",
@@ -2492,7 +2493,7 @@ dependencies = [
 
 [[package]]
 name = "santui-json-yaml-formatter"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "arboard",
  "env_logger",
@@ -2504,7 +2505,7 @@ dependencies = [
 
 [[package]]
 name = "santui-music-preview"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "env_logger",
  "log",
@@ -2516,7 +2517,7 @@ dependencies = [
 
 [[package]]
 name = "santui-package-version-monitor"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "arboard",
  "chrono",
@@ -2531,7 +2532,7 @@ dependencies = [
 
 [[package]]
 name = "santui-pomodoro-timer"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "env_logger",
  "log",
@@ -2543,7 +2544,7 @@ dependencies = [
 
 [[package]]
 name = "santui-quick-notes"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "env_logger",
  "log",
@@ -2554,7 +2555,7 @@ dependencies = [
 
 [[package]]
 name = "santui-quran-reader"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "env_logger",
  "libloading",
@@ -2567,9 +2568,10 @@ dependencies = [
 
 [[package]]
 name = "santui-radio-stream-player"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "env_logger",
+ "libc",
  "libloading",
  "log",
  "rusqlite",
@@ -2581,7 +2583,7 @@ dependencies = [
 
 [[package]]
 name = "santui-radio-stream-scraper"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "env_logger",
  "log",
@@ -2593,7 +2595,7 @@ dependencies = [
 
 [[package]]
 name = "santui-regex-tester"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "arboard",
  "env_logger",
@@ -2606,7 +2608,7 @@ dependencies = [
 
 [[package]]
 name = "santui-registry"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "santui-core",
  "serde",
@@ -2618,7 +2620,7 @@ dependencies = [
 
 [[package]]
 name = "santui-registry-plugin"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "env_logger",
  "log",
@@ -2630,7 +2632,7 @@ dependencies = [
 
 [[package]]
 name = "santui-rss-reader"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "env_logger",
  "feed-rs",
@@ -2643,7 +2645,7 @@ dependencies = [
 
 [[package]]
 name = "santui-ssh-manager"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "env_logger",
  "log",
@@ -2654,7 +2656,7 @@ dependencies = [
 
 [[package]]
 name = "santui-system-monitor"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "env_logger",
  "log",
@@ -2666,7 +2668,7 @@ dependencies = [
 
 [[package]]
 name = "santui-todo-task-manager"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "arboard",
  "chrono",
@@ -2679,7 +2681,7 @@ dependencies = [
 
 [[package]]
 name = "santui-unit-converter"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "arboard",
  "env_logger",
@@ -2690,7 +2692,7 @@ dependencies = [
 
 [[package]]
 name = "santui-weather"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "env_logger",
  "log",
@@ -2702,7 +2704,7 @@ dependencies = [
 
 [[package]]
 name = "santui-world-clock"
-version = "0.2.26"
+version = "0.2.27"
 dependencies = [
  "chrono",
  "chrono-tz",

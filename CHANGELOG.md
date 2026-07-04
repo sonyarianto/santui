@@ -1,4 +1,4 @@
-## [0.2.26] - 2026-07-01
+## [0.2.27] - 2026-07-01
 
 ### 🎨 Refactor
 
@@ -19,7 +19,7 @@
 
 - Add santui reset command
 - Add --help flag
-\nFull Changelog: [v0.2.25...v0.2.26](https://github.com/sonyarianto/santui/compare/v0.2.25...v0.2.26)
+\nFull Changelog: [v0.2.25...v0.2.27](https://github.com/sonyarianto/santui/compare/v0.2.25...v0.2.27)
 ## [0.2.25] - 2026-07-01
 
 ### 🚀 Features

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-OUTDIR="$ROOT/target/debug"
+export ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+export OUTDIR="$ROOT/target/debug"
 
 # Derive version from the single source of truth — crates/core/Cargo.toml
-VERSION="$(grep '^version' "$ROOT/crates/core/Cargo.toml" | head -1 | cut -d'"' -f2)"
+export VERSION="$(grep '^version' "$ROOT/crates/core/Cargo.toml" | head -1 | cut -d'"' -f2)"
 
 echo ">> Building workspace (debug) ..."
 cargo build --workspace
