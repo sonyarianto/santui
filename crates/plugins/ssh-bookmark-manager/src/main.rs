@@ -592,23 +592,6 @@ fn main() {
 mod tests {
     use super::*;
 
-    fn test_theme() -> ThemeData {
-        ThemeData {
-            text: [200; 3],
-            text_muted: [100; 3],
-            accent: [180; 3],
-            highlight: [220; 3],
-            logo: [255; 3],
-            background: [0; 3],
-            background_panel: [20; 3],
-            background_overlay: [10; 3],
-            border: [150; 3],
-            success: [80; 3],
-            error: [255; 3],
-            inverted_text: [255; 3],
-        }
-    }
-
     fn test_bm(name: &str, host: &str, user: &str) -> state::SshBookmark {
         state::SshBookmark {
             id: name.to_lowercase().replace(' ', "-"),

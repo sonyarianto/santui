@@ -230,7 +230,7 @@ mod tests {
 
     #[test]
     fn filter_empty_shows_all() {
-        let mut state = state_with(vec![
+        let state = state_with(vec![
             make_bm("Prod Web", "10.0.1.10", "root", "Production"),
             make_bm("Dev Box", "10.0.2.20", "dev", "Dev"),
             make_bm("Raspi", "192.168.1.100", "pi", "Personal"),
