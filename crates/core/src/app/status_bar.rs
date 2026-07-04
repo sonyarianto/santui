@@ -47,11 +47,14 @@ impl StatusBar<'_> {
                 spans.push(Span::styled(" ", dim));
                 spans.push(Span::styled(hint_desc.as_str(), dim));
             }
+            let has_esc = self.active_plugin_hints.iter().any(|(k, _)| k == "esc");
             if !self.active_plugin_hints.is_empty() {
                 spans.push(Span::styled(" • ", dim));
             }
-            spans.push(Span::styled("esc", key));
-            spans.push(Span::styled(" back", dim));
+            if !has_esc {
+                spans.push(Span::styled("esc", key));
+                spans.push(Span::styled(" back", dim));
+            }
             Line::from(spans)
         } else {
             let mut spans = vec![

@@ -50,8 +50,8 @@ pub trait Plugin: Send {
 
     /// Called before the plugin is unloaded (hot-reload or app exit).
     /// The plugin should flush state, close handles, and prepare to be dropped.
-    /// For IPC plugins this sends `Shutdown` and waits briefly for a response
-    /// before the child process is killed.
+    /// For IPC plugins this sends `Shutdown` (non-blocking) — the child process
+    /// is killed later in `Drop`/`kill()` when the channel senders are dropped.
     fn shutdown(&mut self) {}
 
     /// Return the filesystem path to this plugin's binary, if it runs as an
@@ -66,6 +66,19 @@ pub trait Plugin: Send {
     /// IPC plugins override this to check the child process.
     fn is_alive(&self) -> bool {
         true
+    }
+
+    /// Whether the plugin has completed initialization and is ready to render.
+    /// In-process plugins are ready immediately. IPC plugins become ready once
+    /// the child process responds to the `Init` message.
+    fn is_ready(&self) -> bool {
+        true
+    }
+
+    /// Whether the plugin's last render included a dim overlay (search palette, dialog, etc.).
+    /// The host uses this to extend the dim to the status bar.
+    fn has_dim_overlay(&self) -> bool {
+        false
     }
 
     /// Whether the plugin supports running in the background when the user

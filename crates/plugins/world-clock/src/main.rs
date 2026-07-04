@@ -21,10 +21,7 @@ struct App {
 impl Default for App {
     fn default() -> Self {
         Self {
-            state: WorldTimeState {
-                clocks: WorldTimeState::default_clocks(),
-                ..WorldTimeState::default()
-            },
+            state: WorldTimeState::default(),
             theme: ThemeData {
                 text: [220; 3],
                 text_muted: [140; 3],
@@ -60,7 +57,6 @@ impl App {
         match &self.state.screen {
             Screen::Search => self.handle_search_key(key),
             Screen::Rename(_) => self.handle_rename_key(key),
-            Screen::Detail(idx) => self.handle_detail_key(key, *idx),
             Screen::Grid => self.handle_grid_key(key),
         }
     }
@@ -108,8 +104,6 @@ impl App {
             }
             IpcKey::Enter => {
                 if !self.state.clocks.is_empty() {
-                    let idx = self.state.selected;
-                    self.state.screen = Screen::Detail(idx);
                     self.dirty = true;
                 }
                 true
@@ -143,17 +137,6 @@ impl App {
         }
     }
 
-    fn handle_detail_key(&mut self, key: IpcKey, _idx: usize) -> bool {
-        match key {
-            IpcKey::Esc | IpcKey::Tab => {
-                self.state.screen = Screen::Grid;
-                self.dirty = true;
-                true
-            }
-            _ => false,
-        }
-    }
-
     fn handle_search_key(&mut self, key: IpcKey) -> bool {
         match key {
             IpcKey::Esc => {
@@ -176,6 +159,9 @@ impl App {
             }
             IpcKey::Up => {
                 self.state.search_cursor = self.state.search_cursor.saturating_sub(1);
+                if self.state.search_cursor < self.state.search_scroll {
+                    self.state.search_scroll = self.state.search_cursor;
+                }
                 self.dirty = true;
                 true
             }
@@ -183,7 +169,37 @@ impl App {
                 let max = self.state.search_results.len().saturating_sub(1);
                 self.state.search_cursor =
                     self.state.search_cursor.min(max).saturating_add(1).min(max);
+                const MAX_VISIBLE: usize = 12;
+                if self.state.search_cursor >= self.state.search_scroll + MAX_VISIBLE {
+                    self.state.search_scroll = self.state.search_cursor - MAX_VISIBLE + 1;
+                }
                 self.dirty = true;
+                true
+            }
+            IpcKey::PageUp => {
+                const JUMP: usize = 6;
+                let prev = self.state.search_cursor;
+                self.state.search_cursor = self.state.search_cursor.saturating_sub(JUMP);
+                if self.state.search_cursor < self.state.search_scroll {
+                    self.state.search_scroll = self.state.search_cursor;
+                }
+                if self.state.search_cursor != prev {
+                    self.dirty = true;
+                }
+                true
+            }
+            IpcKey::PageDown => {
+                let max = self.state.search_results.len().saturating_sub(1);
+                const JUMP: usize = 6;
+                let prev = self.state.search_cursor;
+                self.state.search_cursor = self.state.search_cursor.saturating_add(JUMP).min(max);
+                const MAX_VISIBLE: usize = 12;
+                if self.state.search_cursor >= self.state.search_scroll + MAX_VISIBLE {
+                    self.state.search_scroll = self.state.search_cursor - MAX_VISIBLE + 1;
+                }
+                if self.state.search_cursor != prev {
+                    self.dirty = true;
+                }
                 true
             }
             IpcKey::Backspace => {
@@ -238,13 +254,20 @@ impl App {
     }
 
     fn handle_tick(&mut self) {
-        let now_secs = std::time::SystemTime::now()
+        let since_epoch = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs() as u32;
+            .unwrap_or_default();
+        let now_secs = since_epoch.as_secs() as u32;
         if now_secs != self.state.last_second {
             self.state.last_second = now_secs;
             self.dirty = true;
+        }
+        if let Screen::Search = self.state.screen {
+            let blink = (since_epoch.as_millis() / 500).is_multiple_of(2);
+            if blink != self.state.search_cursor_visible {
+                self.state.search_cursor_visible = blink;
+                self.dirty = true;
+            }
         }
     }
 
@@ -273,8 +296,7 @@ impl App {
         match &self.state.screen {
             Screen::Grid => {
                 let mut hints = vec![
-                    ("↑↓←→".into(), "nav".into()),
-                    ("enter".into(), "detail".into()),
+                    ("↑↓←→".into(), "navigate".into()),
                     ("a".into(), "add".into()),
                 ];
                 if !self.state.clocks.is_empty() {
@@ -283,10 +305,10 @@ impl App {
                 }
                 hints
             }
-            Screen::Detail(_) => vec![("tab".into(), "next".into()), ("esc".into(), "back".into())],
             Screen::Search => vec![
                 ("↵".into(), "add".into()),
-                ("↑↓".into(), "nav".into()),
+                ("↑↓".into(), "navigate".into()),
+                ("PgUp/Dn".into(), "jump".into()),
                 ("⌫".into(), "del".into()),
                 ("esc".into(), "cancel".into()),
             ],
@@ -461,27 +483,11 @@ mod tests {
     }
 
     #[test]
-    fn handle_key_enter_on_grid_opens_detail() {
+    fn handle_key_enter_on_grid_does_not_change_screen() {
         let mut app = base_app();
         app.state.clocks = state::WorldTimeState::default_clocks();
         app.state.selected = 0;
         assert!(app.handle_key(IpcKey::Enter));
-        assert_eq!(app.state.screen, Screen::Detail(0));
-    }
-
-    #[test]
-    fn handle_key_esc_on_detail_returns_to_grid() {
-        let mut app = base_app();
-        app.state.screen = Screen::Detail(0);
-        assert!(app.handle_key(IpcKey::Esc));
-        assert_eq!(app.state.screen, Screen::Grid);
-    }
-
-    #[test]
-    fn handle_key_tab_on_detail_returns_to_grid() {
-        let mut app = base_app();
-        app.state.screen = Screen::Detail(0);
-        assert!(app.handle_key(IpcKey::Tab));
         assert_eq!(app.state.screen, Screen::Grid);
     }
 

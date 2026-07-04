@@ -39,6 +39,8 @@ pub(crate) struct PluginManager {
     registry_mtime: Option<SystemTime>,
     /// Throttle: only stat plugin binaries every N frames.
     reload_skip: u32,
+    /// Throttle: only stat registry.toml every N frames.
+    registry_poll_skip: u32,
     /// Names of plugins that have crashed since last check.
     crashed_plugins: Vec<String>,
     /// Cached carousel items, rebuilt on demand.
@@ -59,6 +61,7 @@ impl PluginManager {
             data_dir: PathBuf::new(),
             registry_mtime: None,
             reload_skip: 0,
+            registry_poll_skip: 0,
             crashed_plugins: Vec::new(),
             carousel_cache: None,
         }
@@ -451,6 +454,30 @@ impl PluginManager {
     // Palette commands
     // ------------------------------------------------------------------
 
+    pub fn plugin_name(&self, idx: usize) -> Option<&str> {
+        if idx < self.plugins.len() {
+            Some(self.plugins[idx].name())
+        } else {
+            None
+        }
+    }
+
+    pub fn is_ready(&self, idx: usize) -> bool {
+        if idx < self.plugins.len() {
+            self.plugins[idx].is_ready()
+        } else {
+            false
+        }
+    }
+
+    pub fn has_dim_overlay(&self, idx: usize) -> bool {
+        if idx < self.plugins.len() {
+            self.plugins[idx].has_dim_overlay()
+        } else {
+            false
+        }
+    }
+
     pub fn commands(&self) -> &[(usize, usize, PluginCmdItem)] {
         &self.plugin_commands
     }
@@ -469,8 +496,13 @@ impl PluginManager {
     }
 
     /// Poll `registry.toml` for changes and update dynamic palette items.
-    /// Called once per frame. Returns true if items changed.
+    /// Called once per frame (throttled to every 30 frames). Returns true if items changed.
     pub fn poll_registry_installed(&mut self) -> bool {
+        self.registry_poll_skip = self.registry_poll_skip.saturating_sub(1);
+        if self.registry_poll_skip > 0 {
+            return false;
+        }
+        self.registry_poll_skip = 30;
         let path = self.data_dir.join("registry.toml");
         let current_mtime = match std::fs::metadata(&path) {
             Ok(m) => m.modified().ok(),
@@ -490,6 +522,7 @@ impl PluginManager {
     /// Re-read `registry.toml` and rebuild `dynamic_items` and `plugin_capabilities`.
     /// Returns true if items changed.
     pub fn read_registry_installed(&mut self) -> bool {
+        self.registry_poll_skip = 0;
         self.invalidate_carousel_cache();
         let path = self.data_dir.join("registry.toml");
         let cfg = RegistryConfig::load(&path);

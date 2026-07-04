@@ -511,13 +511,23 @@ impl Santui {
                 }
             }
             Some(idx) => {
-                self.plugin_manager.render(idx, f, chunks[0]);
+                if self.plugin_manager.is_ready(idx) {
+                    self.plugin_manager.render(idx, f, chunks[0]);
+                } else {
+                    let name = self
+                        .plugin_manager
+                        .plugin_name(idx)
+                        .unwrap_or("plugin")
+                        .to_owned();
+                    self.render_loading(f, chunks[0], &name);
+                }
             }
         }
 
         let hints = self
             .plugin_manager
             .active()
+            .filter(|&idx| self.plugin_manager.is_ready(idx))
             .map(|idx| self.plugin_manager.status_hints(idx))
             .unwrap_or_default();
         let current_user = self.auth.as_ref().and_then(|a| a.current_user());
@@ -539,6 +549,16 @@ impl Santui {
                 style: Style::default().bg(self.app_state.theme.background_overlay),
             }
             .render(area, f.buffer_mut());
+        } else if self
+            .plugin_manager
+            .active()
+            .is_some_and(|idx| self.plugin_manager.has_dim_overlay(idx))
+        {
+            // Plugin already dims its own content area; dim the status bar too
+            DimOverlay {
+                style: Style::default().bg(self.app_state.theme.background_overlay),
+            }
+            .render(chunks[1], f.buffer_mut());
         }
 
         if self.palette_controller.is_open() {

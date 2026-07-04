@@ -190,4 +190,29 @@ impl super::Santui {
         let p = Paragraph::new(text).alignment(Alignment::Center);
         f.render_widget(p, vert[1]);
     }
+
+    pub(super) fn render_loading(&mut self, f: &mut Frame, area: Rect, plugin_name: &str) {
+        self.render_starfield(f, area);
+        let t = &self.app_state.theme;
+        let vert = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Fill(1),
+                Constraint::Length(3),
+                Constraint::Fill(1),
+            ])
+            .split(area);
+        let lines = vec![
+            Line::from(Span::styled(
+                format!("Loading {plugin_name}…"),
+                Style::default().fg(t.text_muted),
+            )),
+            Line::from(Span::styled(
+                "Starting plugin process…",
+                Style::default().fg(t.text_muted),
+            )),
+        ];
+        let p = Paragraph::new(lines).alignment(Alignment::Center);
+        f.render_widget(p, vert[1]);
+    }
 }

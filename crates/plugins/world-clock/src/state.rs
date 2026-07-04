@@ -13,7 +13,6 @@ pub struct ClockEntry {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Screen {
     Grid,
-    Detail(usize),
     Search,
     Rename(usize),
 }
@@ -25,6 +24,8 @@ pub struct WorldTimeState {
     pub search_query: String,
     pub search_results: Vec<Tz>,
     pub search_cursor: usize,
+    pub search_scroll: usize,
+    pub search_cursor_visible: bool,
     pub rename_buf: String,
     pub last_second: u32,
 }
@@ -38,6 +39,8 @@ impl Default for WorldTimeState {
             search_query: String::new(),
             search_results: Vec::new(),
             search_cursor: 0,
+            search_scroll: 0,
+            search_cursor_visible: true,
             rename_buf: String::new(),
             last_second: 61,
         }
@@ -48,6 +51,7 @@ impl WorldTimeState {
     pub fn apply_search(&mut self) {
         self.search_results = timezones::search(&self.search_query);
         self.search_cursor = 0;
+        self.search_scroll = 0;
     }
 
     pub fn add_clock(&mut self, tz: Tz) {

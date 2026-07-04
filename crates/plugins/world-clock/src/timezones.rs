@@ -66,7 +66,9 @@ pub const ALL: &[(&str, Tz)] = &[
 
 pub fn search(query: &str) -> Vec<Tz> {
     if query.is_empty() {
-        return ALL.iter().map(|&(_, tz)| tz).collect();
+        let mut all: Vec<Tz> = ALL.iter().map(|&(_, tz)| tz).collect();
+        all.sort_by_key(|tz| city_name(*tz));
+        return all;
     }
     let lower = query.to_lowercase();
     let tokens: Vec<&str> = lower.split_whitespace().collect();
@@ -78,6 +80,7 @@ pub fn search(query: &str) -> Vec<Tz> {
             results.push(tz);
         }
     }
+    results.sort_by_key(|tz| city_name(*tz));
     results
 }
 

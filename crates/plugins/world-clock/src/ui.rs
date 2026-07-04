@@ -1,6 +1,7 @@
-use chrono::{Datelike, Offset, Timelike};
-use chrono_tz::Tz;
+use chrono::{Offset, Timelike};
+use chrono_tz::{OffsetComponents, Tz};
 use santui_ipc::protocol::{RenderCmd, ThemeData, BORDER_ALL};
+use santui_ipc::ui;
 
 use crate::state::{Screen, WorldTimeState};
 
@@ -28,7 +29,6 @@ fn grid_cols(area_w: u16) -> u16 {
 pub fn render_ui(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec<RenderCmd> {
     match &state.screen {
         Screen::Grid => render_grid(state, theme, w, h),
-        Screen::Detail(idx) => render_detail(state, theme, w, h, *idx),
         Screen::Search => render_search(state, theme, w, h),
         Screen::Rename(idx) => render_rename(state, theme, w, h, *idx),
     }
@@ -43,10 +43,12 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
     let ch = card_h();
 
     if state.clocks.is_empty() {
+        let text = "Add a timezone (press 'a')";
+        let x = (w.saturating_sub(text.len() as u16)) / 2;
         cmds.push(RenderCmd::Text {
-            x: 2,
+            x,
             y: h / 2,
-            text: "Add a timezone (press 'a')".into(),
+            text: text.into(),
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
@@ -81,12 +83,7 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
 
         let dt = chrono::Utc::now().with_timezone(&clock.tz);
         let offset_str = fmt_offset(clock.tz);
-        let hour = dt.hour();
-        let dot_fg = match hour {
-            9..=16 => theme.success,
-            7..=8 | 17..=18 => theme.highlight,
-            _ => theme.text_muted,
-        };
+        let dst_active = dt.offset().dst_offset().num_seconds() != 0;
 
         cmds.push(RenderCmd::Text {
             x: cx + 2,
@@ -124,189 +121,88 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
             bg: None,
             bold: false,
         });
-        cmds.push(RenderCmd::Text {
-            x: cx + cw - 3,
-            y: cy + 5,
-            text: "●".into(),
-            fg: Some(dot_fg),
-            bg: None,
-            bold: false,
-        });
+        if dst_active {
+            cmds.push(RenderCmd::Text {
+                x: cx + cw - 3,
+                y: cy + 5,
+                text: "D".into(),
+                fg: Some(theme.highlight),
+                bg: None,
+                bold: true,
+            });
+        }
     }
-
-    cmds
-}
-
-fn render_detail(
-    state: &WorldTimeState,
-    theme: &ThemeData,
-    w: u16,
-    h: u16,
-    idx: usize,
-) -> Vec<RenderCmd> {
-    let mut cmds = Vec::new();
-    let clock = &state.clocks[idx];
-    let dt = chrono::Utc::now().with_timezone(&clock.tz);
-    let offset_str = fmt_offset(clock.tz);
-    cmds.push(RenderCmd::Border {
-        x: 0,
-        y: 0,
-        w,
-        h,
-        fg: theme.border,
-        bg: None,
-        borders: BORDER_ALL,
-        title: Some(clock.label.clone()),
-        title_fg: Some(theme.accent),
-        title_dash_fg: Some(theme.border),
-    });
-
-    let mut row = 1;
-    let header = format!(
-        "{}, {} {} {}    {:02}:{:02}:{:02} {}    UTC {}",
-        dt.format("%A"),
-        dt.day(),
-        dt.format("%B"),
-        dt.year(),
-        dt.hour(),
-        dt.minute(),
-        dt.second(),
-        dt.format("%Z"),
-        offset_str,
-    );
-    cmds.push(RenderCmd::Text {
-        x: 2,
-        y: row,
-        text: header,
-        fg: Some(theme.text),
-        bg: None,
-        bold: false,
-    });
-    row += 1;
-
-    let dst = dt.format("%Z").to_string();
-    let std_name = clock.tz.name().split('/').next_back().unwrap_or("");
-    let is_dst = dst != std_name;
-    let dst_str = if is_dst { "Yes" } else { "No" };
-    cmds.push(RenderCmd::Text {
-        x: 2,
-        y: row,
-        text: format!("DST: {}", dst_str),
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-    });
-    row += 2;
-
-    let bar_y = row;
-    for hour in 0..24 {
-        let col = 2 + hour * 2;
-        let ch = match hour {
-            9..=16 => '▓',
-            _ => '░',
-        };
-        cmds.push(RenderCmd::Text {
-            x: col,
-            y: bar_y,
-            text: ch.to_string(),
-            fg: if (9..=16).contains(&hour) {
-                Some(theme.accent)
-            } else {
-                Some(theme.text_muted)
-            },
-            bg: None,
-            bold: false,
-        });
-    }
-    let local_h = dt.hour();
-    let now_col = 2 + (local_h as u16).min(23) * 2;
-    if local_h < 24 {
-        cmds.push(RenderCmd::Text {
-            x: now_col,
-            y: bar_y,
-            text: "▲".into(),
-            fg: Some(theme.success),
-            bg: None,
-            bold: true,
-        });
-    }
-    row += 2;
-
-    let hour_labels: String = (0..24).map(|h| format!("{:02} ", h)).collect();
-    cmds.push(RenderCmd::Text {
-        x: 2,
-        y: row,
-        text: hour_labels,
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-    });
 
     cmds
 }
 
 fn render_search(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec<RenderCmd> {
-    let mut cmds = Vec::new();
+    let mut cmds = render_grid(state, theme, w, h);
+    let title_h = 5u16;
 
-    let popup_w = 50.min(w.saturating_sub(4));
-    let result_count = state.search_results.len();
-    let popup_h = (12u16)
-        .min(result_count.saturating_add(4) as u16)
-        .min(h.saturating_sub(2));
-    let popup_x = (w - popup_w) / 2;
-    let popup_y = (h - popup_h) / 2;
+    const MAX_ITEMS: usize = 12;
+    let item_count = state.search_results.len().min(MAX_ITEMS);
+    let popup_h = (title_h + item_count as u16 + 3).min(h).max(title_h + 1);
+    let r = ui::palette_rect(w, h, popup_h);
+    ui::palette_bg(&mut cmds, theme, &r);
 
-    cmds.push(RenderCmd::Dim {
-        x: 0,
-        y: 0,
-        w,
-        h,
-        bg: theme.background_overlay,
-    });
+    ui::palette_title(&mut cmds, theme, &r, 1, "Add Timezone");
 
-    cmds.push(RenderCmd::Border {
-        x: popup_x,
-        y: popup_y,
-        w: popup_w,
-        h: popup_h,
-        fg: theme.border,
-        bg: Some(theme.background_overlay),
-        borders: BORDER_ALL,
-        title: Some("Add Timezone".into()),
-        title_fg: Some(theme.accent),
-        title_dash_fg: Some(theme.border),
-    });
+    let input_y = r.y + 3;
+    if state.search_query.is_empty() {
+        cmds.push(RenderCmd::Text {
+            x: r.ix,
+            y: input_y,
+            text: "Search...".into(),
+            fg: Some(theme.text_muted),
+            bg: Some(theme.background_panel),
+            bold: false,
+        });
+    } else {
+        cmds.push(RenderCmd::Text {
+            x: r.ix,
+            y: input_y,
+            text: state.search_query.clone(),
+            fg: Some(theme.text),
+            bg: Some(theme.background_panel),
+            bold: false,
+        });
+        if state.search_cursor_visible {
+            cmds.push(RenderCmd::Text {
+                x: r.ix + state.search_query.len() as u16,
+                y: input_y,
+                text: " ".into(),
+                fg: Some(theme.inverted_text),
+                bg: Some(theme.highlight),
+                bold: false,
+            });
+        }
+    }
 
-    let input_y = popup_y + 1;
-    let input_text = format!("> {}", state.search_query);
+    let scroll = state.search_scroll;
+    let end = (scroll + item_count).min(state.search_results.len());
+    for (y_off, i) in (title_h..).zip(scroll..end) {
+        let tz = state.search_results[i];
+        let selected = i == state.search_cursor;
+        ui::palette_item(
+            &mut cmds,
+            theme,
+            &r,
+            y_off,
+            &timezones::city_name(tz),
+            selected,
+        );
+    }
+
+    let hint_y = r.y + title_h + item_count as u16 + 1;
     cmds.push(RenderCmd::Text {
-        x: popup_x + 2,
-        y: input_y,
-        text: santui_ipc::ui::truncate(&input_text, popup_w.saturating_sub(4) as usize),
-        fg: Some(theme.text),
-        bg: None,
+        x: r.ix,
+        y: hint_y,
+        text: "↑↓ pgup pgdn  ↵ add".into(),
+        fg: Some(theme.text_muted),
+        bg: Some(theme.background_panel),
         bold: false,
     });
-
-    let list_y = input_y + 2;
-    let max_visible = popup_h.saturating_sub(4) as usize;
-    for (i, tz) in state.search_results.iter().enumerate().take(max_visible) {
-        let is_selected_result = i == state.search_cursor;
-        let name = timezones::city_name(*tz);
-        let line = format!(" {}  {}", santui_ipc::ui::truncate(&name, 16), tz.name(),);
-        cmds.push(RenderCmd::Text {
-            x: popup_x + 2,
-            y: list_y + i as u16,
-            text: line,
-            fg: if is_selected_result {
-                Some(theme.accent)
-            } else {
-                Some(theme.text)
-            },
-            bg: None,
-            bold: is_selected_result,
-        });
-    }
 
     cmds
 }
@@ -432,13 +328,5 @@ mod tests {
         let s = WorldTimeState::default();
         let cmds = render_ui(&s, &test_theme(), 120, 30);
         let _ = cmds;
-    }
-
-    #[test]
-    fn detail_view_does_not_panic() {
-        let mut s = state_with_clocks();
-        s.screen = Screen::Detail(0);
-        let cmds = render_ui(&s, &test_theme(), 120, 30);
-        assert!(!cmds.is_empty());
     }
 }

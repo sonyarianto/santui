@@ -69,6 +69,8 @@ pub struct IpcPluginHost {
     response_count: u64,
     /// Resolved consumed value from the pending Esc response.
     esc_consumed: Option<bool>,
+    /// Whether the plugin has responded to the Init message.
+    init_complete: bool,
 }
 
 impl IpcPluginHost {
@@ -113,6 +115,7 @@ impl IpcPluginHost {
             last_resp_count: 0,
             response_count: 0,
             esc_consumed: None,
+            init_complete: false,
         }
     }
 
@@ -246,6 +249,7 @@ impl IpcPluginHost {
                         }
                         self.consumed = msg.consumed;
                         self.response_count += 1;
+                        self.init_complete = true;
                     }
                     Err(mpsc::TryRecvError::Empty) => break,
                     Err(mpsc::TryRecvError::Disconnected) => {
@@ -255,13 +259,6 @@ impl IpcPluginHost {
                     }
                 }
             }
-        }
-    }
-
-    /// Block briefly for one response (used during shutdown only).
-    fn recv_shutdown(&mut self) {
-        if let Some(ref rx) = self.response_rx {
-            let _ = rx.recv_timeout(Duration::from_secs(3));
         }
     }
 
@@ -324,16 +321,9 @@ impl IpcPluginHost {
         self.drain_responses();
     }
 
-    /// Send a message and block briefly for one response.
-    /// Used during `init()` so the first PluginMsg (with palette_commands)
-    /// is guaranteed to be cached before the host calls refresh_commands().
-    fn send_recv_blocking(&mut self, msg: &HostMsg) {
-        self.send_recv_blocking_timeout(msg, Duration::from_millis(500));
-    }
-
+    #[allow(dead_code)]
     fn send_recv_blocking_timeout(&mut self, msg: &HostMsg, timeout: Duration) {
         self.send(msg, Priority::High);
-        // Drain stale responses so the blocking recv picks up the fresh one.
         self.drain_responses();
         if let Some(ref rx) = self.response_rx {
             if let Ok(resp) = rx.recv_timeout(timeout) {
@@ -343,13 +333,6 @@ impl IpcPluginHost {
                 self.pending_request = resp.request;
                 self.consumed = resp.consumed;
             }
-            // Drain any additional responses. If a stale Tick response was
-            // processed during recv_timeout, it arrived first in the channel
-            // and recv_timeout captured it (consumed=false). But this
-            // message's response is always processed last (FIFO) and is still
-            // in the channel, so drain_responses overwrites consumed with
-            // the correct value. If recv_timeout already got this message's
-            // response, drain_responses finds nothing and consumed is preserved.
             self.drain_responses();
         }
     }
@@ -469,17 +452,12 @@ impl IpcPluginHost {
         match req {
             PluginRequest::SignIn { provider } => {
                 if let Some(auth) = auth {
-                    match auth.sign_in(&provider) {
-                        Ok(user) => {
-                            self.send_recv(&HostMsg::UserUpdate {
-                                user: Some(user_to_data(&user)),
-                            });
-                        }
-                        Err(e) => {
-                            log::error!("[santui] Sign-in failed: {e}");
-                            self.send_recv(&HostMsg::UserUpdate { user: None });
-                        }
+                    if let Err(e) = auth.start_sign_in(&provider) {
+                        log::error!("[santui] Sign-in start failed: {e}");
+                        self.send_recv(&HostMsg::UserUpdate { user: None });
                     }
+                    // Non-blocking: the main loop drains the result and calls
+                    // on_user_update_all on all plugins when sign-in completes.
                 }
             }
             PluginRequest::SignOut => {
@@ -544,18 +522,25 @@ impl Plugin for IpcPluginHost {
         }
         self.spawn()?;
 
-        let msg = HostMsg::Init {
-            theme: self.theme_data.clone(),
-            area: self.area,
-            data_dir: self.data_dir.to_string_lossy().to_string(),
-        };
-        self.send_recv_blocking(&msg);
+        self.send(
+            &HostMsg::Init {
+                theme: self.theme_data.clone(),
+                area: self.area,
+                data_dir: self.data_dir.to_string_lossy().to_string(),
+            },
+            Priority::High,
+        );
+        self.drain_responses();
 
         if let Some(ref auth) = ctx.auth {
             if let Some(user) = auth.current_user() {
-                self.send_recv_blocking(&HostMsg::UserUpdate {
-                    user: Some(user_to_data(&user)),
-                });
+                self.send(
+                    &HostMsg::UserUpdate {
+                        user: Some(user_to_data(&user)),
+                    },
+                    Priority::High,
+                );
+                self.drain_responses();
             }
         }
 
@@ -675,6 +660,16 @@ impl Plugin for IpcPluginHost {
         render_commands(f, area, &self.cached_commands);
     }
 
+    fn has_dim_overlay(&self) -> bool {
+        self.cached_commands
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Dim { .. }))
+    }
+
+    fn is_ready(&self) -> bool {
+        self.init_complete
+    }
+
     /// Tick is non-blocking: send the message, then drain any pending
     /// responses without waiting.  This keeps the UI responsive even when
     /// a plugin is slow to process a tick.
@@ -765,7 +760,8 @@ impl Plugin for IpcPluginHost {
 
     fn shutdown(&mut self) {
         self.send(&HostMsg::Shutdown, Priority::High);
-        self.recv_shutdown();
+        // Non-blocking: don't wait for a response — the plugin will be
+        // killed in Drop/kill() when the channel senders are dropped.
     }
 
     fn can_background(&self) -> bool {
