@@ -2540,6 +2540,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-quran-reader"
+version = "0.2.26"
+dependencies = [
+ "env_logger",
+ "libloading",
+ "log",
+ "santui-ipc",
+ "serde",
+ "serde_json",
+ "ureq 3.3.0",
+]
+
+[[package]]
 name = "santui-radio-stream-player"
 version = "0.2.26"
 dependencies = [

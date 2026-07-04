@@ -139,6 +139,7 @@ jobs:
             @{id="package-version-monitor"; name="Package Version Monitor"; desc="Scan manifests and check dependency versions across ecosystems"; caps=@()}
             @{id="dictionary-thesaurus"; name="Dictionary/Thesaurus"; desc="Look up definitions, examples, synonyms, and antonyms"; caps=@()}
             @{id="git-repository-dashboard"; name="Git Repository Dashboard"; desc="Track local Git repositories, branch status, changes, and recent commits"; caps=@()}
+            @{id="quran-reader"; name="Quran"; desc="Read Quran text and translations with recitation playback"; caps=@("background")}
           )
 
           foreach ($p in $pluginNames) {
@@ -209,6 +210,7 @@ jobs:
           add_plugin "package-version-monitor" "Package Version Monitor" "Scan manifests and check dependency versions across ecosystems" '[]'
           add_plugin "dictionary-thesaurus" "Dictionary/Thesaurus" "Look up definitions, examples, synonyms, and antonyms" '[]'
           add_plugin "git-repository-dashboard" "Git Repository Dashboard" "Track local Git repositories, branch status, changes, and recent commits" '[]'
+          add_plugin "quran-reader" "Quran" "Read Quran text and translations with recitation playback" '["background"]'
 
           printf '[%s]\n' "$entries" > "plugins-${TARGET}.json"
           echo "Generated plugins-${TARGET}.json"
@@ -217,7 +219,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p plugin-binaries
-          for binary in "${BINARY_DIR}"/santui-*-plugin${{ matrix.plugin_ext }} "${BINARY_DIR}"/santui-{radio-stream-player,weather,rss-reader,clipboard-history,hacker-news-reader,system-monitor,world-clock,unit-converter,regex-tester,json-yaml-formatter,todo-task-manager,bookmark-launcher,cron-expression-helper,calendar-agenda,package-version-monitor,dictionary-thesaurus,git-repository-dashboard}${{ matrix.plugin_ext }}; do
+          for binary in "${BINARY_DIR}"/santui-*-plugin${{ matrix.plugin_ext }} "${BINARY_DIR}"/santui-{radio-stream-player,weather,rss-reader,clipboard-history,hacker-news-reader,system-monitor,world-clock,unit-converter,regex-tester,json-yaml-formatter,todo-task-manager,bookmark-launcher,cron-expression-helper,calendar-agenda,package-version-monitor,dictionary-thesaurus,git-repository-dashboard,quran-reader}${{ matrix.plugin_ext }}; do
             [ -f "$binary" ] || continue
             name="$(basename "$binary")"
             # Strip .exe and also strip the santui- prefix so the filename
@@ -294,7 +296,7 @@ jobs:
         run: |
           echo "=== Checking for empty files ==="
           has_empty=0
-          for f in santui-* plugins-*.json radio-stream-player-* unit-converter-* regex-tester-* json-yaml-formatter-* todo-task-manager-* bookmark-launcher-* cron-expression-helper-* calendar-agenda-* package-version-monitor-* dictionary-thesaurus-* git-repository-dashboard-*; do
+          for f in santui-* plugins-*.json radio-stream-player-* unit-converter-* regex-tester-* json-yaml-formatter-* todo-task-manager-* bookmark-launcher-* cron-expression-helper-* calendar-agenda-* package-version-monitor-* dictionary-thesaurus-* git-repository-dashboard-* quran-reader-*; do
             if [ -f "$f" ]; then
               size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null)
               if [ "$size" -eq 0 ]; then
@@ -333,6 +335,7 @@ jobs:
             package-version-monitor-*
             dictionary-thesaurus-*
             git-repository-dashboard-*
+            quran-reader-*
           fail_on_unmatched_files: false
           generate_release_notes: true
 
