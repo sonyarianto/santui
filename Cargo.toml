@@ -12,7 +12,15 @@ members = [
     "crates/plugins/registry",
     "crates/plugins/weather",
     "crates/plugins/rss-reader",
+    "crates/plugins/currency-converter",
+    "crates/plugins/quick-notes",
     "crates/plugins/clipboard-history",
+    "crates/plugins/hackernews-reader",
+    "crates/plugins/pomodoro-timer",
+    "crates/plugins/music-preview",
+    "crates/plugins/http-client",
+    "crates/plugins/ssh-bookmark-manager",
+    "crates/plugins/habit-tracker",
     "crates/app",
 ]
 resolver = "2"

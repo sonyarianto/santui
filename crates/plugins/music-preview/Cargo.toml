@@ -1,0 +1,16 @@
+[package]
+name = "santui-music-preview"
+version = "0.2.26"
+edition = "2021"
+
+[[bin]]
+name = "santui-music-preview"
+path = "src/main.rs"
+
+[dependencies]
+santui-ipc  = { path = "../../ipc",  version = "0.2.26", default-features = false }
+serde       = { workspace = true }
+serde_json  = { workspace = true }
+ureq        = "3"
+log         = { workspace = true }
+env_logger  = { workspace = true }

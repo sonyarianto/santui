@@ -71,6 +71,8 @@ pub struct IpcPluginHost {
     esc_consumed: Option<bool>,
     /// Whether the plugin has responded to the Init message.
     init_complete: bool,
+    /// Pending launch request from this plugin (id, name).
+    pending_launch: Option<(String, String)>,
 }
 
 impl IpcPluginHost {
@@ -116,6 +118,7 @@ impl IpcPluginHost {
             response_count: 0,
             esc_consumed: None,
             init_complete: false,
+            pending_launch: None,
         }
     }
 
@@ -507,6 +510,9 @@ impl IpcPluginHost {
                     value: Some(value),
                 });
             }
+            PluginRequest::LaunchPlugin { id, name } => {
+                self.pending_launch = Some((id, name));
+            }
         }
     }
 }
@@ -518,6 +524,10 @@ impl Plugin for IpcPluginHost {
         auth: Option<&Arc<dyn AuthHandle>>,
     ) {
         self.process_pending_requests_inner(db, auth);
+    }
+
+    fn drain_pending_launch(&mut self) -> Option<(String, String)> {
+        self.pending_launch.take()
     }
 
     fn id(&self) -> &str {

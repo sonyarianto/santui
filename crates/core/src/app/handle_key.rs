@@ -103,7 +103,7 @@ impl super::Santui {
         }
     }
 
-    fn activate_plugin_by_id(&mut self, id: &str, name: &str) -> bool {
+    pub(super) fn activate_plugin_by_id(&mut self, id: &str, name: &str) -> bool {
         if let Some(existing) = self.plugin_manager.find_by_id(id) {
             self.plugin_manager.set_active(Some(existing));
             return true;

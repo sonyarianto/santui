@@ -352,6 +352,7 @@ impl App {
                 Action::Install => "Install".into(),
                 Action::Update => format!("Update to v{}", plugin.version),
                 Action::Delete => "Delete".into(),
+                Action::Launch => "Launch".into(),
             };
             ui::palette_item(cmds, t, &pr, action_base + i as u16, &label, focused);
         }

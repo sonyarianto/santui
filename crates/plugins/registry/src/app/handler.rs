@@ -265,6 +265,7 @@ impl App {
         match installed_idx {
             Some(i) => {
                 if reg.installed[i].enabled {
+                    actions.push(Action::Launch);
                     actions.push(Action::Disable);
                 } else {
                     actions.push(Action::Enable);
@@ -328,6 +329,13 @@ impl App {
                         *request = Some(PluginRequest::PluginsChanged);
                     }
                 }
+                self.detail_idx = None;
+            }
+            Action::Launch => {
+                *request = Some(PluginRequest::LaunchPlugin {
+                    id: plugin.id.clone(),
+                    name: plugin.name.clone(),
+                });
                 self.detail_idx = None;
             }
         }
@@ -663,7 +671,7 @@ mod tests {
                 capabilities: vec![],
             });
         }
-        // Now available_actions returns [Disable, Delete] = 2 actions
+        // Now available_actions returns [Launch, Disable, Delete] = 3 actions
         h.app.cursor = 0;
         h.app.handle(h.key(IpcKey::Enter));
         assert_eq!(h.app.action_cursor, 0);
@@ -770,9 +778,10 @@ mod tests {
             });
         }
         let actions = h.app.available_actions(0);
-        assert_eq!(actions.len(), 2);
-        assert_eq!(actions[0], Action::Disable);
-        assert_eq!(actions[1], Action::Delete);
+        assert_eq!(actions.len(), 3);
+        assert_eq!(actions[0], Action::Launch);
+        assert_eq!(actions[1], Action::Disable);
+        assert_eq!(actions[2], Action::Delete);
     }
 
     #[test]
@@ -810,10 +819,11 @@ mod tests {
             });
         }
         let actions = h.app.available_actions(0);
-        assert_eq!(actions.len(), 3);
-        assert_eq!(actions[0], Action::Disable);
-        assert_eq!(actions[1], Action::Update);
-        assert_eq!(actions[2], Action::Delete);
+        assert_eq!(actions.len(), 4);
+        assert_eq!(actions[0], Action::Launch);
+        assert_eq!(actions[1], Action::Disable);
+        assert_eq!(actions[2], Action::Update);
+        assert_eq!(actions[3], Action::Delete);
     }
 
     #[test]

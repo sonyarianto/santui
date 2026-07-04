@@ -2344,12 +2344,60 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-currency-converter"
+version = "0.2.26"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde",
+ "serde_json",
+ "ureq 3.3.0",
+]
+
+[[package]]
 name = "santui-db"
 version = "0.2.26"
 dependencies = [
  "rusqlite",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "santui-habit-tracker"
+version = "0.2.26"
+dependencies = [
+ "chrono",
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-hackernews-reader"
+version = "0.2.26"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde",
+ "serde_json",
+ "ureq 3.3.0",
+]
+
+[[package]]
+name = "santui-http-client"
+version = "0.2.26"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde",
+ "serde_json",
+ "ureq 3.3.0",
 ]
 
 [[package]]
@@ -2360,6 +2408,41 @@ dependencies = [
  "log",
  "ratatui",
  "santui-core",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-music-preview"
+version = "0.2.26"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde",
+ "serde_json",
+ "ureq 3.3.0",
+]
+
+[[package]]
+name = "santui-pomodoro-timer"
+version = "0.2.26"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-core",
+ "santui-ipc",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-quick-notes"
+version = "0.2.26"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
  "serde",
  "serde_json",
 ]
@@ -2425,6 +2508,17 @@ dependencies = [
  "serde",
  "serde_json",
  "ureq 2.12.1",
+]
+
+[[package]]
+name = "santui-ssh-bookmark-manager"
+version = "0.2.26"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

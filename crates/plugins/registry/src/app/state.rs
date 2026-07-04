@@ -16,6 +16,7 @@ pub(super) enum Action {
     Install,
     Update,
     Delete,
+    Launch,
 }
 
 pub struct App {

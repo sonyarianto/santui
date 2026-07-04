@@ -45,6 +45,8 @@ pub(crate) struct PluginManager {
     crashed_plugins: Vec<String>,
     /// Cached carousel items, rebuilt on demand.
     carousel_cache: Option<Vec<CarouselItem>>,
+    /// Pending launch requests collected from plugins (id, name).
+    pending_launches: Vec<(String, String)>,
 }
 
 impl PluginManager {
@@ -64,6 +66,7 @@ impl PluginManager {
             registry_poll_skip: 0,
             crashed_plugins: Vec::new(),
             carousel_cache: None,
+            pending_launches: Vec::new(),
         }
     }
 
@@ -139,7 +142,16 @@ impl PluginManager {
         let auth_ref = auth.as_ref();
         for p in &mut self.plugins {
             p.process_pending_requests(db, auth_ref);
+            if let Some(launch) = p.drain_pending_launch() {
+                self.pending_launches.push(launch);
+            }
         }
+    }
+
+    /// Drain all pending launch requests collected from plugins.
+    /// Returns a list of `(id, name)` pairs.
+    pub fn drain_pending_launches(&mut self) -> Vec<(String, String)> {
+        std::mem::take(&mut self.pending_launches)
     }
 
     pub fn crashed_plugins(&self) -> &[String] {

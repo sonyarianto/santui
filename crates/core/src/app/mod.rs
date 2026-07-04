@@ -489,6 +489,11 @@ impl Santui {
                     }
                 }
             }
+
+            // Activate any plugins requested to launch (e.g. from registry plugin).
+            for (id, name) in self.plugin_manager.drain_pending_launches() {
+                self.activate_plugin_by_id(&id, &name);
+            }
         }
 
         Ok(())

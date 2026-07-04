@@ -123,6 +123,12 @@ pub trait Plugin: Send {
         _auth: Option<&Arc<dyn AuthHandle>>,
     ) {
     }
+
+    /// Drain any pending launch request from this plugin.
+    /// Returns `Some((id, name))` if a launch was requested, `None` otherwise.
+    fn drain_pending_launch(&mut self) -> Option<(String, String)> {
+        None
+    }
 }
 
 pub struct PluginContext {

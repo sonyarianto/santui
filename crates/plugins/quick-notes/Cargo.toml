@@ -1,0 +1,15 @@
+[package]
+name = "santui-quick-notes"
+version = "0.2.26"
+edition = "2021"
+
+[[bin]]
+name = "santui-quick-notes"
+path = "src/main.rs"
+
+[dependencies]
+santui-ipc = { path = "../../ipc", version = "0.2.26", default-features = false }
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+env_logger = { workspace = true }

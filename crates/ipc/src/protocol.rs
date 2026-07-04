@@ -268,6 +268,11 @@ pub enum PluginRequest {
         key: String,
         value: String,
     },
+    /// Request the host to activate/launch a plugin by its id.
+    LaunchPlugin {
+        id: String,
+        name: String,
+    },
 }
 
 /// Outgoing plugin-to-plugin message sent by a plugin to another plugin.
