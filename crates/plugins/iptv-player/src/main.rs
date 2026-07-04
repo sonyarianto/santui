@@ -753,7 +753,9 @@ fn main() {
     {
         use std::os::unix::io::AsRawFd;
         if let Ok(null) = std::fs::File::open("/dev/null") {
-            unsafe { libc::dup2(null.as_raw_fd(), libc::STDERR_FILENO); }
+            unsafe {
+                libc::dup2(null.as_raw_fd(), libc::STDERR_FILENO);
+            }
         }
     }
 
