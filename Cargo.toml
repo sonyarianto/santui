@@ -32,6 +32,7 @@ members = [
     "crates/plugins/dictionary-thesaurus",
     "crates/plugins/git-repository-dashboard",
     "crates/plugins/quran-reader",
+    "crates/plugins/iptv-player",
     "crates/app",
 ]
 resolver = "2"

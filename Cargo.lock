@@ -2313,7 +2313,7 @@ dependencies = [
  "santui-core",
  "serde",
  "serde_json",
- "ureq 3.3.0",
+ "ureq",
  "url",
 ]
 
@@ -2391,7 +2391,7 @@ dependencies = [
  "santui-ipc",
  "serde",
  "serde_json",
- "ureq 3.3.0",
+ "ureq",
 ]
 
 [[package]]
@@ -2413,7 +2413,7 @@ dependencies = [
  "santui-ipc",
  "serde",
  "serde_json",
- "ureq 3.3.0",
+ "ureq",
  "urlencoding",
 ]
 
@@ -2450,7 +2450,7 @@ dependencies = [
  "santui-ipc",
  "serde",
  "serde_json",
- "ureq 3.3.0",
+ "ureq",
 ]
 
 [[package]]
@@ -2462,7 +2462,7 @@ dependencies = [
  "santui-ipc",
  "serde",
  "serde_json",
- "ureq 3.3.0",
+ "ureq",
 ]
 
 [[package]]
@@ -2475,6 +2475,19 @@ dependencies = [
  "santui-core",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "santui-iptv-player"
+version = "0.2.26"
+dependencies = [
+ "env_logger",
+ "libloading",
+ "log",
+ "santui-ipc",
+ "serde",
+ "serde_json",
+ "ureq",
 ]
 
 [[package]]
@@ -2498,7 +2511,7 @@ dependencies = [
  "santui-ipc",
  "serde",
  "serde_json",
- "ureq 3.3.0",
+ "ureq",
 ]
 
 [[package]]
@@ -2513,7 +2526,7 @@ dependencies = [
  "serde",
  "serde_json",
  "toml",
- "ureq 3.3.0",
+ "ureq",
 ]
 
 [[package]]
@@ -2549,7 +2562,7 @@ dependencies = [
  "santui-ipc",
  "serde",
  "serde_json",
- "ureq 3.3.0",
+ "ureq",
 ]
 
 [[package]]
@@ -2563,7 +2576,7 @@ dependencies = [
  "santui-ipc",
  "serde",
  "serde_json",
- "ureq 3.3.0",
+ "ureq",
 ]
 
 [[package]]
@@ -2575,7 +2588,7 @@ dependencies = [
  "rusqlite",
  "serde",
  "serde_json",
- "ureq 3.3.0",
+ "ureq",
 ]
 
 [[package]]
@@ -2600,7 +2613,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "toml",
- "ureq 3.3.0",
+ "ureq",
 ]
 
 [[package]]
@@ -2625,7 +2638,7 @@ dependencies = [
  "santui-ipc",
  "serde",
  "serde_json",
- "ureq 2.12.1",
+ "ureq",
 ]
 
 [[package]]
@@ -2684,7 +2697,7 @@ dependencies = [
  "santui-ipc",
  "serde",
  "serde_json",
- "ureq 3.3.0",
+ "ureq",
 ]
 
 [[package]]
@@ -3229,24 +3242,6 @@ checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
 
 [[package]]
 name = "ureq"
-version = "2.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02d1a66277ed75f640d608235660df48c8e3c19f3b4edb6a263315626cc3c01d"
-dependencies = [
- "base64",
- "flate2",
- "log",
- "once_cell",
- "rustls",
- "rustls-pki-types",
- "serde",
- "serde_json",
- "url",
- "webpki-roots 0.26.11",
-]
-
-[[package]]
-name = "ureq"
 version = "3.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dea7109cdcd5864d4eeb1b58a1648dc9bf520360d7af16ec26d0a9354bafcfc0"
@@ -3259,7 +3254,7 @@ dependencies = [
  "rustls-pki-types",
  "ureq-proto",
  "utf8-zero",
- "webpki-roots 1.0.8",
+ "webpki-roots",
 ]
 
 [[package]]
@@ -3421,15 +3416,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc1b4cb0cc549fcf58d7dfc081778139b3d283a081644e833e84682ad71cea24"
 dependencies = [
  "unicode-ident",
-]
-
-[[package]]
-name = "webpki-roots"
-version = "0.26.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "521bc38abb08001b01866da9f51eb7c5d647a19260e00054a8c7fd5f9e57f7a9"
-dependencies = [
- "webpki-roots 1.0.8",
 ]
 
 [[package]]

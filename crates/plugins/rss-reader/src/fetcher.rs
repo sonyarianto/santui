@@ -16,10 +16,10 @@ pub struct FeedItem {
 
 pub fn fetch_feed(url: &str) -> Result<Vec<FeedItem>, String> {
     let body = ureq::get(url)
-        .timeout(std::time::Duration::from_secs(10))
         .call()
         .map_err(|e| e.to_string())?
-        .into_string()
+        .body_mut()
+        .read_to_string()
         .map_err(|e| e.to_string())?;
 
     let feed = feed_rs::parser::parse(body.as_bytes()).map_err(|e| e.to_string())?;
