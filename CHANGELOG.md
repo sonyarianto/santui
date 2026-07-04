@@ -1,4 +1,57 @@
-## [0.2.27] - 2026-07-01
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+## [0.2.27] - 2026-07-04
+
+### ⚙️ Miscellaneous
+
+- Add git-cliff changelog generation
+- Pass --ignore flags to cargo-audit for quick-xml vulns, add audit.toml as reference
+
+### 🎨 Refactor
+
+- Remove duplicate hints in world-clock, add active panel indicator in radio-stream-player
+- Unify focus indicator styling across world-clock and radio-stream-player
+- Centralize plugin metadata into plugins-manifest.json
+
+### 🐛 Bug Fixes
+
+- Update plugin names and descriptions in dev scripts, CI, and docs
+- Right-align top bar text flush to panel border edge
+- Align plugin registry table highlight and info text with panel padding
+- Align radio-stream-player table padding, right-aligned text, and add red heart overlay
+- Rss-reader & clipboard-history padding/unicode bugs, audit ignore for quick-xml
+- Make plugin init, shutdown, and sign-in fully non-blocking
+- Validate plugin binary path is within data_dir or exe_dir
+- Resolve three TOCTOU/race condition bugs
+- Replace THEMES[1] with named lookup and improve spawn() error diagnostics
+- Replace unfulfilled expect(dead_code) with allow(dead_code)
+- Remove unused test_theme and unnecessary mut in ssh-bookmark-manager
+- Remove unused HttpMethod import in http-client ui tests
+- Remove invalid local declarations in dev-setup.sh script body
+- Suppress mpv/PipeWire stderr output in radio and IPTV plugins
+
+### 📚 Documentation
+
+- Add missing plugin Cargo.toml files to release checklist
+- Fix config path and keybindings docs in website configuration guide
+- Sync plugin lists and IPC protocol docs with new plugins
+- Sync plugin lists across docs, website, README, AGENTS with 12 missing plugins
+
+### 🚀 Features
+
+- System-monitor plugin with 4-column dashboard + Processes panel
+- World-clock plugin with timezone grid, detail view, search, and rename
+- Add PluginMessage struct and plugin_message field to PluginMsg for plugin-to-plugin messaging
+- Weather plugin with current conditions, hourly/daily forecast, and location search
+- Clipboard-history and rss-reader plugins, fix host.rs missing plugin_message fields
+- Add carousel cache, configurable keybindings, and missing plugin tests
+- Add 8 new plugins + LaunchPlugin IPC support
+- Add Quran reader plugin
+- Add IPTV Player plugin with M3U parser and mpv video playback
+\nFull Changelog: [v0.2.26...v0.2.27](https://github.com/sonyarianto/santui/compare/v0.2.26...v0.2.27)
+## [0.2.26] - 2026-07-01
 
 ### 🎨 Refactor
 
@@ -19,7 +72,7 @@
 
 - Add santui reset command
 - Add --help flag
-\nFull Changelog: [v0.2.25...v0.2.27](https://github.com/sonyarianto/santui/compare/v0.2.25...v0.2.27)
+\nFull Changelog: [v0.2.25...v0.2.26](https://github.com/sonyarianto/santui/compare/v0.2.25...v0.2.26)
 ## [0.2.25] - 2026-07-01
 
 ### 🚀 Features
