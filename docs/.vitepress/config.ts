@@ -5,6 +5,10 @@ export default defineConfig({
   title: 'WakaWiki',
   description: 'CLI that writes and maintains agent documentation for your codebase',
 
+  head: [
+    ['link', { rel: 'llms', href: '/llms.txt' }],
+  ],
+
   themeConfig: {
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
