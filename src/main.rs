@@ -34,7 +34,10 @@ async fn main() {
     let cli = Cli::parse();
 
     if cli.init {
-        config::init_config().unwrap();
+        if let Err(e) = config::init_config() {
+            eprintln!("Error during initialization: {e}");
+            std::process::exit(1);
+        }
         println!("Configuration saved. Run 'codewiki' to generate documentation.");
         return;
     }
@@ -45,14 +48,17 @@ async fn main() {
         std::process::exit(1);
     });
 
-    let project_dir = std::env::current_dir().unwrap();
+    let project_dir = std::env::current_dir().unwrap_or_else(|e| {
+        eprintln!("Error getting current directory: {e}");
+        std::process::exit(1);
+    });
     let codewiki_dir = project_dir.join("codewiki");
 
     if cli.update && codewiki_dir.exists() {
-        let wiki_meta = output::load_wiki_meta(&codewiki_dir);
+        let mut wiki_meta = output::load_wiki_meta(&codewiki_dir);
         let provider = provider::create(&cfg);
         let result =
-            agent::update_docs(&project_dir, &codewiki_dir, &wiki_meta, &provider, &cfg).await;
+            agent::update_docs(&project_dir, &codewiki_dir, &mut wiki_meta, &provider, &cfg).await;
         match result {
             Ok(()) => println!("Documentation updated."),
             Err(e) => eprintln!("Update failed: {e}"),
@@ -60,21 +66,19 @@ async fn main() {
         return;
     }
 
-    let init_prompt = if cli.prompt.is_some() {
-        cli.prompt
-    } else {
-        Some("Please generate comprehensive documentation for this codebase. Start by exploring the directory structure and key files, then create documentation covering architecture, modules, and APIs.".into())
-    };
+    let init_prompt = cli.prompt.unwrap_or_else(|| {
+        "Please generate comprehensive documentation for this codebase. Start by exploring the directory structure and key files, then create documentation covering architecture, modules, and APIs.".into()
+    });
 
     let provider = provider::create(&cfg);
 
     if cli.print_mode {
-        match agent::run_oneshot(&project_dir, &provider, &cfg, &init_prompt.unwrap()).await {
+        match agent::run_oneshot(&project_dir, &provider, &cfg, &init_prompt).await {
             Ok(output) => println!("{output}"),
             Err(e) => eprintln!("Error: {e}"),
         }
     } else {
-        match agent::run_interactive(&project_dir, &provider, &cfg, init_prompt.as_deref()).await {
+        match agent::run_interactive(&project_dir, &provider, &cfg, Some(&init_prompt)).await {
             Ok(()) => {}
             Err(e) => eprintln!("Error: {e}"),
         }

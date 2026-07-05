@@ -90,7 +90,10 @@ impl OpenAiProvider {
         }
 
         let json: Value = serde_json::from_str(&body_text)?;
-        let choice = &json["choices"][0];
+        let choice = json["choices"]
+            .as_array()
+            .and_then(|arr| arr.first())
+            .ok_or("OpenAI API returned empty choices")?;
 
         let content = choice["message"]["content"]
             .as_str()

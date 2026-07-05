@@ -152,6 +152,7 @@ fn extract_tool_calls(text: &str) -> Option<Vec<ToolCall>> {
                     name: v["tool"].as_str().unwrap_or("").to_string(),
                     arguments: v["args"].to_string(),
                 });
+                continue;
             }
         }
 

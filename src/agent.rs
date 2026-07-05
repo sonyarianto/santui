@@ -76,7 +76,7 @@ fn execute_tool(
     tool: &ToolCall,
     project_dir: &Path,
     codewiki_dir: &Path,
-    _wiki_meta: &WikiMeta,
+    wiki_meta: &mut WikiMeta,
 ) -> String {
     match tool.name.as_str() {
         "list_files" => {
@@ -178,7 +178,10 @@ fn execute_tool(
                 return "Error: no path provided".into();
             }
 
-            let _full_path = output::write_doc(codewiki_dir, path, content);
+            let full_path = output::write_doc(codewiki_dir, path, content);
+            if let Ok(hash) = scanner::compute_file_hash(&full_path) {
+                wiki_meta.file_hashes.insert(path.to_string(), hash);
+            }
             format!(
                 "Documentation written: codewiki/{} ({} bytes)",
                 path,
@@ -198,7 +201,7 @@ pub async fn run_interactive(
     let codewiki_dir = project_dir.join("codewiki");
     std::fs::create_dir_all(&codewiki_dir)?;
 
-    let wiki_meta = output::load_wiki_meta(&codewiki_dir);
+    let mut wiki_meta = output::load_wiki_meta(&codewiki_dir);
     let tools = tool_definitions();
 
     let mut messages: Vec<ChatMessage> = vec![
@@ -241,7 +244,7 @@ pub async fn run_interactive(
             for tc in &tool_calls {
                 println!("  -> {}", tc.name);
 
-                let result = execute_tool(tc, project_dir, &codewiki_dir, &wiki_meta);
+                let result = execute_tool(tc, project_dir, &codewiki_dir, &mut wiki_meta);
 
                 messages.push(ChatMessage {
                     role: "tool".into(),
@@ -301,12 +304,7 @@ pub async fn run_interactive(
         }
     }
 
-    output::save_wiki_meta(
-        &codewiki_dir,
-        &WikiMeta {
-            file_hashes: HashMap::new(),
-        },
-    );
+    output::save_wiki_meta(&codewiki_dir, &wiki_meta);
 
     let _ = output::append_agents_reference(project_dir);
 
@@ -323,7 +321,7 @@ pub async fn run_oneshot(
     let codewiki_dir = project_dir.join("codewiki");
     std::fs::create_dir_all(&codewiki_dir)?;
 
-    let wiki_meta = output::load_wiki_meta(&codewiki_dir);
+    let mut wiki_meta = output::load_wiki_meta(&codewiki_dir);
     let tools = tool_definitions();
 
     let mut messages: Vec<ChatMessage> = vec![
@@ -356,7 +354,7 @@ pub async fn run_oneshot(
             });
 
             for tc in &tool_calls {
-                let result = execute_tool(tc, project_dir, &codewiki_dir, &wiki_meta);
+                let result = execute_tool(tc, project_dir, &codewiki_dir, &mut wiki_meta);
                 messages.push(ChatMessage {
                     role: "tool".into(),
                     content: result,
@@ -383,7 +381,7 @@ pub async fn run_oneshot(
 pub async fn update_docs(
     project_dir: &Path,
     codewiki_dir: &Path,
-    wiki_meta: &WikiMeta,
+    wiki_meta: &mut WikiMeta,
     provider: &LlmProvider,
     _cfg: &Config,
 ) -> Result<(), Box<dyn std::error::Error>> {

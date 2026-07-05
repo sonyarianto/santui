@@ -93,7 +93,6 @@ pub fn search_codebase(
     Ok(results)
 }
 
-#[allow(dead_code)]
 pub fn compute_file_hash(path: &Path) -> Result<String, Box<dyn std::error::Error>> {
     use std::io::Read;
     let mut file = std::fs::File::open(path)?;
