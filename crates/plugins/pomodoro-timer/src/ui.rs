@@ -42,6 +42,7 @@ fn render_main(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         title: Some("Pomodoro Timer".into()),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
+    border_type: None,
     });
 
     let session_text = format!(
@@ -56,6 +57,7 @@ fn render_main(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
+    modifiers: 0,
     });
 
     let phase_label = state.phase.label();
@@ -67,6 +69,7 @@ fn render_main(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         fg: Some(color),
         bg: None,
         bold: true,
+    modifiers: 0,
     });
 
     let time_text = match &state.timer_state {
@@ -92,6 +95,7 @@ fn render_main(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         fg: time_fg,
         bg: None,
         bold: time_bold,
+    modifiers: 0,
     });
 
     let bar_w = w.saturating_sub(8);
@@ -108,6 +112,7 @@ fn render_main(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         fg: Some(color),
         bg: None,
         bold: false,
+    modifiers: 0,
     });
 
     let sessions_text = format!("{} sessions today", state.data.stats.sessions_completed);
@@ -119,6 +124,7 @@ fn render_main(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
+    modifiers: 0,
     });
 
     let focus_min = state.data.stats.total_focus_secs / 60;
@@ -137,6 +143,7 @@ fn render_main(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
+    modifiers: 0,
     });
 
     let hints = match &state.timer_state {
@@ -151,6 +158,7 @@ fn render_main(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
+    modifiers: 0,
     });
 
     cmds
@@ -183,6 +191,7 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
         title: Some("Settings".into()),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
+    border_type: None,
     });
 
     let fields: [(&str, String, bool); 6] = [
@@ -259,6 +268,7 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
             fg: Some(label_fg),
             bg: label_bg,
             bold,
+        modifiers: 0,
         });
 
         let value_x = popup_x + popup_w - 2 - value.len() as u16;
@@ -269,6 +279,7 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
             fg: Some(value_fg),
             bg: value_bg,
             bold,
+        modifiers: 0,
         });
     }
 
@@ -279,6 +290,7 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
+    modifiers: 0,
     });
 
     cmds

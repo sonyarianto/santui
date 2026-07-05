@@ -42,6 +42,7 @@ fn render_list(state: &SshState, theme: &ThemeData, w: u16, h: u16) -> Vec<Rende
         title: Some(title),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
+    border_type: None,
     });
 
     let inner_w = w.saturating_sub(4) as usize;
@@ -71,6 +72,7 @@ fn render_list(state: &SshState, theme: &ThemeData, w: u16, h: u16) -> Vec<Rende
         },
         bg: None,
         bold: state.filter_active,
+    modifiers: 0,
     });
     row += 1;
 
@@ -96,6 +98,7 @@ fn render_list(state: &SshState, theme: &ThemeData, w: u16, h: u16) -> Vec<Rende
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
+        modifiers: 0,
         });
     } else {
         for i in visible_start..visible_end {
@@ -136,6 +139,7 @@ fn render_list(state: &SshState, theme: &ThemeData, w: u16, h: u16) -> Vec<Rende
                     None
                 },
                 bold: is_selected,
+            modifiers: 0,
             });
         }
     }
@@ -148,6 +152,7 @@ fn render_list(state: &SshState, theme: &ThemeData, w: u16, h: u16) -> Vec<Rende
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
+    modifiers: 0,
     });
 
     cmds
@@ -174,6 +179,7 @@ fn render_detail(state: &SshState, theme: &ThemeData, w: u16, h: u16) -> Vec<Ren
         title: Some(title),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
+    border_type: None,
     });
 
     let fields: &[(&str, FieldAccessor)] = &[
@@ -225,6 +231,7 @@ fn render_detail(state: &SshState, theme: &ThemeData, w: u16, h: u16) -> Vec<Ren
             },
             bg: if is_active { Some(theme.accent) } else { None },
             bold: is_active,
+        modifiers: 0,
         });
     }
 
@@ -241,6 +248,7 @@ fn render_detail(state: &SshState, theme: &ThemeData, w: u16, h: u16) -> Vec<Ren
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
+    modifiers: 0,
     });
 
     cmds
@@ -266,6 +274,7 @@ fn render_connect(state: &SshState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         title: Some("SSH Connect".into()),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
+    border_type: None,
     });
 
     cmds.push(RenderCmd::Text {
@@ -275,6 +284,7 @@ fn render_connect(state: &SshState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         fg: Some(theme.highlight),
         bg: None,
         bold: true,
+    modifiers: 0,
     });
 
     cmds

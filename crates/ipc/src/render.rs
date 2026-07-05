@@ -1,9 +1,10 @@
-use crate::protocol::{RenderCmd, TextStyle};
-use ratatui::layout::Rect;
+use crate::protocol::{RenderCmd, TextStyle, BORDER_TYPE_DOUBLE, BORDER_TYPE_ROUNDED, BORDER_TYPE_THICK, ALIGN_CENTER, ALIGN_RIGHT};
+use ratatui::layout::{Alignment, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{
-    self, Block, Borders, Cell, ListState, Paragraph, Row, Table, TableState, Wrap,
+    self, Block, BorderType, Borders, Cell, Gauge, ListState, Paragraph, Row, Table, TableState,
+    Wrap,
 };
 use ratatui::Frame;
 
@@ -32,6 +33,9 @@ fn to_style(s: &TextStyle) -> Style {
     if s.bold {
         style = style.add_modifier(Modifier::BOLD);
     }
+    if s.modifiers != 0 {
+        style = style.add_modifier(Modifier::from_bits_truncate(s.modifiers));
+    }
     style
 }
 
@@ -55,11 +59,30 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                 text,
                 style,
                 wrap,
+                spans,
+                alignment,
             } => {
                 let p_area = clipped(area, *x, *y, *w, *h);
-                let mut p = Paragraph::new(text.as_str()).style(to_style(style));
+                let mut p = if let Some(ref spans_data) = spans {
+                    let lines: Vec<Line> = spans_data
+                        .iter()
+                        .map(|s| {
+                            Line::from(Span::styled(s.text.as_str(), to_style(&s.style)))
+                        })
+                        .collect();
+                    Paragraph::new(lines).style(to_style(style))
+                } else {
+                    Paragraph::new(text.as_str()).style(to_style(style))
+                };
                 if *wrap {
                     p = p.wrap(Wrap { trim: false });
+                }
+                if let Some(a) = alignment {
+                    if *a == ALIGN_CENTER {
+                        p = p.alignment(Alignment::Center);
+                    } else if *a == ALIGN_RIGHT {
+                        p = p.alignment(Alignment::Right);
+                    }
                 }
                 f.render_widget(p, p_area);
             }
@@ -100,6 +123,7 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                 highlight_style,
                 current_row,
                 current_style,
+                cell_styles,
             } => {
                 let table_area = clipped(area, *x, *y, *w, *h);
                 let widths: Vec<ratatui::layout::Constraint> = column_widths
@@ -112,7 +136,20 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                     .iter()
                     .enumerate()
                     .map(|(i, row)| {
-                        let cells: Vec<Cell> = row.iter().map(|c| Cell::from(c.as_str())).collect();
+                        let cells: Vec<Cell> = row
+                            .iter()
+                            .enumerate()
+                            .map(|(j, c)| {
+                                let mut cell = Cell::from(c.as_str());
+                                if let Some(ref styles) = cell_styles {
+                                    if let Some(Some(ref cs)) = styles.get(i).and_then(|r| r.get(j))
+                                    {
+                                        cell = cell.style(to_style(cs));
+                                    }
+                                }
+                                cell
+                            })
+                            .collect();
                         let mut r = Row::new(cells);
                         if let Some(cur) = current_row {
                             if i == *cur {
@@ -144,6 +181,7 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                 fg,
                 bg,
                 bold,
+                modifiers,
             } => {
                 let mut style = Style::default();
                 if let Some([r, g, b]) = fg {
@@ -154,6 +192,9 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                 }
                 if *bold {
                     style = style.add_modifier(Modifier::BOLD);
+                }
+                if *modifiers != 0 {
+                    style = style.add_modifier(Modifier::from_bits_truncate(*modifiers));
                 }
                 let rect = clipped(area, *x, *y, text.chars().count() as u16, 1);
                 f.render_widget(Paragraph::new(text.as_str()).style(style), rect);
@@ -193,6 +234,7 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                 title,
                 title_fg,
                 title_dash_fg,
+                border_type,
             } => {
                 let rect = clipped(area, *x, *y, *w, *h);
                 let fg_color = Color::Rgb(fg[0], fg[1], fg[2]);
@@ -200,6 +242,15 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                 let mut block = Block::default()
                     .borders(border_set)
                     .border_style(Style::default().fg(fg_color));
+                if let Some(bt) = border_type {
+                    if *bt == BORDER_TYPE_ROUNDED {
+                        block = block.border_type(BorderType::Rounded);
+                    } else if *bt == BORDER_TYPE_DOUBLE {
+                        block = block.border_type(BorderType::Double);
+                    } else if *bt == BORDER_TYPE_THICK {
+                        block = block.border_type(BorderType::Thick);
+                    }
+                }
                 if let Some(bg_col) = bg {
                     block = block
                         .style(Style::default().bg(Color::Rgb(bg_col[0], bg_col[1], bg_col[2])));
@@ -222,6 +273,26 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                     }
                 }
                 f.render_widget(block, rect);
+            }
+            RenderCmd::Gauge {
+                x,
+                y,
+                w,
+                h,
+                ratio,
+                label,
+                style,
+                gauge_style,
+            } => {
+                let gauge_area = clipped(area, *x, *y, *w, *h);
+                let mut gauge = Gauge::default()
+                    .ratio(*ratio)
+                    .style(to_style(style))
+                    .gauge_style(to_style(gauge_style));
+                if let Some(ref lbl) = label {
+                    gauge = gauge.label(Span::styled(lbl.as_str(), to_style(style)));
+                }
+                f.render_widget(gauge, gauge_area);
             }
         }
     }

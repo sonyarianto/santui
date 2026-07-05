@@ -37,6 +37,7 @@ fn draw_panel(
         title: Some(t),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
+    border_type: None,
     });
 
     if let Some(hints) = footer {
@@ -59,6 +60,7 @@ fn draw_panel(
                         fg: Some(theme.text_muted),
                         bg: None,
                         bold: false,
+                    modifiers: 0,
                     });
                     cx += sep_w as u16;
                     remaining -= sep_w;
@@ -77,6 +79,7 @@ fn draw_panel(
                     fg: Some(theme.text),
                     bg: None,
                     bold: false,
+                modifiers: 0,
                 });
                 cx += kw as u16;
                 remaining -= kw;
@@ -98,6 +101,7 @@ fn draw_panel(
                         fg: Some(theme.text_muted),
                         bg: None,
                         bold: false,
+                    modifiers: 0,
                     });
                     cx += (1 + dw) as u16;
                     remaining -= 1 + dw;
@@ -206,6 +210,7 @@ pub fn render_ui(
             fg: Some(theme.accent),
             bg: None,
             bold: false,
+        modifiers: 0,
         });
         cmds.push(RenderCmd::Text {
             x: right_x,
@@ -214,6 +219,7 @@ pub fn render_ui(
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
+        modifiers: 0,
         });
     } else if let Some(ref msg) = state.scan_msg {
         let max_w = left_w.saturating_sub(4) as usize;
@@ -231,6 +237,7 @@ pub fn render_ui(
             fg: Some(theme.accent),
             bg: None,
             bold: false,
+        modifiers: 0,
         });
     } else if !state.query.is_empty() {
         let left_text = format!("Filter: \"{}\"", state.query);
@@ -246,6 +253,7 @@ pub fn render_ui(
             fg: Some(theme.accent),
             bg: None,
             bold: false,
+        modifiers: 0,
         });
         cmds.push(RenderCmd::Text {
             x: right_x,
@@ -254,6 +262,7 @@ pub fn render_ui(
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
+        modifiers: 0,
         });
     } else {
         let fav_count = state.favorites_count();
@@ -272,6 +281,7 @@ pub fn render_ui(
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
+        modifiers: 0,
         });
 
         if state.show_favorites_only {
@@ -282,6 +292,7 @@ pub fn render_ui(
                 fg: Some([255, 60, 60]),
                 bg: None,
                 bold: false,
+            modifiers: 0,
             });
         } else if fav_count > 0 {
             let digit_count = state.stations.len().to_string().chars().count();
@@ -293,6 +304,7 @@ pub fn render_ui(
                 fg: Some([255, 60, 60]),
                 bg: None,
                 bold: false,
+            modifiers: 0,
             });
         }
     }
@@ -347,6 +359,7 @@ pub fn render_ui(
             fg: Some(theme.text_muted),
             bg: None,
             bold: true,
+        modifiers: 0,
         },
         rows,
         column_widths: vec![name_w as u16, genre_w as u16, country_w as u16],
@@ -355,18 +368,22 @@ pub fn render_ui(
             fg: Some(theme.text),
             bg: None,
             bold: false,
+        modifiers: 0,
         },
         highlight_style: TextStyle {
             fg: Some(theme.inverted_text),
             bg: Some(theme.highlight),
             bold: true,
+        modifiers: 0,
         },
         current_row,
         current_style: Some(TextStyle {
             fg: Some(theme.success),
             bg: None,
             bold: false,
+            modifiers: 0,
         }),
+    cell_styles: None,
     });
 
     // Red heart overlay for favorite stations (table already renders "♥ " in the name cell)
@@ -386,6 +403,7 @@ pub fn render_ui(
                 fg: Some(heart_red),
                 bg,
                 bold: false,
+            modifiers: 0,
             });
         }
     }
@@ -412,6 +430,7 @@ pub fn render_ui(
         fg: Some(theme.text),
         bg: None,
         bold: false,
+    modifiers: 0,
     });
 
     let r_inner_w = left_w.saturating_sub(4);
@@ -436,6 +455,7 @@ pub fn render_ui(
                 fg: Some(theme.success),
                 bg: None,
                 bold: true,
+            modifiers: 0,
             });
             if state.song_title.is_empty() {
                 ui::text_at(
@@ -559,6 +579,7 @@ pub fn render_ui(
                     fg: Some(theme.accent),
                     bg: None,
                     bold: true,
+                modifiers: 0,
                 });
             }
             if let Some(ref artist) = header_artist {
@@ -569,6 +590,7 @@ pub fn render_ui(
                     fg: Some(theme.text_muted),
                     bg: None,
                     bold: false,
+                modifiers: 0,
                 });
             }
             // Blank line at y=3 (both) or y=2 (title only) is implicit
@@ -609,6 +631,7 @@ pub fn render_ui(
                     fg: Some(theme.text_muted),
                     bg: None,
                     bold: false,
+                modifiers: 0,
                 });
             }
         }

@@ -460,6 +460,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         title: Some(" Cron Expression Helper ".into()),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
+    border_type: None,
     });
     push_text(
         &mut cmds,
@@ -558,6 +559,7 @@ fn render_success(
             fg: Some(theme.accent),
             bg: None,
             bold: true,
+        modifiers: 0,
         },
         rows,
         column_widths: vec![14, 12, (w / 2).saturating_sub(31)],
@@ -566,14 +568,17 @@ fn render_success(
             fg: Some(theme.text),
             bg: None,
             bold: false,
+        modifiers: 0,
         },
         highlight_style: TextStyle {
             fg: Some(theme.inverted_text),
             bg: Some(theme.highlight),
             bold: true,
+        modifiers: 0,
         },
         current_row: None,
         current_style: None,
+    cell_styles: None,
     });
     let runs = next_runs(schedule, Local::now(), app.next_count);
     let items: Vec<String> = runs
@@ -591,11 +596,13 @@ fn render_success(
             fg: Some(theme.text),
             bg: None,
             bold: false,
+        modifiers: 0,
         },
         highlight_style: TextStyle {
             fg: Some(theme.inverted_text),
             bg: Some(theme.highlight),
             bold: true,
+        modifiers: 0,
         },
     });
     let recent_h = h.saturating_sub(18).max(1);
@@ -619,11 +626,13 @@ fn render_success(
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
+        modifiers: 0,
         },
         highlight_style: TextStyle {
             fg: Some(theme.inverted_text),
             bg: Some(theme.highlight),
             bold: true,
+        modifiers: 0,
         },
     });
 }
@@ -665,6 +674,7 @@ fn push_text(
         fg: Some(fg),
         bg: None,
         bold,
+    modifiers: 0,
     });
 }
 fn default_theme() -> ThemeData {

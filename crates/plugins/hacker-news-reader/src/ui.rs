@@ -33,6 +33,7 @@ fn render_story_list(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         title: Some(format!("Hacker News \u{2014} {}", state.category.label())),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
+    border_type: None,
     });
 
     let inner_w = w.saturating_sub(4) as usize;
@@ -47,6 +48,7 @@ fn render_story_list(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<
                 fg: Some(theme.text_muted),
                 bg: None,
                 bold: false,
+            modifiers: 0,
             });
             cmds.push(RenderCmd::Text {
                 x: 1,
@@ -55,6 +57,7 @@ fn render_story_list(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<
                 fg: Some(theme.text_muted),
                 bg: None,
                 bold: false,
+            modifiers: 0,
             });
             return cmds;
         }
@@ -66,6 +69,7 @@ fn render_story_list(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<
                 fg: Some(theme.error),
                 bg: None,
                 bold: false,
+            modifiers: 0,
             });
             cmds.push(RenderCmd::Text {
                 x: 1,
@@ -74,6 +78,7 @@ fn render_story_list(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<
                 fg: Some(theme.text_muted),
                 bg: None,
                 bold: false,
+            modifiers: 0,
             });
             return cmds;
         }
@@ -88,6 +93,7 @@ fn render_story_list(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
+        modifiers: 0,
         });
         cmds.push(RenderCmd::Text {
             x: 1,
@@ -96,6 +102,7 @@ fn render_story_list(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
+        modifiers: 0,
         });
         return cmds;
     }
@@ -144,6 +151,7 @@ fn render_story_list(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<
                 None
             },
             bold: is_selected,
+        modifiers: 0,
         });
 
         let domain_part = domain
@@ -167,6 +175,7 @@ fn render_story_list(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<
                 None
             },
             bold: false,
+        modifiers: 0,
         });
     }
 
@@ -177,6 +186,7 @@ fn render_story_list(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
+    modifiers: 0,
     });
 
     cmds
@@ -202,6 +212,7 @@ fn render_comments(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         title: Some(format!("Hacker News \u{2014} {}", story_title)),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
+    border_type: None,
     });
 
     let inner_w = w.saturating_sub(4) as usize;
@@ -227,6 +238,7 @@ fn render_comments(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
             fg: Some(theme.text),
             bg: None,
             bold: true,
+        modifiers: 0,
         });
     }
 
@@ -239,6 +251,7 @@ fn render_comments(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
                 fg: Some(theme.text_muted),
                 bg: None,
                 bold: false,
+            modifiers: 0,
             });
             cmds.push(RenderCmd::Text {
                 x: 1,
@@ -247,6 +260,7 @@ fn render_comments(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
                 fg: Some(theme.text_muted),
                 bg: None,
                 bold: false,
+            modifiers: 0,
             });
             return cmds;
         }
@@ -258,6 +272,7 @@ fn render_comments(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
                 fg: Some(theme.error),
                 bg: None,
                 bold: false,
+            modifiers: 0,
             });
             cmds.push(RenderCmd::Text {
                 x: 1,
@@ -266,6 +281,7 @@ fn render_comments(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
                 fg: Some(theme.text_muted),
                 bg: None,
                 bold: false,
+            modifiers: 0,
             });
             return cmds;
         }
@@ -281,6 +297,7 @@ fn render_comments(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
+        modifiers: 0,
         });
     } else {
         let tree = build_comment_tree(&state.comments, &state.comment_ids());
@@ -307,6 +324,7 @@ fn render_comments(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
                     fg: Some(theme.text_muted),
                     bg: None,
                     bold: false,
+                modifiers: 0,
                 });
                 row += 1;
                 continue;
@@ -350,6 +368,7 @@ fn render_comments(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
                 fg: Some(theme.accent),
                 bg: None,
                 bold: false,
+            modifiers: 0,
             });
             row += 1;
 
@@ -370,6 +389,7 @@ fn render_comments(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
                     fg: Some(theme.text),
                     bg: None,
                     bold: false,
+                modifiers: 0,
                 });
                 row += 1;
             }
@@ -382,6 +402,7 @@ fn render_comments(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
                     fg: Some(theme.text_muted),
                     bg: None,
                     bold: false,
+                modifiers: 0,
                 });
                 row += 1;
             }
@@ -395,6 +416,7 @@ fn render_comments(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
+    modifiers: 0,
     });
 
     cmds

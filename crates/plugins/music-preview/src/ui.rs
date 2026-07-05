@@ -21,6 +21,7 @@ pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
         title: Some("Music Preview".into()),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
+    border_type: None,
     });
 
     let search_prompt = "> search: ";
@@ -44,6 +45,7 @@ pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
         fg: Some(theme.text),
         bg: None,
         bold: false,
+    modifiers: 0,
     });
 
     match &state.fetch_state {
@@ -55,6 +57,7 @@ pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
                 fg: Some(theme.text_muted),
                 bg: None,
                 bold: false,
+            modifiers: 0,
             });
         }
         FetchState::Error(e) => {
@@ -65,6 +68,7 @@ pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
                 fg: Some(theme.error),
                 bg: None,
                 bold: false,
+            modifiers: 0,
             });
         }
         FetchState::Done => {
@@ -76,6 +80,7 @@ pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
                     fg: Some(theme.text_muted),
                     bg: None,
                     bold: false,
+                modifiers: 0,
                 });
             } else {
                 render_results(state, theme, w, h, &mut cmds);
@@ -90,6 +95,7 @@ pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
                     fg: Some(theme.text_muted),
                     bg: None,
                     bold: false,
+                modifiers: 0,
                 });
             }
         }
@@ -102,6 +108,7 @@ pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
+    modifiers: 0,
     });
 
     cmds
@@ -144,6 +151,7 @@ fn render_results(
             },
             bg: None,
             bold: is_selected,
+        modifiers: 0,
         });
 
         let duration = track
@@ -163,6 +171,7 @@ fn render_results(
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
+        modifiers: 0,
         });
     }
 }

@@ -8,6 +8,28 @@ pub const BORDER_TOP: u8 = 4;
 pub const BORDER_BOTTOM: u8 = 8;
 pub const BORDER_ALL: u8 = 15;
 
+/// Modifier flags matching ratatui `Modifier` bits. Combine with bitwise OR.
+pub const MOD_BOLD: u16 = 0b0000_0000_0000_0001;
+pub const MOD_DIM: u16 = 0b0000_0000_0000_0010;
+pub const MOD_ITALIC: u16 = 0b0000_0000_0000_0100;
+pub const MOD_UNDERLINED: u16 = 0b0000_0000_0000_1000;
+pub const MOD_SLOW_BLINK: u16 = 0b0000_0000_0001_0000;
+pub const MOD_RAPID_BLINK: u16 = 0b0000_0000_0010_0000;
+pub const MOD_REVERSED: u16 = 0b0000_0000_0100_0000;
+pub const MOD_HIDDEN: u16 = 0b0000_0000_1000_0000;
+pub const MOD_CROSSED_OUT: u16 = 0b0000_0001_0000_0000;
+
+/// Border type constants matching ratatui `BorderType`.
+pub const BORDER_TYPE_PLAIN: u8 = 0;
+pub const BORDER_TYPE_ROUNDED: u8 = 1;
+pub const BORDER_TYPE_DOUBLE: u8 = 2;
+pub const BORDER_TYPE_THICK: u8 = 3;
+
+/// Alignment constants for `Paragraph`.
+pub const ALIGN_LEFT: u8 = 0;
+pub const ALIGN_CENTER: u8 = 1;
+pub const ALIGN_RIGHT: u8 = 2;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThemeData {
     pub text: [u8; 3],
@@ -154,6 +176,17 @@ pub struct TextStyle {
     pub bg: Option<[u8; 3]>,
     #[serde(default)]
     pub bold: bool,
+    /// Bitmask of `MOD_*` constants. Applied in addition to `bold`.
+    #[serde(default)]
+    pub modifiers: u16,
+}
+
+/// A styled span of text for rich inline formatting within `Paragraph`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpanData {
+    pub text: String,
+    #[serde(default)]
+    pub style: TextStyle,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -165,6 +198,9 @@ pub enum RenderCmd {
         fg: Option<[u8; 3]>,
         bg: Option<[u8; 3]>,
         bold: bool,
+        /// Bitmask of `MOD_*` constants.
+        #[serde(default)]
+        modifiers: u16,
     },
     Clear {
         x: u16,
@@ -205,16 +241,29 @@ pub enum RenderCmd {
         title: Option<String>,
         title_fg: Option<[u8; 3]>,
         title_dash_fg: Option<[u8; 3]>,
+        /// Border type: `BORDER_TYPE_PLAIN` (default), `BORDER_TYPE_ROUNDED`, `BORDER_TYPE_DOUBLE`, `BORDER_TYPE_THICK`.
+        #[serde(default)]
+        border_type: Option<u8>,
     },
-    /// Renders wrapped text within a rectangle.
+    /// Renders wrapped text within a rectangle. When `spans` is set, each span
+    /// can have its own style for inline rich-text formatting.
     Paragraph {
         x: u16,
         y: u16,
         w: u16,
         h: u16,
+        #[serde(default)]
         text: String,
+        #[serde(default)]
         style: TextStyle,
+        #[serde(default)]
         wrap: bool,
+        /// Optional rich-text spans. When set, `text` is ignored.
+        #[serde(default)]
+        spans: Option<Vec<SpanData>>,
+        /// Text alignment: `ALIGN_LEFT` (default), `ALIGN_CENTER`, `ALIGN_RIGHT`.
+        #[serde(default)]
+        alignment: Option<u8>,
     },
     /// A scrollable list with selection highlighting.
     List {
@@ -245,6 +294,26 @@ pub enum RenderCmd {
         current_row: Option<usize>,
         #[serde(default)]
         current_style: Option<TextStyle>,
+        /// Per-cell styles. `cell_styles[row][col]` sets the style for that cell.
+        /// `None` entries use the row's default style.
+        #[serde(default)]
+        cell_styles: Option<Vec<Vec<Option<TextStyle>>>>,
+    },
+    /// A progress bar / gauge.
+    Gauge {
+        x: u16,
+        y: u16,
+        w: u16,
+        h: u16,
+        /// Progress ratio (0.0 to 1.0).
+        ratio: f64,
+        /// Optional label rendered in the center of the gauge.
+        #[serde(default)]
+        label: Option<String>,
+        #[serde(default)]
+        style: TextStyle,
+        #[serde(default)]
+        gauge_style: TextStyle,
     },
 }
 
@@ -491,6 +560,7 @@ mod tests {
                 fg: Some([255, 0, 0]),
                 bg: None,
                 bold: true,
+                modifiers: 0,
             },
             RenderCmd::Text {
                 x: 1,
@@ -499,6 +569,7 @@ mod tests {
                 fg: None,
                 bg: Some([0, 0, 0]),
                 bold: false,
+                modifiers: 0,
             },
             RenderCmd::Rect {
                 x: 1,
@@ -525,6 +596,7 @@ mod tests {
                 title: Some("Test".into()),
                 title_fg: Some([255, 255, 255]),
                 title_dash_fg: Some([250, 178, 131]),
+                border_type: None,
             },
         ];
         for cmd in cmds {

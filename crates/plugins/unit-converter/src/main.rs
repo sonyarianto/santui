@@ -702,6 +702,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         title: Some(" Unit Converter ".into()),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
+    border_type: None,
     });
 
     let from = unit_by_id(app.from_id);
@@ -782,11 +783,13 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
             fg: Some(theme.text),
             bg: None,
             bold: false,
+        modifiers: 0,
         },
         highlight_style: TextStyle {
             fg: Some(theme.inverted_text),
             bg: Some(theme.highlight),
             bold: true,
+        modifiers: 0,
         },
     });
     push_text(
@@ -830,6 +833,7 @@ fn push_text(
         fg: Some(fg),
         bg: None,
         bold,
+    modifiers: 0,
     });
 }
 

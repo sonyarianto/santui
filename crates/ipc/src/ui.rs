@@ -68,6 +68,7 @@ pub fn palette_title(
         fg: Some(theme.text),
         bg: Some(theme.background_panel),
         bold: true,
+        modifiers: 0,
     });
     // "esc" right-aligned, dimmed (matches host palette)
     cmds.push(RenderCmd::Text {
@@ -77,6 +78,7 @@ pub fn palette_title(
         fg: Some(theme.text_muted),
         bg: Some(theme.background_panel),
         bold: false,
+        modifiers: 0,
     });
 }
 
@@ -95,6 +97,7 @@ pub fn palette_category(
         fg: Some(theme.accent),
         bg: Some(theme.background_panel),
         bold: true,
+        modifiers: 0,
     });
 }
 
@@ -122,6 +125,7 @@ pub fn palette_item(
             Some(theme.background_panel)
         },
         bold: selected,
+        modifiers: 0,
     });
 }
 
@@ -152,6 +156,7 @@ pub fn draw_panel(
         title: Some(title.trim().into()),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
+        border_type: None,
     });
 }
 
@@ -183,5 +188,6 @@ pub fn text_at(
         fg: Some(fg),
         bg,
         bold: false,
+        modifiers: 0,
     });
 }

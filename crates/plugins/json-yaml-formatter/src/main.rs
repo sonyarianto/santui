@@ -306,6 +306,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         title: Some(" JSON / YAML Formatter ".into()),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
+    border_type: None,
     });
 
     let header = format!(
@@ -350,6 +351,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         title: Some(" Input ".into()),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
+    border_type: None,
     });
     cmds.push(RenderCmd::Paragraph {
         x: 3,
@@ -361,8 +363,10 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
             fg: Some(theme.text),
             bg: None,
             bold: false,
+        modifiers: 0,
         },
         wrap: false,
+    spans: None, alignment: None,
     });
 
     cmds.push(RenderCmd::Border {
@@ -380,6 +384,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         title: Some(" Output ".into()),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
+    border_type: None,
     });
     cmds.push(RenderCmd::Paragraph {
         x: right_x + 1,
@@ -391,8 +396,10 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
             fg: Some(if result.ok { theme.text } else { theme.error }),
             bg: None,
             bold: false,
+        modifiers: 0,
         },
         wrap: false,
+    spans: None, alignment: None,
     });
 
     let counts = format!(
@@ -496,6 +503,7 @@ fn push_text(
         fg: Some(fg),
         bg: None,
         bold,
+    modifiers: 0,
     });
 }
 

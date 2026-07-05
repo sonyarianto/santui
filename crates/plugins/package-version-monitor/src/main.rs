@@ -671,6 +671,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         title: Some(" Package Version Monitor ".into()),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
+    border_type: None,
     });
     match &app.screen {
         Screen::List => render_list(app, &mut cmds, &theme, w, h),
@@ -735,6 +736,7 @@ fn render_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, 
             fg: Some(theme.accent),
             bg: None,
             bold: true,
+        modifiers: 0,
         },
         rows,
         column_widths: vec![18, 13, 12, 7, 9],
@@ -743,14 +745,17 @@ fn render_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, 
             fg: Some(theme.text),
             bg: None,
             bold: false,
+        modifiers: 0,
         },
         highlight_style: TextStyle {
             fg: Some(theme.inverted_text),
             bg: Some(theme.highlight),
             bold: true,
+        modifiers: 0,
         },
         current_row: None,
         current_style: None,
+    cell_styles: None,
     });
     cmds.push(RenderCmd::Border {
         x: detail_x,
@@ -763,6 +768,7 @@ fn render_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, 
         title: Some(" Detail ".into()),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
+    border_type: None,
     });
     if let Some(dep) = app.selected_dep() {
         let detail = format!("{}\nProject: {}\nEcosystem: {}\nRequirement: {}\nLatest: {}\nStatus: {}\nSource: {}\nURL: {}\n{}", dep.name, dep.project, dep.ecosystem.label(), dep.requirement, dep.latest.as_deref().unwrap_or("-"), dep.status.label(), dep.source_file, dep.package_url, dep.error);
@@ -776,8 +782,10 @@ fn render_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, 
                 fg: Some(theme.text),
                 bg: None,
                 bold: false,
+            modifiers: 0,
             },
             wrap: true,
+        spans: None, alignment: None,
         });
     }
     push_text(
@@ -881,6 +889,7 @@ fn push_text(
         fg: Some(fg),
         bg: None,
         bold,
+    modifiers: 0,
     });
 }
 fn default_theme() -> ThemeData {

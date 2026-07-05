@@ -545,6 +545,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         title: Some(" Bookmark Launcher ".into()),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
+    border_type: None,
     });
     match &app.screen {
         Screen::List => render_list(app, &mut cmds, &theme, w, h),
@@ -569,6 +570,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
                 title: Some(" Confirm ".into()),
                 title_fg: Some(theme.text),
                 title_dash_fg: Some(theme.error),
+            border_type: None,
             });
             push_text(
                 &mut cmds,
@@ -617,11 +619,13 @@ fn render_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, 
             fg: Some(theme.text),
             bg: None,
             bold: false,
+        modifiers: 0,
         },
         highlight_style: TextStyle {
             fg: Some(theme.inverted_text),
             bg: Some(theme.highlight),
             bold: true,
+        modifiers: 0,
         },
     });
     cmds.push(RenderCmd::Border {
@@ -635,6 +639,7 @@ fn render_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, 
         title: Some(" Detail ".into()),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
+    border_type: None,
     });
     if let Some(bookmark) = app.selected_bookmark() {
         let detail = format!(
@@ -655,8 +660,10 @@ fn render_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, 
                 fg: Some(theme.text),
                 bg: None,
                 bold: false,
+            modifiers: 0,
             },
             wrap: true,
+        spans: None, alignment: None,
         });
     }
     push_text(
@@ -765,6 +772,7 @@ fn push_text(
         fg: Some(fg),
         bg: None,
         bold,
+    modifiers: 0,
     });
 }
 fn default_theme() -> ThemeData {

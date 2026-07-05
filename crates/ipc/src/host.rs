@@ -1218,6 +1218,7 @@ mod tests {
                 fg: None,
                 bg: None,
                 bold: false,
+                modifiers: 0,
             }],
             hints: vec![("new".into(), "hint".into())],
             palette_commands: vec![],

@@ -71,6 +71,7 @@ impl App {
                 fg: Some(t.text_muted),
                 bg: None,
                 bold: false,
+            modifiers: 0,
             });
         }
 
@@ -97,6 +98,7 @@ impl App {
                 fg: Some(t.accent),
                 bg: None,
                 bold: false,
+            modifiers: 0,
             });
         }
 
@@ -112,6 +114,7 @@ impl App {
                     fg: self.fg(t.text_muted),
                     bg: self.bg(),
                     bold: false,
+                modifiers: 0,
                 });
                 return;
             }
@@ -201,6 +204,7 @@ impl App {
                     fg: Some(t.text_muted),
                     bg: None,
                     bold: true,
+                modifiers: 0,
                 },
                 rows,
                 column_widths: vec![
@@ -216,14 +220,17 @@ impl App {
                     fg: Some(t.text),
                     bg: None,
                     bold: false,
+                modifiers: 0,
                 },
                 highlight_style: TextStyle {
                     fg: Some(t.inverted_text),
                     bg: Some(t.highlight),
                     bold: true,
+                modifiers: 0,
                 },
                 current_row: None,
                 current_style: None,
+            cell_styles: None,
             });
         }
     }
@@ -267,6 +274,7 @@ impl App {
             fg: field_fg,
             bg,
             bold: false,
+        modifiers: 0,
         });
 
         if has_publisher {
@@ -277,6 +285,7 @@ impl App {
                 fg: field_fg,
                 bg,
                 bold: false,
+            modifiers: 0,
             });
         }
 
@@ -316,6 +325,7 @@ impl App {
             fg: field_fg,
             bg,
             bold: false,
+        modifiers: 0,
         });
 
         let status_str = if installed_idx != usize::MAX {
@@ -340,6 +350,7 @@ impl App {
             fg: status_color,
             bg,
             bold: false,
+        modifiers: 0,
         });
 
         // Action items
@@ -367,6 +378,7 @@ impl App {
             fg: dim_fg,
             bg,
             bold: false,
+        modifiers: 0,
         });
         cmds.push(RenderCmd::Text {
             x: ix,
@@ -375,6 +387,7 @@ impl App {
             fg: dim_fg,
             bg,
             bold: false,
+        modifiers: 0,
         });
         cmds.push(RenderCmd::Text {
             x: ix,
@@ -383,6 +396,7 @@ impl App {
             fg: dim_fg,
             bg,
             bold: false,
+        modifiers: 0,
         });
     }
 }

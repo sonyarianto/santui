@@ -63,6 +63,7 @@ fn render_overview(state: &WeatherState, theme: &ThemeData, w: u16, h: u16) -> V
         title: Some(title),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
+    border_type: None,
     });
 
     if state.settings.location.is_none() {
@@ -73,6 +74,7 @@ fn render_overview(state: &WeatherState, theme: &ThemeData, w: u16, h: u16) -> V
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
+        modifiers: 0,
         });
         cmds.push(RenderCmd::Text {
             x: w / 2 - 14,
@@ -81,6 +83,7 @@ fn render_overview(state: &WeatherState, theme: &ThemeData, w: u16, h: u16) -> V
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
+        modifiers: 0,
         });
         return cmds;
     }
@@ -94,6 +97,7 @@ fn render_overview(state: &WeatherState, theme: &ThemeData, w: u16, h: u16) -> V
                 fg: Some(theme.text_muted),
                 bg: None,
                 bold: false,
+            modifiers: 0,
             });
             return cmds;
         }
@@ -105,6 +109,7 @@ fn render_overview(state: &WeatherState, theme: &ThemeData, w: u16, h: u16) -> V
                 fg: Some(theme.error),
                 bg: None,
                 bold: false,
+            modifiers: 0,
             });
             // hints handled by status_hints
             return cmds;
@@ -132,6 +137,7 @@ fn render_overview(state: &WeatherState, theme: &ThemeData, w: u16, h: u16) -> V
             fg: Some(theme.text),
             bg: None,
             bold: true,
+        modifiers: 0,
         });
         row += 1;
 
@@ -142,6 +148,7 @@ fn render_overview(state: &WeatherState, theme: &ThemeData, w: u16, h: u16) -> V
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
+        modifiers: 0,
         });
         row += 2;
 
@@ -158,6 +165,7 @@ fn render_overview(state: &WeatherState, theme: &ThemeData, w: u16, h: u16) -> V
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
+        modifiers: 0,
         });
         row += 2;
 
@@ -183,6 +191,7 @@ fn render_overview(state: &WeatherState, theme: &ThemeData, w: u16, h: u16) -> V
                 fg: Some(theme.text),
                 bg: None,
                 bold: false,
+            modifiers: 0,
             });
             row += 1;
         }
@@ -210,6 +219,7 @@ fn render_overview(state: &WeatherState, theme: &ThemeData, w: u16, h: u16) -> V
                 fg: Some(theme.text),
                 bg: None,
                 bold: false,
+            modifiers: 0,
             });
         }
     }
@@ -238,6 +248,7 @@ fn render_hourly(state: &WeatherState, theme: &ThemeData, w: u16, h: u16) -> Vec
         title: Some(format!("Hourly Forecast — {}", location)),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
+    border_type: None,
     });
 
     if let Some(ref data) = state.data {
@@ -262,6 +273,7 @@ fn render_hourly(state: &WeatherState, theme: &ThemeData, w: u16, h: u16) -> Vec
                 fg: Some(theme.text_muted),
                 bg: None,
                 bold: false,
+            modifiers: 0,
             });
             cmds.push(RenderCmd::Text {
                 x: 2,
@@ -270,6 +282,7 @@ fn render_hourly(state: &WeatherState, theme: &ThemeData, w: u16, h: u16) -> Vec
                 fg: Some(theme.text),
                 bg: None,
                 bold: false,
+            modifiers: 0,
             });
             cmds.push(RenderCmd::Text {
                 x: 2,
@@ -278,6 +291,7 @@ fn render_hourly(state: &WeatherState, theme: &ThemeData, w: u16, h: u16) -> Vec
                 fg: Some(theme.accent),
                 bg: None,
                 bold: true,
+            modifiers: 0,
             });
             let precip_color = |p: u8| -> [u8; 3] {
                 if p < 30 {
@@ -296,6 +310,7 @@ fn render_hourly(state: &WeatherState, theme: &ThemeData, w: u16, h: u16) -> Vec
                     fg: Some(precip_color(h.precip_prob)),
                     bg: None,
                     bold: false,
+                modifiers: 0,
                 });
             }
         }
@@ -308,6 +323,7 @@ fn render_hourly(state: &WeatherState, theme: &ThemeData, w: u16, h: u16) -> Vec
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
+    modifiers: 0,
     });
 
     cmds
@@ -334,6 +350,7 @@ fn render_daily(state: &WeatherState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         title: Some(format!("7-Day Forecast — {}", location)),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
+    border_type: None,
     });
 
     if let Some(ref data) = state.data {
@@ -352,6 +369,7 @@ fn render_daily(state: &WeatherState, theme: &ThemeData, w: u16, h: u16) -> Vec<
             fg: Some(theme.accent),
             bg: None,
             bold: true,
+        modifiers: 0,
         });
 
         for (i, day) in data.daily.iter().enumerate() {
@@ -386,6 +404,7 @@ fn render_daily(state: &WeatherState, theme: &ThemeData, w: u16, h: u16) -> Vec<
                     None
                 },
                 bold: is_selected,
+            modifiers: 0,
             });
         }
     }
@@ -428,6 +447,7 @@ fn render_location_search(
         title: Some("Set Location".into()),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
+    border_type: None,
     });
 
     let input_text = format!("> {}", state.search_query);
@@ -438,6 +458,7 @@ fn render_location_search(
         fg: Some(theme.text),
         bg: None,
         bold: false,
+    modifiers: 0,
     });
 
     if state.search_fetching {
@@ -448,6 +469,7 @@ fn render_location_search(
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
+        modifiers: 0,
         });
     } else {
         let list_y = popup_y + 2;
@@ -480,6 +502,7 @@ fn render_location_search(
                 },
                 bg: None,
                 bold: is_selected,
+            modifiers: 0,
             });
         }
     }
@@ -491,6 +514,7 @@ fn render_location_search(
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
+    modifiers: 0,
     });
 
     cmds
