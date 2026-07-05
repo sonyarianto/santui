@@ -420,6 +420,7 @@ mod tests {
     impl TestHarness {
         fn new(name: &str) -> Self {
             let dir = std::env::temp_dir().join(format!("santui-reg-test-{name}"));
+            let _ = std::fs::remove_dir_all(&dir);
             let _ = std::fs::create_dir_all(&dir);
             let r = santui_registry::Registry::new(dir.clone());
             let mut app = App::new();
