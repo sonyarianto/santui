@@ -12,10 +12,6 @@ hero:
     - theme: alt
       text: View on GitHub
       link: https://github.com/sonyarianto/wakawiki
-  image:
-    src: /logo.svg
-    alt: WakaWiki
-
 features:
   - icon: 🤖
     title: Agent-Driven
