@@ -72,11 +72,11 @@ impl OpencodeProvider {
         }
 
         let output = tokio::time::timeout(
-            Duration::from_secs(120),
+            Duration::from_secs(600),
             tokio::task::spawn_blocking(move || cmd.output()),
         )
         .await
-        .map_err(|_| "opencode timed out after 120 seconds")???;
+        .map_err(|_| "opencode timed out after 600 seconds")???;
 
         if !output.status.success() {
             return Err(format!("opencode exited with status: {}", output.status).into());
