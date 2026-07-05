@@ -116,4 +116,4 @@ Prerequisites:
 
 - `docs/architecture.md` — architecture & IPC plugin model
 - `docs/conventions.md` — coding conventions
-- `docs/development.md` — tooling setup (lefthook, pre-commit hooks)
+- `docs/development.md` — tooling setup, pre-commit checks
