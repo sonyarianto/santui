@@ -197,6 +197,19 @@ impl App {
                 }
                 true
             }
+            IpcKey::PageUp => {
+                let page = super::render::max_list_h(self.area.h) as usize;
+                self.cursor = self.cursor.saturating_sub(page);
+                self.ensure_scroll_visible();
+                true
+            }
+            IpcKey::PageDown => {
+                let page = super::render::max_list_h(self.area.h) as usize;
+                let max = self.available_count().saturating_sub(1);
+                self.cursor = (self.cursor + page).min(max);
+                self.ensure_scroll_visible();
+                true
+            }
             IpcKey::Enter | IpcKey::Char('d') | IpcKey::Char('D') => {
                 let count = self.available_count();
                 if self.cursor < count {

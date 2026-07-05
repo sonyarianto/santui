@@ -1,4 +1,7 @@
-use crate::protocol::{RenderCmd, TextStyle, BORDER_TYPE_DOUBLE, BORDER_TYPE_ROUNDED, BORDER_TYPE_THICK, ALIGN_CENTER, ALIGN_RIGHT};
+use crate::protocol::{
+    RenderCmd, TextStyle, ALIGN_CENTER, ALIGN_RIGHT, BORDER_TYPE_DOUBLE, BORDER_TYPE_ROUNDED,
+    BORDER_TYPE_THICK,
+};
 use ratatui::layout::{Alignment, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
@@ -66,9 +69,7 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                 let mut p = if let Some(ref spans_data) = spans {
                     let lines: Vec<Line> = spans_data
                         .iter()
-                        .map(|s| {
-                            Line::from(Span::styled(s.text.as_str(), to_style(&s.style)))
-                        })
+                        .map(|s| Line::from(Span::styled(s.text.as_str(), to_style(&s.style))))
                         .collect();
                     Paragraph::new(lines).style(to_style(style))
                 } else {

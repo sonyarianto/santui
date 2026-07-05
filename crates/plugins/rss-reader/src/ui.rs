@@ -69,7 +69,7 @@ fn render_feed_list(
         title: Some(title),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     let mut row = 1u16;
@@ -82,7 +82,7 @@ fn render_feed_list(
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
         row += 1;
     }
@@ -108,7 +108,7 @@ fn render_feed_list(
             None
         },
         bold: true,
-    modifiers: 0,
+        modifiers: 0,
     });
     row += 1;
 
@@ -136,7 +136,7 @@ fn render_feed_list(
                 None
             },
             bold: is_selected || unread > 0,
-        modifiers: 0,
+            modifiers: 0,
         });
         row += 1;
     }
@@ -178,7 +178,7 @@ fn render_item_list(
         title: Some(title),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     let max_w = w.saturating_sub(4) as usize;
@@ -234,7 +234,7 @@ fn render_item_list(
                 None
             },
             bold: is_selected || !item.is_read,
-        modifiers: 0,
+            modifiers: 0,
         });
     }
 }
@@ -280,7 +280,7 @@ fn render_item_view(
         title: Some(title_str),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     let mut row = 1u16;
@@ -304,7 +304,7 @@ fn render_item_view(
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
         row += 1;
     }
@@ -318,7 +318,7 @@ fn render_item_view(
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
     }
 
@@ -334,10 +334,11 @@ fn render_item_view(
                 fg: Some(theme.text),
                 bg: None,
                 bold: false,
-            modifiers: 0,
+                modifiers: 0,
             },
             wrap: true,
-        spans: None, alignment: None,
+            spans: None,
+            alignment: None,
         });
     }
 }
@@ -366,7 +367,7 @@ fn render_add_feed(cmds: &mut Vec<RenderCmd>, state: &RssState, theme: &ThemeDat
         title: Some("Add Feed".into()),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
     cmds.push(RenderCmd::Text {
         x: popup_x + 2,
@@ -375,7 +376,7 @@ fn render_add_feed(cmds: &mut Vec<RenderCmd>, state: &RssState, theme: &ThemeDat
         fg: Some(theme.text),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
     cmds.push(RenderCmd::Text {
         x: popup_x + 2,
@@ -384,7 +385,7 @@ fn render_add_feed(cmds: &mut Vec<RenderCmd>, state: &RssState, theme: &ThemeDat
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 }
 
@@ -425,7 +426,7 @@ fn render_confirm_remove(
         title: Some("Remove Feed?".into()),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
     cmds.push(RenderCmd::Text {
         x: popup_x + 2,
@@ -434,7 +435,7 @@ fn render_confirm_remove(
         fg: Some(theme.text),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
     cmds.push(RenderCmd::Text {
         x: popup_x + 2,
@@ -443,7 +444,7 @@ fn render_confirm_remove(
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
     cmds.push(RenderCmd::Text {
         x: popup_x + 2,
@@ -452,7 +453,7 @@ fn render_confirm_remove(
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 }
 

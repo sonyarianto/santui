@@ -42,7 +42,7 @@ fn render_editor(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         title: Some("HTTP Client".into()),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     let field_w = w.saturating_sub(8).max(20);
@@ -67,7 +67,7 @@ fn render_editor(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         },
         bg: None,
         bold: method_active,
-    modifiers: 0,
+        modifiers: 0,
     });
     row += 1;
 
@@ -94,7 +94,7 @@ fn render_editor(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         },
         bg: None,
         bold: url_active,
-    modifiers: 0,
+        modifiers: 0,
     });
     row += 1;
 
@@ -120,7 +120,7 @@ fn render_editor(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         },
         bg: None,
         bold: headers_active,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     if headers_active && !state.headers_text.is_empty() {
@@ -135,7 +135,7 @@ fn render_editor(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Vec<
                 fg: Some(theme.text_muted),
                 bg: None,
                 bold: false,
-            modifiers: 0,
+                modifiers: 0,
             });
         }
     }
@@ -167,7 +167,7 @@ fn render_editor(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         },
         bg: None,
         bold: body_active,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     if body_active && !state.body_text.is_empty() {
@@ -182,7 +182,7 @@ fn render_editor(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Vec<
                 fg: Some(theme.text_muted),
                 bg: None,
                 bold: false,
-            modifiers: 0,
+                modifiers: 0,
             });
         }
     }
@@ -196,7 +196,7 @@ fn render_editor(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     cmds
@@ -216,7 +216,7 @@ fn render_response(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Ve
         title: Some("HTTP Client — Response".into()),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     let col_x = 2u16;
@@ -231,7 +231,7 @@ fn render_response(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Ve
                 fg: Some(theme.text_muted),
                 bg: None,
                 bold: false,
-            modifiers: 0,
+                modifiers: 0,
             });
             return cmds;
         }
@@ -247,7 +247,7 @@ fn render_response(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Ve
                 title: Some("Status".into()),
                 title_fg: Some(theme.error),
                 title_dash_fg: None,
-            border_type: None,
+                border_type: None,
             });
             cmds.push(RenderCmd::Text {
                 x: col_x + 1,
@@ -256,7 +256,7 @@ fn render_response(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Ve
                 fg: Some(theme.error),
                 bg: None,
                 bold: false,
-            modifiers: 0,
+                modifiers: 0,
             });
             cmds.push(RenderCmd::Text {
                 x: 1,
@@ -265,7 +265,7 @@ fn render_response(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Ve
                 fg: Some(theme.text_muted),
                 bg: None,
                 bold: false,
-            modifiers: 0,
+                modifiers: 0,
             });
             return cmds;
         }
@@ -282,7 +282,7 @@ fn render_response(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Ve
                 fg: Some(theme.text_muted),
                 bg: None,
                 bold: false,
-            modifiers: 0,
+                modifiers: 0,
             });
             return cmds;
         }
@@ -303,7 +303,7 @@ fn render_response(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Ve
         fg: Some(theme.accent),
         bg: None,
         bold: true,
-    modifiers: 0,
+        modifiers: 0,
     });
     row += 1;
     cmds.push(RenderCmd::Text {
@@ -316,7 +316,7 @@ fn render_response(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Ve
         fg: Some(status_color),
         bg: None,
         bold: true,
-    modifiers: 0,
+        modifiers: 0,
     });
     row += 2;
 
@@ -328,7 +328,7 @@ fn render_response(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Ve
         fg: Some(theme.accent),
         bg: None,
         bold: true,
-    modifiers: 0,
+        modifiers: 0,
     });
     row += 1;
     let max_headers = 8usize;
@@ -344,7 +344,7 @@ fn render_response(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Ve
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
         row += 1;
     }
@@ -358,7 +358,7 @@ fn render_response(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Ve
         fg: Some(theme.accent),
         bg: None,
         bold: true,
-    modifiers: 0,
+        modifiers: 0,
     });
     row += 1;
 
@@ -376,7 +376,7 @@ fn render_response(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Ve
             fg: Some(theme.text),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
         row += 1;
     }
@@ -389,7 +389,7 @@ fn render_response(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Ve
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
     }
 
@@ -400,7 +400,7 @@ fn render_response(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Ve
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     cmds
@@ -420,7 +420,7 @@ fn render_history(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Vec
         title: Some("HTTP Client — History".into()),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     render_entry_list(&mut cmds, state, theme, w, h, true);
@@ -432,7 +432,7 @@ fn render_history(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Vec
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     cmds
@@ -452,7 +452,7 @@ fn render_saved(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
         title: Some("HTTP Client — Saved".into()),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     render_entry_list(&mut cmds, state, theme, w, h, false);
@@ -464,7 +464,7 @@ fn render_saved(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     cmds
@@ -518,7 +518,7 @@ fn render_entry_list(
                 None
             },
             bold: is_selected,
-        modifiers: 0,
+            modifiers: 0,
         });
     }
 }
@@ -551,7 +551,7 @@ fn render_method_picker(state: &ClientState, theme: &ThemeData, w: u16, h: u16) 
         title: Some("Select Method".into()),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     for (i, method) in methods.iter().enumerate() {
@@ -576,7 +576,7 @@ fn render_method_picker(state: &ClientState, theme: &ThemeData, w: u16, h: u16) 
                 None
             },
             bold: is_selected,
-        modifiers: 0,
+            modifiers: 0,
         });
     }
 

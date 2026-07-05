@@ -37,7 +37,7 @@ fn render_list(state: &ClipState, theme: &ThemeData, w: u16, h: u16) -> Vec<Rend
         title: Some(title),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     let search_text = if state.search_query.is_empty() {
@@ -52,7 +52,7 @@ fn render_list(state: &ClipState, theme: &ThemeData, w: u16, h: u16) -> Vec<Rend
         fg: Some(theme.text),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     if state.filtered.is_empty() && state.entries.is_empty() {
@@ -63,7 +63,7 @@ fn render_list(state: &ClipState, theme: &ThemeData, w: u16, h: u16) -> Vec<Rend
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
     } else if state.filtered.is_empty() && !state.entries.is_empty() {
         cmds.push(RenderCmd::Text {
@@ -73,7 +73,7 @@ fn render_list(state: &ClipState, theme: &ThemeData, w: u16, h: u16) -> Vec<Rend
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
     } else {
         for (i, &entry_idx) in state.filtered.iter().enumerate() {
@@ -99,7 +99,7 @@ fn render_list(state: &ClipState, theme: &ThemeData, w: u16, h: u16) -> Vec<Rend
                     None
                 },
                 bold: is_selected,
-            modifiers: 0,
+                modifiers: 0,
             });
 
             if is_copied {
@@ -115,7 +115,7 @@ fn render_list(state: &ClipState, theme: &ThemeData, w: u16, h: u16) -> Vec<Rend
                         None
                     },
                     bold: false,
-                modifiers: 0,
+                    modifiers: 0,
                 });
             }
 
@@ -131,7 +131,7 @@ fn render_list(state: &ClipState, theme: &ThemeData, w: u16, h: u16) -> Vec<Rend
                     None
                 },
                 bold: false,
-            modifiers: 0,
+                modifiers: 0,
             });
         }
     }
@@ -144,7 +144,7 @@ fn render_list(state: &ClipState, theme: &ThemeData, w: u16, h: u16) -> Vec<Rend
             fg: Some(theme.error),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
     }
 
@@ -168,7 +168,7 @@ fn render_view(state: &ClipState, theme: &ThemeData, w: u16, h: u16, idx: usize)
         title: Some(title),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     cmds.push(RenderCmd::Paragraph {
@@ -181,10 +181,11 @@ fn render_view(state: &ClipState, theme: &ThemeData, w: u16, h: u16, idx: usize)
             fg: Some(theme.text),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         },
         wrap: true,
-    spans: None, alignment: None,
+        spans: None,
+        alignment: None,
     });
 
     let char_count = format!("{} characters", entry.content.chars().count());
@@ -195,7 +196,7 @@ fn render_view(state: &ClipState, theme: &ThemeData, w: u16, h: u16, idx: usize)
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     cmds

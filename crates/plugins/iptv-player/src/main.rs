@@ -679,7 +679,7 @@ impl App {
                         fg: Some(self.theme.error),
                         bg: None,
                         bold: false,
-                    modifiers: 0,
+                        modifiers: 0,
                     }];
                 } else {
                     let mut lines = vec![format!("{err}")];
@@ -698,7 +698,7 @@ impl App {
                         fg: Some(self.theme.error),
                         bg: None,
                         bold: false,
-                    modifiers: 0,
+                        modifiers: 0,
                     }];
                 }
             } else {

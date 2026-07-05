@@ -43,7 +43,7 @@ fn render_overview(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> Vec
         title: Some(title),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     let habits = state.filtered_habits();
@@ -58,7 +58,7 @@ fn render_overview(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> Vec
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
         cmds.push(RenderCmd::Text {
             x: 2,
@@ -67,7 +67,7 @@ fn render_overview(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> Vec
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
     } else {
         let _max_visible = (h.saturating_sub(6)) as usize;
@@ -111,7 +111,7 @@ fn render_overview(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> Vec
                     None
                 },
                 bold: is_selected,
-            modifiers: 0,
+                modifiers: 0,
             });
         }
     }
@@ -124,7 +124,7 @@ fn render_overview(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> Vec
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     let hints = if state.filter_mode {
@@ -139,7 +139,7 @@ fn render_overview(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> Vec
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     cmds
@@ -200,7 +200,7 @@ fn render_detail(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
         title: Some(title),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     let weeks = state.heatmap_weeks(habit_id);
@@ -223,7 +223,7 @@ fn render_detail(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
             fg: Some(theme.accent),
             bg: None,
             bold: true,
-        modifiers: 0,
+            modifiers: 0,
         });
     }
 
@@ -282,7 +282,7 @@ fn render_detail(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
                 },
                 bg: if is_cursor { Some(theme.accent) } else { None },
                 bold: bold || is_cursor,
-            modifiers: 0,
+                modifiers: 0,
             });
         }
     }
@@ -310,7 +310,7 @@ fn render_detail(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
             fg: Some(theme.text),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
     }
 
@@ -333,7 +333,7 @@ fn render_detail(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
                 fg: Some(theme.text_muted),
                 bg: None,
                 bold: false,
-            modifiers: 0,
+                modifiers: 0,
             });
         }
     }
@@ -372,7 +372,7 @@ fn render_editor(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
         title: Some(title),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     let habit = state.editor_habit.clone().unwrap_or_default();
@@ -421,7 +421,7 @@ fn render_editor(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
             },
             bg: if is_focused { Some(theme.accent) } else { None },
             bold: is_focused,
-        modifiers: 0,
+            modifiers: 0,
         });
     }
 
@@ -444,7 +444,7 @@ fn render_editor(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     cmds.push(RenderCmd::Text {
@@ -454,7 +454,7 @@ fn render_editor(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     cmds
@@ -477,7 +477,7 @@ fn render_day_detail(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> V
         title: Some(title),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     cmds.push(RenderCmd::Text {
@@ -487,7 +487,7 @@ fn render_day_detail(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> V
         fg: Some(theme.accent),
         bg: None,
         bold: true,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     let habits = state.filtered_habits();
@@ -547,7 +547,7 @@ fn render_day_detail(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> V
                 None
             },
             bold: is_selected,
-        modifiers: 0,
+            modifiers: 0,
         });
     }
 
@@ -562,7 +562,7 @@ fn render_day_detail(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> V
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     cmds

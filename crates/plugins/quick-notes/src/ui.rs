@@ -27,7 +27,7 @@ fn render_list(state: &NotesState, theme: &ThemeData, w: u16, h: u16) -> Vec<Ren
         title: Some(title),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     // Search bar
@@ -39,7 +39,7 @@ fn render_list(state: &NotesState, theme: &ThemeData, w: u16, h: u16) -> Vec<Ren
         fg: Some(theme.text),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     // Separator
@@ -51,7 +51,7 @@ fn render_list(state: &NotesState, theme: &ThemeData, w: u16, h: u16) -> Vec<Ren
         fg: Some(theme.border),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     let visible_count = (h as usize).saturating_sub(4);
@@ -77,7 +77,7 @@ fn render_list(state: &NotesState, theme: &ThemeData, w: u16, h: u16) -> Vec<Ren
                     fg,
                     bg: None,
                     bold: fi == state.list_cursor,
-                modifiers: 0,
+                    modifiers: 0,
                 });
             }
         }
@@ -91,7 +91,7 @@ fn render_list(state: &NotesState, theme: &ThemeData, w: u16, h: u16) -> Vec<Ren
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
     }
 
@@ -119,7 +119,7 @@ fn render_view(
         title: Some(format!(" {} ", note.title)),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     let body_height = h.saturating_sub(3) as usize;
@@ -132,7 +132,7 @@ fn render_view(
             fg: Some(theme.text),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
     }
 
@@ -160,7 +160,7 @@ fn render_edit(
         title: Some(format!(" Editing: {} ", note.title)),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     let body_height = h.saturating_sub(3) as usize;
@@ -173,7 +173,7 @@ fn render_edit(
             fg: Some(theme.text),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
     }
 
@@ -205,7 +205,7 @@ fn render_new_title(state: &NotesState, theme: &ThemeData, w: u16, _h: u16) -> V
         title: Some(" New Note ".into()),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     cmds.push(RenderCmd::Text {
@@ -215,7 +215,7 @@ fn render_new_title(state: &NotesState, theme: &ThemeData, w: u16, _h: u16) -> V
         fg: Some(theme.text),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     cmds.push(RenderCmd::Text {
@@ -225,7 +225,7 @@ fn render_new_title(state: &NotesState, theme: &ThemeData, w: u16, _h: u16) -> V
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     cmds
@@ -256,7 +256,7 @@ fn render_rename(state: &NotesState, theme: &ThemeData, w: u16, _h: u16) -> Vec<
         title: Some(" Rename Note ".into()),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     cmds.push(RenderCmd::Text {
@@ -266,7 +266,7 @@ fn render_rename(state: &NotesState, theme: &ThemeData, w: u16, _h: u16) -> Vec<
         fg: Some(theme.text),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     cmds.push(RenderCmd::Text {
@@ -276,7 +276,7 @@ fn render_rename(state: &NotesState, theme: &ThemeData, w: u16, _h: u16) -> Vec<
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     cmds
@@ -318,7 +318,7 @@ fn render_confirm_delete(
         title: Some(" Delete Note? ".into()),
         title_fg: Some(theme.error),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     cmds.push(RenderCmd::Text {
@@ -328,7 +328,7 @@ fn render_confirm_delete(
         fg: Some(theme.text),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
     cmds.push(RenderCmd::Text {
         x: popup_x + 2,
@@ -337,7 +337,7 @@ fn render_confirm_delete(
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
     cmds.push(RenderCmd::Text {
         x: popup_x + 2,
@@ -346,7 +346,7 @@ fn render_confirm_delete(
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     cmds

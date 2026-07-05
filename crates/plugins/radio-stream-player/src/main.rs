@@ -643,7 +643,7 @@ impl App {
                     fg: Some(self.theme.error),
                     bg: None,
                     bold: false,
-                modifiers: 0,
+                    modifiers: 0,
                 }]
             } else {
                 ui::render_ui(&self.state, &self.theme, self.area.w, self.area.h)

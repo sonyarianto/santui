@@ -53,7 +53,7 @@ pub fn render_bar(
             fg: Some(theme.text),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
         return cmds;
     }
@@ -75,7 +75,7 @@ pub fn render_bar(
         fg: Some(theme.text),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
     cmds.push(RenderCmd::Text {
         x: x + bar_offset,
@@ -84,7 +84,7 @@ pub fn render_bar(
         fg: Some(bar_color),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     cmds
@@ -135,7 +135,7 @@ pub fn render_sparkline(
         fg: Some(color),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     }
 }
 
@@ -181,7 +181,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         title: Some("Computer".into()),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
     let comp_iy = 1;
     let max_val_w = inner_w.saturating_sub(4);
@@ -195,7 +195,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
         cmds.push(RenderCmd::Text {
             x: mx + 2 + label_w,
@@ -204,7 +204,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
             fg: Some(theme.text),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
     };
     comp_row(&mut cmds, comp_iy, "Name", &snap.hostname);
@@ -238,7 +238,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         title: Some("CPU".into()),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     let mut cy = cpu_iy;
@@ -254,7 +254,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         fg: Some(theme.text),
         bg: None,
         bold: true,
-    modifiers: 0,
+        modifiers: 0,
     });
     cy += 1;
     cmds.extend(render_bar(
@@ -284,7 +284,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     // ── Memory Panel ──
@@ -302,7 +302,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         title: Some("Memory".into()),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     let mut my = mem_iy;
@@ -342,7 +342,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
     my += 1;
     cmds.extend(render_bar(
@@ -371,7 +371,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     // ── Disk Panel ──
@@ -389,7 +389,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         title: Some("Disk".into()),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     let mut dy = disk_iy;
@@ -428,7 +428,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
     }
 
@@ -446,7 +446,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         title: Some("Network".into()),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     let mut ny = net_iy;
@@ -468,7 +468,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
             fg: Some(theme.text),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
         ny += 1;
     }
@@ -480,7 +480,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
     }
 
@@ -497,7 +497,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         title: Some("Processes".into()),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     let procs_iy = procs_y + 1;
@@ -509,7 +509,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     let name_w = (procs_iw / 2).max(10) as usize;
@@ -535,7 +535,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
             fg: Some(theme.text),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
     }
 
@@ -547,7 +547,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     cmds
@@ -568,7 +568,7 @@ fn cpu_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         title: Some("CPU Detail".into()),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     let mut row = 1;
@@ -586,7 +586,7 @@ fn cpu_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         fg: Some(theme.text),
         bg: None,
         bold: true,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     row += 1;
@@ -635,7 +635,7 @@ fn cpu_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     cmds
@@ -656,7 +656,7 @@ fn mem_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         title: Some("Memory Detail".into()),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     let mut row = 1;
@@ -683,7 +683,7 @@ fn mem_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     row += 1;
@@ -707,7 +707,7 @@ fn mem_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     row += 2;
@@ -720,7 +720,7 @@ fn mem_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     row += 1;
@@ -739,7 +739,7 @@ fn mem_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     cmds
@@ -759,7 +759,7 @@ fn disk_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec
         title: Some("Disk Detail".into()),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     let header = vec![
@@ -803,7 +803,7 @@ fn disk_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec
             fg: Some(theme.accent),
             bg: None,
             bold: true,
-        modifiers: 0,
+            modifiers: 0,
         },
         rows,
         column_widths: vec![col_w, col_w, col_w, col_w, col_w, col_w],
@@ -812,17 +812,17 @@ fn disk_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec
             fg: Some(theme.text),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         },
         highlight_style: TextStyle {
             fg: Some(theme.inverted_text),
             bg: Some(theme.highlight),
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         },
         current_row: None,
         current_style: None,
-    cell_styles: None,
+        cell_styles: None,
     });
 
     cmds
@@ -842,7 +842,7 @@ fn net_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         title: Some("Network Detail".into()),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     let header = vec![
@@ -879,7 +879,7 @@ fn net_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<
             fg: Some(theme.accent),
             bg: None,
             bold: true,
-        modifiers: 0,
+            modifiers: 0,
         },
         rows,
         column_widths: vec![col_w, col_w, col_w, col_w, col_w],
@@ -888,17 +888,17 @@ fn net_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<
             fg: Some(theme.text),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         },
         highlight_style: TextStyle {
             fg: Some(theme.inverted_text),
             bg: Some(theme.highlight),
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         },
         current_row: None,
         current_style: None,
-    cell_styles: None,
+        cell_styles: None,
     });
 
     cmds
@@ -926,7 +926,7 @@ fn process_list_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Ve
         title: Some(title),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     let core_count = state.snapshot.cpu.core_count.max(1) as f32;
@@ -958,7 +958,7 @@ fn process_list_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Ve
             fg: Some(theme.accent),
             bg: None,
             bold: true,
-        modifiers: 0,
+            modifiers: 0,
         },
         rows,
         column_widths: vec![col_w, col_w, col_w, col_w],
@@ -967,17 +967,17 @@ fn process_list_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Ve
             fg: Some(theme.text),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         },
         highlight_style: TextStyle {
             fg: Some(theme.inverted_text),
             bg: Some(theme.highlight),
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         },
         current_row: None,
         current_style: None,
-    cell_styles: None,
+        cell_styles: None,
     });
 
     cmds

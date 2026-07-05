@@ -33,7 +33,7 @@ fn render_main(state: &CurrencyState, theme: &ThemeData, w: u16, _h: u16) -> Vec
         title: Some(" Currency Converter ".into()),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     // Amount field
@@ -44,7 +44,7 @@ fn render_main(state: &CurrencyState, theme: &ThemeData, w: u16, _h: u16) -> Vec
         fg: Some(theme.accent),
         bg: None,
         bold: true,
-    modifiers: 0,
+        modifiers: 0,
     });
     let amount_style = if matches!(state.input_mode, InputMode::Amount) {
         format!(
@@ -69,7 +69,7 @@ fn render_main(state: &CurrencyState, theme: &ThemeData, w: u16, _h: u16) -> Vec
             None
         },
         bold: matches!(state.input_mode, InputMode::Amount),
-    modifiers: 0,
+        modifiers: 0,
     });
 
     // Source currency
@@ -80,7 +80,7 @@ fn render_main(state: &CurrencyState, theme: &ThemeData, w: u16, _h: u16) -> Vec
         fg: Some(theme.accent),
         bg: None,
         bold: true,
-    modifiers: 0,
+        modifiers: 0,
     });
     let source_style = if matches!(state.input_mode, InputMode::Source) {
         format!("[ {} ]", source)
@@ -98,7 +98,7 @@ fn render_main(state: &CurrencyState, theme: &ThemeData, w: u16, _h: u16) -> Vec
             None
         },
         bold: matches!(state.input_mode, InputMode::Source),
-    modifiers: 0,
+        modifiers: 0,
     });
 
     // Target currency
@@ -109,7 +109,7 @@ fn render_main(state: &CurrencyState, theme: &ThemeData, w: u16, _h: u16) -> Vec
         fg: Some(theme.accent),
         bg: None,
         bold: true,
-    modifiers: 0,
+        modifiers: 0,
     });
     let target_style = if matches!(state.input_mode, InputMode::Target) {
         format!("[ {} ]", target)
@@ -127,7 +127,7 @@ fn render_main(state: &CurrencyState, theme: &ThemeData, w: u16, _h: u16) -> Vec
             None
         },
         bold: matches!(state.input_mode, InputMode::Target),
-    modifiers: 0,
+        modifiers: 0,
     });
 
     // Result
@@ -142,7 +142,7 @@ fn render_main(state: &CurrencyState, theme: &ThemeData, w: u16, _h: u16) -> Vec
         title: None,
         title_fg: None,
         title_dash_fg: None,
-    border_type: None,
+        border_type: None,
     });
 
     match &state.fetch_state {
@@ -154,7 +154,7 @@ fn render_main(state: &CurrencyState, theme: &ThemeData, w: u16, _h: u16) -> Vec
                 fg: Some(theme.text_muted),
                 bg: None,
                 bold: false,
-            modifiers: 0,
+                modifiers: 0,
             });
         }
         FetchState::Error(e) => {
@@ -165,7 +165,7 @@ fn render_main(state: &CurrencyState, theme: &ThemeData, w: u16, _h: u16) -> Vec
                 fg: Some(theme.error),
                 bg: None,
                 bold: false,
-            modifiers: 0,
+                modifiers: 0,
             });
         }
         _ => {
@@ -181,7 +181,7 @@ fn render_main(state: &CurrencyState, theme: &ThemeData, w: u16, _h: u16) -> Vec
                         fg: Some(theme.success),
                         bg: None,
                         bold: true,
-                    modifiers: 0,
+                        modifiers: 0,
                     });
                 }
             }
@@ -200,7 +200,7 @@ fn render_main(state: &CurrencyState, theme: &ThemeData, w: u16, _h: u16) -> Vec
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
     }
 
@@ -213,7 +213,7 @@ fn render_main(state: &CurrencyState, theme: &ThemeData, w: u16, _h: u16) -> Vec
             fg: Some(theme.border),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
         cmds.push(RenderCmd::Text {
             x: 3,
@@ -222,7 +222,7 @@ fn render_main(state: &CurrencyState, theme: &ThemeData, w: u16, _h: u16) -> Vec
             fg: Some(theme.accent),
             bg: None,
             bold: true,
-        modifiers: 0,
+            modifiers: 0,
         });
 
         let y_start = 14u16;
@@ -245,7 +245,7 @@ fn render_main(state: &CurrencyState, theme: &ThemeData, w: u16, _h: u16) -> Vec
                 fg: Some(theme.text_muted),
                 bg: None,
                 bold: false,
-            modifiers: 0,
+                modifiers: 0,
             });
         }
     }
@@ -280,7 +280,7 @@ fn render_browse(state: &CurrencyState, theme: &ThemeData, w: u16, h: u16) -> Ve
         title: Some(" Select Currency ".into()),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     // Search query
@@ -292,7 +292,7 @@ fn render_browse(state: &CurrencyState, theme: &ThemeData, w: u16, h: u16) -> Ve
         fg: Some(theme.text),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     let start_idx = 0usize;
@@ -324,7 +324,7 @@ fn render_browse(state: &CurrencyState, theme: &ThemeData, w: u16, h: u16) -> Ve
             fg,
             bg: None,
             bold: i == state.browse_cursor,
-        modifiers: 0,
+            modifiers: 0,
         });
     }
 
@@ -357,7 +357,7 @@ fn render_favorites(state: &CurrencyState, theme: &ThemeData, w: u16, h: u16) ->
         title: Some(" Favorites ".into()),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     for (i, (s, t)) in state.favorite_pairs.iter().enumerate() {
@@ -379,7 +379,7 @@ fn render_favorites(state: &CurrencyState, theme: &ThemeData, w: u16, h: u16) ->
             fg,
             bg: None,
             bold: i == state.fav_cursor,
-        modifiers: 0,
+            modifiers: 0,
         });
     }
 

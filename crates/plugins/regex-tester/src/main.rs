@@ -377,7 +377,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         title: Some(" Regex Tester ".into()),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     push_text(
@@ -430,7 +430,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         title: Some(" Sample ".into()),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
     let sample_lines = app
         .sample
@@ -449,10 +449,11 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
             fg: Some(theme.text),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         },
         wrap: true,
-    spans: None, alignment: None,
+        spans: None,
+        alignment: None,
     });
 
     cmds.push(RenderCmd::Border {
@@ -470,7 +471,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         title: Some(" Matches ".into()),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
     let items = match &analysis.error {
         Some(err) => vec![format!("Error: {err}")],
@@ -494,13 +495,13 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
             fg: Some(theme.text),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         },
         highlight_style: TextStyle {
             fg: Some(theme.inverted_text),
             bg: Some(theme.highlight),
             bold: true,
-        modifiers: 0,
+            modifiers: 0,
         },
     });
 
@@ -638,7 +639,7 @@ fn push_text(
         fg: Some(fg),
         bg: None,
         bold,
-    modifiers: 0,
+        modifiers: 0,
     });
 }
 

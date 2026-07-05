@@ -38,7 +38,7 @@ fn draw_panel(
         title: Some(t),
         title_fg: Some(theme.text),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     if let Some(hints) = footer {
@@ -61,7 +61,7 @@ fn draw_panel(
                         fg: Some(theme.text_muted),
                         bg: None,
                         bold: false,
-                    modifiers: 0,
+                        modifiers: 0,
                     });
                     cx += sep_w as u16;
                     remaining -= sep_w;
@@ -80,7 +80,7 @@ fn draw_panel(
                     fg: Some(theme.text),
                     bg: None,
                     bold: false,
-                modifiers: 0,
+                    modifiers: 0,
                 });
                 cx += kw as u16;
                 remaining -= kw;
@@ -102,7 +102,7 @@ fn draw_panel(
                         fg: Some(theme.text_muted),
                         bg: None,
                         bold: false,
-                    modifiers: 0,
+                        modifiers: 0,
                     });
                     cx += (1 + dw) as u16;
                     remaining -= 1 + dw;
@@ -123,7 +123,7 @@ pub fn render_ui(state: &IptvState, theme: &ThemeData, area_w: u16, area_h: u16)
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
         return cmds;
     }
@@ -215,7 +215,7 @@ fn render_channel_list(
             fg: Some(theme.accent),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
     } else if let Some(ref gf) = state.group_filter {
         let left_text = format!("Group: {}", gf);
@@ -237,7 +237,7 @@ fn render_channel_list(
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
     } else if !state.query.is_empty() {
         let left_text = format!("Filter: \"{}\"", state.query);
@@ -259,7 +259,7 @@ fn render_channel_list(
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
     } else {
         let fav_count = state.favorites_count();
@@ -282,7 +282,7 @@ fn render_channel_list(
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
     }
 
@@ -343,7 +343,7 @@ fn render_channel_list(
             fg: Some(theme.text_muted),
             bg: None,
             bold: true,
-        modifiers: 0,
+            modifiers: 0,
         },
         rows,
         column_widths: vec![name_w as u16, group_w as u16, country_w as u16],
@@ -352,13 +352,13 @@ fn render_channel_list(
             fg: Some(theme.text),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         },
         highlight_style: TextStyle {
             fg: Some(theme.inverted_text),
             bg: Some(theme.highlight),
             bold: true,
-        modifiers: 0,
+            modifiers: 0,
         },
         current_row,
         current_style: Some(TextStyle {
@@ -367,7 +367,7 @@ fn render_channel_list(
             bold: false,
             modifiers: 0,
         }),
-    cell_styles: None,
+        cell_styles: None,
     });
 
     // Heart overlay for favorites
@@ -387,7 +387,7 @@ fn render_channel_list(
                 fg: Some(heart_red),
                 bg,
                 bold: false,
-            modifiers: 0,
+                modifiers: 0,
             });
         }
     }
@@ -405,7 +405,7 @@ fn render_channel_list(
         fg: Some(theme.text),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     let r_inner_w = area_w.saturating_sub(4);
@@ -435,7 +435,7 @@ fn render_channel_list(
                 fg: Some(theme.accent),
                 bg: None,
                 bold: true,
-            modifiers: 0,
+                modifiers: 0,
             });
             ui::text_at(
                 cmds,
@@ -460,7 +460,7 @@ fn render_channel_list(
                 fg: Some(theme.success),
                 bg: None,
                 bold: true,
-            modifiers: 0,
+                modifiers: 0,
             });
             ui::text_at(
                 cmds,
@@ -485,7 +485,7 @@ fn render_channel_list(
                 fg: Some(theme.accent),
                 bg: None,
                 bold: true,
-            modifiers: 0,
+                modifiers: 0,
             });
             ui::text_at(
                 cmds,
@@ -543,7 +543,7 @@ fn render_search(
         fg: Some(theme.accent),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
     let right_x = area_w.saturating_sub(2u16.saturating_add(count_text.len() as u16));
     cmds.push(RenderCmd::Text {
@@ -553,7 +553,7 @@ fn render_search(
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     let hint_y = area_h.saturating_sub(2);
@@ -568,7 +568,7 @@ fn render_search(
                 fg: Some(theme.text_muted),
                 bg: None,
                 bold: false,
-            modifiers: 0,
+                modifiers: 0,
             });
             cx += 3;
         }
@@ -579,7 +579,7 @@ fn render_search(
             fg: Some(theme.text),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
         cx += key.len() as u16;
         cmds.push(RenderCmd::Text {
@@ -589,7 +589,7 @@ fn render_search(
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
         cx += (1 + desc.len()) as u16;
     }
@@ -625,7 +625,7 @@ fn render_search(
             fg: Some(fg),
             bg: None,
             bold: Some(i) == Some(state.selected.saturating_sub(scroll)),
-        modifiers: 0,
+            modifiers: 0,
         });
     }
 }
@@ -665,7 +665,7 @@ fn render_url_editor(
         fg: Some(theme.text),
         bg: None,
         bold: true,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     let cursor = if state.tick_counter % 6 < 3 {
@@ -686,7 +686,7 @@ fn render_url_editor(
         fg: Some(theme.accent),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     let hint_text = "enter: save  esc: cancel  ctrl+b: default";
@@ -697,7 +697,7 @@ fn render_url_editor(
         fg: Some(theme.text_muted),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 }
 

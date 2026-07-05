@@ -52,7 +52,7 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
         return cmds;
     }
@@ -80,7 +80,7 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
             },
             title_fg: if is_selected { Some(theme.text) } else { None },
             title_dash_fg: Some(theme.border),
-        border_type: None,
+            border_type: None,
         });
 
         let dt = chrono::Utc::now().with_timezone(&clock.tz);
@@ -94,7 +94,7 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
             fg: Some(theme.text),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
         cmds.push(RenderCmd::Text {
             x: cx + cw.saturating_sub(2 + offset_str.len() as u16),
@@ -103,7 +103,7 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
 
         let time_str = format!("{:02}:{:02}:{:02}", dt.hour(), dt.minute(), dt.second());
@@ -114,7 +114,7 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
             fg: Some(theme.accent),
             bg: None,
             bold: true,
-        modifiers: 0,
+            modifiers: 0,
         });
 
         let date_str = dt.format("%a, %-d %b %Y").to_string();
@@ -125,7 +125,7 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
         if dst_active {
             cmds.push(RenderCmd::Text {
@@ -135,7 +135,7 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
                 fg: Some(theme.highlight),
                 bg: None,
                 bold: true,
-            modifiers: 0,
+                modifiers: 0,
             });
         }
     }
@@ -164,7 +164,7 @@ fn render_search(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> V
             fg: Some(theme.text_muted),
             bg: Some(theme.background_panel),
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
     } else {
         cmds.push(RenderCmd::Text {
@@ -174,7 +174,7 @@ fn render_search(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> V
             fg: Some(theme.text),
             bg: Some(theme.background_panel),
             bold: false,
-        modifiers: 0,
+            modifiers: 0,
         });
         if state.search_cursor_visible {
             cmds.push(RenderCmd::Text {
@@ -184,7 +184,7 @@ fn render_search(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> V
                 fg: Some(theme.inverted_text),
                 bg: Some(theme.highlight),
                 bold: false,
-            modifiers: 0,
+                modifiers: 0,
             });
         }
     }
@@ -212,7 +212,7 @@ fn render_search(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> V
         fg: Some(theme.text_muted),
         bg: Some(theme.background_panel),
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     cmds
@@ -257,7 +257,7 @@ fn render_rename(
         title: Some("Rename".into()),
         title_fg: Some(theme.accent),
         title_dash_fg: Some(theme.border),
-    border_type: None,
+        border_type: None,
     });
 
     let input_text = format!("> {}", state.rename_buf);
@@ -268,7 +268,7 @@ fn render_rename(
         fg: Some(theme.text),
         bg: None,
         bold: false,
-    modifiers: 0,
+        modifiers: 0,
     });
 
     cmds
