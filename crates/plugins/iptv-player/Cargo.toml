@@ -1,10 +1,10 @@
 [package]
 name = "santui-iptv-player"
-version = "0.2.27"
+version = "0.2.28"
 edition = "2021"
 
 [dependencies]
-santui-ipc = { path = "../../ipc", version = "0.2.27", default-features = false }
+santui-ipc = { path = "../../ipc", version = "0.2.28", default-features = false }
 libloading = "0.9"
 ureq = "3"
 libc = "0.2"

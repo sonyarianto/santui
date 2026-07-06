@@ -1,13 +1,13 @@
 [package]
 name = "santui-registry"
-version = "0.2.27"
+version = "0.2.28"
 edition = "2021"
 description = "Santui plugin registry — manifest fetch, install, config management"
 license = "MIT"
 repository = "https://github.com/sonyarianto/santui"
 
 [dependencies]
-santui-core = { path = "../core", version = "0.2.27" }
+santui-core = { path = "../core", version = "0.2.28" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 toml = "0.8"
