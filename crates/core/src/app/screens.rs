@@ -5,6 +5,31 @@ use ratatui::widgets::Paragraph;
 use ratatui::Frame;
 
 impl super::Santui {
+    /// Render text character-by-character, skipping spaces, so the
+    /// background (e.g. starfield) shows through between glyphs.
+    fn draw_transparent_text(f: &mut Frame, area: Rect, lines: &[&str], color: ratatui::style::Color) {
+        let max_w = lines
+            .iter()
+            .map(|l| l.chars().count() as u16)
+            .max()
+            .unwrap_or(0);
+        let x0 = area.x + (area.width.saturating_sub(max_w)) / 2;
+        let buf = f.buffer_mut();
+        for (row, line) in lines.iter().enumerate() {
+            let y = area.y + row as u16;
+            for (col, ch) in line.chars().enumerate() {
+                if ch == ' ' {
+                    continue;
+                }
+                let x = x0 + col as u16;
+                if let Some(cell) = buf.cell_mut((x, y)) {
+                    cell.set_char(ch);
+                    cell.set_fg(color);
+                }
+            }
+        }
+    }
+
     pub(super) fn render_starfield(&self, f: &mut Frame, area: Rect) {
         if area.width < 10 || area.height < 5 {
             return;
@@ -70,34 +95,6 @@ impl super::Santui {
         let t = &self.app_state.theme;
         let ver = super::VERSION;
 
-        if self.cached_logo.is_none() {
-            let mut lines: Vec<Line> = [
-                "███████╗ █████╗ ███╗   ██╗████████╗██╗   ██╗██╗",
-                "██╔════╝██╔══██╗████╗  ██║╚══██╔══╝██║   ██║██║",
-                "███████╗███████║██╔██╗ ██║   ██║   ██║   ██║██║",
-                "╚════██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║",
-                "███████║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║",
-                "╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝",
-            ]
-            .iter()
-            .map(|line| Line::from(Span::styled(*line, Style::default().fg(t.logo))))
-            .collect::<Vec<_>>();
-
-            lines.push(Line::from(Span::styled(
-                "your terminal home base",
-                Style::default().fg(t.text_muted),
-            )));
-            lines.push(Line::from(Span::styled(
-                format!("v{ver}"),
-                Style::default().fg(t.text_muted),
-            )));
-            self.cached_logo = Some(lines);
-        }
-
-        let Some(logo) = self.cached_logo.as_ref() else {
-            return;
-        };
-
         // ── Carousel bar ──
         let carousel = self.plugin_manager.carousel_items();
         let carousel_lines: Vec<Line> = if carousel.is_empty() {
@@ -116,22 +113,63 @@ impl super::Santui {
         };
 
         let carousel_h = if carousel_lines.is_empty() { 0 } else { 2 };
+        let logo_h: u16 = 6;
+        let comment_h: u16 = 2; // tagline + version
+        let content_h = logo_h + comment_h + carousel_h;
         let vert = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
                 Constraint::Fill(1),
-                Constraint::Length(8),
-                Constraint::Length(carousel_h),
+                Constraint::Length(content_h),
                 Constraint::Fill(1),
             ])
             .split(area);
 
-        let p = Paragraph::new(logo.as_slice()).alignment(Alignment::Center);
-        f.render_widget(p, vert[1]);
+        let logo_area = Rect {
+            x: vert[1].x,
+            y: vert[1].y,
+            width: vert[1].width,
+            height: logo_h,
+        };
+        Self::draw_transparent_text(
+            f,
+            logo_area,
+            &[
+                "███████╗ █████╗ ███╗   ██╗████████╗██╗   ██╗██╗",
+                "██╔════╝██╔══██╗████╗  ██║╚══██╔══╝██║   ██║██║",
+                "███████╗███████║██╔██╗ ██║   ██║   ██║   ██║██║",
+                "╚════██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║",
+                "███████║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║",
+                "╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝",
+            ],
+            t.logo,
+        );
+
+        let comment_area = Rect {
+            x: vert[1].x,
+            y: vert[1].y + logo_h,
+            width: vert[1].width,
+            height: comment_h,
+        };
+        Self::draw_transparent_text(
+            f,
+            comment_area,
+            &[
+                "your terminal home base",
+                &format!("v{ver}"),
+            ],
+            t.text_muted,
+        );
 
         if !carousel_lines.is_empty() {
+            let carousel_rect = Rect {
+                x: vert[1].x,
+                y: vert[1].y + logo_h + comment_h,
+                width: vert[1].width,
+                height: carousel_h,
+            };
             let p = Paragraph::new(carousel_lines).alignment(Alignment::Center);
-            f.render_widget(p, vert[2]);
+            f.render_widget(p, carousel_rect);
         }
     }
 
@@ -140,43 +178,34 @@ impl super::Santui {
         let t = &self.app_state.theme;
         let ver = super::VERSION;
 
-        let text: Vec<Line> = [
-            "███████╗ █████╗ ███╗   ██╗████████╗██╗   ██╗██╗",
-            "██╔════╝██╔══██╗████╗  ██║╚══██╔══╝██║   ██║██║",
-            "███████╗███████║██╔██╗ ██║   ██║   ██║   ██║██║",
-            "╚════██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║",
-            "███████║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║",
-            "╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝",
-        ]
-        .iter()
-        .map(|line| Line::from(Span::styled(*line, Style::default().fg(t.logo))))
-        .collect();
-
-        let text = text
-            .into_iter()
-            .chain([
-                Line::from(Span::styled(
-                    "your terminal home base",
-                    Style::default().fg(t.text_muted),
-                )),
-                Line::from(Span::styled(
-                    format!("v{ver}"),
-                    Style::default().fg(t.text_muted),
-                )),
-                Line::from(""),
-                Line::from("Copyright \u{00a9} Sony AK https://github.com/sonyarianto"),
-                Line::from(""),
-                Line::from(Span::styled(
-                    "https://santuiapp.vercel.app",
-                    Style::default().fg(t.text_muted),
-                )),
-                Line::from(""),
-                Line::from(Span::styled(
-                    "Press esc to go back",
-                    Style::default().fg(t.text_muted),
-                )),
-            ])
-            .collect::<Vec<_>>();
+        let info: Vec<Line> = vec![
+            Line::from(""),
+            Line::from(""),
+            Line::from(""),
+            Line::from(""),
+            Line::from(""),
+            Line::from(""),
+            Line::from(Span::styled(
+                "your terminal home base",
+                Style::default().fg(t.text_muted),
+            )),
+            Line::from(Span::styled(
+                format!("v{ver}"),
+                Style::default().fg(t.text_muted),
+            )),
+            Line::from(""),
+            Line::from("Copyright \u{00a9} Sony AK https://github.com/sonyarianto"),
+            Line::from(""),
+            Line::from(Span::styled(
+                "https://santuiapp.vercel.app",
+                Style::default().fg(t.text_muted),
+            )),
+            Line::from(""),
+            Line::from(Span::styled(
+                "Press esc to go back",
+                Style::default().fg(t.text_muted),
+            )),
+        ];
 
         let vert = Layout::default()
             .direction(Direction::Vertical)
@@ -187,7 +216,27 @@ impl super::Santui {
             ])
             .split(area);
 
-        let p = Paragraph::new(text).alignment(Alignment::Center);
+        let logo_area = Rect {
+            x: vert[1].x,
+            y: vert[1].y,
+            width: vert[1].width,
+            height: 6,
+        };
+        Self::draw_transparent_text(
+            f,
+            logo_area,
+            &[
+                "███████╗ █████╗ ███╗   ██╗████████╗██╗   ██╗██╗",
+                "██╔════╝██╔══██╗████╗  ██║╚══██╔══╝██║   ██║██║",
+                "███████╗███████║██╔██╗ ██║   ██║   ██║   ██║██║",
+                "╚════██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║",
+                "███████║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║",
+                "╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝",
+            ],
+            t.logo,
+        );
+
+        let p = Paragraph::new(info).alignment(Alignment::Center);
         f.render_widget(p, vert[1]);
     }
 

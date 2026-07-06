@@ -181,8 +181,6 @@ pub struct Santui {
     pub(super) bindings: ResolvedBindings,
     /// Starfield background animation.
     pub(super) starfield: starfield::Starfield,
-    /// Pre-built splash logo lines, invalidated on theme change.
-    cached_logo: Option<Vec<ratatui::text::Line<'static>>>,
     /// Cached terminal height, updated on resize.
     term_h: u16,
 }
@@ -238,7 +236,6 @@ impl Santui {
             config_manager: ConfigManager::new(std::path::PathBuf::new()),
             bindings: ResolvedBindings::from_config(&crate::config::KeyBindings::default()),
             starfield: starfield::Starfield::new(),
-            cached_logo: None,
             term_h: 24,
         }
     }
@@ -448,12 +445,6 @@ impl Santui {
 
             // Drain the event bus and forward events to subsystems.
             let events = self.event_bus.drain();
-            if events
-                .iter()
-                .any(|e| matches!(e, crate::event::Event::ThemeChanged(_)))
-            {
-                self.cached_logo = None;
-            }
             self.app_state.process_events(&events);
             self.plugin_manager.process_events(&events);
 
