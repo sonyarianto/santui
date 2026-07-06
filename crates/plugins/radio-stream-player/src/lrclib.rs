@@ -55,7 +55,8 @@ pub fn fetch(title: &str, artist: Option<&str>) -> Result<Option<LyricsData>, St
         url.push_str(&encoded_artist);
     }
 
-    let mut resp = crate::http::agent().get(&url)
+    let mut resp = crate::http::agent()
+        .get(&url)
         .call()
         .map_err(|e| format!("LRCLib request failed: {e}"))?;
     let body: String = resp

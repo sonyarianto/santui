@@ -7,7 +7,12 @@ use ratatui::Frame;
 impl super::Santui {
     /// Render text character-by-character, skipping spaces, so the
     /// background (e.g. starfield) shows through between glyphs.
-    fn draw_transparent_text(f: &mut Frame, area: Rect, lines: &[&str], color: ratatui::style::Color) {
+    fn draw_transparent_text(
+        f: &mut Frame,
+        area: Rect,
+        lines: &[&str],
+        color: ratatui::style::Color,
+    ) {
         let buf = f.buffer_mut();
         for (row, line) in lines.iter().enumerate() {
             let y = area.y + row as u16;
@@ -102,7 +107,7 @@ impl super::Santui {
             vec![Line::from(""), styled]
         } else {
             let hint = Line::from(Span::styled(
-                " ← → to browse plugins    ENTER to open",
+                " ← → to browse plugins    Enter to open",
                 Style::default().fg(t.text_muted),
             ));
             vec![Line::from(""), hint]
@@ -150,10 +155,7 @@ impl super::Santui {
         Self::draw_transparent_text(
             f,
             comment_area,
-            &[
-                "your terminal home base",
-                &format!("v{ver}"),
-            ],
+            &["your terminal home base", &format!("v{ver}")],
             t.text_muted,
         );
 
@@ -196,7 +198,9 @@ impl super::Santui {
                 Style::default().fg(t.text_muted),
             )),
             Line::from(""),
-            Line::from(format!("\u{00a9} {year} Santui contributors https://github.com/sonyarianto")),
+            Line::from(format!(
+                "\u{00a9} {year} Santui contributors https://github.com/sonyarianto"
+            )),
             Line::from(""),
             Line::from(Span::styled(
                 "https://santuiapp.vercel.app",

@@ -180,18 +180,10 @@ impl App {
                                 .to_string()
                         };
                         if name == "metadata" {
-                            let t = mpv
-                                .metadata_title()
-                                .ok()
-                                .flatten()
-                                .unwrap_or_default();
+                            let t = mpv.metadata_title().ok().flatten().unwrap_or_default();
                             let _ = tx_msg_mpv.send(MpvMsg::Metadata(t));
                         } else if name == "media-title" {
-                            let t = mpv
-                                .media_title()
-                                .ok()
-                                .flatten()
-                                .unwrap_or_default();
+                            let t = mpv.media_title().ok().flatten().unwrap_or_default();
                             let _ = tx_msg_mpv.send(MpvMsg::Metadata(t));
                         }
                     }
@@ -210,11 +202,7 @@ impl App {
                             if let Err(e) = mpv.load_url(&url) {
                                 log::warn!("mpv load_url failed: {e}");
                             }
-                            let title = mpv
-                                .metadata_title()
-                                .ok()
-                                .flatten()
-                                .unwrap_or_default();
+                            let title = mpv.metadata_title().ok().flatten().unwrap_or_default();
                             let _ = tx_msg_mpv.send(MpvMsg::Metadata(title));
                         }
                         MpvCmd::Stop => {
@@ -289,7 +277,8 @@ impl App {
                     if let Some(station) = self.state.selected_station().cloned() {
                         let idx = self.state.current_filtered_index();
                         self.state.current_station = Some(idx);
-                        self.state.play_state = state::PlayState::Connecting(station.name.to_string());
+                        self.state.play_state =
+                            state::PlayState::Connecting(station.name.to_string());
                         self.state.last_metadata.clear();
                         self.state.song_title.clear();
                         self.state.track_info = None;

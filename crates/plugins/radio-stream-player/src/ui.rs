@@ -28,7 +28,11 @@ fn draw_panel(
         title.trim().to_string()
     };
     let bright = focused || !dim_unfocused;
-    let border_fg = if bright { theme.border } else { theme.text_muted };
+    let border_fg = if bright {
+        theme.border
+    } else {
+        theme.text_muted
+    };
     let text_fg = if bright { theme.text } else { theme.text_muted };
     cmds.push(RenderCmd::Border {
         x,
@@ -406,7 +410,11 @@ pub fn render_ui(
         column_widths: vec![name_w as u16, genre_w as u16, country_w as u16],
         selected: vis_selected,
         style: TextStyle {
-            fg: Some(if stations_focused { theme.text } else { theme.text_muted }),
+            fg: Some(if stations_focused {
+                theme.text
+            } else {
+                theme.text_muted
+            }),
             bg: None,
             bold: false,
             modifiers: 0,
@@ -453,16 +461,7 @@ pub fn render_ui(
     const NP_TITLE: &str = "Now Playing";
     let np_y = stations_h + GAP;
     draw_panel(
-        &mut cmds,
-        theme,
-        0,
-        np_y,
-        left_w,
-        info_h,
-        NP_TITLE,
-        false,
-        None,
-        false,
+        &mut cmds, theme, 0, np_y, left_w, info_h, NP_TITLE, false, None, false,
     );
     // Volume on the top border line (trailing title dash serves as separator)
     let vol_text = format!(" Vol: {}% ", state.volume);
@@ -650,8 +649,16 @@ pub fn render_ui(
         } else {
             // Render title header
             let focused = state.lyrics_focused;
-            let title_fg = if focused { theme.accent } else { theme.text_muted };
-            let artist_fg = if focused { theme.text } else { theme.text_muted };
+            let title_fg = if focused {
+                theme.accent
+            } else {
+                theme.text_muted
+            };
+            let artist_fg = if focused {
+                theme.text
+            } else {
+                theme.text_muted
+            };
             if let Some(ref title) = header_title {
                 cmds.push(RenderCmd::Text {
                     x: ly_x + 2,
@@ -685,7 +692,11 @@ pub fn render_ui(
                     break;
                 }
                 let line = lines[line_idx];
-                let lyrics_body_fg = if focused { theme.text } else { theme.text_muted };
+                let lyrics_body_fg = if focused {
+                    theme.text
+                } else {
+                    theme.text_muted
+                };
                 ui::text_at(
                     &mut cmds,
                     ly_x + 2,
