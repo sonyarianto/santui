@@ -157,7 +157,7 @@ pub fn render_ui(
             ("r", "reload"),
         ])
     } else if state.lyrics_focused {
-        Some(&[("↑↓", "scroll"), ("l", "hide lyrics")])
+        Some(&[("tab", "stations"), ("l", "hide lyrics")])
     } else {
         Some(&[
             ("↑↓", "navigate"),
