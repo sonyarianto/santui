@@ -356,7 +356,7 @@ pub fn render_ui(
         h: (visible_count + 1).max(1) as u16,
         header: vec!["Name".into(), "Genre".into(), "Country".into()],
         header_style: TextStyle {
-            fg: Some(theme.text_muted),
+            fg: Some(theme.accent),
             bg: None,
             bold: true,
             modifiers: 0,

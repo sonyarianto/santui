@@ -106,13 +106,13 @@ impl super::Santui {
             let item = &carousel[sel];
             let label = format!(" ◀ {} ▶ ", item.name);
             let styled = Line::from(Span::styled(label, Style::default().fg(t.accent)));
-            vec![styled]
+            vec![Line::from(""), styled]
         } else {
             let hint = Line::from(Span::styled(
                 " ← →  to browse plugins    ENTER  to open",
                 Style::default().fg(t.text_muted),
             ));
-            vec![hint]
+            vec![Line::from(""), hint]
         };
 
         let carousel_h = if carousel_lines.is_empty() { 0 } else { 2 };
