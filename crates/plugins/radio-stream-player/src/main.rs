@@ -149,21 +149,22 @@ impl App {
                         break;
                     }
                     if id == player::MPV_EVENT_FILE_LOADED {
-                        if let Ok(Some(t)) = mpv.metadata_title() {
-                            let _ = tx_msg_mpv.send(MpvMsg::Metadata(t));
-                        } else if let Ok(Some(t)) = mpv.media_title() {
-                            let _ = tx_msg_mpv.send(MpvMsg::Metadata(t));
-                        }
+                        let title = mpv
+                            .metadata_title()
+                            .ok()
+                            .flatten()
+                            .or_else(|| mpv.media_title().ok().flatten())
+                            .unwrap_or_default();
+                        let _ = tx_msg_mpv.send(MpvMsg::Metadata(title));
                     }
                     if id == player::MPV_EVENT_PLAYBACK_RESTART {
                         let title = mpv
                             .metadata_title()
                             .ok()
                             .flatten()
-                            .or_else(|| mpv.media_title().ok().flatten());
-                        if let Some(title) = title {
-                            let _ = tx_msg_mpv.send(MpvMsg::Metadata(title));
-                        }
+                            .or_else(|| mpv.media_title().ok().flatten())
+                            .unwrap_or_default();
+                        let _ = tx_msg_mpv.send(MpvMsg::Metadata(title));
                     }
                     if id == player::MPV_EVENT_PROPERTY_CHANGE {
                         if ev.data.is_null() {
@@ -499,20 +500,11 @@ impl App {
                 changed = true;
                 match msg {
                     MpvMsg::Metadata(title) => {
-                        // Mpv can fire redundant PLAYBACK_RESTART or
-                        // PROPERTY_CHANGE events for the same radio stream
-                        // title (rebuffer, reconnect).  Skip to avoid
-                        // clearing lyrics and re-fetching unnecessarily — a
-                        // failed redundant fetch would overwrite good lyrics
-                        // with empty via MpvMsg::Lyrics(None).
-                        //
-                        // Use last_metadata (not song_title) as the dedup key
-                        // because TrackInfo may update song_title mid-stream.
-                        if title == self.state.last_metadata {
-                            continue;
-                        }
                         if let state::PlayState::Connecting(name) = &self.state.play_state {
                             self.state.play_state = state::PlayState::Playing(name.clone());
+                        }
+                        if title == self.state.last_metadata {
+                            continue;
                         }
                         self.state.last_metadata = title.clone();
                         self.state.song_title = title.clone();
