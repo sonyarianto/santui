@@ -106,10 +106,13 @@ impl super::Santui {
             let styled = Line::from(Span::styled(label, Style::default().fg(t.accent)));
             vec![Line::from(""), styled]
         } else {
-            let hint = Line::from(Span::styled(
-                " ← → to browse plugins    Enter to open",
-                Style::default().fg(t.text_muted),
-            ));
+            let hint = Line::from(vec![
+                Span::styled(" ", Style::default()),
+                Span::styled("← →", Style::default().fg(t.accent)),
+                Span::styled(" to browse plugins    ", Style::default().fg(t.text_muted)),
+                Span::styled("Enter", Style::default().fg(t.accent)),
+                Span::styled(" to open", Style::default().fg(t.text_muted)),
+            ]);
             vec![Line::from(""), hint]
         };
 
