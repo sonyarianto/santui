@@ -35,7 +35,7 @@ export default defineConfig({
       { icon: 'github', link: 'https://github.com/sonyarianto/santui' },
     ],
     footer: {
-      message: 'Santui v0.2.27 — Copyright \u00a9 2026 <a href="https://github.com/sonyarianto" target="_blank" rel="noopener">Sony AK</a>',
+      message: 'Santui v0.2.27 — Copyright \u00a9 2026 <a href="https://github.com/sonyarianto" target="_blank" rel="noopener">Santui contributors</a>',
     },
   },
 })
