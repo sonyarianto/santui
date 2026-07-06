@@ -450,6 +450,7 @@ pub fn render_ui(
     }
 
     // ---- Now Playing panel (bottom-left) ----
+    const NP_TITLE: &str = "Now Playing";
     let np_y = stations_h + GAP;
     draw_panel(
         &mut cmds,
@@ -458,7 +459,7 @@ pub fn render_ui(
         np_y,
         left_w,
         info_h,
-        "Now Playing",
+        NP_TITLE,
         false,
         None,
         false,
@@ -466,7 +467,7 @@ pub fn render_ui(
     // Volume on the top border line (trailing title dash serves as separator)
     let vol_text = format!(" Vol: {}% ", state.volume);
     cmds.push(RenderCmd::Text {
-        x: 5u16.saturating_add("Now Playing".len() as u16),
+        x: 5u16.saturating_add(NP_TITLE.len() as u16),
         y: np_y,
         text: vol_text,
         fg: Some(theme.text),
