@@ -586,6 +586,20 @@ pub fn render_ui(
             true,
         );
 
+        if !state.lyrics_text.is_empty() && !state.lyrics_source.is_empty() {
+            let footer_y = area_h.saturating_sub(2);
+            let sx = ly_x + ly_panel_w.saturating_sub(state.lyrics_source.len() as u16 + 2);
+            cmds.push(RenderCmd::Text {
+                x: sx,
+                y: footer_y,
+                text: state.lyrics_source.clone(),
+                fg: Some(theme.text_muted),
+                bg: None,
+                bold: false,
+                modifiers: 0,
+            });
+        }
+
         let ly_inner_w = ly_panel_w.saturating_sub(4);
 
         // Title/artist header from iTunes (track_info) or station metadata (song_title)
