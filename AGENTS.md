@@ -106,7 +106,7 @@ cd website && npm run build # static build
 git add -A && git commit -m "chore: bump version to x.y.z"
 git cliff -o CHANGELOG.md   # auto-generate changelog from conventional commits
 git add -A && git commit -m "chore: bump version to x.y.z"
-git tag vx.y.z && git push --tags
+git tag vx.y.z && git push origin main vx.y.z
 # CI builds binaries, creates GitHub Release, publishes to npm and crates.io
 ```
 
