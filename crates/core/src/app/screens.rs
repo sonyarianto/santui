@@ -102,7 +102,7 @@ impl super::Santui {
             vec![Line::from(""), styled]
         } else {
             let hint = Line::from(Span::styled(
-                " ← →  to browse plugins    ENTER  to open",
+                " ← → to browse plugins    ENTER to open",
                 Style::default().fg(t.text_muted),
             ));
             vec![Line::from(""), hint]
