@@ -447,6 +447,26 @@ pub fn render_ui(
                 r_inner_w,
             );
         }
+        PlayState::Connecting(station_name) => {
+            cmds.push(RenderCmd::Text {
+                x: 2,
+                y: np_y + 1,
+                text: ui::truncate(station_name, r_inner_w as usize),
+                fg: Some(theme.accent),
+                bg: None,
+                bold: true,
+                modifiers: 0,
+            });
+            ui::text_at(
+                &mut cmds,
+                2,
+                np_y + 2,
+                "Connecting...",
+                theme.text_muted,
+                None,
+                r_inner_w,
+            );
+        }
         PlayState::Playing(station_name) => {
             cmds.push(RenderCmd::Text {
                 x: 2,

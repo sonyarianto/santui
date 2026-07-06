@@ -278,7 +278,7 @@ impl App {
                     if let Some(station) = self.state.selected_station().cloned() {
                         let idx = self.state.current_filtered_index();
                         self.state.current_station = Some(idx);
-                        self.state.play_state = state::PlayState::Playing(station.name.to_string());
+                        self.state.play_state = state::PlayState::Connecting(station.name.to_string());
                         self.state.last_metadata.clear();
                         self.state.song_title.clear();
                         self.state.track_info = None;
@@ -390,7 +390,7 @@ impl App {
                 } else if let Some(station) = self.state.selected_station().cloned() {
                     let idx = self.state.current_filtered_index();
                     self.state.current_station = Some(idx);
-                    self.state.play_state = state::PlayState::Playing(station.name.to_string());
+                    self.state.play_state = state::PlayState::Connecting(station.name.to_string());
                     self.state.last_metadata.clear();
                     self.state.song_title.clear();
                     self.state.track_info = None;
@@ -509,6 +509,9 @@ impl App {
                         // because TrackInfo may update song_title mid-stream.
                         if title == self.state.last_metadata {
                             continue;
+                        }
+                        if let state::PlayState::Connecting(name) = &self.state.play_state {
+                            self.state.play_state = state::PlayState::Playing(name.clone());
                         }
                         self.state.last_metadata = title.clone();
                         self.state.song_title = title.clone();
@@ -878,7 +881,7 @@ mod tests {
         assert!(app.handle_key(IpcKey::Enter));
         assert!(!app.state.search_mode);
         assert_eq!(app.state.current_station, Some(0));
-        assert!(matches!(app.state.play_state, PlayState::Playing(_)));
+        assert!(matches!(app.state.play_state, PlayState::Connecting(_)));
     }
 
     #[test]
@@ -1126,7 +1129,7 @@ mod tests {
         let mut app = base_app();
         assert!(app.handle_key(IpcKey::Enter));
         assert_eq!(app.state.current_station, Some(0));
-        assert!(matches!(app.state.play_state, PlayState::Playing(_)));
+        assert!(matches!(app.state.play_state, PlayState::Connecting(_)));
     }
 
     #[test]

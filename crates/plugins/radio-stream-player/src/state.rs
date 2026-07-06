@@ -6,6 +6,7 @@ use std::time::Instant;
 
 pub enum PlayState {
     Stopped,
+    Connecting(String),
     Playing(String),
     Error(String),
 }
@@ -192,6 +193,7 @@ impl RadioState {
     pub fn info_h(&self) -> u16 {
         let content_rows = match &self.play_state {
             PlayState::Stopped => 1,
+            PlayState::Connecting(_) => 2,
             PlayState::Playing(_) => {
                 if self.song_title.is_empty() {
                     2

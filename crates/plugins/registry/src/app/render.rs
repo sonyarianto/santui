@@ -201,7 +201,7 @@ impl App {
                     "Status".into(),
                 ],
                 header_style: TextStyle {
-                    fg: Some(t.text_muted),
+                    fg: Some(t.accent),
                     bg: None,
                     bold: true,
                     modifiers: 0,
