@@ -180,13 +180,19 @@ impl App {
                                 .to_string()
                         };
                         if name == "metadata" {
-                            if let Ok(Some(t)) = mpv.metadata_title() {
-                                let _ = tx_msg_mpv.send(MpvMsg::Metadata(t));
-                            }
+                            let t = mpv
+                                .metadata_title()
+                                .ok()
+                                .flatten()
+                                .unwrap_or_default();
+                            let _ = tx_msg_mpv.send(MpvMsg::Metadata(t));
                         } else if name == "media-title" {
-                            if let Ok(Some(t)) = mpv.media_title() {
-                                let _ = tx_msg_mpv.send(MpvMsg::Metadata(t));
-                            }
+                            let t = mpv
+                                .media_title()
+                                .ok()
+                                .flatten()
+                                .unwrap_or_default();
+                            let _ = tx_msg_mpv.send(MpvMsg::Metadata(t));
                         }
                     }
                     if id == player::MPV_EVENT_END_FILE {
@@ -204,9 +210,12 @@ impl App {
                             if let Err(e) = mpv.load_url(&url) {
                                 log::warn!("mpv load_url failed: {e}");
                             }
-                            if let Some(title) = mpv.metadata_title().ok().flatten() {
-                                let _ = tx_msg_mpv.send(MpvMsg::Metadata(title));
-                            }
+                            let title = mpv
+                                .metadata_title()
+                                .ok()
+                                .flatten()
+                                .unwrap_or_default();
+                            let _ = tx_msg_mpv.send(MpvMsg::Metadata(title));
                         }
                         MpvCmd::Stop => {
                             if let Err(e) = mpv.stop() {
@@ -562,6 +571,9 @@ impl App {
                         self.state.lyrics_scroll = 0;
                     }
                     MpvMsg::EndFile(reason) => {
+                        if matches!(self.state.play_state, state::PlayState::Connecting(_)) {
+                            continue;
+                        }
                         if reason == player::MPV_END_FILE_REASON_EOF {
                             if let Some(idx) = self.state.current_station {
                                 let station = self.state.stations[idx].clone();
@@ -573,6 +585,13 @@ impl App {
                         }
                     }
                 }
+            }
+        }
+        if let state::PlayState::Connecting(name) = &self.state.play_state {
+            if self.state.start_time.elapsed().as_secs() >= 10 {
+                self.state.play_state =
+                    state::PlayState::Error(format!("timed out connecting to {name}"));
+                changed = true;
             }
         }
         self.state.tick_counter += 1;
