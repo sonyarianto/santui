@@ -157,7 +157,7 @@ pub fn render_ui(
             ("r", "reload"),
         ])
     } else if state.lyrics_focused {
-        Some(&[("↑↓", "scroll"), ("l", "hide")])
+        Some(&[("↑↓", "scroll"), ("l", "hide lyrics")])
     } else {
         Some(&[
             ("↑↓", "navigate"),
@@ -170,7 +170,7 @@ pub fn render_ui(
         ])
     };
     let lyrics_footer: Option<&[(&str, &str)]> = if state.show_lyrics {
-        Some(&[("↑↓", "scroll"), ("l", "hide")])
+        Some(&[("↑↓", "scroll"), ("l", "hide lyrics")])
     } else {
         None
     };

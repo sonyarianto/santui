@@ -623,12 +623,12 @@ impl App {
         let mut hints: Vec<(String, String)> = Vec::new();
         if self.state.show_lyrics && self.state.lyrics_focused {
             hints.push(("tab".into(), "stations".into()));
-            hints.push(("l".into(), "hide".into()));
+            hints.push(("l".into(), "hide lyrics".into()));
         } else if self.state.show_lyrics {
             hints.push(("tab".into(), "lyrics".into()));
-            hints.push(("l".into(), "hide".into()));
+            hints.push(("l".into(), "hide lyrics".into()));
         } else if !self.state.lyrics_text.is_empty() || self.state.lyrics_loading {
-            hints.push(("l".into(), "lyrics".into()));
+            hints.push(("l".into(), "show lyrics".into()));
         }
         if !self.state.query.is_empty() {
             hints.push(("c".into(), "clear".into()));
