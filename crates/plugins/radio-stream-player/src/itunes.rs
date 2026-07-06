@@ -47,7 +47,7 @@ pub fn lookup(title: &str) -> Result<Option<TrackInfo>, String> {
         encoded
     );
 
-    let mut resp = ureq::get(&url)
+    let mut resp = crate::http::agent().get(&url)
         .call()
         .map_err(|e| format!("iTunes request failed: {e}"))?;
     let body: String = resp

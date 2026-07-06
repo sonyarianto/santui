@@ -1,4 +1,5 @@
 mod database;
+mod http;
 mod itunes;
 mod lrclib;
 mod player;
