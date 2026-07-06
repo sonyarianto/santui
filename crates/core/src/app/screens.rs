@@ -201,9 +201,7 @@ impl super::Santui {
                 Style::default().fg(t.text_muted),
             )),
             Line::from(""),
-            Line::from(format!(
-                "\u{00a9} {year} Santui contributors https://github.com/sonyarianto"
-            )),
+            Line::from(format!("\u{00a9} {year} Santui contributors")),
             Line::from(""),
             Line::from(Span::styled(
                 "https://santuiapp.vercel.app",
