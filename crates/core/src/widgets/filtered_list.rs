@@ -479,6 +479,10 @@ impl FilteredListState {
         self.dirty
     }
 
+    pub fn mark_dirty(&mut self) {
+        self.dirty = true;
+    }
+
     pub fn set_clean(&mut self) {
         self.dirty = false;
     }

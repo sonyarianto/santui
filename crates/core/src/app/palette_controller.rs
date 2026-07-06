@@ -35,6 +35,12 @@ impl PaletteController {
         self.state.is_some()
     }
 
+    pub fn invalidate(&mut self) {
+        if let Some(ref mut state) = self.state {
+            state.mark_dirty();
+        }
+    }
+
     /// Build a flat `DisplayItem` list and a parallel `ItemIndex` mapping
     /// from the three item sources.
     fn build_items<'a>(

@@ -442,7 +442,9 @@ impl Santui {
             self.plugin_manager.check_reloads(&mut ctx);
 
             // Poll registry.toml for changes (registry plugin writes it).
-            self.plugin_manager.poll_registry_installed();
+            if self.plugin_manager.poll_registry_installed() {
+                self.palette_controller.invalidate();
+            }
 
             // Drain the event bus and forward events to subsystems.
             let events = self.event_bus.drain();
