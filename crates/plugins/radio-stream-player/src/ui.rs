@@ -196,6 +196,19 @@ pub fn render_ui(
     let inner_w = left_w.saturating_sub(4) as usize;
 
     // ---- Top line: search bar, scan message, filter indicator, or total station count ----
+    let table_avail = stations_h.saturating_sub(TABLE_TOP + HEADER_H + 1 + stations_footer_rows);
+    let max_visible = table_avail as usize;
+    let scroll_pct = if state.filtered.len() > max_visible.max(1) && state.scroll > 0 {
+        let visible = max_visible.min(state.filtered.len().saturating_sub(state.scroll));
+        let max_scroll = state.filtered.len().saturating_sub(visible.max(1));
+        let pct = (state.scroll * 100)
+            .checked_div(max_scroll)
+            .unwrap_or(0)
+            .min(100);
+        Some(pct)
+    } else {
+        None
+    };
     if state.search_mode {
         let cursor = if state.tick_counter % 6 < 3 {
             '█'
@@ -203,7 +216,16 @@ pub fn render_ui(
             ' '
         };
         let left_text = format!("Search: {}{cursor}", state.query);
-        let right_text = format!("{}/{}", state.filtered.len(), state.stations.len());
+        let right_text = if let Some(pct) = scroll_pct {
+            format!(
+                "{}/{}  {}%",
+                state.filtered.len(),
+                state.stations.len(),
+                pct
+            )
+        } else {
+            format!("{}/{}", state.filtered.len(), state.stations.len())
+        };
         let right_len = right_text.len();
         let max_left = inner_w.saturating_sub(right_len + 1);
         let display_left: String = left_text.chars().take(max_left).collect();
@@ -246,7 +268,16 @@ pub fn render_ui(
         });
     } else if !state.query.is_empty() {
         let left_text = format!("Filter: \"{}\"", state.query);
-        let right_text = format!("{}/{}", state.filtered.len(), state.stations.len());
+        let right_text = if let Some(pct) = scroll_pct {
+            format!(
+                "{}/{}  {}%",
+                state.filtered.len(),
+                state.stations.len(),
+                pct
+            )
+        } else {
+            format!("{}/{}", state.filtered.len(), state.stations.len())
+        };
         let right_len = right_text.len();
         let max_left = inner_w.saturating_sub(right_len + 1);
         let display_left: String = left_text.chars().take(max_left).collect();
@@ -277,6 +308,11 @@ pub fn render_ui(
             format!("Total stations: {}  ♥ {}", state.stations.len(), fav_count)
         } else {
             format!("Total stations: {}", state.stations.len())
+        };
+        let top_text = if let Some(pct) = scroll_pct {
+            format!("{}  {}%", top_text, pct)
+        } else {
+            top_text
         };
         let top_x = left_w.saturating_sub(2u16.saturating_add(top_text.chars().count() as u16));
         cmds.push(RenderCmd::Text {
