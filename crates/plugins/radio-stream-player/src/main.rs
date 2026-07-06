@@ -440,7 +440,7 @@ impl App {
             IpcKey::Char('l') => {
                 self.state.show_lyrics = !self.state.show_lyrics;
                 self.state.lyrics_scroll = 0;
-                self.state.lyrics_focused = self.state.show_lyrics;
+                self.state.lyrics_focused = false;
                 true
             }
             IpcKey::Char(' ') => {
@@ -1234,7 +1234,7 @@ mod tests {
         assert!(!app.state.show_lyrics);
         assert!(app.handle_key(IpcKey::Char('l')));
         assert!(app.state.show_lyrics);
-        assert!(app.state.lyrics_focused);
+        assert!(!app.state.lyrics_focused);
         assert_eq!(app.state.lyrics_scroll, 0);
     }
 
