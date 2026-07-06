@@ -420,7 +420,7 @@ pub fn render_ui(
         left_w,
         info_h,
         "Now Playing",
-        stations_focused,
+        false,
         None,
     );
     // Volume on the top border line (trailing title dash serves as separator)
@@ -593,12 +593,15 @@ pub fn render_ui(
             );
         } else {
             // Render title header
+            let focused = state.lyrics_focused;
+            let title_fg = if focused { theme.accent } else { theme.text_muted };
+            let artist_fg = if focused { theme.text } else { theme.text_muted };
             if let Some(ref title) = header_title {
                 cmds.push(RenderCmd::Text {
                     x: ly_x + 2,
                     y: 1,
                     text: title.chars().take(ly_inner_w as usize).collect(),
-            fg: Some(theme.text_muted),
+                    fg: Some(title_fg),
                     bg: None,
                     bold: true,
                     modifiers: 0,
@@ -609,7 +612,7 @@ pub fn render_ui(
                     x: ly_x + 2,
                     y: 2,
                     text: artist.chars().take(ly_inner_w as usize).collect(),
-                    fg: Some(theme.text_muted),
+                    fg: Some(artist_fg),
                     bg: None,
                     bold: false,
                     modifiers: 0,
@@ -626,12 +629,13 @@ pub fn render_ui(
                     break;
                 }
                 let line = lines[line_idx];
+                let lyrics_body_fg = if focused { theme.text } else { theme.text_muted };
                 ui::text_at(
                     &mut cmds,
                     ly_x + 2,
                     content_top + i as u16,
                     line,
-                    theme.text,
+                    lyrics_body_fg,
                     None,
                     ly_inner_w,
                 );
