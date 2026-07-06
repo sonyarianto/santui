@@ -370,7 +370,7 @@ pub fn render_ui(
         column_widths: vec![name_w as u16, genre_w as u16, country_w as u16],
         selected: vis_selected,
         style: TextStyle {
-            fg: Some(theme.text),
+            fg: Some(if stations_focused { theme.text } else { theme.text_muted }),
             bg: None,
             bold: false,
             modifiers: 0,
