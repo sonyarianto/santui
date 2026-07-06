@@ -598,7 +598,7 @@ pub fn render_ui(
                     x: ly_x + 2,
                     y: 1,
                     text: title.chars().take(ly_inner_w as usize).collect(),
-                    fg: Some(theme.accent),
+            fg: Some(theme.text_muted),
                     bg: None,
                     bold: true,
                     modifiers: 0,
