@@ -262,6 +262,18 @@ impl RadioState {
             self.lyrics_scroll = (self.lyrics_scroll + 1).min(max_scroll);
         }
     }
+
+    pub fn lyrics_page_up(&mut self, page: usize) {
+        self.lyrics_scroll = self.lyrics_scroll.saturating_sub(page);
+    }
+
+    pub fn lyrics_page_down(&mut self, page: usize) {
+        let total = self.lyrics_text.lines().count();
+        if total > page {
+            let max_scroll = total.saturating_sub(page);
+            self.lyrics_scroll = (self.lyrics_scroll + page).min(max_scroll);
+        }
+    }
 }
 
 #[cfg(test)]

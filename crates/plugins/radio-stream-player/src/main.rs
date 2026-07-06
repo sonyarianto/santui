@@ -350,7 +350,8 @@ impl App {
             }
             IpcKey::PageUp => {
                 if self.state.show_lyrics && self.state.lyrics_focused {
-                    self.state.lyrics_scroll_up();
+                    let panel_h = self.state.lyrics_content_height(self.area.h);
+                    self.state.lyrics_page_up(panel_h.max(1));
                 } else {
                     let info_h = self.state.info_h();
                     let page = self.area.h.saturating_sub(info_h + LIST_OVERHEAD) as usize;
@@ -362,7 +363,7 @@ impl App {
             IpcKey::PageDown => {
                 if self.state.show_lyrics && self.state.lyrics_focused {
                     let panel_h = self.state.lyrics_content_height(self.area.h);
-                    self.state.lyrics_scroll_down(panel_h);
+                    self.state.lyrics_page_down(panel_h.max(1));
                 } else {
                     let info_h = self.state.info_h();
                     let page = self.area.h.saturating_sub(info_h + LIST_OVERHEAD) as usize;
@@ -1052,7 +1053,7 @@ mod tests {
         app.state.lyrics_text = "a\nb\nc".into();
         app.state.lyrics_scroll = 2;
         assert!(app.handle_key(IpcKey::PageUp));
-        assert_eq!(app.state.lyrics_scroll, 1);
+        assert_eq!(app.state.lyrics_scroll, 0);
     }
 
     #[test]
@@ -1073,7 +1074,7 @@ mod tests {
             .collect::<Vec<_>>()
             .join("\n");
         assert!(app.handle_key(IpcKey::PageDown));
-        assert_eq!(app.state.lyrics_scroll, 1);
+        assert_eq!(app.state.lyrics_scroll, 10);
     }
 
     #[test]
