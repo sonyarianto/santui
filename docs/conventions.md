@@ -6,4 +6,4 @@
 - All widgets use ratatui's `Frame`, `Layout`, `Rect`, `Style`, `Span`, `Line`, `Paragraph`
 - Use `Theme` semantic colors instead of hardcoded `Color::*` — add new fields to `Theme` if needed
 - Add `impl Default` for any type with a `new()` constructor (clippy rule)
-- `cargo fmt` before commit; clippy must pass with `-D warnings`
+- `cargo fmt` before commit; clippy must pass with `-D warnings` (enforced by lefthook pre-commit)

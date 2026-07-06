@@ -11,6 +11,8 @@ cargo fmt                # auto-format
 cargo test --workspace   # run tests
 ```
 
+lefthook pre-commit runs `cargo fmt --check` + `cargo clippy` automatically. Install hooks: `lefthook install`.
+
 Run: `cargo build --workspace && cargo run -p santui` or `.\target\debug\santui.exe`
 
 Dev mode (plugin registry + native deps):
@@ -66,7 +68,7 @@ crates/
 - Rust edition 2021, no nightly
 - `ratatui` for rendering; `Theme` semantic colors over hardcoded `Color::*`
 - `impl Default` for any type with a `new()` constructor
-- `cargo fmt` before commit; clippy must pass with `-D warnings`
+- `cargo fmt` before commit; clippy must pass with `-D warnings` (enforced by lefthook pre-commit)
 - Commit messages must be in English
 - **Refactoring / non-trivial changes**: work on a feature branch, push for review, then merge to `main`
 - **Don't push on every commit** — only push when explicitly asked or when the branch is ready for review/merging

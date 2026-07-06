@@ -2,10 +2,12 @@
 
 ## Pre-commit checks
 
-Run these manually before committing — CI will also catch failures on push:
+lefthook runs the following checks automatically on commit:
 
 - `cargo fmt --check` (or `cargo fmt` to auto-fix)
 - `cargo clippy --workspace -- -D warnings`
+
+Install hooks: `lefthook install`. You can also run these manually — CI will also catch failures on push.
 
 ## Development Mode (Plugin Registry)
 
