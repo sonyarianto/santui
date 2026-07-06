@@ -8,15 +8,11 @@ impl super::Santui {
     /// Render text character-by-character, skipping spaces, so the
     /// background (e.g. starfield) shows through between glyphs.
     fn draw_transparent_text(f: &mut Frame, area: Rect, lines: &[&str], color: ratatui::style::Color) {
-        let max_w = lines
-            .iter()
-            .map(|l| l.chars().count() as u16)
-            .max()
-            .unwrap_or(0);
-        let x0 = area.x + (area.width.saturating_sub(max_w)) / 2;
         let buf = f.buffer_mut();
         for (row, line) in lines.iter().enumerate() {
             let y = area.y + row as u16;
+            let w = line.chars().count() as u16;
+            let x0 = area.x + (area.width.saturating_sub(w)) / 2;
             for (col, ch) in line.chars().enumerate() {
                 if ch == ' ' {
                     continue;
@@ -177,6 +173,12 @@ impl super::Santui {
         self.render_starfield(f, area);
         let t = &self.app_state.theme;
         let ver = super::VERSION;
+        let year = 1970u64
+            + std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs()
+                / 31_556_952;
 
         let info: Vec<Line> = vec![
             Line::from(""),
@@ -194,7 +196,7 @@ impl super::Santui {
                 Style::default().fg(t.text_muted),
             )),
             Line::from(""),
-            Line::from("Copyright \u{00a9} Sony AK https://github.com/sonyarianto"),
+            Line::from(format!("\u{00a9} {year} Santui contributors https://github.com/sonyarianto")),
             Line::from(""),
             Line::from(Span::styled(
                 "https://santuiapp.vercel.app",
