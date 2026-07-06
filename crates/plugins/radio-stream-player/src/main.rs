@@ -659,10 +659,7 @@ impl App {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![
-        ("Radio".into(), "Search stations".into()),
-        ("Radio".into(), "Reload stations".into()),
-    ]
+    vec![]
 }
 
 fn respond(app: &mut App, consumed: bool) {
