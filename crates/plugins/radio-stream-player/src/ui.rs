@@ -26,17 +26,19 @@ fn draw_panel(
     } else {
         title.trim().to_string()
     };
+    let border_fg = if focused { theme.border } else { theme.text_muted };
+    let text_fg = if focused { theme.text } else { theme.text_muted };
     cmds.push(RenderCmd::Border {
         x,
         y,
         w,
         h,
-        fg: theme.border,
+        fg: border_fg,
         bg: None,
         borders: BORDER_ALL,
         title: Some(t),
-        title_fg: Some(theme.text),
-        title_dash_fg: Some(theme.border),
+        title_fg: Some(text_fg),
+        title_dash_fg: Some(border_fg),
         border_type: None,
     });
 
@@ -418,7 +420,7 @@ pub fn render_ui(
         left_w,
         info_h,
         "Now Playing",
-        false,
+        stations_focused,
         None,
     );
     // Volume on the top border line (trailing title dash serves as separator)
