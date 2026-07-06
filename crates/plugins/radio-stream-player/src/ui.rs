@@ -17,6 +17,7 @@ fn draw_panel(
     title: &str,
     focused: bool,
     footer: Option<&[(&str, &str)]>,
+    dim_unfocused: bool,
 ) {
     if w < 3 || h < 2 {
         return;
@@ -26,8 +27,9 @@ fn draw_panel(
     } else {
         title.trim().to_string()
     };
-    let border_fg = if focused { theme.border } else { theme.text_muted };
-    let text_fg = if focused { theme.text } else { theme.text_muted };
+    let bright = focused || !dim_unfocused;
+    let border_fg = if bright { theme.border } else { theme.text_muted };
+    let text_fg = if bright { theme.text } else { theme.text_muted };
     cmds.push(RenderCmd::Border {
         x,
         y,
@@ -188,6 +190,7 @@ pub fn render_ui(
         "Stations",
         stations_focused,
         stations_footer,
+        true,
     );
 
     let inner_w = left_w.saturating_sub(4) as usize;
@@ -422,6 +425,7 @@ pub fn render_ui(
         "Now Playing",
         false,
         None,
+        false,
     );
     // Volume on the top border line (trailing title dash serves as separator)
     let vol_text = format!(" Vol: {}% ", state.volume);
@@ -542,6 +546,7 @@ pub fn render_ui(
             "Lyrics",
             state.lyrics_focused,
             lyrics_footer,
+            true,
         );
 
         let ly_inner_w = ly_panel_w.saturating_sub(4);
