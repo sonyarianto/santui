@@ -61,6 +61,16 @@ members = [
     "crates/plugins/sprint-retro",
     "crates/plugins/sql-playground",
     "crates/plugins/ssl-checker",
+    "crates/plugins/ai-chat",
+    "crates/plugins/code-runner",
+    "crates/plugins/github-browser",
+    "crates/plugins/mermaid-renderer",
+    "crates/plugins/music-player-controller",
+    "crates/plugins/network-bandwidth-monitor",
+    "crates/plugins/package-manager",
+    "crates/plugins/recipe-manager",
+    "crates/plugins/sqlite-browser",
+    "crates/plugins/time-tracker",
     "crates/app",
 ]
 resolver = "2"

@@ -398,6 +398,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "cookie"
+version = "0.18.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ddef33a339a91ea89fb53151bd0a4689cfce27055c291dfa69945475d22c747"
+dependencies = [
+ "percent-encoding",
+ "time",
+ "version_check",
+]
+
+[[package]]
+name = "cookie_store"
+version = "0.22.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15b2c103cf610ec6cae3da84a766285b42fd16aad564758459e6ecf128c75206"
+dependencies = [
+ "cookie",
+ "document-features",
+ "idna",
+ "indexmap",
+ "log",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "time",
+ "url",
+]
+
+[[package]]
 name = "core-foundation-sys"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2484,6 +2513,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-ai-chat"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+ "ureq",
+]
+
+[[package]]
 name = "santui-api-monitor"
 version = "0.2.28"
 dependencies = [
@@ -2587,6 +2627,16 @@ dependencies = [
 
 [[package]]
 name = "santui-cloud-cost"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-code-runner"
 version = "0.2.28"
 dependencies = [
  "env_logger",
@@ -2760,6 +2810,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-github-browser"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+ "ureq",
+]
+
+[[package]]
 name = "santui-habit-tracker"
 version = "0.2.28"
 dependencies = [
@@ -2834,7 +2895,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-mermaid-renderer"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
 name = "santui-mongo-explorer"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-music-player-controller"
 version = "0.2.28"
 dependencies = [
  "env_logger",
@@ -2853,6 +2934,26 @@ dependencies = [
  "serde",
  "serde_json",
  "ureq",
+]
+
+[[package]]
+name = "santui-network-bandwidth-monitor"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-package-manager"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
 ]
 
 [[package]]
@@ -2971,6 +3072,16 @@ dependencies = [
  "serde",
  "serde_json",
  "ureq",
+]
+
+[[package]]
+name = "santui-recipe-manager"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
 ]
 
 [[package]]
@@ -3096,6 +3207,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-sqlite-browser"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "rusqlite",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
 name = "santui-ssh-manager"
 version = "0.2.28"
 dependencies = [
@@ -3127,6 +3249,16 @@ dependencies = [
  "serde",
  "serde_json",
  "sysinfo",
+]
+
+[[package]]
+name = "santui-time-tracker"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
 ]
 
 [[package]]
@@ -3598,6 +3730,7 @@ dependencies = [
  "powerfmt",
  "serde_core",
  "time-core",
+ "time-macros",
 ]
 
 [[package]]
@@ -3605,6 +3738,16 @@ name = "time-core"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1c906769ad99c88eaa54e728060edef082f8e358ff32030cb7c7d315e81109"
+
+[[package]]
+name = "time-macros"
+version = "0.2.30"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dcef1a61bdb119096e153208ec5cbec23944ce8bca13be5c7f60c634f7403935"
+dependencies = [
+ "num-conv",
+ "time-core",
+]
 
 [[package]]
 name = "tinystr"
@@ -3723,11 +3866,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dea7109cdcd5864d4eeb1b58a1648dc9bf520360d7af16ec26d0a9354bafcfc0"
 dependencies = [
  "base64",
+ "cookie_store",
  "flate2",
  "log",
  "percent-encoding",
  "rustls",
  "rustls-pki-types",
+ "serde",
+ "serde_json",
  "ureq-proto",
  "utf8-zero",
  "webpki-roots",
