@@ -1,28 +1,668 @@
 [
-  {"id": "radio-stream-player",       "name": "Radio Stream Player",      "description": "Listen to thousands of radio stations worldwide",                                                    "capabilities": ["background"]},
-  {"id": "weather",                   "name": "Weather",                  "description": "Current conditions, hourly & 7-day forecast, location search, auto-refresh",                       "capabilities": []},
-  {"id": "rss-reader",                "name": "RSS Reader",               "description": "Subscribe to and read RSS/Atom feeds",                                                             "capabilities": []},
-  {"id": "clipboard-history",         "name": "Clipboard History",        "description": "Track and search clipboard history",                                                              "capabilities": []},
-  {"id": "hacker-news-reader",        "name": "Hacker News Reader",       "description": "Browse top, new, and best stories from Hacker News",                                              "capabilities": []},
-  {"id": "system-monitor",            "name": "System Monitor",           "description": "Real-time CPU, memory, disk, network, and process monitor",                                       "capabilities": []},
-  {"id": "world-clock",               "name": "World Clock",              "description": "World timezone clock with grid, detail view, search, and custom labels",                          "capabilities": []},
-  {"id": "unit-converter",            "name": "Unit Converter",           "description": "Offline converter for common measurement units",                                                  "capabilities": []},
-  {"id": "regex-tester",              "name": "Regex Tester",             "description": "Interactive regular expression tester with captures and replacement preview",                     "capabilities": []},
-  {"id": "json-yaml-formatter",       "name": "JSON/YAML Formatter",      "description": "Format, validate, minify, and convert JSON and YAML snippets",                                    "capabilities": []},
-  {"id": "todo-task-manager",         "name": "Todo Task Manager",        "description": "Local-first task manager with priorities, due dates, tags, and search",                           "capabilities": []},
-  {"id": "bookmark-launcher",         "name": "Bookmark Launcher",        "description": "Search, open, and copy URLs, paths, command snippets, and notes",                                 "capabilities": []},
-  {"id": "cron-expression-helper",    "name": "Cron Expression Helper",   "description": "Validate cron expressions, explain schedules, and preview upcoming runs",                         "capabilities": []},
-  {"id": "calendar-agenda",           "name": "Calendar Agenda",          "description": "Display local ICS calendars as a searchable daily agenda",                                       "capabilities": []},
-  {"id": "package-version-monitor",   "name": "Package Version Monitor",  "description": "Scan manifests and check dependency versions across ecosystems",                                  "capabilities": []},
-  {"id": "dictionary-thesaurus",      "name": "Dictionary/Thesaurus",     "description": "Look up definitions, examples, synonyms, and antonyms",                                          "capabilities": []},
-  {"id": "git-repository-dashboard",  "name": "Git Repository Dashboard", "description": "Track local Git repositories, branch status, changes, and recent commits",                        "capabilities": []},
-  {"id": "quran-reader",              "name": "Quran",                    "description": "Read Quran text and translations with recitation playback",                                      "capabilities": ["background"]},
-  {"id": "iptv-player",               "name": "IPTV Player",              "description": "Browse IPTV playlists and play channels in a native mpv window",                                 "capabilities": ["background"]},
-  {"id": "currency-converter",        "name": "Currency Converter",       "description": "Real-time currency converter",                                                                   "capabilities": []},
-  {"id": "habit-tracker",             "name": "Habit Tracker",            "description": "Track daily habits with streak heatmaps",                                                        "capabilities": []},
-  {"id": "http-client",               "name": "HTTP Client",              "description": "Compose and send HTTP requests with history",                                                    "capabilities": []},
-  {"id": "music-preview",             "name": "Music Preview",            "description": "Search and preview iTunes music tracks",                                                         "capabilities": []},
-  {"id": "pomodoro-timer",            "name": "Pomodoro Timer",           "description": "Focus timer with work and break sessions",                                                       "capabilities": []},
-  {"id": "quick-notes",               "name": "Quick Notes",              "description": "Scratch pad for quick notes and snippets",                                                       "capabilities": []},
-  {"id": "ssh-manager",               "name": "SSH Manager",              "description": "Manage and connect to SSH hosts",                                                                "capabilities": []}
+  {
+    "id": "radio-stream-player",
+    "name": "Radio Stream Player",
+    "description": "Listen to thousands of radio stations worldwide",
+    "capabilities": [
+      "background"
+    ]
+  },
+  {
+    "id": "weather",
+    "name": "Weather",
+    "description": "Current conditions, hourly & 7-day forecast, location search, auto-refresh",
+    "capabilities": []
+  },
+  {
+    "id": "rss-reader",
+    "name": "RSS Reader",
+    "description": "Subscribe to and read RSS/Atom feeds",
+    "capabilities": []
+  },
+  {
+    "id": "clipboard-history",
+    "name": "Clipboard History",
+    "description": "Track and search clipboard history",
+    "capabilities": []
+  },
+  {
+    "id": "hacker-news-reader",
+    "name": "Hacker News Reader",
+    "description": "Browse top, new, and best stories from Hacker News",
+    "capabilities": []
+  },
+  {
+    "id": "system-monitor",
+    "name": "System Monitor",
+    "description": "Real-time CPU, memory, disk, network, and process monitor",
+    "capabilities": []
+  },
+  {
+    "id": "world-clock",
+    "name": "World Clock",
+    "description": "World timezone clock with grid, detail view, search, and custom labels",
+    "capabilities": []
+  },
+  {
+    "id": "unit-converter",
+    "name": "Unit Converter",
+    "description": "Offline converter for common measurement units",
+    "capabilities": []
+  },
+  {
+    "id": "regex-tester",
+    "name": "Regex Tester",
+    "description": "Interactive regular expression tester with captures and replacement preview",
+    "capabilities": []
+  },
+  {
+    "id": "json-yaml-formatter",
+    "name": "JSON/YAML Formatter",
+    "description": "Format, validate, minify, and convert JSON and YAML snippets",
+    "capabilities": []
+  },
+  {
+    "id": "todo-task-manager",
+    "name": "Todo Task Manager",
+    "description": "Local-first task manager with priorities, due dates, tags, and search",
+    "capabilities": []
+  },
+  {
+    "id": "bookmark-launcher",
+    "name": "Bookmark Launcher",
+    "description": "Search, open, and copy URLs, paths, command snippets, and notes",
+    "capabilities": []
+  },
+  {
+    "id": "cron-expression-helper",
+    "name": "Cron Expression Helper",
+    "description": "Validate cron expressions, explain schedules, and preview upcoming runs",
+    "capabilities": []
+  },
+  {
+    "id": "calendar-agenda",
+    "name": "Calendar Agenda",
+    "description": "Display local ICS calendars as a searchable daily agenda",
+    "capabilities": []
+  },
+  {
+    "id": "package-version-monitor",
+    "name": "Package Version Monitor",
+    "description": "Scan manifests and check dependency versions across ecosystems",
+    "capabilities": []
+  },
+  {
+    "id": "dictionary-thesaurus",
+    "name": "Dictionary/Thesaurus",
+    "description": "Look up definitions, examples, synonyms, and antonyms",
+    "capabilities": []
+  },
+  {
+    "id": "git-repository-dashboard",
+    "name": "Git Repository Dashboard",
+    "description": "Track local Git repositories, branch status, changes, and recent commits",
+    "capabilities": []
+  },
+  {
+    "id": "quran-reader",
+    "name": "Quran",
+    "description": "Read Quran text and translations with recitation playback",
+    "capabilities": [
+      "background"
+    ]
+  },
+  {
+    "id": "iptv-player",
+    "name": "IPTV Player",
+    "description": "Browse IPTV playlists and play channels in a native mpv window",
+    "capabilities": [
+      "background"
+    ]
+  },
+  {
+    "id": "currency-converter",
+    "name": "Currency Converter",
+    "description": "Real-time currency converter",
+    "capabilities": []
+  },
+  {
+    "id": "habit-tracker",
+    "name": "Habit Tracker",
+    "description": "Track daily habits with streak heatmaps",
+    "capabilities": []
+  },
+  {
+    "id": "http-client",
+    "name": "HTTP Client",
+    "description": "Compose and send HTTP requests with history",
+    "capabilities": []
+  },
+  {
+    "id": "music-preview",
+    "name": "Music Preview",
+    "description": "Search and preview iTunes music tracks",
+    "capabilities": []
+  },
+  {
+    "id": "pomodoro-timer",
+    "name": "Pomodoro Timer",
+    "description": "Focus timer with work and break sessions",
+    "capabilities": []
+  },
+  {
+    "id": "quick-notes",
+    "name": "Quick Notes",
+    "description": "Scratch pad for quick notes and snippets",
+    "capabilities": []
+  },
+  {
+    "id": "ssh-manager",
+    "name": "SSH Manager",
+    "description": "Manage and connect to SSH hosts",
+    "capabilities": []
+  },
+  {
+    "id": "ai-chat",
+    "name": "AI Chat",
+    "description": "Chat with LLMs via OpenAI-compatible API from the terminal",
+    "capabilities": []
+  },
+  {
+    "id": "api-monitor",
+    "name": "API Monitor",
+    "description": "Monitor API endpoint health with status checks and response times",
+    "capabilities": []
+  },
+  {
+    "id": "archive-browser",
+    "name": "Archive Browser",
+    "description": "Browse and inspect zip and tar archive file contents",
+    "capabilities": []
+  },
+  {
+    "id": "ascii-table",
+    "name": "ASCII Table",
+    "description": "Display and search ASCII character table",
+    "capabilities": []
+  },
+  {
+    "id": "base64-encoder",
+    "name": "Base64 Encoder",
+    "description": "Encode and decode Base64 text",
+    "capabilities": []
+  },
+  {
+    "id": "batch-renamer",
+    "name": "Batch Renamer",
+    "description": "Preview and apply batch file renaming with prefix, suffix, and replace patterns",
+    "capabilities": []
+  },
+  {
+    "id": "bmi-calculator",
+    "name": "BMI Calculator",
+    "description": "Calculate Body Mass Index from height and weight",
+    "capabilities": []
+  },
+  {
+    "id": "breathing-exercise",
+    "name": "Breathing Exercise",
+    "description": "Guided breathing exercise with animated inhale/hold/exhale cycles",
+    "capabilities": []
+  },
+  {
+    "id": "budget-tracker",
+    "name": "Budget Tracker",
+    "description": "Track monthly budget categories with budgeted and spent amounts",
+    "capabilities": []
+  },
+  {
+    "id": "case-converter",
+    "name": "Case Converter",
+    "description": "Convert text between camelCase, snake_case, kebab-case, and more",
+    "capabilities": []
+  },
+  {
+    "id": "cheatsheet-browser",
+    "name": "Cheat Sheet Browser",
+    "description": "Browse embedded cheat sheets for Git, Vim, Docker, Regex, and Bash",
+    "capabilities": []
+  },
+  {
+    "id": "chess",
+    "name": "Chess",
+    "description": "Play chess against yourself with Unicode pieces and algebraic notation",
+    "capabilities": []
+  },
+  {
+    "id": "cloud-cost",
+    "name": "Cloud Cost Estimator",
+    "description": "Estimate cloud resource costs across AWS, Azure, and GCP",
+    "capabilities": []
+  },
+  {
+    "id": "code-runner",
+    "name": "Code Runner",
+    "description": "Write and execute code snippets in any installed language",
+    "capabilities": []
+  },
+  {
+    "id": "color-picker",
+    "name": "Color Picker",
+    "description": "Pick colors and copy hex/rgb/hsl values",
+    "capabilities": []
+  },
+  {
+    "id": "connection-string-builder",
+    "name": "Connection String Builder",
+    "description": "Build database connection strings from host, port, user, and password fields",
+    "capabilities": []
+  },
+  {
+    "id": "csv-viewer",
+    "name": "CSV Viewer",
+    "description": "View and search CSV files with column alignment",
+    "capabilities": []
+  },
+  {
+    "id": "dashboard",
+    "name": "Dashboard",
+    "description": "System overview dashboard with simulated CPU, memory, disk, and uptime gauges",
+    "capabilities": []
+  },
+  {
+    "id": "disk-usage",
+    "name": "Disk Usage Analyzer",
+    "description": "Analyze disk usage with directory sizes and bar chart visualization",
+    "capabilities": []
+  },
+  {
+    "id": "dns-globe",
+    "name": "DNS Globe",
+    "description": "DNS record lookup with global server selection",
+    "capabilities": []
+  },
+  {
+    "id": "dns-lookup",
+    "name": "DNS Lookup",
+    "description": "Look up DNS records for a domain name",
+    "capabilities": []
+  },
+  {
+    "id": "docker-dashboard",
+    "name": "Docker Dashboard",
+    "description": "List and manage Docker containers with start, stop, and status monitoring",
+    "capabilities": []
+  },
+  {
+    "id": "email-client",
+    "name": "Email Client",
+    "description": "Browse and read emails from a mock IMAP inbox",
+    "capabilities": []
+  },
+  {
+    "id": "env-manager",
+    "name": "Environment Manager",
+    "description": "View and filter system environment variables",
+    "capabilities": []
+  },
+  {
+    "id": "erd-sketch",
+    "name": "ERD Sketch",
+    "description": "Sketch entity-relationship diagrams with tables, columns, and relationships",
+    "capabilities": []
+  },
+  {
+    "id": "expense-splitter",
+    "name": "Expense Splitter",
+    "description": "Split a bill among people with optional tip calculation",
+    "capabilities": []
+  },
+  {
+    "id": "file-diff",
+    "name": "File Diff",
+    "description": "Side-by-side file diff viewer with highlighted added, removed, and changed lines",
+    "capabilities": []
+  },
+  {
+    "id": "file-explorer",
+    "name": "File Explorer",
+    "description": "Browse the local filesystem with directory navigation",
+    "capabilities": []
+  },
+  {
+    "id": "flashcards",
+    "name": "Flashcards",
+    "description": "Browse and study flashcard deck with flip and random pick",
+    "capabilities": []
+  },
+  {
+    "id": "fortune-cookie",
+    "name": "Fortune Cookie",
+    "description": "Random quotes, wisdom, and fun facts from fortune databases",
+    "capabilities": []
+  },
+  {
+    "id": "game-of-life",
+    "name": "Game of Life",
+    "description": "Conway Game of Life cellular automaton simulation",
+    "capabilities": []
+  },
+  {
+    "id": "github-browser",
+    "name": "GitHub Browser",
+    "description": "Browse GitHub issues, pull requests, and notifications",
+    "capabilities": []
+  },
+  {
+    "id": "gpg-encryptor",
+    "name": "GPG Encryptor",
+    "description": "Encrypt, decrypt, sign, and verify messages using GPG",
+    "capabilities": []
+  },
+  {
+    "id": "graphql-playground",
+    "name": "GraphQL Playground",
+    "description": "Interactive GraphQL query composer with schema introspection",
+    "capabilities": []
+  },
+  {
+    "id": "hash-calculator",
+    "name": "Hash Calculator",
+    "description": "Compute MD5, SHA-1, SHA-256 hashes of input text",
+    "capabilities": []
+  },
+  {
+    "id": "hex-viewer",
+    "name": "Hex Viewer",
+    "description": "Hex dump viewer with offset, hex, and ASCII columns",
+    "capabilities": []
+  },
+  {
+    "id": "jwt-inspector",
+    "name": "JWT Inspector",
+    "description": "Decode and inspect JWT tokens without validation",
+    "capabilities": []
+  },
+  {
+    "id": "k8s-viewer",
+    "name": "Kubernetes Viewer",
+    "description": "View Kubernetes pods, deployments, services, and cluster state",
+    "capabilities": []
+  },
+  {
+    "id": "kanban-board",
+    "name": "Kanban Board",
+    "description": "Visual task management with drag-free column-based board",
+    "capabilities": []
+  },
+  {
+    "id": "loan-calculator",
+    "name": "Loan Calculator",
+    "description": "Calculate monthly payments, total interest, and amortization schedule",
+    "capabilities": []
+  },
+  {
+    "id": "log-viewer",
+    "name": "Log Viewer",
+    "description": "View and filter log file contents with scrolling support",
+    "capabilities": []
+  },
+  {
+    "id": "lorem-generator",
+    "name": "Lorem Generator",
+    "description": "Generate Lorem Ipsum placeholder text",
+    "capabilities": []
+  },
+  {
+    "id": "markdown-previewer",
+    "name": "Markdown Previewer",
+    "description": "Write and preview rendered Markdown in real time",
+    "capabilities": []
+  },
+  {
+    "id": "math-evaluator",
+    "name": "Math Evaluator",
+    "description": "Evaluate mathematical expressions with variables and functions",
+    "capabilities": []
+  },
+  {
+    "id": "mermaid-renderer",
+    "name": "Mermaid Renderer",
+    "description": "Render Mermaid.js-style diagrams as Unicode box-drawing art",
+    "capabilities": []
+  },
+  {
+    "id": "mongo-explorer",
+    "name": "MongoDB Explorer",
+    "description": "Browse mock MongoDB collections and documents",
+    "capabilities": []
+  },
+  {
+    "id": "music-player-controller",
+    "name": "Music Player Controller",
+    "description": "Control MPD music player daemon from the terminal",
+    "capabilities": []
+  },
+  {
+    "id": "network-bandwidth-monitor",
+    "name": "Network Bandwidth Monitor",
+    "description": "Real-time network bandwidth usage per interface with bar charts",
+    "capabilities": []
+  },
+  {
+    "id": "package-manager",
+    "name": "Package Manager",
+    "description": "Search system packages via apt, pacman, brew, or dnf",
+    "capabilities": []
+  },
+  {
+    "id": "password-generator",
+    "name": "Password Generator",
+    "description": "Generate strong random passwords with configurable options",
+    "capabilities": []
+  },
+  {
+    "id": "path-editor",
+    "name": "PATH Editor",
+    "description": "View, edit, add, and delete entries in the PATH environment variable",
+    "capabilities": []
+  },
+  {
+    "id": "periodic-table",
+    "name": "Periodic Table",
+    "description": "Browse the periodic table of elements with details",
+    "capabilities": []
+  },
+  {
+    "id": "ping-traceroute",
+    "name": "Ping / Traceroute",
+    "description": "Network diagnostic tool with ping and traceroute modes",
+    "capabilities": []
+  },
+  {
+    "id": "pipe-runner",
+    "name": "Pipe Runner",
+    "description": "Run shell commands and view their stdout/stderr output",
+    "capabilities": []
+  },
+  {
+    "id": "pixel-art",
+    "name": "Pixel Art",
+    "description": "Create pixel art on a grid with arrow keys and toggle cells",
+    "capabilities": []
+  },
+  {
+    "id": "port-scanner",
+    "name": "Port Scanner",
+    "description": "Scan TCP ports on a host and report open/closed status",
+    "capabilities": []
+  },
+  {
+    "id": "postgres-console",
+    "name": "PostgreSQL Console",
+    "description": "Interactive PostgreSQL query console with mock results",
+    "capabilities": []
+  },
+  {
+    "id": "process-manager",
+    "name": "Process Manager",
+    "description": "View and manage system processes with PID, name, and status",
+    "capabilities": []
+  },
+  {
+    "id": "qr-generator",
+    "name": "QR Generator",
+    "description": "Generate QR codes from text input",
+    "capabilities": []
+  },
+  {
+    "id": "recipe-manager",
+    "name": "Recipe Manager",
+    "description": "Store, search, and view cooking recipes",
+    "capabilities": []
+  },
+  {
+    "id": "redis-explorer",
+    "name": "Redis Explorer",
+    "description": "Browse and inspect Redis keys and values",
+    "capabilities": []
+  },
+  {
+    "id": "sdk-playground",
+    "name": "SDK Playground",
+    "description": "Send mock API requests and inspect responses",
+    "capabilities": []
+  },
+  {
+    "id": "service-manager",
+    "name": "Service Manager",
+    "description": "List and control system services with start, stop, and restart",
+    "capabilities": []
+  },
+  {
+    "id": "slug-generator",
+    "name": "Slug Generator",
+    "description": "Generate URL-friendly slugs from text",
+    "capabilities": []
+  },
+  {
+    "id": "snake-game",
+    "name": "Snake Game",
+    "description": "Classic Snake game with keyboard controls and high score tracking",
+    "capabilities": []
+  },
+  {
+    "id": "snippet-manager",
+    "name": "Snippet Manager",
+    "description": "Create, edit, and organize code snippets with syntax labels",
+    "capabilities": []
+  },
+  {
+    "id": "speed-test",
+    "name": "Speed Test",
+    "description": "Network speed test with simulated ping, download, and upload gauges",
+    "capabilities": []
+  },
+  {
+    "id": "sprint-retro",
+    "name": "Sprint Retro",
+    "description": "Sprint retrospective board with Went Well, Went Wrong, and Action Items columns",
+    "capabilities": []
+  },
+  {
+    "id": "sql-playground",
+    "name": "SQL Playground",
+    "description": "Run mock SQL queries and view tabular results",
+    "capabilities": []
+  },
+  {
+    "id": "sqlite-browser",
+    "name": "SQLite Browser",
+    "description": "Browse SQLite database files tables, schemas, and data",
+    "capabilities": []
+  },
+  {
+    "id": "ssl-checker",
+    "name": "SSL Checker",
+    "description": "Check SSL/TLS certificate information for a given domain",
+    "capabilities": []
+  },
+  {
+    "id": "stock-ticker",
+    "name": "Stock Ticker",
+    "description": "Simulated stock price tracker with real-time updates",
+    "capabilities": []
+  },
+  {
+    "id": "subnet-calculator",
+    "name": "Subnet Calculator",
+    "description": "Compute IPv4 network, broadcast, wildcard, and host range from CIDR",
+    "capabilities": []
+  },
+  {
+    "id": "terminal-pet",
+    "name": "Terminal Pet",
+    "description": "ASCII art pet companion with mood and pet switching",
+    "capabilities": []
+  },
+  {
+    "id": "text-toolkit",
+    "name": "Text Toolkit",
+    "description": "Transform text: counts, reverse, case, sort, dedupe, shuffle",
+    "capabilities": []
+  },
+  {
+    "id": "time-tracker",
+    "name": "Time Tracker",
+    "description": "Track time spent on tasks and projects with start/stop timers",
+    "capabilities": []
+  },
+  {
+    "id": "totp-viewer",
+    "name": "TOTP Viewer",
+    "description": "Time-based one-time password code viewer with TOTP algorithm",
+    "capabilities": []
+  },
+  {
+    "id": "typing-test",
+    "name": "Typing Test",
+    "description": "Typing speed test with WPM, accuracy, and word lists",
+    "capabilities": []
+  },
+  {
+    "id": "uuid-generator",
+    "name": "UUID Generator",
+    "description": "Generate UUID v4 and v7 identifiers",
+    "capabilities": []
+  },
+  {
+    "id": "wake-on-lan",
+    "name": "Wake-on-LAN",
+    "description": "Send Wake-on-LAN magic packets to wake remote machines",
+    "capabilities": []
+  },
+  {
+    "id": "water-tracker",
+    "name": "Water Tracker",
+    "description": "Track daily water intake with visual progress bar",
+    "capabilities": []
+  },
+  {
+    "id": "webhook-tester",
+    "name": "Webhook Tester",
+    "description": "Local HTTP server to receive and inspect webhook payloads",
+    "capabilities": []
+  },
+  {
+    "id": "websocket-client",
+    "name": "WebSocket Client",
+    "description": "Connect to WebSocket servers and send/receive messages",
+    "capabilities": []
+  },
+  {
+    "id": "whois-lookup",
+    "name": "WHOIS Lookup",
+    "description": "Look up domain registration WHOIS data",
+    "capabilities": []
+  }
 ]
