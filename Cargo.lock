@@ -576,6 +576,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "data-encoding"
+version = "2.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4ae5f15dda3c708c0ade84bfee31ccab44a3da4f88015ed22f63732abe300c8"
+
+[[package]]
 name = "deflate64"
 version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -978,6 +984,15 @@ checksum = "1bd49230192a3797a9a4d6abe9b3eed6f7fa4c8a8a4947977c6f80025f92cbd8"
 dependencies = [
  "rustix",
  "windows-link",
+]
+
+[[package]]
+name = "getopts"
+version = "0.2.24"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfe4fbac503b8d1f88e6676011885f34b7174f46e59956bba534ba83abded4df"
+dependencies = [
+ "unicode-width",
 ]
 
 [[package]]
@@ -2103,6 +2118,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "pulldown-cmark"
+version = "0.13.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9f068eba8e7071c5f9511831b44f32c740d5adf574e990f946ddb53db2f314e"
+dependencies = [
+ "bitflags 2.13.0",
+ "getopts",
+ "memchr",
+ "pulldown-cmark-escape",
+ "unicase",
+]
+
+[[package]]
+name = "pulldown-cmark-escape"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "007d8adb5ddab6f8e3f491ac63566a7d5002cc7ed73901f72057943fa71ae1ae"
+
+[[package]]
 name = "pxfm"
 version = "0.1.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2580,6 +2614,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-breathing-exercise"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
 name = "santui-budget-tracker"
 version = "0.2.28"
 dependencies = [
@@ -2599,6 +2643,17 @@ dependencies = [
  "log",
  "santui-ipc",
  "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-cheatsheet-browser"
+version = "0.2.28"
+dependencies = [
+ "arboard",
+ "env_logger",
+ "log",
+ "santui-ipc",
  "serde_json",
 ]
 
@@ -2738,6 +2793,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-dns-globe"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-dns-lookup"
+version = "0.2.28"
+dependencies = [
+ "arboard",
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
 name = "santui-docker-dashboard"
 version = "0.2.28"
 dependencies = [
@@ -2778,6 +2854,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-expense-splitter"
+version = "0.2.28"
+dependencies = [
+ "arboard",
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
 name = "santui-file-diff"
 version = "0.2.28"
 dependencies = [
@@ -2798,6 +2885,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-flashcards"
+version = "0.2.28"
+dependencies = [
+ "arboard",
+ "env_logger",
+ "log",
+ "rand 0.8.6",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-fortune-cookie"
+version = "0.2.28"
+dependencies = [
+ "arboard",
+ "env_logger",
+ "log",
+ "rand 0.8.6",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-game-of-life"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "rand 0.8.6",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
 name = "santui-git-repository-dashboard"
 version = "0.2.28"
 dependencies = [
@@ -2811,6 +2933,27 @@ dependencies = [
 
 [[package]]
 name = "santui-github-browser"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+ "ureq",
+]
+
+[[package]]
+name = "santui-gpg-encryptor"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-graphql-playground"
 version = "0.2.28"
 dependencies = [
  "env_logger",
@@ -2842,6 +2985,17 @@ dependencies = [
  "serde",
  "serde_json",
  "ureq",
+]
+
+[[package]]
+name = "santui-hex-viewer"
+version = "0.2.28"
+dependencies = [
+ "arboard",
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
 ]
 
 [[package]]
@@ -2902,6 +3056,60 @@ dependencies = [
  "santui-ipc",
  "serde_json",
  "serde_yaml",
+]
+
+[[package]]
+name = "santui-jwt-inspector"
+version = "0.2.28"
+dependencies = [
+ "arboard",
+ "base64",
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-k8s-viewer"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-kanban-board"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-log-viewer"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-markdown-previewer"
+version = "0.2.28"
+dependencies = [
+ "arboard",
+ "env_logger",
+ "log",
+ "pulldown-cmark",
+ "santui-ipc",
+ "serde_json",
 ]
 
 [[package]]
@@ -2989,6 +3197,36 @@ dependencies = [
  "serde_json",
  "toml",
  "ureq",
+]
+
+[[package]]
+name = "santui-path-editor"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-ping-traceroute"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-pipe-runner"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
 ]
 
 [[package]]
@@ -3186,6 +3424,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-snake-game"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "rand 0.8.6",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
 name = "santui-snippet-manager"
 version = "0.2.28"
 dependencies = [
@@ -3260,6 +3509,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-stock-ticker"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "rand 0.8.6",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-subnet-calculator"
+version = "0.2.28"
+dependencies = [
+ "arboard",
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
 name = "santui-system-monitor"
 version = "0.2.28"
 dependencies = [
@@ -3269,6 +3540,29 @@ dependencies = [
  "serde",
  "serde_json",
  "sysinfo",
+]
+
+[[package]]
+name = "santui-terminal-pet"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "rand 0.8.6",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-text-toolkit"
+version = "0.2.28"
+dependencies = [
+ "arboard",
+ "env_logger",
+ "log",
+ "rand 0.8.6",
+ "santui-ipc",
+ "serde_json",
 ]
 
 [[package]]
@@ -3295,10 +3589,53 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-totp-viewer"
+version = "0.2.28"
+dependencies = [
+ "arboard",
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+ "sha1",
+]
+
+[[package]]
+name = "santui-typing-test"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "rand 0.8.6",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
 name = "santui-unit-converter"
 version = "0.2.28"
 dependencies = [
  "arboard",
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-wake-on-lan"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-water-tracker"
+version = "0.2.28"
+dependencies = [
  "env_logger",
  "log",
  "santui-ipc",
@@ -3315,6 +3652,37 @@ dependencies = [
  "serde",
  "serde_json",
  "ureq",
+]
+
+[[package]]
+name = "santui-webhook-tester"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-websocket-client"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+ "tungstenite",
+]
+
+[[package]]
+name = "santui-whois-lookup"
+version = "0.2.28"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
 ]
 
 [[package]]
@@ -3821,6 +4189,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d99f8c9a7727884afe522e9bd5edbfc91a3312b36a77b5fb8926e4c31a41801"
 
 [[package]]
+name = "tungstenite"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "18e5b8366ee7a95b16d32197d0b2604b43a0be89dc5fac9f8e96ccafbaedda8a"
+dependencies = [
+ "byteorder",
+ "bytes",
+ "data-encoding",
+ "http",
+ "httparse",
+ "log",
+ "rand 0.8.6",
+ "sha1",
+ "thiserror 1.0.69",
+ "utf-8",
+]
+
+[[package]]
 name = "typenum"
 version = "1.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3837,6 +4223,12 @@ name = "unarray"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eaea85b334db583fe3274d12b4cd1880032beab409c0d774be044d4480ab9a94"
+
+[[package]]
+name = "unicase"
+version = "2.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dbc4bc3a9f746d862c45cb89d705aa10f187bb96c76001afab07a0d35ce60142"
 
 [[package]]
 name = "unicode-ident"
@@ -3929,6 +4321,12 @@ name = "urlencoding"
 version = "2.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "daf8dba3b7eb870caf1ddeed7bc9d2a049f3cfdfae7cb521b087cc33ae4c49da"
+
+[[package]]
+name = "utf-8"
+version = "0.7.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "09cc8ee72d2a9becf2f2febe0205bbed8fc6615b7cb429ad062dc7b7ddd036a9"
 
 [[package]]
 name = "utf8-zero"
