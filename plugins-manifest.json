@@ -664,5 +664,17 @@
     "name": "WHOIS Lookup",
     "description": "Look up domain registration WHOIS data",
     "capabilities": []
+  },
+  {
+    "id": "mysql-browser",
+    "name": "MySQL Browser",
+    "description": "Interactive MySQL database browser with mock query execution, table listings, and result inspection",
+    "capabilities": []
+  },
+  {
+    "id": "irc-client",
+    "name": "IRC Client",
+    "description": "Internet Relay Chat client with channel list, message view, and mock server interaction",
+    "capabilities": []
   }
 ]

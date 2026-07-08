@@ -71,6 +71,8 @@ members = [
     "crates/plugins/recipe-manager",
     "crates/plugins/sqlite-browser",
     "crates/plugins/time-tracker",
+    "crates/plugins/mysql-browser",
+    "crates/plugins/irc-client",
     "crates/app",
 ]
 resolver = "2"
