@@ -1,0 +1,19 @@
+[package]
+name = "santui-hash-calculator"
+version = "0.2.28"
+edition = "2021"
+
+[[bin]]
+name = "santui-hash-calculator"
+path = "src/main.rs"
+
+[dependencies]
+santui-ipc = { path = "../../ipc", version = "0.2.28", default-features = false }
+serde_json = { workspace = true }
+log = { workspace = true }
+env_logger = { workspace = true }
+arboard = "3"
+sha2 = "0.10"
+sha1 = "0.10"
+hex = "0.4"
+md-5 = "0.10"

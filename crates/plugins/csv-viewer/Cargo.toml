@@ -1,0 +1,16 @@
+[package]
+name = "santui-csv-viewer"
+version = "0.2.28"
+edition = "2021"
+
+[[bin]]
+name = "santui-csv-viewer"
+path = "src/main.rs"
+
+[dependencies]
+santui-ipc = { path = "../../ipc", version = "0.2.28", default-features = false }
+serde_json = { workspace = true }
+log = { workspace = true }
+env_logger = { workspace = true }
+arboard = "3"
+csv = "1"
