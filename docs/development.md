@@ -48,35 +48,11 @@ santui/
 │   ├── auth/           — GitHub OAuth client
 │   ├── registry/       — plugin registry: manifest fetch, install, config
 │   ├── db/             — central SQLite database for per-user plugin data
-│   ├── plugins/
+│   ├── plugins/           — 110+ first-party plugins
 │   │   ├── radio-stream-player/   — radio player plugin
 │   │   │   └── scraper/              — radio station scraper
 │   │   ├── registry/                 — plugin registry UI plugin
-│   │   ├── rss-reader/               — RSS feed reader
-│   │   ├── clipboard-history/        — clipboard history manager
-│   │   ├── system-monitor/           — system resource monitor
-│   │   ├── world-clock/              — world clock / timezone converter
-│   │   ├── weather/                  — weather forecaster
-│   │   ├── currency-converter/       — real-time currency converter
-│   │   ├── habit-tracker/            — habit tracker with heatmaps
-│   │   ├── hacker-news-reader/       — Hacker News story reader
-│   │   ├── http-client/              — HTTP request composer
-│   │   ├── music-preview/            — iTunes track search and preview
-│   │   ├── pomodoro-timer/           — focus timer
-│   │   ├── quick-notes/              — scratch pad and note manager
-│   │   ├── ssh-manager/              — SSH connection manager
-│   │   ├── unit-converter/           — unit conversion utility
-│   │   ├── regex-tester/             — regex playground
-│   │   ├── json-yaml-formatter/      — JSON/YAML format/convert
-│   │   ├── todo-task-manager/        — task and todo manager
-│   │   ├── bookmark-launcher/        — bookmark quick-launcher
-│   │   ├── cron-expression-helper/   — cron expression builder
-│   │   ├── calendar-agenda/          — monthly calendar with events
-│   │   ├── package-version-monitor/  — dependency version checker
-│   │   ├── dictionary-thesaurus/     — dictionary and thesaurus
-│   │   ├── git-repository-dashboard/ — Git repo status dashboard
-│   │   ├── quran-reader/             — Quran reader with translations
-│   │   └── iptv-player/              — IPTV playlist browser and player
+│   │   └── ... (108 more)
 │   └── app/            — binary entry point (main.rs)
 ├── website/            — VitePress docs site
 ├── docs/               — architecture & dev docs

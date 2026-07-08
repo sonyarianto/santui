@@ -288,7 +288,9 @@ jobs:
         run: |
           echo "=== Checking for empty files ==="
           has_empty=0
-          for f in santui-* plugins-*.json radio-stream-player-* unit-converter-* regex-tester-* json-yaml-formatter-* todo-task-manager-* bookmark-launcher-* cron-expression-helper-* calendar-agenda-* package-version-monitor-* dictionary-thesaurus-* git-repository-dashboard-* quran-reader-* iptv-player-*; do
+          # Generate glob patterns from plugins-manifest.json (source of truth for all plugin IDs)
+          plugin_ids=$(python3 -c "import json; ids=[p['id'] for p in json.load(open('plugins-manifest.json'))]; print(' '.join(f'{pid}-*' for pid in ids))")
+          for f in santui-* plugins-*.json $plugin_ids; do
             if [ -f "$f" ]; then
               size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null)
               if [ "$size" -eq 0 ]; then
@@ -311,24 +313,7 @@ jobs:
           files: |
             santui-*
             plugins-*.json
-            radio-stream-player-*
-            weather-*
-            rss-reader-*
-            clipboard-history-*
-            system-monitor-*
-            world-clock-*
-            unit-converter-*
-            regex-tester-*
-            json-yaml-formatter-*
-            todo-task-manager-*
-            bookmark-launcher-*
-            cron-expression-helper-*
-            calendar-agenda-*
-            package-version-monitor-*
-            dictionary-thesaurus-*
-            git-repository-dashboard-*
-            quran-reader-*
-            iptv-player-*
+            *
           fail_on_unmatched_files: false
           generate_release_notes: true
 

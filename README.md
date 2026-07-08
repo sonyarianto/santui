@@ -27,37 +27,7 @@ That's it. No bloat. You add what you need.
 
 Plugins are **standalone binaries** distributed through the Plugin Registry. Open `Ctrl+P` → **Plugin registry**, install what you want, enable it, and it appears in your palette — ready to use.
 
-### Available now
-
-| Plugin | What it does | Needs |
-|---|---|---|
-| **Radio Stream Player** | Browse stations by country, search, stream internet radio, **save favorites** | [libmpv](https://mpv.io/installation/) |
-| **RSS Reader** | Subscribe to and read RSS/Atom feeds | — |
-| **Clipboard History** | Track and search clipboard history | — |
-| **System Monitor** | Monitor CPU, memory, disk, and network | — |
-| **World Clock** | Timezone converter and world clock | — |
-| **Weather** | Current conditions, hourly & 7-day forecast, location search, auto-refresh | — |
-| **Plugin Registry** | Browse, install, and manage plugins | — |
-| **Currency Converter** | Convert between currencies with live exchange rates | — |
-| **Habit Tracker** | Track daily habits with streaks and heatmap visualization | — |
-| **Hacker News Reader** | Browse top, new, and best stories from Hacker News | — |
-| **HTTP Client** | Compose and send HTTP requests, view responses | — |
-| **Music Preview** | Search and preview tracks from the iTunes catalog | — |
-| **Pomodoro Timer** | Focus timer with work/break sessions and daily stats | — |
-| **Quick Notes** | Lightweight scratch pad for capturing and searching notes | — |
-| **SSH Manager** | Manage and connect to SSH hosts | — |
-| **Unit Converter** | Convert between units of length, mass, temperature, and more | — |
-| **Regex Tester** | Test and debug regular expressions with real-time matching | — |
-| **JSON/YAML Formatter** | Format, validate, and convert between JSON and YAML | — |
-| **Todo & Task Manager** | Manage tasks with priorities, due dates, and categories | — |
-| **Bookmark Launcher** | Organize and quick-launch bookmarks | — |
-| **Cron Expression Helper** | Build and validate cron schedule expressions | — |
-| **Calendar Agenda** | View monthly calendar with event management | — |
-| **Package Version Monitor** | Check dependency versions across ecosystems | — |
-| **Dictionary / Thesaurus** | Look up definitions, examples, synonyms, and antonyms | — |
-| **Git Repository Dashboard** | Track local Git repositories, branch status, and changes | — |
-| **Quran Reader** | Read Quran text and translations with recitation playback | — |
-| **IPTV Player** | Browse IPTV playlists and play channels in a native mpv window | [libmpv](https://mpv.io/installation/) |
+Santui ships with **110+ plugins** covering everything from radio streaming and weather to Git dashboards and Quran reading. Open `Ctrl+P` → **Plugin registry** to browse, install, and manage them all.
 
 *Want to build your own? See [docs/architecture.md](docs/architecture.md).*
 
