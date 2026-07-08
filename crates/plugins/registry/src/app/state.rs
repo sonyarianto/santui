@@ -36,6 +36,10 @@ pub struct App {
     pub(super) pending_install_name: Option<String>,
     pub(super) pending_install_version: Option<String>,
     pub(super) pending_install_capabilities: Vec<String>,
+    pub(super) search_mode: bool,
+    pub(super) query: String,
+    pub(super) filtered: Vec<usize>,
+    pub(super) tick: u64,
 }
 
 impl Default for App {
@@ -76,14 +80,45 @@ impl App {
             pending_install_name: None,
             pending_install_version: None,
             pending_install_capabilities: Vec::new(),
+            search_mode: false,
+            query: String::new(),
+            filtered: Vec::new(),
+            tick: 0,
         }
     }
 
     pub fn available_count(&self) -> usize {
-        self.registry
-            .as_ref()
-            .map(|r| r.available.len())
-            .unwrap_or(0)
+        self.filtered.len()
+    }
+
+    pub fn apply_filter(&mut self) {
+        let q = self.query.to_lowercase();
+        let reg = match &self.registry {
+            Some(r) => r,
+            None => {
+                self.filtered.clear();
+                return;
+            }
+        };
+        self.filtered = if q.is_empty() {
+            (0..reg.available.len()).collect()
+        } else {
+            reg.available
+                .iter()
+                .enumerate()
+                .filter(|(_, p)| {
+                    p.name.to_lowercase().contains(&q)
+                        || p.description.to_lowercase().contains(&q)
+                        || p.publisher.to_lowercase().contains(&q)
+                })
+                .map(|(i, _)| i)
+                .collect()
+        };
+        let max = self.filtered.len().saturating_sub(1);
+        if self.cursor > max {
+            self.cursor = max;
+        }
+        self.ensure_scroll_visible();
     }
 
     pub fn ensure_scroll_visible(&mut self) {
@@ -137,6 +172,10 @@ mod tests {
         assert!(app.pending_install_name.is_none());
         assert!(app.pending_install_version.is_none());
         assert!(app.pending_install_capabilities.is_empty());
+        assert!(!app.search_mode);
+        assert!(app.query.is_empty());
+        assert!(app.filtered.is_empty());
+        assert_eq!(app.tick, 0);
     }
 
     #[test]

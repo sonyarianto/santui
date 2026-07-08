@@ -47,6 +47,7 @@ impl App {
                         }
                     }
                 }
+                self.apply_filter();
             }
 
             HostMsg::Focus => {
@@ -63,6 +64,7 @@ impl App {
             HostMsg::Key { key, .. } => consumed = self.handle_key(key, &mut request),
 
             HostMsg::Tick => {
+                self.tick = self.tick.wrapping_add(1);
                 self.tick_status();
                 let rx = self.download_rx.take();
                 if let Some(rx) = rx {
@@ -175,6 +177,8 @@ impl App {
         self.status.clear();
         if let Some(detail_idx) = self.detail_idx {
             self.handle_detail_key(key, detail_idx, request)
+        } else if self.search_mode {
+            self.handle_search_key(key, request)
         } else {
             self.handle_list_key(key, request)
         }
@@ -213,12 +217,69 @@ impl App {
             IpcKey::Enter | IpcKey::Char('d') | IpcKey::Char('D') => {
                 let count = self.available_count();
                 if self.cursor < count {
-                    self.detail_idx = Some(self.cursor);
+                    self.detail_idx = Some(self.filtered[self.cursor]);
                     self.action_cursor = 0;
                 }
                 true
             }
+            IpcKey::Char('/') => {
+                self.search_mode = true;
+                self.query.clear();
+                self.apply_filter();
+                true
+            }
+            IpcKey::Char('c') if !self.query.is_empty() => {
+                self.query.clear();
+                self.apply_filter();
+                true
+            }
             IpcKey::Esc | IpcKey::Char('q') => false,
+            _ => false,
+        }
+    }
+
+    fn handle_search_key(&mut self, key: IpcKey, _request: &mut Option<PluginRequest>) -> bool {
+        match key {
+            IpcKey::Esc => {
+                self.search_mode = false;
+                self.query.clear();
+                self.apply_filter();
+                true
+            }
+            IpcKey::Enter => {
+                let count = self.available_count();
+                if self.cursor < count {
+                    self.detail_idx = Some(self.filtered[self.cursor]);
+                    self.action_cursor = 0;
+                }
+                self.search_mode = false;
+                true
+            }
+            IpcKey::Backspace => {
+                self.query.pop();
+                self.apply_filter();
+                true
+            }
+            IpcKey::Char(c) if !c.is_control() => {
+                self.query.push(c);
+                self.apply_filter();
+                true
+            }
+            IpcKey::Up => {
+                if self.cursor > 0 {
+                    self.cursor -= 1;
+                    self.ensure_scroll_visible();
+                }
+                true
+            }
+            IpcKey::Down => {
+                let count = self.available_count().saturating_sub(1);
+                if self.cursor < count {
+                    self.cursor += 1;
+                    self.ensure_scroll_visible();
+                }
+                true
+            }
             _ => false,
         }
     }
@@ -459,6 +520,7 @@ mod tests {
                     });
                 }
             }
+            self.app.apply_filter();
         }
 
         fn key(&self, key: IpcKey) -> HostMsg {

@@ -23,10 +23,24 @@ impl App {
                 ("↵".into(), "select".into()),
                 ("esc".into(), "back".into()),
             ]
+        } else if self.search_mode {
+            vec![
+                ("↑↓".into(), "navigate".into()),
+                ("↵".into(), "select".into()),
+                ("esc".into(), "cancel".into()),
+            ]
+        } else if !self.query.is_empty() {
+            vec![
+                ("↑↓".into(), "navigate".into()),
+                ("↵".into(), "select".into()),
+                ("c".into(), "clear".into()),
+                ("/".into(), "search".into()),
+            ]
         } else {
             vec![
                 ("↑↓".into(), "navigate".into()),
                 ("↵".into(), "select".into()),
+                ("/".into(), "search".into()),
             ]
         }
     }
@@ -55,9 +69,42 @@ impl App {
 
         ui::draw_panel(cmds, t, 0, 0, aw, ah, "Plugins");
 
+        if self.search_mode {
+            let cursor = if self.tick % 6 < 3 { '█' } else { ' ' };
+            let search_text = format!("Search: {}{cursor}", self.query);
+            cmds.push(RenderCmd::Text {
+                x: 2,
+                y: 1,
+                text: search_text,
+                fg: Some(t.accent),
+                bg: None,
+                bold: false,
+                modifiers: 0,
+            });
+        } else if !self.query.is_empty() {
+            let filter_text = format!("Filter: \"{}\"", self.query);
+            cmds.push(RenderCmd::Text {
+                x: 2,
+                y: 1,
+                text: filter_text,
+                fg: Some(t.accent),
+                bg: None,
+                bold: false,
+                modifiers: 0,
+            });
+        }
+
         let info = if self.status.is_empty() {
             self.registry.as_ref().map_or_else(String::new, |reg| {
-                format!("{} available", reg.available.len())
+                if self.query.is_empty() {
+                    format!("{} available", reg.available.len())
+                } else {
+                    format!(
+                        "{} / {} available",
+                        self.filtered.len(),
+                        reg.available.len()
+                    )
+                }
             })
         } else {
             self.status.clone()
@@ -106,11 +153,16 @@ impl App {
             let list_top = 3u16;
             let list_h = max_list_h(ah) as usize;
 
-            if reg.available.is_empty() {
+            if self.filtered.is_empty() {
+                let msg = if self.query.is_empty() {
+                    "No plugins available"
+                } else {
+                    "No matching plugins"
+                };
                 cmds.push(RenderCmd::Text {
                     x: 2,
                     y: list_top,
-                    text: "No plugins available".into(),
+                    text: msg.into(),
                     fg: self.fg(t.text_muted),
                     bg: self.bg(),
                     bold: false,
@@ -128,15 +180,15 @@ impl App {
             let desc_w = rem.saturating_sub(name_w).max(5);
 
             let visible_count =
-                list_h.min(reg.available.len().saturating_sub(self.scroll as usize));
+                list_h.min(self.filtered.len().saturating_sub(self.scroll as usize));
 
             let mut rows: Vec<Vec<String>> = Vec::with_capacity(visible_count);
             for i in 0..visible_count {
                 let idx = self.scroll as usize + i;
-                if idx >= reg.available.len() {
+                if idx >= self.filtered.len() {
                     break;
                 }
-                let plugin = &reg.available[idx];
+                let plugin = &reg.available[self.filtered[idx]];
                 let is_installed = reg.installed.iter().any(|p| {
                     p.path
                         .file_stem()
@@ -396,9 +448,28 @@ mod tests {
     fn test_hints_list_mode() {
         let app = App::new();
         let hints = app.hints();
-        assert_eq!(hints.len(), 2);
+        assert_eq!(hints.len(), 3);
         assert_eq!(hints[0], ("↑↓".into(), "navigate".into()));
         assert_eq!(hints[1], ("↵".into(), "select".into()));
+        assert_eq!(hints[2], ("/".into(), "search".into()));
+    }
+
+    #[test]
+    fn test_hints_search_mode() {
+        let mut app = App::new();
+        app.search_mode = true;
+        let hints = app.hints();
+        assert_eq!(hints.len(), 3);
+        assert_eq!(hints[2], ("esc".into(), "cancel".into()));
+    }
+
+    #[test]
+    fn test_hints_filter_mode() {
+        let mut app = App::new();
+        app.query = "test".into();
+        let hints = app.hints();
+        assert_eq!(hints.len(), 4);
+        assert_eq!(hints[2], ("c".into(), "clear".into()));
     }
 
     #[test]
