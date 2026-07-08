@@ -4,7 +4,7 @@ use santui_ipc::ui;
 use super::state::{Action, App};
 
 pub(super) fn max_list_h(content_h: u16) -> u16 {
-    content_h.saturating_sub(10).max(3)
+    content_h.saturating_sub(4).max(3)
 }
 
 impl App {
@@ -379,17 +379,17 @@ mod tests {
 
     #[test]
     fn test_max_list_h_normal() {
-        assert_eq!(max_list_h(24), 14);
+        assert_eq!(max_list_h(24), 20);
     }
 
     #[test]
     fn test_max_list_h_minimum() {
-        assert_eq!(max_list_h(12), 3);
+        assert_eq!(max_list_h(6), 3);
     }
 
     #[test]
     fn test_max_list_h_small() {
-        assert_eq!(max_list_h(13), 3);
+        assert_eq!(max_list_h(8), 4);
     }
 
     #[test]
