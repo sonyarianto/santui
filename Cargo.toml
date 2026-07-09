@@ -101,6 +101,7 @@ members = [
     "crates/plugins/typing-test",
     "crates/plugins/wake-on-lan",
     "crates/plugins/water-tracker",
+    "crates/plugins/math-evaluator",
     "crates/plugins/webhook-tester",
     "crates/plugins/websocket-client",
     "crates/plugins/whois-lookup",

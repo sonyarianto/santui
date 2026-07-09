@@ -43,7 +43,14 @@ impl App {
         if self.input.trim().is_empty() {
             return;
         }
-        match meval::eval_str(&self.input) {
+        let mut ns = |name: &str, _args: Vec<f64>| -> Option<f64> {
+            match name {
+                "pi" => Some(std::f64::consts::PI),
+                "e" => Some(std::f64::consts::E),
+                _ => None,
+            }
+        };
+        match fasteval::ez_eval(&self.input, &mut ns) {
             Ok(v) => {
                 let r = if (v - v.round()).abs() < 1e-10 {
                     format!("{}", v as i64)

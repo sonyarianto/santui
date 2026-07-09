@@ -13,4 +13,4 @@ serde_json = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
 arboard = "3"
-meval = "0.2"
+fasteval = "0.2"
