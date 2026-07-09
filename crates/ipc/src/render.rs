@@ -266,11 +266,11 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                             Style::default().fg(Color::Rgb(dash_col[0], dash_col[1], dash_col[2]));
                         block = block.title(Line::from(vec![
                             Span::styled("─ ", dash_style),
-                            Span::styled(t.clone(), text_style),
+                            Span::styled(t.trim(), text_style),
                             Span::styled(" ─", dash_style),
                         ]));
                     } else {
-                        block = block.title(Line::from(Span::styled(t.clone(), text_style)));
+                        block = block.title(Line::from(Span::styled(t.trim(), text_style)));
                     }
                 }
                 f.render_widget(block, rect);

@@ -246,6 +246,17 @@ impl App {
                 self.selected_surah = self.selected_surah.min(max).saturating_add(1).min(max);
                 true
             }
+            IpcKey::PageUp => {
+                let page = (self.area.h.saturating_sub(7).max(4) as usize).saturating_sub(1);
+                self.selected_surah = self.selected_surah.saturating_sub(page);
+                true
+            }
+            IpcKey::PageDown => {
+                let max = self.filtered_surahs().len().saturating_sub(1);
+                let page = (self.area.h.saturating_sub(7).max(4) as usize).saturating_sub(1);
+                self.selected_surah = (self.selected_surah + page).min(max);
+                true
+            }
             IpcKey::Enter => {
                 self.open_selected_surah();
                 true
@@ -870,7 +881,7 @@ fn render_surah_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w:
         cmds,
         2,
         h.saturating_sub(1),
-        "Enter read · / search · e translation · r reciter · R refresh · Esc",
+        "Enter read · / search · e translation · r reciter · R refresh · PgUp/PgDn · Esc",
         theme.text_muted,
         false,
     );
