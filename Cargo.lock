@@ -124,7 +124,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0348a1c054491f4bfe6ab86a7b6ab1e44e45d899005de92f58b3df180b36ddaf"
 dependencies = [
  "clipboard-win",
- "image",
+ "image 0.25.10",
  "log",
  "objc2",
  "objc2-app-kit",
@@ -307,6 +307,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
+name = "checked_int_cast"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "17cc5e6b5ab06331c33589842070416baa137e8b0eb912b008cfd4a78ada7919"
+
+[[package]]
 name = "chrono"
 version = "0.4.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -363,6 +369,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "color_quant"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3d7b894f5411737b7867f4827955924d7c254fc9f4d91a6aad6b097804b1018b"
+
+[[package]]
 name = "colorchoice"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -387,6 +399,15 @@ name = "constant_time_eq"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c74b8349d32d297c9134b8c88677813a227df8f779daa29bfc29c183fe3dca6"
+
+[[package]]
+name = "convert_case"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ec182b0ca2f35d8fc196cf3404988fd8b8c739a4d270ff118a398feb0cbec1ca"
+dependencies = [
+ "unicode-segmentation",
+]
 
 [[package]]
 name = "convert_case"
@@ -531,6 +552,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "csv"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "52cd9d68cf7efc6ddfaaee42e7288d3a99d613d4b50f76ce9827ae0c6e14f938"
+dependencies = [
+ "csv-core",
+ "itoa",
+ "ryu",
+ "serde_core",
+]
+
+[[package]]
+name = "csv-core"
+version = "0.1.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "704a3c26996a80471189265814dbc2c257598b96b8a7feae2d31ace646bb9782"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "ctrlc"
 version = "3.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -656,7 +698,7 @@ version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "799a97264921d8623a957f6c3b9011f3b5492f557bbb7a5a19b7fa6d06ba8dcb"
 dependencies = [
- "convert_case",
+ "convert_case 0.10.0",
  "proc-macro2",
  "quote",
  "rustc_version",
@@ -1250,6 +1292,20 @@ dependencies = [
 
 [[package]]
 name = "image"
+version = "0.23.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "24ffcb7e7244a9bf19d35bf2883b9c080c4ced3c07a9895572178cdb8f13f6a1"
+dependencies = [
+ "bytemuck",
+ "byteorder",
+ "color_quant",
+ "num-iter",
+ "num-rational",
+ "num-traits",
+]
+
+[[package]]
+name = "image"
 version = "0.25.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "85ab80394333c02fe689eaf900ab500fbd0c2213da414687ebf995a65d5a6104"
@@ -1567,6 +1623,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "md-5"
+version = "0.10.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d89e7ee0cfbedfc4da3340218492196241d89eefb6dab27de5df917a6d2e78cf"
+dependencies = [
+ "cfg-if",
+ "digest",
+]
+
+[[package]]
 name = "mediatype"
 version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1721,6 +1787,36 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.118",
+]
+
+[[package]]
+name = "num-integer"
+version = "0.1.46"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7969661fd2958a5cb096e56c8e1ad0444ac2bbcd0061bd28660485a44879858f"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
+name = "num-iter"
+version = "0.1.46"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c92800bd69a1eac91786bcfe9da64a897eb72911b8dc3095decbd07429e8048b"
+dependencies = [
+ "num-integer",
+ "num-traits",
+]
+
+[[package]]
+name = "num-rational"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "12ac428b1cb17fce6f731001d307d351ec70a6d202fc2e60f7d4c5e42d8f4f07"
+dependencies = [
+ "autocfg",
+ "num-integer",
+ "num-traits",
 ]
 
 [[package]]
@@ -2123,6 +2219,16 @@ name = "pxfm"
 version = "0.1.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d55d956fa96f5ec02be2e13af0e20391a5aa83d6a074e3ad368959d0fab299ea"
+
+[[package]]
+name = "qrcode"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "16d2f1455f3630c6e5107b4f2b94e74d76dea80736de0981fd27644216cff57f"
+dependencies = [
+ "checked_int_cast",
+ "image 0.23.14",
+]
 
 [[package]]
 name = "quick-error"
@@ -2561,6 +2667,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-ascii-table"
+version = "0.2.28"
+dependencies = [
+ "arboard",
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
 name = "santui-auth"
 version = "0.2.28"
 dependencies = [
@@ -2573,9 +2690,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-base64-encoder"
+version = "0.2.28"
+dependencies = [
+ "arboard",
+ "base64",
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
 name = "santui-batch-renamer"
 version = "0.2.28"
 dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-bmi-calculator"
+version = "0.2.28"
+dependencies = [
+ "arboard",
  "env_logger",
  "log",
  "santui-ipc",
@@ -2625,6 +2765,18 @@ dependencies = [
  "log",
  "santui-ipc",
  "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-case-converter"
+version = "0.2.28"
+dependencies = [
+ "arboard",
+ "convert_case 0.6.0",
+ "env_logger",
+ "log",
+ "santui-ipc",
  "serde_json",
 ]
 
@@ -2683,6 +2835,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-color-picker"
+version = "0.2.28"
+dependencies = [
+ "arboard",
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
 name = "santui-connection-string-builder"
 version = "0.2.28"
 dependencies = [
@@ -2716,6 +2879,18 @@ dependencies = [
  "log",
  "santui-ipc",
  "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-csv-viewer"
+version = "0.2.28"
+dependencies = [
+ "arboard",
+ "csv",
+ "env_logger",
+ "log",
+ "santui-ipc",
  "serde_json",
 ]
 
@@ -2970,6 +3145,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-hash-calculator"
+version = "0.2.28"
+dependencies = [
+ "arboard",
+ "env_logger",
+ "hex",
+ "log",
+ "md-5",
+ "santui-ipc",
+ "serde_json",
+ "sha1",
+ "sha2",
+]
+
+[[package]]
 name = "santui-hex-viewer"
 version = "0.2.28"
 dependencies = [
@@ -3073,11 +3263,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-loan-calculator"
+version = "0.2.28"
+dependencies = [
+ "arboard",
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
 name = "santui-log-viewer"
 version = "0.2.28"
 dependencies = [
  "env_logger",
  "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-lorem-generator"
+version = "0.2.28"
+dependencies = [
+ "arboard",
+ "env_logger",
+ "log",
+ "rand 0.8.6",
  "santui-ipc",
  "serde_json",
 ]
@@ -3194,9 +3407,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-password-generator"
+version = "0.2.28"
+dependencies = [
+ "arboard",
+ "env_logger",
+ "log",
+ "rand 0.8.6",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
 name = "santui-path-editor"
 version = "0.2.28"
 dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-periodic-table"
+version = "0.2.28"
+dependencies = [
+ "arboard",
  "env_logger",
  "log",
  "santui-ipc",
@@ -3271,6 +3507,18 @@ version = "0.2.28"
 dependencies = [
  "env_logger",
  "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-qr-generator"
+version = "0.2.28"
+dependencies = [
+ "arboard",
+ "env_logger",
+ "log",
+ "qrcode",
  "santui-ipc",
  "serde_json",
 ]
@@ -3411,6 +3659,17 @@ dependencies = [
 name = "santui-service-manager"
 version = "0.2.28"
 dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+]
+
+[[package]]
+name = "santui-slug-generator"
+version = "0.2.28"
+dependencies = [
+ "arboard",
  "env_logger",
  "log",
  "santui-ipc",
@@ -3614,6 +3873,18 @@ dependencies = [
  "log",
  "santui-ipc",
  "serde_json",
+]
+
+[[package]]
+name = "santui-uuid-generator"
+version = "0.2.28"
+dependencies = [
+ "arboard",
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde_json",
+ "uuid",
 ]
 
 [[package]]
