@@ -15,7 +15,10 @@ use ui::{HEADER_H, TABLE_TOP};
 const LIST_OVERHEAD: u16 = TABLE_TOP + HEADER_H + 1 + 2; // top + search + sep + header + bottom + footer (blank + hints)
 
 use player::Mpv;
-use santui_ipc::protocol::{Area, HostMsg, IpcKey, PluginRequest, RenderCmd, ThemeData, UserData};
+use santui_ipc::protocol::{
+    Area, HostMsg, IpcKey, IpcMouseEvent, MouseButton, MouseEventKind, PluginRequest, RenderCmd,
+    ThemeData, UserData,
+};
 
 enum MpvMsg {
     Metadata(String),
@@ -387,18 +390,8 @@ impl App {
             IpcKey::Enter => {
                 if self.state.lyrics_focused {
                     // no-op while lyrics focused
-                } else if let Some(station) = self.state.selected_station().cloned() {
-                    let idx = self.state.current_filtered_index();
-                    self.state.current_station = Some(idx);
-                    self.state.play_state = state::PlayState::Connecting(station.name.to_string());
-                    self.state.last_metadata.clear();
-                    self.state.song_title.clear();
-                    self.state.track_info = None;
-                    self.state.clear_lyrics();
-                    self.state.lyrics_loading = true;
-                    self.state.start_time = std::time::Instant::now();
-                    send_cmd(self, MpvCmd::Stop);
-                    send_cmd(self, MpvCmd::LoadUrl(station.url));
+                } else {
+                    self.play_selected_station();
                 }
                 true
             }
@@ -485,6 +478,107 @@ impl App {
                 self.state.set_query(String::new());
                 self.state.selected = 0;
                 self.state.scroll = 0;
+                true
+            }
+            _ => false,
+        }
+    }
+
+    fn play_selected_station(&mut self) {
+        if let Some(station) = self.state.selected_station().cloned() {
+            let idx = self.state.current_filtered_index();
+            self.state.current_station = Some(idx);
+            self.state.play_state = state::PlayState::Connecting(station.name.to_string());
+            self.state.last_metadata.clear();
+            self.state.song_title.clear();
+            self.state.track_info = None;
+            self.state.clear_lyrics();
+            self.state.lyrics_loading = true;
+            self.state.start_time = std::time::Instant::now();
+            send_cmd(self, MpvCmd::Stop);
+            send_cmd(self, MpvCmd::LoadUrl(station.url));
+        }
+    }
+
+    fn handle_mouse(&mut self, event: IpcMouseEvent) -> bool {
+        let x = event.x;
+        let y = event.y;
+        let area_w = self.area.w;
+        let area_h = self.area.h;
+
+        let left_w = if self.state.show_lyrics {
+            (area_w * 3 / 5).max(20)
+        } else {
+            area_w
+        };
+        let right_w = area_w.saturating_sub(left_w);
+        let info_h = self.state.info_h();
+        let stations_h = area_h.saturating_sub(info_h);
+
+        match event.kind {
+            MouseEventKind::Down => {
+                if event.button != MouseButton::Left {
+                    return false;
+                }
+                if self.state.search_mode {
+                    return false;
+                }
+
+                // Stations table rows
+                if x < left_w && y > ui::TABLE_TOP {
+                    let table_avail =
+                        stations_h.saturating_sub(ui::TABLE_TOP + ui::HEADER_H + 1 + 2);
+                    let max_visible = table_avail as usize;
+                    let visible_count = max_visible
+                        .min(self.state.filtered.len().saturating_sub(self.state.scroll));
+                    let row_start = ui::TABLE_TOP + 1;
+                    let row_end = row_start + visible_count as u16;
+                    if y >= row_start && y < row_end {
+                        let row = (y - row_start) as usize;
+                        let filtered_idx = self.state.scroll + row;
+                        if filtered_idx < self.state.filtered.len() {
+                            self.state.selected = filtered_idx;
+                            self.state.scroll = self.state.scroll.min(self.state.selected);
+                            self.play_selected_station();
+                            return true;
+                        }
+                    }
+                }
+
+                // Lyrics panel — focus on click
+                if self.state.show_lyrics && x >= left_w && x < left_w + right_w {
+                    self.state.lyrics_focused = true;
+                    return true;
+                }
+
+                false
+            }
+            MouseEventKind::ScrollUp | MouseEventKind::ScrollDown => {
+                let is_up = event.kind == MouseEventKind::ScrollUp;
+                if self.state.search_mode {
+                    return false;
+                }
+
+                // Scroll lyrics if focused
+                if self.state.show_lyrics && self.state.lyrics_focused {
+                    if is_up {
+                        self.state.lyrics_scroll_up();
+                    } else {
+                        let panel_h = self.state.lyrics_content_height(area_h);
+                        self.state.lyrics_scroll_down(panel_h);
+                    }
+                    return true;
+                }
+
+                // Scroll station list otherwise
+                if is_up {
+                    self.state.select_prev();
+                } else {
+                    self.state.select_next();
+                }
+                let info_h = self.state.info_h();
+                let max_visible = area_h.saturating_sub(info_h + 8) as usize;
+                self.state.ensure_scroll_visible(max_visible.max(1));
                 true
             }
             _ => false,
@@ -763,8 +857,9 @@ fn main() {
                         // to keep the match exhaustive.
                         respond(&mut app, false);
                     }
-                    HostMsg::Mouse { .. } => {
-                        respond(&mut app, false);
+                    HostMsg::Mouse { event } => {
+                        let consumed = app.handle_mouse(event);
+                        respond(&mut app, consumed);
                     }
                     HostMsg::UserUpdate { user } => {
                         app.user = user;

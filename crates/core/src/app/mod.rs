@@ -14,7 +14,8 @@ use crate::config::ConfigManager;
 use crate::db_access::DbAccess;
 use crate::plugin::{Plugin, PluginContext};
 use crate::widgets::DimOverlay;
-use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
+use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
+use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers, MouseEvent};
 use crossterm::execute;
 use crossterm::terminal::enable_raw_mode;
 use ratatui::backend::CrosstermBackend;
@@ -363,7 +364,11 @@ impl Santui {
 
         enable_raw_mode()?;
         let mut stdout = std::io::stdout();
-        execute!(stdout, crossterm::terminal::EnterAlternateScreen,)?;
+        execute!(
+            stdout,
+            crossterm::terminal::EnterAlternateScreen,
+            EnableMouseCapture
+        )?;
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend)?;
         terminal.clear()?;
@@ -376,6 +381,7 @@ impl Santui {
                 let _ = crossterm::execute!(
                     std::io::stdout(),
                     crossterm::terminal::LeaveAlternateScreen,
+                    DisableMouseCapture,
                     crossterm::cursor::Show,
                 );
             }
@@ -468,18 +474,21 @@ impl Santui {
             terminal.draw(|f| self.render(f))?;
 
             if crossterm::event::poll(self.config_manager.tick_rate())? {
-                if let Event::Key(key) = crossterm::event::read()? {
-                    if key.kind != KeyEventKind::Press {
-                        continue;
-                    }
-                    self.handle_key(key);
+                match crossterm::event::read()? {
+                    Event::Key(key) if key.kind == KeyEventKind::Press => {
+                        self.handle_key(key);
 
-                    // Process pending plugin requests from key responses
-                    // (e.g. DbSet on Space press).
-                    if let Some(ref mut db) = self.db {
-                        self.plugin_manager
-                            .process_all_requests(db.as_mut(), &self.auth);
+                        // Process pending plugin requests from key responses
+                        // (e.g. DbSet on Space press).
+                        if let Some(ref mut db) = self.db {
+                            self.plugin_manager
+                                .process_all_requests(db.as_mut(), &self.auth);
+                        }
                     }
+                    Event::Mouse(mouse) => {
+                        self.handle_mouse(mouse);
+                    }
+                    _ => {}
                 }
             }
 
@@ -490,6 +499,14 @@ impl Santui {
         }
 
         Ok(())
+    }
+
+    pub(super) fn handle_mouse(&mut self, mouse: MouseEvent) {
+        if let Some(idx) = self.plugin_manager.active() {
+            if self.plugin_manager.is_ready(idx) {
+                self.plugin_manager.handle_mouse(idx, mouse);
+            }
+        }
     }
 
     fn render(&mut self, f: &mut Frame) {

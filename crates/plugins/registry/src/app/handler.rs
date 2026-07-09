@@ -1,4 +1,6 @@
-use santui_ipc::protocol::{HostMsg, IpcKey, PluginMsg, PluginRequest};
+use santui_ipc::protocol::{
+    HostMsg, IpcKey, IpcMouseEvent, MouseButton, MouseEventKind, PluginMsg, PluginRequest,
+};
 use santui_registry::{plugin_filename, PluginManifest};
 
 use super::state::{Action, App, DownloadEvent};
@@ -156,7 +158,10 @@ impl App {
             HostMsg::PluginMessage { .. } => {}
             HostMsg::DbValue { .. } => {}
 
-            HostMsg::Mouse { .. } => {}
+            HostMsg::Mouse { event } => {
+                self.status.clear();
+                consumed = self.handle_mouse(event, &mut request);
+            }
         }
 
         let commands = self.render_commands();
@@ -181,6 +186,108 @@ impl App {
             self.handle_search_key(key, request)
         } else {
             self.handle_list_key(key, request)
+        }
+    }
+
+    fn handle_mouse(&mut self, event: IpcMouseEvent, request: &mut Option<PluginRequest>) -> bool {
+        let x = event.x;
+        let y = event.y;
+        let aw = self.area.w;
+        let ah = self.area.h;
+
+        match event.kind {
+            MouseEventKind::Down => {
+                if event.button != MouseButton::Left {
+                    return false;
+                }
+
+                // -- Dialog open: either click on action item or outside to close --
+                if let Some(detail_idx) = self.detail_idx {
+                    let actions = self.available_actions(detail_idx);
+                    if actions.is_empty() {
+                        return false;
+                    }
+                    let publisher_empty = self
+                        .registry
+                        .as_ref()
+                        .and_then(|r| r.available.get(detail_idx))
+                        .map(|p| p.publisher.is_empty())
+                        .unwrap_or(true);
+                    let fields_count = if publisher_empty { 3 } else { 4 };
+                    let content_h = 2 + 1 + fields_count + 1 + actions.len() as u16 + 3;
+                    let pr = santui_ipc::ui::palette_rect(aw, ah, content_h);
+
+                    let inside = x >= pr.x && x < pr.x + pr.w && y >= pr.y && y < pr.y + pr.h;
+                    if inside {
+                        let action_base = 4 + fields_count;
+                        for (i, _) in actions.iter().enumerate() {
+                            let item_y = pr.y + action_base + i as u16;
+                            if y == item_y {
+                                self.action_cursor = i;
+                                self.execute_action(detail_idx, actions[i], request);
+                                return true;
+                            }
+                        }
+                        return true;
+                    }
+                    // Click outside dialog → close it
+                    self.detail_idx = None;
+                    return true;
+                }
+
+                // -- Table mode: click on row to select + open detail --
+                let list_top = 3u16;
+                if x >= 2 && x < aw.saturating_sub(2) {
+                    let list_h = super::render::max_list_h(ah) as usize;
+                    let visible_count =
+                        list_h.min(self.filtered.len().saturating_sub(self.scroll as usize));
+                    let row_start = list_top + 1;
+                    let row_end = row_start + visible_count as u16;
+                    if y >= row_start && y < row_end {
+                        let row = (y - row_start) as usize;
+                        let idx = self.scroll as usize + row;
+                        if idx < self.filtered.len() {
+                            self.cursor = idx;
+                            self.detail_idx = Some(self.filtered[self.cursor]);
+                            self.action_cursor = 0;
+                            return true;
+                        }
+                    }
+                }
+
+                false
+            }
+            MouseEventKind::ScrollUp | MouseEventKind::ScrollDown => {
+                let is_up = event.kind == MouseEventKind::ScrollUp;
+                if let Some(d_idx) = self.detail_idx {
+                    let actions = self.available_actions(d_idx);
+                    if is_up {
+                        if self.action_cursor > 0 {
+                            self.action_cursor -= 1;
+                        }
+                    } else {
+                        let last = actions.len().saturating_sub(1);
+                        if self.action_cursor < last {
+                            self.action_cursor += 1;
+                        }
+                    }
+                } else {
+                    if is_up {
+                        if self.cursor > 0 {
+                            self.cursor -= 1;
+                            self.ensure_scroll_visible();
+                        }
+                    } else {
+                        let count = self.available_count().saturating_sub(1);
+                        if self.cursor < count {
+                            self.cursor += 1;
+                            self.ensure_scroll_visible();
+                        }
+                    }
+                }
+                true
+            }
+            _ => false,
         }
     }
 
