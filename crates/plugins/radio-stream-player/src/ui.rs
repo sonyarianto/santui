@@ -1,5 +1,5 @@
 use crate::lrclib;
-use crate::state::{PlayState, RadioState};
+use crate::state::{wrap_text, PlayState, RadioState};
 use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData, BORDER_ALL};
 use santui_ipc::ui;
 
@@ -680,32 +680,31 @@ pub fn render_ui(
             // Blank line at y=3 (both) or y=2 (title only) is implicit
 
             let ly_h = state.lyrics_content_height(area_h);
-            let lines: Vec<&str> = state.lyrics_text.lines().collect();
-            let scroll = state.lyrics_scroll.min(lines.len().saturating_sub(1));
+            let wrapped = wrap_text(&state.lyrics_text, ly_inner_w as usize);
+            let total_visual = wrapped.len();
+            let scroll = state.lyrics_scroll.min(total_visual.saturating_sub(1));
             for i in 0..ly_h {
                 let line_idx = scroll + i;
-                if line_idx >= lines.len() {
+                if line_idx >= total_visual {
                     break;
                 }
-                let line = lines[line_idx];
                 let lyrics_body_fg = if focused {
                     theme.text
                 } else {
                     theme.text_muted
                 };
-                ui::text_at(
-                    &mut cmds,
-                    ly_x + 2,
-                    content_top + i as u16,
-                    line,
-                    lyrics_body_fg,
-                    None,
-                    ly_inner_w,
-                );
+                cmds.push(RenderCmd::Text {
+                    x: ly_x + 2,
+                    y: content_top + i as u16,
+                    text: wrapped[line_idx].clone(),
+                    fg: Some(lyrics_body_fg),
+                    bg: None,
+                    bold: false,
+                    modifiers: 0,
+                });
             }
-            if lines.len() > ly_h {
-                let total = lines.len();
-                let max_scroll = total.saturating_sub(ly_h);
+            if total_visual > ly_h {
+                let max_scroll = total_visual.saturating_sub(ly_h);
                 let pct = (scroll * 100)
                     .checked_div(max_scroll)
                     .map(|v| v.min(100))

@@ -4,6 +4,47 @@ use crate::stations::Station;
 use std::collections::HashSet;
 use std::time::Instant;
 
+pub fn wrap_text(text: &str, max_w: usize) -> Vec<String> {
+    let mut result = Vec::new();
+    for line in text.lines() {
+        if line.trim().is_empty() {
+            result.push(String::new());
+            continue;
+        }
+        if max_w == 0 || line.chars().count() <= max_w {
+            result.push(line.to_string());
+            continue;
+        }
+        let mut current = String::new();
+        let mut current_len = 0usize;
+        for word in line.split_whitespace() {
+            let word_len = word.chars().count();
+            if current_len == 0 {
+                if word_len > max_w {
+                    for chunk in word.chars().collect::<Vec<char>>().chunks(max_w) {
+                        result.push(chunk.iter().collect());
+                    }
+                } else {
+                    current = word.to_string();
+                    current_len = word_len;
+                }
+            } else if current_len + 1 + word_len <= max_w {
+                current.push(' ');
+                current.push_str(word);
+                current_len += 1 + word_len;
+            } else {
+                result.push(current);
+                current = word.to_string();
+                current_len = word_len;
+            }
+        }
+        if !current.is_empty() {
+            result.push(current);
+        }
+    }
+    result
+}
+
 pub enum PlayState {
     Stopped,
     Connecting(String),
@@ -224,6 +265,17 @@ impl RadioState {
         self.lyrics_source.clear();
     }
 
+    /// Inner width of the lyrics panel for text wrapping purposes.
+    pub fn lyrics_inner_w(&self, area_w: u16) -> u16 {
+        let left_w = if self.show_lyrics {
+            (area_w * 3 / 5).max(20)
+        } else {
+            area_w
+        };
+        let right_w = area_w.saturating_sub(left_w);
+        right_w.saturating_sub(4)
+    }
+
     /// Number of visible lines in the lyrics content area (inside panel borders,
     /// below header, above footer).
     pub fn lyrics_content_height(&self, area_h: u16) -> usize {
@@ -257,8 +309,8 @@ impl RadioState {
         self.lyrics_scroll = self.lyrics_scroll.saturating_sub(1);
     }
 
-    pub fn lyrics_scroll_down(&mut self, panel_h: usize) {
-        let total = self.lyrics_text.lines().count();
+    pub fn lyrics_scroll_down(&mut self, panel_h: usize, inner_w: u16) {
+        let total = wrap_text(&self.lyrics_text, inner_w as usize).len();
         if total > panel_h {
             let max_scroll = total.saturating_sub(panel_h);
             self.lyrics_scroll = (self.lyrics_scroll + 1).min(max_scroll);
@@ -269,8 +321,8 @@ impl RadioState {
         self.lyrics_scroll = self.lyrics_scroll.saturating_sub(page);
     }
 
-    pub fn lyrics_page_down(&mut self, page: usize) {
-        let total = self.lyrics_text.lines().count();
+    pub fn lyrics_page_down(&mut self, page: usize, inner_w: u16) {
+        let total = wrap_text(&self.lyrics_text, inner_w as usize).len();
         if total > page {
             let max_scroll = total.saturating_sub(page);
             self.lyrics_scroll = (self.lyrics_scroll + page).min(max_scroll);
