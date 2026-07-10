@@ -260,11 +260,11 @@ impl super::Santui {
             .split(area);
         let lines = vec![
             Line::from(Span::styled(
-                format!("Loading {plugin_name}…"),
+                format!("Loading {plugin_name}..."),
                 Style::default().fg(t.text_muted),
             )),
             Line::from(Span::styled(
-                "Starting plugin process…",
+                "Starting plugin process...",
                 Style::default().fg(t.text_muted),
             )),
         ];
