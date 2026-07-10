@@ -258,16 +258,10 @@ impl super::Santui {
                 Constraint::Fill(1),
             ])
             .split(area);
-        let lines = vec![
-            Line::from(Span::styled(
-                format!("Loading {plugin_name}..."),
-                Style::default().fg(t.text_muted),
-            )),
-            Line::from(Span::styled(
-                "Starting plugin process...",
-                Style::default().fg(t.text_muted),
-            )),
-        ];
+        let lines = vec![Line::from(Span::styled(
+            format!("Loading {plugin_name}..."),
+            Style::default().fg(t.text_muted),
+        ))];
         let p = Paragraph::new(lines).alignment(Alignment::Center);
         f.render_widget(p, vert[1]);
     }

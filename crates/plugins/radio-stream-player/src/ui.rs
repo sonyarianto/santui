@@ -22,11 +22,7 @@ fn draw_panel(
     if w < 3 || h < 2 {
         return;
     }
-    let t = if focused {
-        format!("● {}", title.trim())
-    } else {
-        title.trim().to_string()
-    };
+    let t = title.trim().to_string();
     let bright = focused || !dim_unfocused;
     let border_fg = if bright {
         theme.border
@@ -809,7 +805,7 @@ mod tests {
             .collect();
         assert_eq!(borders.len(), 2, "stations panel + now playing panel");
         if let RenderCmd::Border { title, y, .. } = borders[0] {
-            assert_eq!(title.as_deref(), Some("● Stations"));
+            assert_eq!(title.as_deref(), Some("Stations"));
             assert_eq!(*y, 0);
         }
     }
@@ -1417,7 +1413,7 @@ mod tests {
         // Lyrics panel is the third border
         assert!(borders.len() >= 3);
         if let RenderCmd::Border { title, fg, .. } = &borders[2] {
-            assert_eq!(title.as_deref(), Some("● Lyrics"));
+            assert_eq!(title.as_deref(), Some("Lyrics"));
             assert_eq!(
                 *fg,
                 default_theme().border,
