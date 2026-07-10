@@ -1,6 +1,8 @@
 use std::io::Write;
 use std::path::PathBuf;
+use std::sync::Arc;
 
+use santui_core::sync::{SyncClient, SyncOp};
 use santui_core::{DbAccess, Santui};
 use santui_db::open_db;
 use santui_registry::Registry;
@@ -13,8 +15,11 @@ use rusqlite::Connection;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Wraps the central santui.db connection for plugin key-value access.
+/// If a `sync` client is provided, every write is also enqueued for
+/// best-effort server sync.
 struct SantuiDb {
     conn: Option<Connection>,
+    sync: Option<Arc<SyncClient>>,
 }
 
 impl DbAccess for SantuiDb {
@@ -38,6 +43,13 @@ impl DbAccess for SantuiDb {
              ON CONFLICT(plugin, user_id, key) DO UPDATE SET value = excluded.value",
             rusqlite::params![plugin, user_id, key, value],
         );
+        if let Some(ref sync) = self.sync {
+            sync.enqueue(SyncOp::Set {
+                plugin: plugin.to_string(),
+                key: key.to_string(),
+                value: value.to_string(),
+            });
+        }
     }
 }
 
@@ -233,12 +245,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .format_timestamp(None)
         .format_target(false)
         .try_init();
-    let mut app = Santui::new();
-
-    // Initialize central database for plugin user data.
-    let conn = open_db().ok();
-    let db = Box::new(SantuiDb { conn });
-    app.set_db(db);
 
     let dev = std::env::var("SANTUI_DEV").as_deref() == Ok("1");
     let dir = if dev {
@@ -257,6 +263,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if !dir.join("config.toml").exists() {
         santui_core::config::Config::default().save_to(&dir)?;
     }
+
+    // Load config to check for server URL before creating the app.
+    let cfg = santui_core::config::Config::load_from(&dir);
+    let sync_client: Option<Arc<SyncClient>> = cfg
+        .server
+        .as_ref()
+        .map(|s| Arc::new(SyncClient::new(s.url.clone())));
+
+    // Initialize central database — inject sync client so every write is queued.
+    let conn = open_db().ok();
+    let db = Box::new(SantuiDb {
+        conn,
+        sync: sync_client.clone(),
+    });
+
+    let mut app = Santui::new();
+    app.set_db(db);
+    app.set_sync(sync_client);
     app.set_data_dir(dir.clone());
     app.set_config_dir(dir);
 
@@ -284,6 +308,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let mut providers = Vec::new();
 
+        // Public identifier for GitHub OAuth Device Flow — NOT a secret.
+        // GitHub device code flow does not require a client_secret; this ID is
+        // embedded in every OAuth app's frontend code and is intentionally public.
         let github_id = std::env::var("SANTUI_GITHUB_CLIENT_ID")
             .unwrap_or_else(|_| "Ov23liQ8S6DliNvkWmoB".into());
         let config = santui_auth::AuthConfig::github(github_id);

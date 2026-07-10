@@ -127,4 +127,111 @@ santui.exe (host)
 | **Plugin reload** | Binary mtime polling + re-spawn via factory | 3.2 ✅ |
 | **Plugin SDK** | `cargo generate` template in `templates/plugin/` | 3.3 ✅ |
 
+## Server Architecture (`santui-server`)
+
+`santui-server` is an **optional, self-hosted** backend for cross-device state sync. It runs as a standalone binary using `axum` (async HTTP) and stores data in its own SQLite database.
+
+```
+┌─────────────────────┐      REST/JSON       ┌─────────────────────────┐
+│  santui (TUI)       │ ◄──────────────────► │  santui-server          │
+│                     │   (ureq, blocking)   │  ─── axum + tokio      │
+│  ┌───────────────┐  │                      │  ─── SQLite (server)   │
+│  │ Local SQLite  │  │                      │  ─── JWT auth          │
+│  │ (primary)     │  │                      │  ─── REST API          │
+│  └───────┬───────┘  │                      │  ─── Web UI (optional) │
+│          │          │                      │                        │
+│          ▼          │                      │                        │
+│  ┌───────────────┐  │                      │                        │
+│  │ SyncClient    │──┼──────────────────────┤                        │
+│  │ (best-effort) │  │                      │                        │
+│  └───────────────┘  │                      └────────────────────────┘
+│                     │
+│  Local-first: writes go to local DB first,
+│  then enqueued for async push to server.
+└─────────────────────┘
+```
+
+### Flow
+
+1. **User writes data** (plugin `DbSet` request) → `SantuiDb.set_value()` writes to local SQLite and enqueues a `SyncOp`.
+2. **Main loop tick** → `SyncClient.try_sync()` drains the queue: gets a JWT (via `POST /auth/login` using the stored OAuth bearer token), then pushes ops via `POST /api/v1/data/{plugin}`.
+3. **Server stores** in its own `user_data` table (same schema, plus `updated_at`).
+4. **Pull** (future): `GET /api/v1/data/{plugin}?since=<ts>` for multi-device merge.
+
+### Auth
+
+The sync client reuses the existing OAuth flow. When a server URL is configured:
+1. The client's stored OAuth token (from GitHub/Google sign-in) is exchanged for a server JWT via `POST /auth/login`.
+2. The JWT is cached in memory and used for all subsequent API calls.
+3. If the JWT expires or is missing, the client re-authenticates automatically.
+
+### Configuration
+
+```toml
+# ~/.local/share/santui/config.toml
+[server]
+url = "http://localhost:9876"      # optional — omit for offline-only
+```
+
+When `server.url` is absent, no sync happens and the app works entirely offline.
+
+### Running the server
+
+```bash
+# Build
+cargo build -p santui-server
+
+# Run (default port 9876)
+cargo run -p santui-server
+
+# On a VPS / home server
+santui-server --host 0.0.0.0 --port 9876
+
+# CLI flags:
+#   -p, --port        Port (default: 9876, env: SANTUI_SERVER_PORT)
+#   -H, --host        Bind address (default: 127.0.0.1, env: SANTUI_SERVER_HOST)
+#   -d, --data-dir    Data directory (env: SANTUI_SERVER_DATA_DIR)
+#   -s, --jwt-secret  JWT signing secret (env: SANTUI_JWT_SECRET)
+```
+
+### API Endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/auth/login` | OAuth token | Exchange OAuth token → JWT |
+| `GET` | `/auth/me?token=<jwt>` | JWT | Current user info |
+| `GET` | `/api/v1/data/{plugin}?token=<jwt>&since=<ts>` | JWT | Pull KV data |
+| `POST` | `/api/v1/data/{plugin}` | JWT (in body) | Push KV batch |
+| `DELETE` | `/api/v1/data/{plugin}/{key}?token=<jwt>` | JWT | Delete a key |
+| `GET` | `/` | — | Web UI dashboard |
+| `GET` | `/login` | — | Web UI login page |
+
+### Sync Client (in-process, `crates/core/src/sync.rs`)
+
+- **Best-effort**: failures are logged and retried on the next tick.
+- **Non-blocking**: the main loop never waits for the server.
+- **Queue-based**: writes are queued and drained in batches.
+
+```rust
+pub enum SyncOp {
+    Set { plugin, key, value },
+    Delete { plugin, key },
+}
+
+pub struct SyncClient { /* server_url, jwt, pending queue */ }
+
+impl SyncClient {
+    pub fn enqueue(&self, op: SyncOp);       // called from SantuiDb.set_value()
+    pub fn try_sync(&self, auth);             // called every frame from main loop
+}
+```
+
+### Design decisions
+
+- **Self-hosted** — the user controls their data. No central Santui cloud.
+- **Optional** — app works fully offline without a server.
+- **Local-first** — writes go to local SQLite first, then sync (no server dependency for reads).
+- **Same KV schema** — both client and server use `(plugin, user_id, key, value)` — no transformation needed.
+- **Single binary** — `santui-server` is a single Rust binary, no runtime deps.
+
 See the GitHub Issues & Milestones for details on remaining phases.

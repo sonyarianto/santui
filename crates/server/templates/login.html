@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign In — Santui Server</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+.card { background: #1e293b; border: 1px solid #334155; border-radius: 1rem; padding: 2.5rem; max-width: 420px; width: 90%; text-align: center; }
+.card h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; color: #f1f5f9; }
+.card p { color: #94a3b8; font-size: 0.9rem; margin-bottom: 2rem; }
+.btn { display: block; width: 100%; padding: 0.75rem 1rem; border: 1px solid #334155; border-radius: 0.5rem; background: #0f172a; color: #e2e8f0; font-size: 0.95rem; cursor: pointer; transition: all 0.15s; margin-bottom: 0.75rem; text-decoration: none; }
+.btn:hover { background: #1e293b; border-color: #38bdf8; }
+.btn.github { border-left: 3px solid #6e40c9; }
+.btn.google { border-left: 3px solid #ea4335; }
+.token-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #334155; }
+.token-section p { font-size: 0.8rem; margin-bottom: 0.75rem; }
+input[type="text"] { width: 100%; padding: 0.75rem; background: #0f172a; border: 1px solid #334155; border-radius: 0.5rem; color: #e2e8f0; font-size: 0.85rem; font-family: monospace; margin-bottom: 0.75rem; }
+input[type="text"]:focus { outline: none; border-color: #38bdf8; }
+</style>
+</head>
+<body>
+<div class="card">
+<h1>Santui Server</h1>
+<p>Sign in to manage your synced data</p>
+
+<div class="token-section">
+<p>Or paste a JWT token from the TUI app:</p>
+<form action="/" method="GET">
+<input type="text" name="token" placeholder="paste your token..." />
+<button class="btn" type="submit">Authenticate</button>
+</form>
+</div>
+</div>
+</body>
+</html>

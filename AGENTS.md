@@ -3,7 +3,7 @@
 ## Build & Test
 
 ```bash
-cargo build              # build all workspace crates (including plugin binaries)
+cargo build              # build all workspace crates (including server + plugin binaries)
 cargo check              # fast compile check
 cargo clippy --workspace -- -D warnings  # lint
 cargo fmt --check        # formatting check
@@ -15,6 +15,8 @@ lefthook pre-commit runs `cargo fmt --check` + `cargo clippy` automatically. Ins
 
 Run: `cargo build --workspace && cargo run -p santui` or `.\target\debug\santui.exe`
 
+Server: `cargo run -p santui-server`
+
 Dev mode (plugin registry + native deps):
   - Windows: `.\scripts\dev-setup.ps1 ; $env:SANTUI_DEV=1; cargo run -p santui`
   - macOS/Linux: `./scripts/dev-setup.sh && SANTUI_DEV=1 cargo run -p santui`
@@ -25,11 +27,12 @@ Watch: `cargo watch -x "run -p santui"`
 
 ```
 crates/
-├── core/          — framework: App, Plugin trait, event loop, palette
+├── core/          — framework: App, Plugin trait, event loop, palette, sync client
 ├── ipc/           — IPC protocol types + host (`IpcPluginHost`) plugin runner
 ├── auth/          — GitHub OAuth + auth handle/client
 ├── db/            — central SQLite database for per-user plugin data
 ├── registry/      — plugin registry: manifest fetch, install, config
+├── server/        — optional self-hosted sync server (axum + SQLite + JWT)
 ├── plugins/           — 110+ first-party plugins (see plugins-manifest.json for full list)
 │   ├── radio-stream-player/   — radio plugin
 │   │   └── scraper/           — scrape radio stations into DB
@@ -55,6 +58,7 @@ crates/
 - **plugins-manifest.json + Cargo.toml**: When adding a new plugin you MUST update **both**:
   1. `plugins-manifest.json` — add an entry with `id`, `name`, `description`, `capabilities`. This is the source of truth for the registry (read by `dev-setup.sh` and CI `release.yml`). `plugins.json` (gitignored) is auto-generated.
   2. `Cargo.toml` (root workspace) — add `"crates/plugins/{id}"` to the `members` list. Without this, `cargo build` and `dev-setup.sh` will skip the plugin entirely (as happened with 31 orphaned plugins that had manifest entries but no workspace membership).
+- **Never delete code unintentionally**: Every `edit` must preserve all existing lines, functions, and logic unless the user explicitly asked for removal. Before applying an edit, verify that `oldString` matches *only* the intended target and that `newString` includes everything that should remain — especially surrounding code, closing braces, and adjacent statements. When in doubt, prefer a more specific `oldString` with extra context lines to avoid matching the wrong block. After each edit, re-read the file to confirm nothing was silently dropped. A single missing brace or removed line can silently break the build and waste a debugging cycle.
 - **Architectural skepticism**: If the AI struggles to fix a bug across multiple attempts (patch after patch, each adding complexity without solving it), step back and question the architecture itself. A fragile timing assumption or wrong abstraction is often the root cause — patching around it never works. The correct fix is to eliminate the assumption, not widen the window. No magic-number timeouts; no "should be fast enough" reasoning.
 
 ## Website

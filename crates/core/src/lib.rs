@@ -5,6 +5,7 @@ pub mod db_access;
 pub mod event;
 pub mod plugin;
 pub mod registry_config;
+pub mod sync;
 pub mod theme;
 pub mod widgets;
 

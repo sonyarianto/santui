@@ -18,6 +18,19 @@ pub struct Config {
     /// Plugin-specific settings (reserved — schema defined for future use).
     #[serde(default)]
     pub plugins: Option<PluginConfig>,
+    /// Optional santui-server connection for state sync.
+    #[serde(default)]
+    pub server: Option<ServerConfig>,
+}
+
+/// Connection settings for a remote [`santui-server`](https://github.com/sonyarianto/santui).
+///
+/// When configured, the TUI app pushes plugin data changes to the server for
+/// cross-device sync and persistence.
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+pub struct ServerConfig {
+    /// Base URL of the santui-server, e.g. `"http://localhost:9876"`.
+    pub url: String,
 }
 
 /// Per-color-field overrides for a custom theme.
@@ -456,6 +469,7 @@ mod tests {
         assert_eq!(cfg.keybindings.quit, "q");
         assert_eq!(cfg.keybindings.about, "?");
         assert!(cfg.plugins.is_none());
+        assert!(cfg.server.is_none());
     }
 
     #[test]
@@ -504,6 +518,7 @@ mod tests {
             }),
             keybindings: KeyBindings::default(),
             plugins: None,
+            server: None,
         };
         cfg.save_to(tmp.path()).unwrap();
         let loaded = Config::load_from(tmp.path());

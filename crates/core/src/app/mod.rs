@@ -13,6 +13,7 @@ use crate::auth::AuthHandle;
 use crate::config::ConfigManager;
 use crate::db_access::DbAccess;
 use crate::plugin::{Plugin, PluginContext};
+use crate::sync::SyncClient;
 use crate::widgets::DimOverlay;
 use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
 use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers, MouseEvent};
@@ -168,6 +169,8 @@ pub struct Santui {
     pub(super) event_bus: crate::event::EventBus,
     /// Authentication handle (set by main.rs before run()).
     pub(super) auth: Option<Arc<dyn AuthHandle>>,
+    /// Sync client for pushing data to a remote santui-server.
+    pub(super) sync: Option<Arc<SyncClient>>,
     /// Central database access for plugin user data.
     pub(super) db: Option<Box<dyn DbAccess>>,
     /// Centralized application state.
@@ -230,6 +233,7 @@ impl Santui {
             plugin_manager: plugin_manager::PluginManager::new(),
             event_bus: crate::event::EventBus::new(),
             auth: None,
+            sync: None,
             db: None,
             app_state: app_state::AppState::new(theme),
             theme_manager,
@@ -257,12 +261,24 @@ impl Santui {
         self.db = Some(db);
     }
 
+    /// Set the sync client for pushing data to a remote santui-server.
+    /// Call before `run()`.  Reads `server.url` from config to determine
+    /// whether sync is enabled.
+    pub fn set_sync(&mut self, sync: Option<Arc<SyncClient>>) {
+        self.sync = sync;
+    }
+
     /// Set the config directory and load (or create) `config.toml`.
     /// Call before `run()`.
     pub fn set_config_dir(&mut self, dir: std::path::PathBuf) {
         self.config_manager = ConfigManager::new(dir.clone());
         self.theme_manager.load_user_themes(&dir);
         self.apply_config();
+    }
+
+    /// Access the currently loaded configuration.
+    pub fn config(&self) -> &crate::config::Config {
+        self.config_manager.config()
     }
 
     /// Apply the loaded config (theme, custom colors) to the current app state.
@@ -421,6 +437,11 @@ impl Santui {
             if let Some(ref mut db) = self.db {
                 self.plugin_manager
                     .process_all_requests(db.as_mut(), &self.auth);
+            }
+
+            // Push queued writes to the remote sync server (best-effort).
+            if let Some(ref sync) = self.sync {
+                sync.try_sync(&self.auth);
             }
 
             // Event-driven Esc: if the active plugin had a pending Esc response

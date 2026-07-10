@@ -99,6 +99,28 @@ This builds everything, generates a local plugin manifest, and runs Santui in de
 
 Santui stores its settings in `config.toml` (TOML format) in the platform-standard data directory (`%APPDATA%/santui` on Windows, `~/.local/share/santui` on Linux, or `~/.santui` in dev mode). Edit the file to set a default theme or custom colour overrides — changes are hot-reloaded automatically. See the full [Configuration reference](https://santuiapp.vercel.app/guide/configuration).
 
+## Self-hosted sync server
+
+Santui can optionally sync plugin data (settings, favorites, etc.) to a self-hosted backend:
+
+```toml
+# ~/.local/share/santui/config.toml
+[server]
+url = "http://localhost:9876"    # your santui-server address
+```
+
+```bash
+# Run the server (separate terminal or VPS)
+santui-server
+
+# That's it — the TUI app auto-discovers the server from config
+# and pushes data changes in the background.
+```
+
+`santui-server` is a standalone Rust binary (axum + SQLite). No Docker, no Python, no config needed. Build it with `cargo build -p santui-server` or use the same install methods above.
+
+See [docs/architecture.md](docs/architecture.md) for the full architecture and API reference.
+
 ## Documentation
 
 Full docs at [santuiapp.vercel.app](https://santuiapp.vercel.app).

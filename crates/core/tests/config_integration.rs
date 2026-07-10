@@ -99,6 +99,7 @@ fn config_save_roundtrip() {
         }),
         keybindings: santui_core::config::KeyBindings::default(),
         plugins: None,
+        server: None,
     };
     cfg.save_to(tmp.path()).unwrap();
 

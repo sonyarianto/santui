@@ -120,6 +120,7 @@ members = [
     "crates/plugins/slug-generator",
     "crates/plugins/uuid-generator",
     "crates/app",
+    "crates/server",
 ]
 resolver = "2"
 
