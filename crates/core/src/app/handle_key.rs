@@ -317,7 +317,10 @@ impl super::Santui {
                 _ if key.code == self.bindings.about.0
                     && key.modifiers.contains(self.bindings.about.1) =>
                 {
-                    self.app_state.show_about = true;
+                    let consumed = self.plugin_manager.handle_key(idx, key);
+                    if !consumed {
+                        self.app_state.show_about = true;
+                    }
                 }
                 _ => {
                     self.plugin_manager.handle_key(idx, key);

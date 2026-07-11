@@ -38,6 +38,7 @@ struct App {
     status: String,
     history: Vec<Entry>,
     cursor: usize,
+    clipboard: Option<arboard::Clipboard>,
 }
 
 impl Default for App {
@@ -50,9 +51,10 @@ impl Default for App {
             mode: Mode::Encode,
             input: String::new(),
             output: String::new(),
-            status: "Type to encode \u{b7} m mode \u{b7} tab mode \u{b7} c copy".into(),
+            status: String::new(),
             history: Vec::new(),
             cursor: 0,
+            clipboard: arboard::Clipboard::new().ok(),
         }
     }
 }
@@ -147,10 +149,24 @@ impl App {
         if self.output.is_empty() || self.output == "(invalid base64)" {
             return;
         }
-        match copy_to_clipboard(&self.output) {
-            Ok(()) => self.status = "Copied to clipboard".into(),
-            Err(e) => self.status = format!("Clipboard error: {e}"),
+        match self.clipboard.as_mut() {
+            Some(clip) => match clip.set_text(self.output.clone()) {
+                Ok(()) => self.status = "Copied to clipboard".into(),
+                Err(e) => self.status = format!("Clipboard error: {e}"),
+            },
+            None => self.status = "Clipboard error: unable to open clipboard".into(),
         }
+    }
+
+    fn hints(&self) -> Vec<(String, String)> {
+        vec![
+            ("type".into(), "input".into()),
+            ("m/tab".into(), "mode".into()),
+            ("enter".into(), "copy + save".into()),
+            ("c".into(), "copy".into()),
+            ("↑↓".into(), "history".into()),
+            ("esc".into(), "back".into()),
+        ]
     }
 
     fn render(&mut self) -> &[RenderCmd] {
@@ -283,7 +299,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
     });
 
     let list_start = hist_y + 1;
-    let bottom_space = 3;
+    let bottom_space = 2;
     let list_h = h.saturating_sub(list_start + bottom_space).max(1);
     let list_w = w.saturating_sub(4);
     let visible = list_h as usize;
@@ -343,24 +359,8 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         bold: false,
         modifiers: 0,
     });
-    cmds.push(RenderCmd::Text {
-        x: 2,
-        y: h.saturating_sub(1),
-        text: "type to input \u{b7} m/tab mode \u{b7} enter copy+save \u{b7} c copy \u{b7} \u{2191}\u{2193} history \u{b7} esc".into(),
-        fg: Some(t.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
 
     cmds
-}
-
-fn copy_to_clipboard(text: &str) -> Result<(), String> {
-    let mut clipboard = arboard::Clipboard::new().map_err(|e| e.to_string())?;
-    clipboard
-        .set_text(text.to_owned())
-        .map_err(|e| e.to_string())
 }
 
 fn default_theme() -> ThemeData {
@@ -384,13 +384,13 @@ fn palette_commands() -> Vec<(String, String)> {
     vec![("Utilities".into(), "Open base64 encoder".into())]
 }
 
-fn respond(app: &mut App, consumed: bool) {
+fn respond(app: &mut App, hints: Vec<(String, String)>, consumed: bool) {
     let Ok(commands_val) = serde_json::to_value(app.render()) else {
         return;
     };
     let json = serde_json::json!({
         "commands": commands_val,
-        "hints": [],
+        "hints": hints,
         "palette_commands": palette_commands(),
         "request": null,
         "plugin_message": null,
@@ -452,7 +452,8 @@ fn main() {
                 false
             }
         };
-        respond(&mut app, consumed);
+        let hints = app.hints();
+        respond(&mut app, hints, consumed);
         line.clear();
     }
 }
