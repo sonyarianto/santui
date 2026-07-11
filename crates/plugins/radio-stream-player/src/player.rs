@@ -45,6 +45,7 @@ type CommandFn = unsafe extern "C" fn(*mut MpvHandle, *const *const i8) -> i32;
 type ObserveFn = unsafe extern "C" fn(*mut MpvHandle, u64, *const i8, u32) -> i32;
 type WaitEventFn = unsafe extern "C" fn(*mut MpvHandle, f64) -> *mut MpvEvent;
 type GetPropFn = unsafe extern "C" fn(*mut MpvHandle, *const i8, u32, *mut std::ffi::c_void) -> i32;
+type WakeupFn = unsafe extern "C" fn(*mut MpvHandle);
 type DestroyFn = unsafe extern "C" fn(*mut MpvHandle);
 
 struct Funcs {
@@ -56,6 +57,7 @@ struct Funcs {
     observe: ObserveFn,
     wait_event: WaitEventFn,
     get_property: GetPropFn,
+    wakeup: WakeupFn,
     destroy: DestroyFn,
 }
 
@@ -65,6 +67,21 @@ pub struct Mpv {
     funcs: Box<Funcs>,
 }
 
+/// Opaque handle that can wake up an mpv event loop from any thread.
+/// Created from an `Mpv` instance before it is moved into a thread.
+pub struct MpvWakeup {
+    handle: *mut MpvHandle,
+    wakeup_fn: unsafe extern "C" fn(*mut MpvHandle),
+}
+
+impl MpvWakeup {
+    /// Wake up `mpv_wait_event` so the event loop thread can check for new
+    /// commands or exit promptly.  Safe to call from any thread.
+    pub fn wakeup(&self) {
+        unsafe { (self.wakeup_fn)(self.handle) };
+    }
+}
+
 // Mpv is Send because all access to `handle` goes through `funcs`,
 // which are plain function pointers loaded from libmpv. The `_lib` Arc<Library>
 // ensures the shared library stays loaded for the lifetime of every Mpv handle.
@@ -72,6 +89,7 @@ pub struct Mpv {
 // must not cross threads. The current design keeps one Mpv per plugin process
 // accessed from a single thread.
 unsafe impl Send for Mpv {}
+unsafe impl Send for MpvWakeup {}
 
 fn to_rc(rc: i32, ctx: &str) -> Result<(), Box<dyn std::error::Error>> {
     if rc >= 0 {
@@ -165,6 +183,7 @@ impl Mpv {
             observe: get_sym!(b"mpv_observe_property\0"),
             wait_event: get_sym!(b"mpv_wait_event\0"),
             get_property: get_sym!(b"mpv_get_property\0"),
+            wakeup: get_sym!(b"mpv_wakeup\0"),
             destroy: get_sym!(b"mpv_destroy\0"),
         });
 
@@ -247,6 +266,13 @@ impl Mpv {
             unsafe { (self.funcs.observe)(self.handle, id, n.as_ptr(), MPV_FORMAT_NODE_OBSERVE) },
             name,
         )
+    }
+
+    pub fn make_wakeup(&self) -> MpvWakeup {
+        MpvWakeup {
+            handle: self.handle,
+            wakeup_fn: self.funcs.wakeup,
+        }
     }
 
     pub fn stop(&self) -> Result<(), Box<dyn std::error::Error>> {

@@ -7,7 +7,9 @@ mod state;
 mod stations;
 mod ui;
 use std::io::{BufRead, BufReader, Write};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc;
+use std::sync::Arc;
 use std::thread;
 
 use ui::{HEADER_H, TABLE_TOP};
@@ -26,6 +28,7 @@ enum MpvMsg {
     TrackInfo(u64, itunes::TrackInfo),
     Lyrics(u64, Option<lrclib::LyricsData>),
     EndFile(u32),
+    MpvReset,
 }
 
 enum MpvCmd {
@@ -43,6 +46,10 @@ struct App {
     rx_msg: Option<mpsc::Receiver<MpvMsg>>,
     tx_msg: Option<mpsc::Sender<MpvMsg>>,
     mpv_thread: Option<thread::JoinHandle<()>>,
+    mpv_wakeup: Option<player::MpvWakeup>,
+    mpv_heartbeat: Arc<AtomicU64>,
+    mpv_last_seen: u64,
+    mpv_stuck_since: Option<std::time::Instant>,
     init_error: Option<String>,
     dirty: bool,
     cached_commands: Vec<RenderCmd>,
@@ -99,6 +106,10 @@ impl App {
             rx_msg: None,
             tx_msg: None,
             mpv_thread: None,
+            mpv_wakeup: None,
+            mpv_heartbeat: Arc::new(AtomicU64::new(0)),
+            mpv_last_seen: 0,
+            mpv_stuck_since: None,
             init_error,
             dirty: true,
             cached_commands: Vec::new(),
@@ -179,16 +190,30 @@ impl App {
             log::warn!("mpv set_volume failed: {e}");
         }
 
+        self.mpv_wakeup = Some(mpv.make_wakeup());
+
         let (tx_msg, rx_msg) = mpsc::channel::<MpvMsg>();
         let (tx_cmd, rx_cmd) = mpsc::channel::<MpvCmd>();
 
         let tx_msg_mpv = tx_msg.clone();
+        let hb = self.mpv_heartbeat.clone();
 
         let handle = thread::spawn(move || {
             loop {
+                hb.fetch_add(1, Ordering::Relaxed);
                 let ev = mpv.wait_event_raw(0.1);
                 if let Some(ev) = ev {
                     let id = ev.event_id;
+                    let name = match id {
+                        player::MPV_EVENT_SHUTDOWN => "SHUTDOWN",
+                        player::MPV_EVENT_FILE_LOADED => "FILE_LOADED",
+                        player::MPV_EVENT_PLAYBACK_RESTART => "PLAYBACK_RESTART",
+                        player::MPV_EVENT_PROPERTY_CHANGE => "PROPERTY_CHANGE",
+                        player::MPV_EVENT_END_FILE => "END_FILE",
+                        7 => "START_FILE",
+                        _ => "OTHER",
+                    };
+                    log::info!("mpv_thread: event {name} (id={id})");
                     if id == player::MPV_EVENT_SHUTDOWN {
                         break;
                     }
@@ -242,25 +267,72 @@ impl App {
 
                 while let Ok(cmd) = rx_cmd.try_recv() {
                     match cmd {
-                        MpvCmd::LoadUrl(url) => {
-                            // Drain ALL stale events from previous operations
-                            // before loading this URL.  Events left in the
-                            // queue from a cancelled prior LoadUrl (e.g. a
-                            // retry that was superseded by a user action) can
-                            // carry FILE_LOADED / END_FILE etc. for the wrong
-                            // URL and would corrupt the state machine.
+                        MpvCmd::LoadUrl(mut url) => {
+                            loop {
+                                match rx_cmd.try_recv() {
+                                    Ok(MpvCmd::LoadUrl(new_url)) => {
+                                        let prev = url.chars().take(60).collect::<String>();
+                                        url = new_url;
+                                        log::info!(
+                                            "mpv_thread: collapsed LoadUrl, prev={:?}",
+                                            prev,
+                                        );
+                                    }
+                                    Ok(MpvCmd::Stop) => {
+                                        if let Err(e) = mpv.stop() {
+                                            log::warn!("mpv stop failed: {e}");
+                                        }
+                                    }
+                                    Ok(MpvCmd::SetVolume(v)) => {
+                                        if let Err(e) = mpv.set_volume(v) {
+                                            log::warn!("mpv set_volume failed: {e}");
+                                        }
+                                    }
+                                    Ok(MpvCmd::Quit) => {
+                                        mpv.destroy();
+                                        return;
+                                    }
+                                    Err(_) => break,
+                                }
+                            }
+                            // Stop previous playback and drain stale events so
+                            // mpv has a clean internal state before loading the
+                            // new URL.  This avoids cases where a stuck/broken
+                            // network stream prevents loadfile from working.
+                            let _ = mpv.stop();
+                            let mut drained = 0u32;
                             while let Some(stale) = mpv.wait_event_raw(0.0) {
                                 if stale.event_id == player::MPV_EVENT_SHUTDOWN {
                                     break;
                                 }
+                                drained += 1;
                             }
-                            if let Err(e) = mpv.load_url(&url) {
-                                log::warn!("mpv load_url failed: {e}");
+                            if drained > 0 {
+                                log::info!(
+                                    "mpv_thread: pre-drain discarded {drained} stale events"
+                                );
                             }
-                            // Do NOT drain after load_url — any event
-                            // generated now belongs to this URL (END_FILE
-                            // for the replaced stream, FILE_LOADED for the
-                            // new stream).
+                            log::info!("mpv_thread: calling load_url");
+                            match mpv.load_url(&url) {
+                                Ok(()) => {}
+                                Err(e) => {
+                                    log::warn!("mpv load_url failed: {e}");
+                                    // Try stop + retry once to recover a transient state
+                                    let _ = mpv.stop();
+                                    while let Some(stale) = mpv.wait_event_raw(0.0) {
+                                        if stale.event_id == player::MPV_EVENT_SHUTDOWN {
+                                            break;
+                                        }
+                                    }
+                                    match mpv.load_url(&url) {
+                                        Ok(()) => {}
+                                        Err(e2) => {
+                                            log::warn!("mpv load_url retry also failed: {e2}");
+                                            let _ = tx_msg_mpv.send(MpvMsg::MpvReset);
+                                        }
+                                    }
+                                }
+                            }
                         }
                         MpvCmd::Stop => {
                             if let Err(e) = mpv.stop() {
@@ -520,7 +592,15 @@ impl App {
             self.state.clear_lyrics();
             self.state.lyrics_loading = true;
             self.state.start_time = std::time::Instant::now();
-            send_cmd(self, MpvCmd::LoadUrl(station.url));
+            log::info!(
+                "play_selected_station: {} → Connecting, url={:?}",
+                station.name,
+                station.url.chars().take(80).collect::<String>(),
+            );
+            // Fully recreate the mpv handle.  Destroy+replace ensures no stale
+            // internal mpv state (stuck DNS, broken TCP connection, corrupted
+            // audio buffer) leaks from one station to the next.
+            self.reset_mpv();
         }
     }
 
@@ -612,29 +692,36 @@ impl App {
 
     fn handle_tick(&mut self) {
         let mut changed = false;
+        let mut reset_requested = false;
         let tx_msg = self.tx_msg.clone();
         if let Some(ref rx) = self.rx_msg {
             while let Ok(msg) = rx.try_recv() {
                 changed = true;
                 match msg {
                     MpvMsg::FileLoaded(title) => {
-                        if let state::PlayState::Connecting(name) = &self.state.play_state {
-                            self.state.play_state = state::PlayState::Playing(name.clone());
+                        let state_before = format!("{:?}", self.state.play_state);
+                        match &self.state.play_state {
+                            state::PlayState::Connecting(name)
+                            | state::PlayState::Retrying(name) => {
+                                self.state.play_state = state::PlayState::Playing(name.clone());
+                                self.state.retry_deadline = None;
+                                self.state.retry_attempt = 0;
+                            }
+                            _ => {}
                         }
+                        log::info!(
+                            "handle_tick: FileLoaded({:?}) state was {state_before}, now {:?}",
+                            title,
+                            self.state.play_state,
+                        );
                         Self::apply_metadata(&mut self.state, &tx_msg, title);
                     }
                     MpvMsg::Metadata(title) => {
-                        // PROPERTY_CHANGE events — only update title if already
-                        // Playing.  Do NOT transition Connecting → Playing;
-                        // that transition is reserved for FileLoaded (from
-                        // mpv's FILE_LOADED event), which unambiguously
-                        // signals the new stream has loaded.  Stale PROPERTY_CHANGE
-                        // events from the previous stream can arrive after we
-                        // start Connecting for a new station (the mpv thread
-                        // polls events before processing commands), and would
-                        // otherwise trigger a premature Playing state, causing
-                        // the subsequent EndFile from the old stream to
-                        // spuriously kick off retry logic.
+                        log::info!(
+                            "handle_tick: Metadata({:?}) state={:?}",
+                            title,
+                            self.state.play_state,
+                        );
                         if !matches!(self.state.play_state, state::PlayState::Playing(_)) {
                             continue;
                         }
@@ -666,37 +753,77 @@ impl App {
                         self.state.lyrics_scroll = 0;
                     }
                     MpvMsg::EndFile(reason) => {
-                        if let state::PlayState::Playing(name) = &self.state.play_state {
-                            match reason {
-                                player::MPV_END_FILE_REASON_EOF
-                                | player::MPV_END_FILE_REASON_ERROR => {
-                                    if self.state.retry_attempt >= state::MAX_RETRIES {
-                                        self.state.play_state = state::PlayState::Error(format!(
-                                            "connection lost after {} attempts",
-                                            state::MAX_RETRIES
-                                        ));
-                                        self.state.retry_deadline = None;
-                                    } else {
-                                        let delay_ms =
-                                            state::retry_delay_ms(self.state.retry_attempt);
-                                        self.state.retry_deadline = Some(
-                                            std::time::Instant::now()
-                                                + std::time::Duration::from_millis(delay_ms),
-                                        );
-                                        self.state.play_state =
-                                            state::PlayState::Retrying(name.clone());
-                                        self.state.retry_attempt += 1;
-                                    }
-                                }
-                                _ => {}
+                        let is_error = reason == player::MPV_END_FILE_REASON_EOF
+                            || reason == player::MPV_END_FILE_REASON_ERROR;
+                        log::info!(
+                            "handle_tick: EndFile(reason={reason}) state={:?} is_error={is_error}",
+                            self.state.play_state,
+                        );
+                        if !is_error {
+                            continue;
+                        }
+                        let name = match &self.state.play_state {
+                            state::PlayState::Playing(n) => Some(n.clone()),
+                            state::PlayState::Connecting(n)
+                                if reason == player::MPV_END_FILE_REASON_ERROR
+                                    && self.state.retry_mode =>
+                            {
+                                // load_url failed while Connecting — start retry
+                                // immediately instead of waiting for the 10s timeout.
+                                // Only applies to automatic retries (retry_mode=true),
+                                // NOT user-initiated selections (retry_mode=false).
+                                // A stale EndFile from the previous stream arriving
+                                // after the user switched stations must not trigger
+                                // a spurious retry for the new station.
+                                Some(n.clone())
+                            }
+                            _ => None,
+                        };
+                        if let Some(name) = name {
+                            if self.state.retry_attempt >= state::MAX_RETRIES {
+                                self.state.play_state = state::PlayState::Error(format!(
+                                    "connection lost after {} attempts",
+                                    state::MAX_RETRIES
+                                ));
+                                self.state.retry_deadline = None;
+                            } else {
+                                let delay_ms = state::retry_delay_ms(self.state.retry_attempt);
+                                self.state.retry_deadline = Some(
+                                    std::time::Instant::now()
+                                        + std::time::Duration::from_millis(delay_ms),
+                                );
+                                self.state.play_state = state::PlayState::Retrying(name);
+                                self.state.retry_attempt += 1;
                             }
                         }
+                    }
+                    MpvMsg::MpvReset => {
+                        log::warn!("handle_tick: MpvReset — recreating mpv handle");
+                        reset_requested = true;
                     }
                 }
             }
         }
+        if reset_requested {
+            self.reset_mpv();
+            // Fresh mpv handle — reset retry state so we get a full
+            // MAX_RETRIES budget on the new handle.
+            self.state.clear_retry();
+            if let Some(idx) = self.state.current_station {
+                let station = self.state.stations[idx].clone();
+                self.state.play_state = state::PlayState::Connecting(station.name.clone());
+                self.state.start_time = std::time::Instant::now();
+                send_cmd(self, MpvCmd::LoadUrl(station.url));
+            }
+            changed = true;
+        }
         if let state::PlayState::Connecting(name) = &self.state.play_state {
-            if self.state.start_time.elapsed().as_secs() >= 10 {
+            let elapsed = self.state.start_time.elapsed().as_secs();
+            if elapsed >= 10 {
+                log::info!(
+                    "handle_tick: Connecting timeout ({elapsed}s) for {name}, attempt {}",
+                    self.state.retry_attempt,
+                );
                 if self.state.retry_attempt >= state::MAX_RETRIES {
                     self.state.play_state = state::PlayState::Error(format!(
                         "timed out connecting to {name} after {} attempts",
@@ -714,25 +841,57 @@ impl App {
                 changed = true;
             }
         }
-        if let state::PlayState::Retrying(_) = &self.state.play_state {
+        if let state::PlayState::Retrying(name) = &self.state.play_state {
             if let Some(deadline) = self.state.retry_deadline {
                 if std::time::Instant::now() >= deadline {
-                    if let Some(idx) = self.state.current_station {
-                        let station = self.state.stations[idx].clone();
-                        self.state.play_state = state::PlayState::Connecting(station.name.clone());
-                        self.state.retry_mode = true;
-                        self.state.start_time = std::time::Instant::now();
-                        self.state.last_metadata.clear();
-                        self.state.song_title.clear();
-                        self.state.track_info = None;
-                        self.state.clear_lyrics();
-                        self.state.lyrics_loading = true;
-                        send_cmd(self, MpvCmd::LoadUrl(station.url));
-                        changed = true;
-                    }
+                    let name = name.clone();
+                    log::info!("handle_tick: Retrying complete for {name}, re-loading");
+                    self.state.retry_mode = true;
+                    self.state.last_metadata.clear();
+                    self.state.song_title.clear();
+                    self.state.track_info = None;
+                    self.state.clear_lyrics();
+                    self.state.lyrics_loading = true;
+                    self.reset_mpv();
+                    changed = true;
                 }
             }
         }
+        // ── mpv thread heartbeat ──────────────────────────────────
+        // If the mpv thread stops advancing its heartbeat while we are
+        // actively waiting for a response, the thread is likely stuck in
+        // a blocking mpv internal call (e.g. TCP connect to a broken
+        // stream).  Force a handle reset so the next LoadUrl runs on a
+        // fresh mpv instance.
+        //
+        // The thread increments the counter once per event-loop iteration
+        // (~100 ms via wait_event_raw(0.1)), so a 5 s stall = ~50 missed
+        // iterations — unlikely to false-positive.
+        const HEARTBEAT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+        if matches!(
+            self.state.play_state,
+            state::PlayState::Connecting(_) | state::PlayState::Playing(_)
+        ) {
+            let now = self.mpv_heartbeat.load(Ordering::Relaxed);
+            if now == self.mpv_last_seen {
+                let stuck = self
+                    .mpv_stuck_since
+                    .get_or_insert_with(std::time::Instant::now);
+                if stuck.elapsed() >= HEARTBEAT_TIMEOUT {
+                    log::warn!(
+                        "mpv heartbeat stuck for {:?}, resetting handle",
+                        stuck.elapsed(),
+                    );
+                    self.reset_mpv();
+                    self.mpv_last_seen = self.mpv_heartbeat.load(Ordering::Relaxed);
+                    self.mpv_stuck_since = None;
+                }
+            } else {
+                self.mpv_last_seen = now;
+                self.mpv_stuck_since = None;
+            }
+        }
+
         self.state.tick_counter += 1;
         if self.state.tick_scan_msg() {
             changed = true;
@@ -747,8 +906,225 @@ impl App {
         if let Some(ref tx) = self.tx_cmd {
             let _ = tx.send(MpvCmd::Quit);
         }
+        // Don't block shutdown — detach the thread and let the OS clean up.
+        self.mpv_thread = None;
+    }
+
+    fn reset_mpv(&mut self) {
+        // Wake up the old event loop so it can process Quit and exit promptly.
+        // mpv_wakeup is safe to call from any thread; it interrupts
+        // wait_event_raw and makes it return immediately.
+        if let Some(ref wakeup) = self.mpv_wakeup {
+            wakeup.wakeup();
+        }
+        // Send Quit — the thread will process it after being woken up.
+        if let Some(ref tx) = self.tx_cmd {
+            let _ = tx.send(MpvCmd::Quit);
+        }
+        // Join the old thread — it should exit quickly now.
         if let Some(handle) = self.mpv_thread.take() {
             let _ = handle.join();
+        }
+        self.mpv_wakeup = None;
+        self.tx_cmd = None;
+        self.rx_msg = None;
+        self.tx_msg = None;
+
+        // In test builds, always use mock channels — libmpv is not
+        // thread-safe and parallel tests would corrupt its global state.
+        let mpv_result = if cfg!(test) {
+            Err::<(Mpv, Vec<String>), Box<dyn std::error::Error>>("test mode".into())
+        } else {
+            Mpv::new()
+        };
+        let (mut mpv, _warns) = match mpv_result {
+            Ok(v) => v,
+            Err(e) => {
+                log::warn!("reset_mpv: failed to create mpv, using mock channels: {e}");
+                let (tx_msg, rx_msg) = mpsc::channel::<MpvMsg>();
+                let (tx_cmd, _) = mpsc::channel::<MpvCmd>();
+                self.tx_cmd = Some(tx_cmd);
+                self.rx_msg = Some(rx_msg);
+                self.tx_msg = Some(tx_msg);
+                if let Some(idx) = self.state.current_station {
+                    let station = self.state.stations[idx].clone();
+                    self.state.play_state = state::PlayState::Connecting(station.name.clone());
+                    self.state.start_time = std::time::Instant::now();
+                    send_cmd(self, MpvCmd::LoadUrl(station.url));
+                }
+                return;
+            }
+        };
+        if let Err(e) = mpv.observe_property(0, "metadata") {
+            log::warn!("mpv observe_property(metadata) failed: {e}");
+        }
+        if let Err(e) = mpv.observe_property(1, "media-title") {
+            log::warn!("mpv observe_property(media-title) failed: {e}");
+        }
+        if let Err(e) = mpv.observe_property(2, "volume") {
+            log::warn!("mpv observe_property(volume) failed: {e}");
+        }
+        if let Err(e) = mpv.set_volume(self.state.volume) {
+            log::warn!("mpv set_volume failed: {e}");
+        }
+
+        self.mpv_wakeup = Some(mpv.make_wakeup());
+
+        let (tx_msg, rx_msg) = mpsc::channel::<MpvMsg>();
+        let (tx_cmd, rx_cmd) = mpsc::channel::<MpvCmd>();
+        let tx_msg_mpv = tx_msg.clone();
+        let hb = self.mpv_heartbeat.clone();
+
+        let handle = thread::spawn(move || {
+            // Duplicated from handle_init — kept in sync manually.
+            loop {
+                hb.fetch_add(1, Ordering::Relaxed);
+                let ev = mpv.wait_event_raw(0.1);
+                if let Some(ev) = ev {
+                    let id = ev.event_id;
+                    let name = match id {
+                        player::MPV_EVENT_SHUTDOWN => "SHUTDOWN",
+                        player::MPV_EVENT_FILE_LOADED => "FILE_LOADED",
+                        player::MPV_EVENT_PLAYBACK_RESTART => "PLAYBACK_RESTART",
+                        player::MPV_EVENT_PROPERTY_CHANGE => "PROPERTY_CHANGE",
+                        player::MPV_EVENT_END_FILE => "END_FILE",
+                        7 => "START_FILE",
+                        _ => "OTHER",
+                    };
+                    log::info!("reset_mpv thread: event {name} (id={id})");
+                    if id == player::MPV_EVENT_SHUTDOWN {
+                        break;
+                    }
+                    if id == player::MPV_EVENT_FILE_LOADED {
+                        let title = mpv
+                            .metadata_title()
+                            .ok()
+                            .flatten()
+                            .or_else(|| mpv.media_title().ok().flatten())
+                            .unwrap_or_default();
+                        let _ = tx_msg_mpv.send(MpvMsg::FileLoaded(title));
+                    }
+                    if id == player::MPV_EVENT_PLAYBACK_RESTART {
+                        let title = mpv
+                            .metadata_title()
+                            .ok()
+                            .flatten()
+                            .or_else(|| mpv.media_title().ok().flatten())
+                            .unwrap_or_default();
+                        let _ = tx_msg_mpv.send(MpvMsg::FileLoaded(title));
+                    }
+                    if id == player::MPV_EVENT_PROPERTY_CHANGE {
+                        if ev.data.is_null() {
+                            continue;
+                        }
+                        let prop: &player::MpvEventProperty = unsafe { &*(ev.data as *const _) };
+                        if prop.name.is_null() {
+                            continue;
+                        }
+                        let name = unsafe {
+                            std::ffi::CStr::from_ptr(prop.name)
+                                .to_string_lossy()
+                                .to_string()
+                        };
+                        if name == "metadata" {
+                            let t = mpv.metadata_title().ok().flatten().unwrap_or_default();
+                            let _ = tx_msg_mpv.send(MpvMsg::Metadata(t));
+                        } else if name == "media-title" {
+                            let t = mpv.media_title().ok().flatten().unwrap_or_default();
+                            let _ = tx_msg_mpv.send(MpvMsg::Metadata(t));
+                        }
+                    }
+                    if id == player::MPV_EVENT_END_FILE {
+                        if ev.data.is_null() {
+                            continue;
+                        }
+                        let ef: &player::MpvEventEndFile = unsafe { &*(ev.data as *const _) };
+                        let _ = tx_msg_mpv.send(MpvMsg::EndFile(ef.reason));
+                    }
+                }
+                while let Ok(cmd) = rx_cmd.try_recv() {
+                    match cmd {
+                        MpvCmd::LoadUrl(mut url) => {
+                            loop {
+                                match rx_cmd.try_recv() {
+                                    Ok(MpvCmd::LoadUrl(new_url)) => url = new_url,
+                                    Ok(MpvCmd::Stop) => {
+                                        if let Err(e) = mpv.stop() {
+                                            log::warn!("mpv stop failed: {e}");
+                                        }
+                                    }
+                                    Ok(MpvCmd::SetVolume(v)) => {
+                                        if let Err(e) = mpv.set_volume(v) {
+                                            log::warn!("mpv set_volume failed: {e}");
+                                        }
+                                    }
+                                    Ok(MpvCmd::Quit) => {
+                                        mpv.destroy();
+                                        return;
+                                    }
+                                    Err(_) => break,
+                                }
+                            }
+                            let _ = mpv.stop();
+                            while let Some(stale) = mpv.wait_event_raw(0.0) {
+                                if stale.event_id == player::MPV_EVENT_SHUTDOWN {
+                                    break;
+                                }
+                            }
+                            log::info!("reset_mpv thread: calling load_url");
+                            match mpv.load_url(&url) {
+                                Ok(()) => {}
+                                Err(e) => {
+                                    log::warn!("reset_mpv thread: load_url failed: {e}");
+                                    let _ = mpv.stop();
+                                    while let Some(stale) = mpv.wait_event_raw(0.0) {
+                                        if stale.event_id == player::MPV_EVENT_SHUTDOWN {
+                                            break;
+                                        }
+                                    }
+                                    match mpv.load_url(&url) {
+                                        Ok(()) => {}
+                                        Err(e2) => {
+                                            log::warn!(
+                                                "reset_mpv thread: load_url retry also failed: {e2}"
+                                            );
+                                            let _ = tx_msg_mpv.send(MpvMsg::MpvReset);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        MpvCmd::Stop => {
+                            if let Err(e) = mpv.stop() {
+                                log::warn!("mpv stop failed: {e}");
+                            }
+                        }
+                        MpvCmd::SetVolume(v) => {
+                            if let Err(e) = mpv.set_volume(v) {
+                                log::warn!("mpv set_volume failed: {e}");
+                            }
+                        }
+                        MpvCmd::Quit => {
+                            mpv.destroy();
+                            return;
+                        }
+                    }
+                }
+            }
+            mpv.destroy();
+        });
+
+        self.mpv_thread = Some(handle);
+        self.tx_cmd = Some(tx_cmd);
+        self.rx_msg = Some(rx_msg);
+        self.tx_msg = Some(tx_msg);
+        // Queue LoadUrl for the current station on the new mpv handle.
+        // (Both this success path and the error path above must do this.)
+        if let Some(idx) = self.state.current_station {
+            let station = self.state.stations[idx].clone();
+            self.state.play_state = state::PlayState::Connecting(station.name.clone());
+            self.state.start_time = std::time::Instant::now();
+            send_cmd(self, MpvCmd::LoadUrl(station.url));
         }
     }
 
@@ -1008,6 +1384,10 @@ mod tests {
             rx_msg: None,
             tx_msg: None,
             mpv_thread: None,
+            mpv_wakeup: None,
+            mpv_heartbeat: Arc::new(AtomicU64::new(0)),
+            mpv_last_seen: 0,
+            mpv_stuck_since: None,
             init_error: None,
             dirty: true,
             cached_commands: Vec::new(),
@@ -1542,5 +1922,307 @@ mod tests {
         app.state.query.clear();
         app.state.apply_filter();
         assert_eq!(app.state.filtered.len(), 2);
+    }
+
+    // ── simulation: user scenario ────────────────────────────────────
+
+    /// Simulate pushing an mpv event into the app's message channel so
+    /// handle_tick can process it through rx.try_recv().
+    fn push_msg(app: &mut App, msg: MpvMsg) {
+        if let Some(ref tx) = app.tx_msg {
+            let _ = tx.send(msg);
+        }
+    }
+
+    /// Create an App with live mpsc channels so we can push MpvMsg events
+    /// and test handle_tick.
+    fn app_with_channels(n: usize) -> App {
+        let (tx_msg, rx_msg) = mpsc::channel();
+        let (tx_cmd, _rx_cmd) = mpsc::channel();
+        App {
+            state: RadioState::new(make_stations(n)),
+            theme: default_theme(),
+            area: Area { w: 80, h: 24 },
+            tx_cmd: Some(tx_cmd),
+            rx_msg: Some(rx_msg),
+            tx_msg: Some(tx_msg),
+            mpv_thread: None,
+            mpv_wakeup: None,
+            mpv_heartbeat: Arc::new(AtomicU64::new(0)),
+            mpv_last_seen: 0,
+            mpv_stuck_since: None,
+            init_error: None,
+            dirty: true,
+            cached_commands: Vec::new(),
+            user: None,
+            db: None,
+            pending_request: None,
+        }
+    }
+
+    /// Simulate retry deadline arrival: set retry_deadline to past, then call handle_tick.
+    fn fire_retry(app: &mut App) {
+        if app.state.retry_deadline.is_some() {
+            app.state.retry_deadline =
+                Some(std::time::Instant::now() - std::time::Duration::from_millis(1));
+        }
+        app.handle_tick();
+    }
+
+    #[test]
+    fn simulate_user_switching_after_bad_station() {
+        let mut app = app_with_channels(3);
+
+        // ── Step 1: play 011.FM ──────────────────────────────────────
+        app.handle_key(IpcKey::Enter);
+        assert!(matches!(app.state.play_state, PlayState::Connecting(_)));
+        assert_eq!(app.state.current_station, Some(0));
+
+        // 011.FM connects
+        push_msg(&mut app, MpvMsg::FileLoaded("011.FM - Song".into()));
+        app.handle_tick();
+        assert!(matches!(app.state.play_state, PlayState::Playing(ref n) if n == "Station 0"));
+        assert_eq!(app.state.song_title, "011.FM - Song");
+
+        // ── Step 2: switch to 1.FM ───────────────────────────────────
+        // 011.FM metadata event arrives BEFORE LoadUrl is processed
+        // (mpv thread polls events before commands)
+        app.state.selected = 1;
+        push_msg(&mut app, MpvMsg::Metadata("011.FM - Extra Metadata".into()));
+        app.handle_key(IpcKey::Enter);
+
+        // Metadata should be DROPPED because state is Connecting("Station 1"), not Playing
+        assert!(matches!(app.state.play_state, PlayState::Connecting(ref n) if n == "Station 1"));
+
+        // 1.FM's loadfile replaces 011.FM → END_FILE for old stream
+        push_msg(&mut app, MpvMsg::EndFile(player::MPV_END_FILE_REASON_EOF));
+        app.handle_tick();
+        // EndFile while Connecting → dropped, still Connecting
+        assert!(matches!(app.state.play_state, PlayState::Connecting(ref n) if n == "Station 1"));
+
+        // 1.FM loads (FILE_LOADED)
+        push_msg(&mut app, MpvMsg::FileLoaded("1.FM - 80s".into()));
+        app.handle_tick();
+        assert!(matches!(app.state.play_state, PlayState::Playing(ref n) if n == "Station 1"));
+
+        // ── Step 3: 1.FM has "no sound" ──────────────────────────────
+        // 1.FM fails → END_FILE(ERROR)
+        push_msg(&mut app, MpvMsg::EndFile(player::MPV_END_FILE_REASON_ERROR));
+        app.handle_tick();
+        assert!(matches!(app.state.play_state, PlayState::Retrying(ref n) if n == "Station 1"));
+        assert_eq!(app.state.retry_attempt, 1);
+
+        // ── Step 4: retry fires, queues LoadUrl ──────────────────────
+        fire_retry(&mut app);
+        assert!(matches!(app.state.play_state, PlayState::Connecting(ref n) if n == "Station 1"));
+
+        // ── Step 5: user presses Enter on 011.FM BEFORE mpv thread
+        // processes the retry's LoadUrl ───────────────────────────────
+        // This is the critical scenario: two LoadUrl commands queued.
+        // We simulate the mpv thread's event stream after processing
+        // BOTH commands with the pre-drain active.
+
+        // First, a stale METADATA arrives (from old 1.FM stream,
+        // polled by mpv thread BEFORE the command loop)
+        push_msg(&mut app, MpvMsg::Metadata("1.FM - Stale Metadata".into()));
+
+        app.state.selected = 0;
+        app.handle_key(IpcKey::Enter);
+        assert!(matches!(app.state.play_state, PlayState::Connecting(ref n) if n == "Station 0"));
+
+        // The stale Metadata arrived during Connecting → should be DROPPED
+        app.handle_tick();
+        assert!(matches!(app.state.play_state, PlayState::Connecting(ref n) if n == "Station 0"));
+
+        // Now simulate the mpv thread processing BOTH LoadUrls:
+        // retry's LoadUrl for 1.FM, then user's LoadUrl for 011.FM,
+        // with pre-drain consuming stale events from the first.
+
+        // Events generated (in order with pre-drain):
+        // Pre-drain of LoadUrl(1fm): nothing stale → loadfile 1fm replace
+        // Pre-drain of LoadUrl(011): processes loadfile 1fm → END_FILE(old) → consumed
+        //                           → processes FILE_LOADED(1fm) if cached → consumed by pre-drain!
+        //                           → loadfile 011 replace
+        // wait_event_raw(0.1): END_FILE(1fm from replacement) → FILE_LOADED(011)
+
+        // So the events arriving at main thread after both commands are processed:
+        // EndFile(EOF) for 1.FM being replaced by 011.FM
+        push_msg(&mut app, MpvMsg::EndFile(player::MPV_END_FILE_REASON_EOF));
+        app.handle_tick();
+        // Connecting → dropped ✓
+        assert!(matches!(app.state.play_state, PlayState::Connecting(ref n) if n == "Station 0"));
+
+        // FileLoaded for 011.FM
+        push_msg(&mut app, MpvMsg::FileLoaded("011.FM - Great Song".into()));
+        app.handle_tick();
+        // Connecting → Playing ✓
+        assert!(matches!(app.state.play_state, PlayState::Playing(ref n) if n == "Station 0"));
+        assert_eq!(app.state.song_title, "011.FM - Great Song");
+
+        // Verify no spurious retry was triggered
+        assert_eq!(app.state.retry_attempt, 0);
+        assert!(app.state.retry_deadline.is_none());
+    }
+
+    #[test]
+    fn simulate_stale_fileloaded_after_double_loadurl() {
+        // Edge case: retry LoadUrl + user LoadUrl queued back-to-back.
+        // mpv thread processes both; the first's FILE_LOADED event must
+        // NOT confuse the second's state.
+        let mut app = app_with_channels(3);
+
+        // Start playing Station 0
+        app.handle_key(IpcKey::Enter);
+        push_msg(&mut app, MpvMsg::FileLoaded("Station 0 Song".into()));
+        app.handle_tick();
+        assert!(matches!(app.state.play_state, PlayState::Playing(_)));
+
+        // Simulate failure → retry
+        push_msg(&mut app, MpvMsg::EndFile(player::MPV_END_FILE_REASON_ERROR));
+        app.handle_tick();
+        assert!(matches!(app.state.play_state, PlayState::Retrying(_)));
+
+        // Retry fires (queues LoadUrl for Station 0)
+        fire_retry(&mut app);
+        assert!(matches!(app.state.play_state, PlayState::Connecting(ref n) if n == "Station 0"));
+
+        // User presses Enter on Station 1 BEFORE mpv thread processes retry
+        app.state.selected = 1;
+        app.handle_key(IpcKey::Enter);
+        assert!(matches!(app.state.play_state, PlayState::Connecting(ref n) if n == "Station 1"));
+
+        // Simulate the mpv thread's pre-drain consuming stale events,
+        // then only the correct events arriving:
+
+        // EndFile from loadfile replace in the SECOND (user's) LoadUrl
+        push_msg(&mut app, MpvMsg::EndFile(player::MPV_END_FILE_REASON_EOF));
+        app.handle_tick();
+        assert!(matches!(app.state.play_state, PlayState::Connecting(ref n) if n == "Station 1"));
+
+        // FileLoaded for Station 1 (the winning URL)
+        push_msg(&mut app, MpvMsg::FileLoaded("Station 1 Rocks".into()));
+        app.handle_tick();
+        assert!(matches!(app.state.play_state, PlayState::Playing(ref n) if n == "Station 1"));
+        assert_eq!(app.state.song_title, "Station 1 Rocks");
+
+        // No spurious retry
+        assert_eq!(app.state.retry_attempt, 0);
+    }
+
+    #[test]
+    fn simulate_mpv_reset_recovers_playing() {
+        // When the mpv thread sends MpvReset (load_url failed after
+        // stop+retry), the main thread should recreate the mpv handle
+        // and re-queue LoadUrl.  We simulate this by pushing MpvReset.
+        let mut app = app_with_channels(3);
+
+        // Start playing Station 0
+        app.handle_key(IpcKey::Enter);
+        push_msg(&mut app, MpvMsg::FileLoaded("Song 0".into()));
+        app.handle_tick();
+        assert!(matches!(app.state.play_state, PlayState::Playing(_)));
+
+        // Simulate failure → retry
+        push_msg(&mut app, MpvMsg::EndFile(player::MPV_END_FILE_REASON_ERROR));
+        app.handle_tick();
+        assert!(matches!(app.state.play_state, PlayState::Retrying(_)));
+
+        // Simulate retry + connecting + mpv reset
+        fire_retry(&mut app);
+        assert!(matches!(app.state.play_state, PlayState::Connecting(_)));
+
+        // MpvReset during Connecting → reset_mpv + re-queue LoadUrl
+        push_msg(&mut app, MpvMsg::MpvReset);
+        app.handle_tick();
+
+        // After reset_mpv, state should be Connecting (with current_station)
+        // and a new LoadUrl was queued (tx_cmd had it sent).
+        assert!(matches!(app.state.play_state, PlayState::Connecting(_)));
+        assert_eq!(app.state.current_station, Some(0));
+
+        // Now simulate FileLoaded from the NEW mpv instance
+        push_msg(&mut app, MpvMsg::FileLoaded("Song 0 Reborn".into()));
+        app.handle_tick();
+        assert!(matches!(app.state.play_state, PlayState::Playing(ref n) if n == "Station 0"));
+        assert_eq!(app.state.song_title, "Song 0 Reborn");
+
+        // No retry was incremented because MpvReset is not a retry
+        assert_eq!(app.state.retry_attempt, 0);
+    }
+
+    /// Integration test that exercises a real mpv handle against the actual
+    /// station URLs from the user's database.  Tests whether 1.FM's stream
+    /// corrupts the mpv handle so that subsequent streams fail.
+    ///
+    /// This test requires network access and libmpv.  It is marked `ignore`
+    /// so it does not run in the normal `cargo test` suite.  Run it with:
+    ///
+    ///     cargo test -p santui-radio-stream-player test_mpv_urls_integration -- --ignored
+    #[test]
+    #[ignore]
+    fn test_mpv_urls_integration() {
+        let url_011 = "https://listen.011fm.com/stream01";
+        let url_1fm = "https://strmreg.1.fm/back280s_mobile_mp3";
+
+        let (mut mpv, warns) =
+            player::Mpv::new().expect("Failed to create mpv — is libmpv installed?");
+        for w in &warns {
+            eprintln!("mpv warn: {w}");
+        }
+        mpv.observe_property(0, "metadata").ok();
+        mpv.observe_property(1, "media-title").ok();
+        mpv.set_volume(50).ok();
+
+        /// Load a URL and wait for either FILE_LOADED or END_FILE.
+        /// Returns the event IDs that arrived.
+        fn load_and_wait(mpv: &player::Mpv, label: &str, url: &str, timeout_secs: f64) -> Vec<u32> {
+            eprintln!("\n--- {label}: {url} ---");
+            mpv.load_url(url).expect("load_url returned error");
+            let mut events = Vec::new();
+            let deadline =
+                std::time::Instant::now() + std::time::Duration::from_secs_f64(timeout_secs);
+            while std::time::Instant::now() < deadline {
+                if let Some(ev) = mpv.wait_event_raw(0.2) {
+                    events.push(ev.event_id);
+                    let name = match ev.event_id {
+                        1 => "SHUTDOWN",
+                        6 => "FILE_LOADED",
+                        18 => "PLAYBACK_RESTART",
+                        22 => "PROPERTY_CHANGE",
+                        25 => "END_FILE",
+                        _ => "OTHER",
+                    };
+                    eprintln!("  event {name} (id={})", ev.event_id);
+                    if ev.event_id == 6 || ev.event_id == 25 || ev.event_id == 1 {
+                        break;
+                    }
+                }
+            }
+            if events.is_empty() {
+                eprintln!("  (no events within {timeout_secs}s timeout)");
+            }
+            events
+        }
+
+        // 1. Play 011.FM — must succeed
+        let ev1 = load_and_wait(&mpv, "011.FM (first)", url_011, 15.0);
+        assert!(
+            ev1.contains(&6),
+            "011.FM should FILE_LOADED on first play, got events: {ev1:?}"
+        );
+
+        // 2. Play 1.FM — expect either FILE_LOADED or END_FILE
+        let ev2 = load_and_wait(&mpv, "1.FM - A List 80s Radio", url_1fm, 30.0);
+
+        // 3. Play 011.FM again — this is the critical test
+        let ev3 = load_and_wait(&mpv, "011.FM (after 1.FM)", url_011, 15.0);
+        assert!(
+            ev3.contains(&6),
+            "mpv HANDLE CORRUPTED by 1.FM!  \
+             011.FM got events {ev3:?} after 1.FM (got {ev2:?})",
+        );
+
+        eprintln!("\n✓ mpv handle survived 1.FM — no corruption detected");
+        mpv.destroy();
     }
 }

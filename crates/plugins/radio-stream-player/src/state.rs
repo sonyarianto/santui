@@ -57,6 +57,7 @@ pub fn wrap_text(text: &str, max_w: usize) -> Vec<String> {
     result
 }
 
+#[derive(Debug)]
 pub enum PlayState {
     Stopped,
     Connecting(String),
