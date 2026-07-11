@@ -4,6 +4,44 @@ All notable changes to this project will be documented in this file.
 
 ## [unreleased]
 
+### ⚙️ Miscellaneous
+
+- Add all 84 missing plugins to plugins-manifest.json
+
+### 🐛 Bug Fixes
+
+- Add 31 missing plugins to workspace members
+- Use correct table height (ah-4 instead of ah-10) to eliminate 6 empty lines at bottom
+- Replace meval with fasteval to remove deprecated nom v1.2.4 dependency
+- Add 14 orphaned plugins to workspace members
+- Remove redundant borrow in format arg to satisfy new clippy lint
+- Prevent infinite retry loop from fake Metadata on LoadUrl
+- Drain stale mpv events on LoadUrl, remove redundant Stop, scrap broken seq approach
+- Only drain END_FILE events after LoadUrl, not FILE_LOADED from new stream
+- Separate FileLoaded from Metadata events to prevent stale-stream retry poisoning
+- Pre-drain ALL stale mpv events before LoadUrl, not after
+- Recreate mpv handle on every station switch
+
+### 📚 Documentation
+
+- Fix git push command in release instructions to avoid tag event loss
+- Add plugins-manifest.json note to AGENTS.md
+- Sync plugin listings with 110-plugin count
+- Clarify plugin addition requires both manifest + Cargo.toml members
+
+### 🚀 Features
+
+- Implement all 28 remaining plugin IPC binaries
+- Implement 10 more plugins — AI Chat, SQLite Browser, GitHub Browser, Code Runner, Network Monitor, Time Tracker, Recipe Manager, Package Manager, Music Controller, Mermaid Renderer
+- Add mysql-browser and irc-client plugins
+- Add live search to plugin list
+- Add mouse support to plugin host, radio player, and registry plugin
+- Add optional self-hosted sync server (santui-server) and sync client
+- Add exponential backoff retry for stream connection failures
+- Persist volume across restarts; remove dead palette_command handler
+\nFull Changelog: [v0.2.28...](https://github.com/sonyarianto/santui/compare/v0.2.28...)
+## [0.2.28] - 2026-07-06
+
 ### ◀️ Revert
 
 - Restore muted table header color
@@ -54,7 +92,7 @@ All notable changes to this project will be documented in this file.
 - Show scroll position percentage on stations list
 - Show lyrics source attribution in lyrics panel footer
 - Render logo character-by-character so starfield shows through gaps
-\nFull Changelog: [v0.2.27...](https://github.com/sonyarianto/santui/compare/v0.2.27...)
+\nFull Changelog: [v0.2.27...v0.2.28](https://github.com/sonyarianto/santui/compare/v0.2.27...v0.2.28)
 ## [0.2.27] - 2026-07-04
 
 ### ⚙️ Miscellaneous
