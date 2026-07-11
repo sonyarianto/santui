@@ -24,11 +24,11 @@ enum MpvMsg {
     Metadata(String),
     TrackInfo(u64, itunes::TrackInfo),
     Lyrics(u64, Option<lrclib::LyricsData>),
-    EndFile(u32),
+    EndFile(u32, u64),
 }
 
 enum MpvCmd {
-    LoadUrl(String),
+    LoadUrl(String, u64),
     Stop,
     SetVolume(i64),
     Quit,
@@ -143,6 +143,7 @@ impl App {
 
         let tx_msg_mpv = tx_msg.clone();
 
+        let mut last_load_seq: u64 = 0;
         let handle = thread::spawn(move || {
             loop {
                 let ev = mpv.wait_event_raw(0.1);
@@ -195,18 +196,17 @@ impl App {
                             continue;
                         }
                         let ef: &player::MpvEventEndFile = unsafe { &*(ev.data as *const _) };
-                        let _ = tx_msg_mpv.send(MpvMsg::EndFile(ef.reason));
+                        let _ = tx_msg_mpv.send(MpvMsg::EndFile(ef.reason, last_load_seq));
                     }
                 }
 
                 while let Ok(cmd) = rx_cmd.try_recv() {
                     match cmd {
-                        MpvCmd::LoadUrl(url) => {
+                        MpvCmd::LoadUrl(url, seq) => {
+                            last_load_seq = seq;
                             if let Err(e) = mpv.load_url(&url) {
                                 log::warn!("mpv load_url failed: {e}");
                             }
-                            let title = mpv.metadata_title().ok().flatten().unwrap_or_default();
-                            let _ = tx_msg_mpv.send(MpvMsg::Metadata(title));
                         }
                         MpvCmd::Stop => {
                             if let Err(e) = mpv.stop() {
@@ -466,8 +466,9 @@ impl App {
             self.state.clear_lyrics();
             self.state.lyrics_loading = true;
             self.state.start_time = std::time::Instant::now();
+            self.state.load_seq += 1;
             send_cmd(self, MpvCmd::Stop);
-            send_cmd(self, MpvCmd::LoadUrl(station.url));
+            send_cmd(self, MpvCmd::LoadUrl(station.url, self.state.load_seq));
         }
     }
 
@@ -625,50 +626,44 @@ impl App {
                         self.state.lyrics_loading = false;
                         self.state.lyrics_scroll = 0;
                     }
-                    MpvMsg::EndFile(reason) => match &self.state.play_state {
-                        state::PlayState::Playing(name) => match reason {
-                            player::MPV_END_FILE_REASON_EOF | player::MPV_END_FILE_REASON_ERROR => {
-                                if self.state.retry_attempt >= state::MAX_RETRIES {
-                                    self.state.play_state = state::PlayState::Error(format!(
-                                        "connection lost after {} attempts",
-                                        state::MAX_RETRIES
-                                    ));
-                                    self.state.retry_deadline = None;
-                                } else {
-                                    let delay_ms = state::retry_delay_ms(self.state.retry_attempt);
-                                    self.state.retry_deadline = Some(
-                                        std::time::Instant::now()
-                                            + std::time::Duration::from_millis(delay_ms),
-                                    );
-                                    self.state.play_state =
-                                        state::PlayState::Retrying(name.clone());
-                                    self.state.retry_attempt += 1;
+                    MpvMsg::EndFile(reason, seq) => {
+                        if seq != self.state.load_seq {
+                            continue;
+                        }
+                        match &self.state.play_state {
+                            state::PlayState::Playing(name) => match reason {
+                                player::MPV_END_FILE_REASON_EOF
+                                | player::MPV_END_FILE_REASON_ERROR => {
+                                    if self.state.retry_attempt >= state::MAX_RETRIES {
+                                        self.state.play_state = state::PlayState::Error(format!(
+                                            "connection lost after {} attempts",
+                                            state::MAX_RETRIES
+                                        ));
+                                        self.state.retry_deadline = None;
+                                    } else {
+                                        let delay_ms =
+                                            state::retry_delay_ms(self.state.retry_attempt);
+                                        self.state.retry_deadline = Some(
+                                            std::time::Instant::now()
+                                                + std::time::Duration::from_millis(delay_ms),
+                                        );
+                                        self.state.play_state =
+                                            state::PlayState::Retrying(name.clone());
+                                        self.state.retry_attempt += 1;
+                                    }
                                 }
+                                _ => {}
+                            },
+                            state::PlayState::Connecting(_)
+                                if reason == player::MPV_END_FILE_REASON_ERROR =>
+                            {
+                                self.state.play_state =
+                                    state::PlayState::Error("connection failed".into());
+                                self.state.retry_deadline = None;
                             }
                             _ => {}
-                        },
-                        state::PlayState::Connecting(name)
-                            if reason == player::MPV_END_FILE_REASON_ERROR
-                                && self.state.retry_mode =>
-                        {
-                            if self.state.retry_attempt >= state::MAX_RETRIES {
-                                self.state.play_state = state::PlayState::Error(format!(
-                                    "connection lost after {} attempts",
-                                    state::MAX_RETRIES
-                                ));
-                                self.state.retry_deadline = None;
-                            } else {
-                                let delay_ms = state::retry_delay_ms(self.state.retry_attempt);
-                                self.state.retry_deadline = Some(
-                                    std::time::Instant::now()
-                                        + std::time::Duration::from_millis(delay_ms),
-                                );
-                                self.state.play_state = state::PlayState::Retrying(name.clone());
-                                self.state.retry_attempt += 1;
-                            }
                         }
-                        _ => {}
-                    },
+                    }
                 }
             }
         }
@@ -704,8 +699,9 @@ impl App {
                         self.state.track_info = None;
                         self.state.clear_lyrics();
                         self.state.lyrics_loading = true;
+                        self.state.load_seq += 1;
                         send_cmd(self, MpvCmd::Stop);
-                        send_cmd(self, MpvCmd::LoadUrl(station.url));
+                        send_cmd(self, MpvCmd::LoadUrl(station.url, self.state.load_seq));
                         changed = true;
                     }
                 }
