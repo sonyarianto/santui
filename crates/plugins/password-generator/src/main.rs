@@ -1,6 +1,6 @@
 use std::io::{BufRead, BufReader, Write};
 
-use rand::Rng;
+use rand::RngExt;
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, TextStyle, ThemeData, BORDER_ALL,
 };
@@ -80,9 +80,9 @@ impl App {
 
     fn generate(&mut self) {
         let chars = self.char_set();
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let password: String = (0..self.length)
-            .map(|_| chars.as_bytes()[rng.gen_range(0..chars.len())] as char)
+            .map(|_| chars.as_bytes()[rng.random_range(0..chars.len())] as char)
             .collect();
         self.history.insert(
             0,

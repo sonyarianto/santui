@@ -13,4 +13,4 @@ serde_json = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
 arboard = "3"
-qrcode = "0.12"
+qrcode = "0.14"

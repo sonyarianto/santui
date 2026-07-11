@@ -39,7 +39,11 @@ pub fn download_plugin(
     // SHA-256 verification.
     let mut hasher = Sha256::new();
     hasher.update(&body);
-    let actual = format!("{:x}", hasher.finalize());
+    let actual: String = hasher
+        .finalize()
+        .iter()
+        .map(|b| format!("{:02x}", b))
+        .collect();
     if actual != expected_hex.to_lowercase() {
         return Err(format!(
             "SHA-256 mismatch: expected {expected_hex}, got {actual}"

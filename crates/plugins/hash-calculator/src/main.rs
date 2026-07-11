@@ -30,22 +30,34 @@ impl Algorithm {
             Self::Md5 => {
                 let mut h = Md5::new();
                 h.update(input);
-                format!("{:x}", h.finalize())
+                h.finalize()
+                    .iter()
+                    .map(|b| format!("{:02x}", b))
+                    .collect::<String>()
             }
             Self::Sha1 => {
                 let mut h = Sha1::new();
                 h.update(input);
-                format!("{digest:x}", digest = h.finalize())
+                h.finalize()
+                    .iter()
+                    .map(|b| format!("{:02x}", b))
+                    .collect::<String>()
             }
             Self::Sha256 => {
                 let mut h = Sha256::new();
                 h.update(input);
-                format!("{digest:x}", digest = h.finalize())
+                h.finalize()
+                    .iter()
+                    .map(|b| format!("{:02x}", b))
+                    .collect::<String>()
             }
             Self::Sha512 => {
                 let mut h = Sha512::new();
                 h.update(input);
-                format!("{digest:x}", digest = h.finalize())
+                h.finalize()
+                    .iter()
+                    .map(|b| format!("{:02x}", b))
+                    .collect::<String>()
             }
         }
     }

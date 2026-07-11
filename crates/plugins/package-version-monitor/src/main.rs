@@ -433,13 +433,13 @@ fn visit(
 }
 
 fn parse_cargo_toml(text: &str, project: &Project, path: &Path) -> Vec<Dependency> {
-    let Ok(value) = text.parse::<toml::Value>() else {
+    let Ok(table) = text.parse::<toml::Table>() else {
         return Vec::new();
     };
     let mut deps = Vec::new();
-    for table in ["dependencies", "dev-dependencies", "build-dependencies"] {
-        if let Some(tbl) = value.get(table).and_then(|v| v.as_table()) {
-            for (name, val) in tbl {
+    for section in ["dependencies", "dev-dependencies", "build-dependencies"] {
+        if let Some(tbl) = table.get(section).and_then(|v| v.as_table()) {
+            for (name, val) in tbl.iter() {
                 if let Some(req) = dep_req_from_toml(val) {
                     deps.push(make_dep(project, name, &req, Ecosystem::Rust, path));
                 }
@@ -474,13 +474,14 @@ fn parse_package_json(text: &str, project: &Project, path: &Path) -> Vec<Depende
     deps
 }
 fn parse_pyproject_toml(text: &str, project: &Project, path: &Path) -> Vec<Dependency> {
-    let Ok(value) = text.parse::<toml::Value>() else {
+    let Ok(table) = text.parse::<toml::Table>() else {
         return Vec::new();
     };
     let mut deps = Vec::new();
-    if let Some(arr) = value
+    if let Some(arr) = table
         .get("project")
-        .and_then(|p| p.get("dependencies"))
+        .and_then(|p| p.as_table())
+        .and_then(|t| t.get("dependencies"))
         .and_then(|v| v.as_array())
     {
         for item in arr {
@@ -489,13 +490,15 @@ fn parse_pyproject_toml(text: &str, project: &Project, path: &Path) -> Vec<Depen
             }
         }
     }
-    if let Some(tbl) = value
+    if let Some(tbl) = table
         .get("tool")
+        .and_then(|t| t.as_table())
         .and_then(|t| t.get("poetry"))
+        .and_then(|p| p.as_table())
         .and_then(|p| p.get("dependencies"))
         .and_then(|v| v.as_table())
     {
-        for (name, val) in tbl {
+        for (name, val) in tbl.iter() {
             if name != "python" {
                 deps.push(make_dep(
                     project,

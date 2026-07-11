@@ -1,6 +1,6 @@
 use std::io::{BufRead, BufReader, Write};
 
-use rand::Rng;
+use rand::RngExt;
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData, BORDER_ALL,
 };
@@ -121,16 +121,16 @@ impl Default for App {
 
 impl App {
     fn generate(&mut self) {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         self.text = match self.mode {
             Mode::Paragraphs => {
                 let mut paras = Vec::new();
                 for _ in 0..self.count {
-                    let sentences: Vec<String> = (0..rng.gen_range(4..8))
+                    let sentences: Vec<String> = (0..rng.random_range(4..8))
                         .map(|_| {
-                            let word_count = rng.gen_range(8..18);
+                            let word_count = rng.random_range(8..18);
                             let words: Vec<&str> = (0..word_count)
-                                .map(|_| WORDS[rng.gen_range(0..WORDS.len())])
+                                .map(|_| WORDS[rng.random_range(0..WORDS.len())])
                                 .collect();
                             let mut sentence = words.join(" ");
                             sentence.push('.');
@@ -146,9 +146,9 @@ impl App {
             Mode::Sentences => {
                 let sentences: Vec<String> = (0..self.count)
                     .map(|_| {
-                        let word_count = rng.gen_range(6..16);
+                        let word_count = rng.random_range(6..16);
                         let words: Vec<&str> = (0..word_count)
-                            .map(|_| WORDS[rng.gen_range(0..WORDS.len())])
+                            .map(|_| WORDS[rng.random_range(0..WORDS.len())])
                             .collect();
                         let mut sentence = words.join(" ");
                         sentence.push('.');
@@ -161,7 +161,7 @@ impl App {
             }
             Mode::Words => {
                 let words: Vec<&str> = (0..self.count)
-                    .map(|_| WORDS[rng.gen_range(0..WORDS.len())])
+                    .map(|_| WORDS[rng.random_range(0..WORDS.len())])
                     .collect();
                 words.join(" ")
             }

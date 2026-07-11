@@ -106,7 +106,7 @@ impl App {
             Transform::Shuffle => {
                 let mut v: Vec<&str> = self.input.lines().collect();
                 use rand::seq::SliceRandom;
-                let mut rng = rand::thread_rng();
+                let mut rng = rand::rng();
                 v.shuffle(&mut rng);
                 v.join("\n")
             }

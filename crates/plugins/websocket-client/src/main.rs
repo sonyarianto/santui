@@ -137,7 +137,7 @@ impl App {
         }
         self.status = format!("Connecting to {url}...");
         let (msg_tx, msg_rx) = mpsc::channel();
-        let (send_tx, send_rx) = mpsc::channel();
+        let (send_tx, send_rx): (mpsc::Sender<String>, mpsc::Receiver<String>) = mpsc::channel();
         thread::spawn(move || match tungstenite::connect(&url) {
             Ok((mut stream, _)) => {
                 let _ = msg_tx.send("Connected!".into());
@@ -146,7 +146,7 @@ impl App {
                         if cmd == "__close__" {
                             break;
                         }
-                        let _ = stream.send(Message::Text(cmd));
+                        let _ = stream.send(Message::Text(cmd.into()));
                     }
                     match stream.read() {
                         Ok(Message::Text(t)) => {

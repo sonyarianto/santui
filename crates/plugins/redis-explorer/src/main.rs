@@ -1,6 +1,6 @@
 use std::io::{BufRead, BufReader, Write};
 
-use rand::Rng;
+use rand::RngExt;
 use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
 use serde_json::{json, Value};
 
@@ -21,32 +21,32 @@ fn generate_mock_keys(count: usize) -> Vec<RedisKey> {
         "rate_limit",
         "flag",
     ];
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut keys = Vec::with_capacity(count);
     for _ in 0..count {
-        let prefix = prefixes[rng.gen_range(0..prefixes.len())];
-        let suffix: u32 = rng.gen_range(1..1000);
+        let prefix = prefixes[rng.random_range(0..prefixes.len())];
+        let suffix: u32 = rng.random_range(1..1000);
         let name = format!("{prefix}:{suffix}");
-        let kind = match rng.gen_range(0..3) {
+        let kind = match rng.random_range(0..3) {
             0 => String::from("string"),
             1 => String::from("list"),
             _ => String::from("set"),
         };
         let value = match kind.as_str() {
             "string" => {
-                let len = rng.gen_range(5..30);
+                let len = rng.random_range(5..30);
                 let chars: String = (0..len)
-                    .map(|_| rng.gen_range(b'a'..=b'z') as char)
+                    .map(|_| rng.random_range(b'a'..=b'z') as char)
                     .collect();
                 format!("\"{chars}\"")
             }
             "list" => {
-                let len = rng.gen_range(1..6);
+                let len = rng.random_range(1..6);
                 let items: Vec<String> = (0..len).map(|i| format!("item_{i}")).collect();
                 format!("[{}]", items.join(", "))
             }
             _ => {
-                let len = rng.gen_range(2..5);
+                let len = rng.random_range(2..5);
                 let items: Vec<String> = (0..len).map(|i| format!("val_{i}")).collect();
                 format!("{{{}}}", items.join(", "))
             }

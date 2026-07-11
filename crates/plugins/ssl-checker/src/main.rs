@@ -1,6 +1,6 @@
 use std::io::{BufRead, BufReader, Write};
 
-use rand::Rng;
+use rand::RngExt;
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData, BORDER_ALL,
 };
@@ -117,11 +117,11 @@ impl App {
             (domain.clone(), 443)
         };
 
-        let mut rng = rand::thread_rng();
-        let expiry_days = rng.gen_range(30..400);
+        let mut rng = rand::rng();
+        let expiry_days = rng.random_range(30..400);
         let valid = expiry_days > 30;
         let suffixes = [".com", ".org", ".net", ".io"];
-        let issuer_suffix = suffixes[rng.gen_range(0..suffixes.len())];
+        let issuer_suffix = suffixes[rng.random_range(0..suffixes.len())];
 
         self.result = Some(CertInfo {
             domain: domain.clone(),

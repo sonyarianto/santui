@@ -10,10 +10,10 @@ repository = "https://github.com/sonyarianto/santui"
 santui-core = { path = "../core", version = "0.2.28" }
 axum = "0.8"
 tokio = { version = "1", features = ["full"] }
-tower-http = { version = "0.6", features = ["cors", "fs"] }
+tower-http = { version = "0.7", features = ["cors", "fs"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
-jsonwebtoken = "9"
+jsonwebtoken = "10"
 rusqlite = { version = "0.40", features = ["bundled"] }
 ureq = "3"
 tracing = "0.1"

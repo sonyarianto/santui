@@ -1,6 +1,6 @@
 use std::io::{BufRead, BufReader, Write};
 
-use rand::Rng;
+use rand::{Rng, RngExt};
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData, BORDER_ALL,
 };
@@ -36,7 +36,7 @@ struct App {
 
 impl Default for App {
     fn default() -> Self {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let snake = vec![(GRID_W / 2, GRID_H / 2)];
         let food = place_food(&snake, &mut rng);
         Self {
@@ -61,8 +61,8 @@ impl Default for App {
 
 fn place_food(snake: &[(usize, usize)], rng: &mut impl Rng) -> (usize, usize) {
     loop {
-        let x = rng.gen_range(0..GRID_W);
-        let y = rng.gen_range(0..GRID_H);
+        let x = rng.random_range(0..GRID_W);
+        let y = rng.random_range(0..GRID_H);
         if !snake.contains(&(x, y)) {
             return (x, y);
         }
@@ -71,7 +71,7 @@ fn place_food(snake: &[(usize, usize)], rng: &mut impl Rng) -> (usize, usize) {
 
 impl App {
     fn reset(&mut self) {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         self.snake = vec![(GRID_W / 2, GRID_H / 2)];
         self.food = place_food(&self.snake, &mut rng);
         self.dir = Dir::Right;
@@ -112,7 +112,7 @@ impl App {
         self.snake.insert(0, (nx, ny));
         if (nx, ny) == self.food {
             self.score += 1;
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rng();
             self.food = place_food(&self.snake, &mut rng);
             self.speed = 5.max(20 - (self.score / 3) as u64);
         } else {

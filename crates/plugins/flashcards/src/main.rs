@@ -1,6 +1,6 @@
 use std::io::{BufRead, BufReader, Write};
 
-use rand::Rng;
+use rand::RngExt;
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData, BORDER_ALL,
 };
@@ -68,8 +68,8 @@ impl App {
                 true
             }
             IpcKey::Char('n') if !modifiers.ctrl => {
-                let mut rng = rand::thread_rng();
-                self.current = rng.gen_range(0..CARDS.len());
+                let mut rng = rand::rng();
+                self.current = rng.random_range(0..CARDS.len());
                 self.flipped = false;
                 self.status = "Random card".into();
                 true

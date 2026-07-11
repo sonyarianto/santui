@@ -1,4 +1,4 @@
-use rand::Rng;
+use rand::RngExt;
 use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
 use serde_json::{json, Value};
 use std::io::{BufRead, BufReader, Write};
@@ -108,9 +108,9 @@ impl App {
     }
 
     fn randomize(&mut self) {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         for stock in &mut self.stocks {
-            let delta = rng.gen_range(-5.0..5.0);
+            let delta = rng.random_range(-5.0..5.0);
             stock.price = (stock.price + delta * 0.1).max(1.0);
             stock.change = delta.round() / 10.0;
         }

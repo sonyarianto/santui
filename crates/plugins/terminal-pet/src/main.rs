@@ -1,4 +1,4 @@
-use rand::Rng;
+use rand::RngExt;
 use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
 use serde_json::{json, Value};
 use std::io::{BufRead, BufReader, Write};
@@ -248,9 +248,9 @@ fn main() {
                 app.tick_count += 1;
                 if app.tick_count % 10 == 0 {
                     app.dirty = true;
-                    let mut rng = rand::thread_rng();
-                    if rng.gen_bool(0.1) {
-                        app.pet_idx = rng.gen_range(0..PETS.len());
+                    let mut rng = rand::rng();
+                    if rng.random_bool(0.1) {
+                        app.pet_idx = rng.random_range(0..PETS.len());
                     }
                 }
                 app.dirty = true;

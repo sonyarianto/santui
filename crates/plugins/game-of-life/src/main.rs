@@ -1,6 +1,6 @@
 use std::io::{BufRead, BufReader, Write};
 
-use rand::Rng;
+use rand::RngExt;
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData, BORDER_ALL,
 };
@@ -22,10 +22,10 @@ struct App {
 impl Default for App {
     fn default() -> Self {
         let mut grid = [[false; GRID_W]; GRID_H];
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         for row in grid.iter_mut() {
             for cell in row.iter_mut() {
-                *cell = rng.gen_bool(0.3);
+                *cell = rng.random_bool(0.3);
             }
         }
         let alive = grid.iter().flatten().filter(|&&c| c).count();
@@ -93,10 +93,10 @@ impl App {
     }
 
     fn random_fill(&mut self) {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         for row in self.grid.iter_mut() {
             for cell in row.iter_mut() {
-                *cell = rng.gen_bool(0.3);
+                *cell = rng.random_bool(0.3);
             }
         }
         self.alive = self.grid.iter().flatten().filter(|&&c| c).count();

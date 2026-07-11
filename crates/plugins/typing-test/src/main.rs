@@ -1,6 +1,6 @@
 use std::io::{BufRead, BufReader, Write};
 
-use rand::seq::SliceRandom;
+use rand::seq::IndexedRandom;
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData, BORDER_ALL,
 };
@@ -41,9 +41,9 @@ struct App {
 
 impl Default for App {
     fn default() -> Self {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let target: Vec<String> = WORD_LIST
-            .choose_multiple(&mut rng, WORDS_PER_TEST)
+            .sample(&mut rng, WORDS_PER_TEST)
             .map(|s| s.to_string())
             .collect();
         Self {
@@ -122,9 +122,9 @@ impl App {
     }
 
     fn reset(&mut self) {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         self.target = WORD_LIST
-            .choose_multiple(&mut rng, WORDS_PER_TEST)
+            .sample(&mut rng, WORDS_PER_TEST)
             .map(|s| s.to_string())
             .collect();
         self.typed.clear();

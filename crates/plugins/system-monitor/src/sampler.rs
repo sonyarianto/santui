@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use sysinfo::{CpuRefreshKind, Disks, MemoryRefreshKind, Networks, RefreshKind, System};
+use sysinfo::{Disks, Networks, ProcessesToUpdate, RefreshKind, System};
 
 use crate::state::{
     CpuSnapshot, DiskSnapshot, MemSnapshot, NetSnapshot, ProcessSnapshot, SystemSnapshot,
@@ -17,11 +17,7 @@ pub struct Sampler {
 
 impl Default for Sampler {
     fn default() -> Self {
-        let mut sys = System::new_with_specifics(
-            RefreshKind::new()
-                .with_cpu(CpuRefreshKind::everything())
-                .with_memory(MemoryRefreshKind::everything()),
-        );
+        let mut sys = System::new_with_specifics(RefreshKind::everything());
         std::thread::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL);
         sys.refresh_all();
         Self {
@@ -37,16 +33,16 @@ impl Default for Sampler {
 
 impl Sampler {
     pub fn sample(&mut self) -> SystemSnapshot {
-        self.sys.refresh_cpu();
+        self.sys.refresh_cpu_all();
         self.sys.refresh_memory();
-        self.sys.refresh_processes();
-        self.disks.refresh();
-        self.networks.refresh();
+        self.sys.refresh_processes(ProcessesToUpdate::All, false);
+        self.disks.refresh(true);
+        self.networks.refresh(true);
 
         let elapsed = self.prev_sample_time.elapsed().as_secs_f64().max(0.001);
         self.prev_sample_time = std::time::Instant::now();
 
-        let global_pct = self.sys.global_cpu_info().cpu_usage();
+        let global_pct = self.sys.global_cpu_usage();
         let per_core: Vec<f32> = self.sys.cpus().iter().map(|c| c.cpu_usage()).collect();
         let brand = self
             .sys
@@ -108,7 +104,7 @@ impl Sampler {
             .values()
             .map(|p| ProcessSnapshot {
                 pid: p.pid().as_u32(),
-                name: p.name().to_string(),
+                name: p.name().to_string_lossy().into_owned(),
                 cpu_pct: p.cpu_usage(),
                 mem_bytes: p.memory(),
             })

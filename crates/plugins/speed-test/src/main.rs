@@ -1,6 +1,6 @@
 use std::io::{BufRead, BufReader, Write};
 
-use rand::Rng;
+use rand::RngExt;
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData, BORDER_ALL,
 };
@@ -71,11 +71,11 @@ impl App {
             if self.progress >= 1.0 {
                 self.progress = 1.0;
                 self.testing = false;
-                let mut rng = rand::thread_rng();
+                let mut rng = rand::rng();
                 self.result = Some(ResultData {
-                    ping: rng.gen_range(5.0..80.0),
-                    download: rng.gen_range(20.0..500.0),
-                    upload: rng.gen_range(10.0..200.0),
+                    ping: rng.random_range(5.0..80.0),
+                    download: rng.random_range(20.0..500.0),
+                    upload: rng.random_range(10.0..200.0),
                 });
                 self.status = String::from("Test complete!");
             }

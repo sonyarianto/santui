@@ -1,7 +1,7 @@
 use std::io::{BufRead, BufReader, Write};
 
-use rand::seq::SliceRandom;
-use rand::Rng;
+use rand::seq::IndexedRandom;
+use rand::RngExt;
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData, BORDER_ALL,
 };
@@ -82,13 +82,13 @@ struct App {
 
 impl Default for App {
     fn default() -> Self {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         Self {
             theme: default_theme(),
             area: Area { w: 80, h: 24 },
             dirty: true,
             cached_commands: Vec::new(),
-            current: rng.gen_range(0..QUOTES.len()),
+            current: rng.random_range(0..QUOTES.len()),
             category_idx: 0,
             status: "n random \u{b7} c copy \u{b7} esc".into(),
         }
@@ -115,7 +115,7 @@ impl App {
         if pool.is_empty() {
             return;
         }
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         self.current = *pool.choose(&mut rng).unwrap_or(&0);
     }
 

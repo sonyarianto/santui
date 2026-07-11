@@ -11,10 +11,10 @@ ratatui = "0.30"
 crossterm = "0.29"
 serde = { workspace = true }
 serde_json = { workspace = true }
-toml = "0.8"
+toml = "1.1"
 log = { workspace = true }
 ctrlc = { version = "3.5", features = ["termination"] }
-notify = "7"
+notify = "8"
 ureq = { version = "3", features = ["json"] }
 
 [dev-dependencies]
