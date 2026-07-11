@@ -205,12 +205,18 @@ impl App {
                             if let Err(e) = mpv.load_url(&url) {
                                 log::warn!("mpv load_url failed: {e}");
                             }
-                            // Drain stale EndFile / teardown events from the
-                            // file that was replaced by this LoadUrl so they
-                            // don't arrive later and confuse the state machine.
+                            // Drain stale EndFile events from the file that
+                            // was replaced by this LoadUrl (they carry no
+                            // identifier and would trigger spurious retries
+                            // in the main-thread state machine).
+                            // Do NOT drain FILE_LOADED / PLAYBACK_RESTART
+                            // etc. — those may be from the *new* stream if
+                            // mpv processed the loadfile synchronously.
                             while let Some(stale) = mpv.wait_event_raw(0.0) {
-                                if stale.event_id == player::MPV_EVENT_SHUTDOWN {
-                                    break;
+                                match stale.event_id {
+                                    player::MPV_EVENT_END_FILE => continue,
+                                    player::MPV_EVENT_SHUTDOWN => break,
+                                    _ => break,
                                 }
                             }
                         }
