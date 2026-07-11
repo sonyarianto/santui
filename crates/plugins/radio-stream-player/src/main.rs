@@ -235,35 +235,6 @@ impl App {
         self.tx_msg = Some(tx_msg);
     }
 
-    fn handle_palette_command(&mut self, index: u32) {
-        match index {
-            0 => {
-                // "Search stations" — enter search mode
-                self.state.search_mode = true;
-                self.state.query.clear();
-                self.state.filtered = (0..self.state.stations.len()).collect();
-                self.state.selected = 0;
-                self.state.scroll = 0;
-                self.dirty = true;
-            }
-            1 => {
-                // "Reload stations" — reload from DB
-                if let Some(ref db) = self.db {
-                    let new_stations = crate::stations::reload(db);
-                    let count = new_stations.len();
-                    self.state.stations = new_stations;
-                    self.state.set_query(String::new());
-                    self.state.selected = 0;
-                    self.state.scroll = 0;
-                    self.state
-                        .set_scan_msg(format!("Reloaded {count} stations from database"));
-                }
-                self.dirty = true;
-            }
-            _ => {}
-        }
-    }
-
     fn handle_key(&mut self, key: IpcKey) -> bool {
         self.state.scan_msg = None;
         self.dirty = true;
@@ -413,11 +384,19 @@ impl App {
             IpcKey::Char('+') | IpcKey::Char('=') => {
                 self.state.volume_up();
                 send_cmd(self, MpvCmd::SetVolume(self.state.volume));
+                self.pending_request = Some(PluginRequest::DbSet {
+                    key: "volume".into(),
+                    value: self.state.volume.to_string(),
+                });
                 true
             }
             IpcKey::Char('-') => {
                 self.state.volume_down();
                 send_cmd(self, MpvCmd::SetVolume(self.state.volume));
+                self.pending_request = Some(PluginRequest::DbSet {
+                    key: "volume".into(),
+                    value: self.state.volume.to_string(),
+                });
                 true
             }
             IpcKey::Char('l') => {
@@ -759,6 +738,17 @@ impl App {
             };
             self.state.set_favorites(favs);
             self.dirty = true;
+            self.pending_request = Some(PluginRequest::DbGet {
+                key: "volume".into(),
+            });
+        } else if key == "volume" {
+            if let Some(json) = value {
+                if let Ok(vol) = serde_json::from_str::<i64>(&json) {
+                    self.state.volume = vol.clamp(0, 100);
+                    send_cmd(self, MpvCmd::SetVolume(self.state.volume));
+                }
+            }
+            self.dirty = true;
         }
     }
 
@@ -902,8 +892,7 @@ fn main() {
                         app.dirty = true;
                         respond(&mut app, false);
                     }
-                    HostMsg::PaletteCommand { index } => {
-                        app.handle_palette_command(index);
+                    HostMsg::PaletteCommand { .. } => {
                         respond(&mut app, false);
                     }
                     HostMsg::PluginMessage { .. } => {
