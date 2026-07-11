@@ -48,7 +48,7 @@ impl StatusBar<'_> {
                 spans.push(Span::styled(hint_desc.as_str(), dim));
             }
             let has_esc = self.active_plugin_hints.iter().any(|(k, _)| k == "esc");
-            if !self.active_plugin_hints.is_empty() {
+            if !self.active_plugin_hints.is_empty() && !has_esc {
                 spans.push(Span::styled(" • ", dim));
             }
             if !has_esc {

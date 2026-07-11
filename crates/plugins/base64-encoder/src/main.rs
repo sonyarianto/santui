@@ -255,39 +255,23 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         modifiers: 0,
     });
 
-    let out_box_y = out_header_y + 1;
-    let out_box_w = w.saturating_sub(4);
-    let out_box_h = 3;
-    cmds.push(RenderCmd::Border {
-        x: 2,
-        y: out_box_y,
-        w: out_box_w,
-        h: out_box_h,
-        fg: t.accent,
-        borders: BORDER_ALL,
-        bg: Some(t.background),
-        title: None,
-        title_fg: None,
-        title_dash_fg: None,
-        border_type: None,
-    });
-
+    let out_text_y = out_header_y + 1;
     let out_display = if app.output.is_empty() {
         "(empty)".into()
     } else {
         app.output.clone()
     };
     cmds.push(RenderCmd::Text {
-        x: 4,
-        y: out_box_y + 1,
+        x: 2,
+        y: out_text_y,
         text: out_display,
-        fg: Some(t.accent),
+        fg: Some(t.text),
         bg: None,
-        bold: true,
+        bold: false,
         modifiers: 0,
     });
 
-    let hist_y = out_box_y + out_box_h + 1;
+    let hist_y = out_text_y + 2;
     cmds.push(RenderCmd::Text {
         x: 2,
         y: hist_y,
