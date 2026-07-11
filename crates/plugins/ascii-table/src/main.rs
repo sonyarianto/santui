@@ -21,12 +21,34 @@ impl Default for App {
             cached_commands: Vec::new(),
             headers: Vec::new(),
             rows: Vec::new(),
-            status: "No table loaded. Send TSV/CSV via plugin message to render.".into(),
+            status: "Press 'l' to load sample table, or send TSV/CSV via plugin message.".into(),
         }
     }
 }
 
 impl App {
+    fn handle_key(&mut self, key: santui_ipc::protocol::IpcKey) -> bool {
+        match key {
+            santui_ipc::protocol::IpcKey::Char('l') => {
+                self.load_sample();
+                self.dirty = true;
+                true
+            }
+            _ => false,
+        }
+    }
+
+    fn load_sample(&mut self) {
+        self.load(
+            "Name\tAge\tCity\tOccupation\n\
+             Alice\t30\tNew York\tEngineer\n\
+             Bob\t25\tLondon\tDesigner\n\
+             Charlie\t35\tTokyo\tDoctor\n\
+             Diana\t28\tParis\tTeacher\n\
+             Eve\t32\tSydney\tArchitect",
+        );
+    }
+
     fn load(&mut self, content: &str) {
         let delimiter = if content.contains('\t') { '\t' } else { ',' };
         let lines: Vec<&str> = content.lines().filter(|l| !l.trim().is_empty()).collect();
@@ -90,15 +112,6 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
             x: 2,
             y: 2,
             text: app.status.clone(),
-            fg: Some(t.text_muted),
-            bg: None,
-            bold: false,
-            modifiers: 0,
-        });
-        cmds.push(RenderCmd::Text {
-            x: 2,
-            y: h.saturating_sub(1),
-            text: "Send TSV/CSV via plugin message \u{b7} esc".into(),
             fg: Some(t.text_muted),
             bg: None,
             bold: false,
@@ -189,16 +202,6 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         bold: false,
         modifiers: 0,
     });
-    cmds.push(RenderCmd::Text {
-        x: 2,
-        y: h.saturating_sub(1),
-        text: "Send TSV/CSV via plugin message \u{b7} esc".into(),
-        fg: Some(t.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
-
     cmds
 }
 
@@ -232,13 +235,17 @@ fn palette_commands() -> Vec<(String, String)> {
     vec![("Utilities".into(), "Open ASCII table".into())]
 }
 
+fn key_hints() -> Vec<(String, String)> {
+    vec![("l".into(), "load sample table".into())]
+}
+
 fn respond(app: &mut App, consumed: bool) {
     let Ok(commands_val) = serde_json::to_value(app.render()) else {
         return;
     };
     let json = serde_json::json!({
         "commands": commands_val,
-        "hints": [],
+        "hints": key_hints(),
         "palette_commands": palette_commands(),
         "request": null,
         "plugin_message": null,
@@ -284,7 +291,7 @@ fn main() {
                 app.dirty = true;
                 true
             }
-            Ok(HostMsg::Key { .. }) => false,
+            Ok(HostMsg::Key { key, .. }) => app.handle_key(key),
             Ok(HostMsg::PaletteCommand { .. }) => {
                 app.dirty = true;
                 true
