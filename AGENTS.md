@@ -8,7 +8,10 @@ cargo check              # fast compile check
 cargo clippy --workspace -- -D warnings  # lint
 cargo fmt --check        # formatting check
 cargo fmt                # auto-format
-cargo test --workspace   # run tests
+cargo test --workspace   # run tests (SLOW — compiles all 110+ plugin binaries)
+cargo test -p santui-core -p santui-ipc -p santui-registry -p santui-db -p santui-server -p santui-auth  # fast — only crates with tests
+
+When running tests, prefer the short list above over `--workspace` to avoid recompiling all 110+ plugin binaries.
 ```
 
 lefthook pre-commit runs `cargo fmt --check` + `cargo clippy` automatically. Install hooks: `lefthook install`.

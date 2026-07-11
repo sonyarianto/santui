@@ -388,9 +388,7 @@ impl IpcPluginHost {
         let mut cmd = Command::new(&binary_path);
         cmd.stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::inherit())
-            // Quiet plugin stderr — don't inherit verbose RUST_LOG from the host.
-            .env("RUST_LOG", "warn");
+            .stderr(Stdio::inherit());
 
         // Tell plugins where the host's native/ directory lives so they can
         // find bundled native dependencies (e.g. libmpv for radio-stream-player)

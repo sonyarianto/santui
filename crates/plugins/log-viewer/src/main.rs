@@ -399,13 +399,17 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Value {
+    json!([["Debug", "Log Viewer"]])
+}
+
+fn key_hints() -> Value {
     json!([
-        {"key": "esc", "hint": "close"},
-        {"key": "p", "hint": "path"},
-        {"key": "f", "hint": "filter"},
-        {"key": "r", "hint": "reload"},
-        {"key": "l", "hint": "log source"},
-        {"key": "g", "hint": "top"},
+        ["esc", "close"],
+        ["p", "path"],
+        ["f", "filter"],
+        ["r", "reload"],
+        ["l", "log source"],
+        ["g", "top"],
     ])
 }
 
@@ -414,7 +418,7 @@ fn respond(app: &mut App, consumed: bool) {
         return;
     };
     let json = json!({
-        "commands": commands_val, "hints": [], "palette_commands": palette_commands(),
+        "commands": commands_val, "hints": key_hints(), "palette_commands": palette_commands(),
         "request": null, "plugin_message": null, "consumed": consumed,
     });
     let mut out = std::io::stdout().lock();
