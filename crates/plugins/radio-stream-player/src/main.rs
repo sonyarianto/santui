@@ -24,11 +24,11 @@ enum MpvMsg {
     Metadata(String),
     TrackInfo(u64, itunes::TrackInfo),
     Lyrics(u64, Option<lrclib::LyricsData>),
-    EndFile(u32, u64),
+    EndFile(u32),
 }
 
 enum MpvCmd {
-    LoadUrl(String, u64),
+    LoadUrl(String),
     Stop,
     SetVolume(i64),
     Quit,
@@ -143,7 +143,6 @@ impl App {
 
         let tx_msg_mpv = tx_msg.clone();
 
-        let mut last_load_seq: u64 = 0;
         let handle = thread::spawn(move || {
             loop {
                 let ev = mpv.wait_event_raw(0.1);
@@ -196,16 +195,23 @@ impl App {
                             continue;
                         }
                         let ef: &player::MpvEventEndFile = unsafe { &*(ev.data as *const _) };
-                        let _ = tx_msg_mpv.send(MpvMsg::EndFile(ef.reason, last_load_seq));
+                        let _ = tx_msg_mpv.send(MpvMsg::EndFile(ef.reason));
                     }
                 }
 
                 while let Ok(cmd) = rx_cmd.try_recv() {
                     match cmd {
-                        MpvCmd::LoadUrl(url, seq) => {
-                            last_load_seq = seq;
+                        MpvCmd::LoadUrl(url) => {
                             if let Err(e) = mpv.load_url(&url) {
                                 log::warn!("mpv load_url failed: {e}");
+                            }
+                            // Drain stale EndFile / teardown events from the
+                            // file that was replaced by this LoadUrl so they
+                            // don't arrive later and confuse the state machine.
+                            while let Some(stale) = mpv.wait_event_raw(0.0) {
+                                if stale.event_id == player::MPV_EVENT_SHUTDOWN {
+                                    break;
+                                }
                             }
                         }
                         MpvCmd::Stop => {
@@ -466,9 +472,7 @@ impl App {
             self.state.clear_lyrics();
             self.state.lyrics_loading = true;
             self.state.start_time = std::time::Instant::now();
-            self.state.load_seq += 1;
-            send_cmd(self, MpvCmd::Stop);
-            send_cmd(self, MpvCmd::LoadUrl(station.url, self.state.load_seq));
+            send_cmd(self, MpvCmd::LoadUrl(station.url));
         }
     }
 
@@ -626,12 +630,9 @@ impl App {
                         self.state.lyrics_loading = false;
                         self.state.lyrics_scroll = 0;
                     }
-                    MpvMsg::EndFile(reason, seq) => {
-                        if seq != self.state.load_seq {
-                            continue;
-                        }
-                        match &self.state.play_state {
-                            state::PlayState::Playing(name) => match reason {
+                    MpvMsg::EndFile(reason) => {
+                        if let state::PlayState::Playing(name) = &self.state.play_state {
+                            match reason {
                                 player::MPV_END_FILE_REASON_EOF
                                 | player::MPV_END_FILE_REASON_ERROR => {
                                     if self.state.retry_attempt >= state::MAX_RETRIES {
@@ -653,15 +654,7 @@ impl App {
                                     }
                                 }
                                 _ => {}
-                            },
-                            state::PlayState::Connecting(_)
-                                if reason == player::MPV_END_FILE_REASON_ERROR =>
-                            {
-                                self.state.play_state =
-                                    state::PlayState::Error("connection failed".into());
-                                self.state.retry_deadline = None;
                             }
-                            _ => {}
                         }
                     }
                 }
@@ -699,9 +692,7 @@ impl App {
                         self.state.track_info = None;
                         self.state.clear_lyrics();
                         self.state.lyrics_loading = true;
-                        self.state.load_seq += 1;
-                        send_cmd(self, MpvCmd::Stop);
-                        send_cmd(self, MpvCmd::LoadUrl(station.url, self.state.load_seq));
+                        send_cmd(self, MpvCmd::LoadUrl(station.url));
                         changed = true;
                     }
                 }

@@ -92,7 +92,6 @@ pub struct RadioState {
     pub lyrics_scroll: usize,
     pub lyrics_source: String,
     pub metadata_seq: u64,
-    pub load_seq: u64,
     pub favorites: HashSet<String>,
     pub show_favorites_only: bool,
 }
@@ -127,7 +126,6 @@ impl RadioState {
             lyrics_scroll: 0,
             lyrics_source: String::new(),
             metadata_seq: 0,
-            load_seq: 0,
             favorites: HashSet::new(),
             show_favorites_only: false,
         }
