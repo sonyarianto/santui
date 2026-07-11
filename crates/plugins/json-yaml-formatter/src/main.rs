@@ -587,7 +587,8 @@ fn main() {
                 | HostMsg::DbValue { .. }
                 | HostMsg::PluginMessage { .. }
                 | HostMsg::PaletteCommand { .. }
-                | HostMsg::Mouse { .. },
+                | HostMsg::Mouse { .. }
+                | HostMsg::LogEntries { .. },
             ) => false,
             Err(e) => {
                 log::error!("[json-yaml-formatter] parse error: {e}: {trimmed}");

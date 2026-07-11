@@ -52,6 +52,16 @@ pub struct Area {
     pub h: u16,
 }
 
+/// A single log entry captured by the host's LoggerBuffer and forwarded
+/// to the log-viewer plugin via [`HostMsg::LogEntries`].
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LogEntry {
+    pub timestamp: u64,
+    pub level: String,
+    pub target: String,
+    pub message: String,
+}
+
 /// Modifier key flags sent alongside key events.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Default)]
 pub struct IpcKeyModifiers {
@@ -164,6 +174,11 @@ pub enum HostMsg {
         key: String,
         #[serde(default)]
         value: Option<String>,
+    },
+    /// Log entries captured by the host's runtime logger. Sent on every
+    /// tick to the log-viewer plugin while there are pending entries.
+    LogEntries {
+        entries: Vec<LogEntry>,
     },
 }
 

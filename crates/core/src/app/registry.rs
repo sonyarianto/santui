@@ -28,4 +28,9 @@ impl Santui {
     pub fn set_plugin_persistent(&mut self, id: &str, persistent: bool) {
         self.plugin_manager.set_persistent(id, persistent);
     }
+
+    /// Set capabilities for a registered plugin (e.g. `["log-consumer"]`).
+    pub fn set_plugin_capabilities(&mut self, id: &str, capabilities: &[String]) {
+        self.plugin_manager.set_capabilities(id, capabilities);
+    }
 }

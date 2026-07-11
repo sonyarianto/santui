@@ -283,6 +283,9 @@ fn main() {
                     HostMsg::DbValue { .. } => {
                         respond(&mut app, false);
                     }
+                    HostMsg::LogEntries { .. } => {
+                        respond(&mut app, false);
+                    }
                     HostMsg::Shutdown => break,
                 }
             }

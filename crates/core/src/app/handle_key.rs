@@ -127,6 +127,7 @@ impl super::Santui {
             theme: self.app_state.theme.clone(),
             auth: self.auth.clone(),
             data_dir: self.plugin_manager.data_dir().to_path_buf(),
+            log_buffer: self.log_buffer.clone(),
         };
 
         match self.plugin_manager.spawn_and_init(
@@ -254,6 +255,7 @@ impl super::Santui {
                         theme: self.app_state.theme.clone(),
                         auth: self.auth.clone(),
                         data_dir: self.plugin_manager.data_dir().to_path_buf(),
+                        log_buffer: self.log_buffer.clone(),
                     };
                     self.plugin_manager.restart_crashed(&mut ctx);
                 }

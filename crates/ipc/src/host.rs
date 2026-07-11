@@ -1,6 +1,6 @@
 use crate::protocol::{
-    Area, HostMsg, IpcKey, IpcKeyModifiers, IpcMouseEvent, PluginMsg, PluginRequest, RenderCmd,
-    ThemeData, UserData,
+    Area, HostMsg, IpcKey, IpcKeyModifiers, IpcMouseEvent, LogEntry, PluginMsg, PluginRequest,
+    RenderCmd, ThemeData, UserData,
 };
 use crate::render::render_commands;
 use crossterm::event::{KeyCode, KeyEvent};
@@ -9,6 +9,7 @@ use ratatui::layout::Rect;
 use ratatui::Frame;
 use santui_core::auth::User;
 use santui_core::theme::Theme;
+use santui_core::LoggerBuffer;
 use santui_core::{AuthHandle, DbAccess, Plugin, PluginCmdItem, PluginContext};
 use std::cell::Cell;
 use std::io::{BufRead, BufReader, Write};
@@ -73,6 +74,9 @@ pub struct IpcPluginHost {
     init_complete: bool,
     /// Pending launch request from this plugin (id, name).
     pending_launch: Option<(String, String)>,
+    /// Runtime log buffer populated by the host's `LoggerBuffer`.
+    /// Only set for plugins with the "log-consumer" capability.
+    log_buffer: Option<Arc<LoggerBuffer>>,
 }
 
 impl IpcPluginHost {
@@ -119,6 +123,7 @@ impl IpcPluginHost {
             esc_consumed: None,
             init_complete: false,
             pending_launch: None,
+            log_buffer: None,
         }
     }
 
@@ -241,6 +246,12 @@ impl IpcPluginHost {
             loop {
                 match rx.try_recv() {
                     Ok(msg) => {
+                        if !self.init_complete {
+                            log::info!(
+                                "[santui] plugin `{}` received first response, marking ready",
+                                self.id
+                            );
+                        }
                         self.cached_commands = msg.commands;
                         self.cached_hints = msg.hints;
                         self.cached_palette_commands = msg.palette_commands;
@@ -377,7 +388,9 @@ impl IpcPluginHost {
         let mut cmd = Command::new(&binary_path);
         cmd.stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::inherit());
+            .stderr(Stdio::inherit())
+            // Quiet plugin stderr — don't inherit verbose RUST_LOG from the host.
+            .env("RUST_LOG", "warn");
 
         // Tell plugins where the host's native/ directory lives so they can
         // find bundled native dependencies (e.g. libmpv for radio-stream-player)
@@ -547,6 +560,10 @@ impl Plugin for IpcPluginHost {
                 h: h.saturating_sub(1),
             };
             self.current_area.set(self.area);
+        }
+        // Only subscribe to logs if the plugin declares log-consumer capability.
+        if ctx.log_buffer.is_some() && self.capabilities.iter().any(|c| c == "log-consumer") {
+            self.log_buffer = ctx.log_buffer.clone();
         }
         self.spawn()?;
 
@@ -739,6 +756,24 @@ impl Plugin for IpcPluginHost {
         }
         self.send(&HostMsg::Tick, Priority::High);
         self.drain_responses();
+
+        // Drain runtime log buffer and forward to plugins that subscribe.
+        if let Some(ref buf) = self.log_buffer {
+            let entries: Vec<LogEntry> = buf
+                .drain()
+                .into_iter()
+                .map(|e| LogEntry {
+                    timestamp: e.timestamp,
+                    level: e.level,
+                    target: e.target,
+                    message: e.message,
+                })
+                .collect();
+            if !entries.is_empty() {
+                self.send(&HostMsg::LogEntries { entries }, Priority::Low);
+                self.drain_responses();
+            }
+        }
     }
 
     fn on_focus(&mut self) {

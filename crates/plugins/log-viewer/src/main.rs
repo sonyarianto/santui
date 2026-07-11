@@ -1,8 +1,16 @@
-use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
+use santui_ipc::protocol::{
+    Area, HostMsg, IpcKey, IpcKeyModifiers, LogEntry, ThemeData, BORDER_ALL,
+};
 use serde_json::{json, Value};
 use std::io::{BufRead, BufReader, Write};
 
 const DEFAULT_PATH: &str = "/var/log/syslog";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum LogSource {
+    File,
+    Runtime,
+}
 
 struct App {
     theme: ThemeData,
@@ -15,6 +23,8 @@ struct App {
     filter: String,
     mode: Mode,
     status: String,
+    source: LogSource,
+    runtime_logs: Vec<LogEntry>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -36,7 +46,9 @@ impl Default for App {
             scroll: 0,
             filter: String::new(),
             mode: Mode::View,
-            status: "p path \u{b7} f filter \u{b7} \u{2191}\u{2193} scroll \u{b7} g goto \u{b7} r reload \u{b7} esc".into(),
+            status: "p path · f filter · ↑↓ scroll · g goto · r reload · l runtime · esc".into(),
+            source: LogSource::File,
+            runtime_logs: Vec::new(),
         }
     }
 }
@@ -49,7 +61,9 @@ impl App {
                 match key {
                     IpcKey::Esc => {
                         self.mode = Mode::View;
-                        self.status = "p path \u{b7} f filter \u{b7} \u{2191}\u{2193} scroll \u{b7} g goto \u{b7} r reload \u{b7} esc".into();
+                        self.status =
+                            "p path · f filter · ↑↓ scroll · g goto · r reload · l runtime · esc"
+                                .into();
                     }
                     IpcKey::Char('\n') | IpcKey::Char('\r') => {
                         self.mode = Mode::View;
@@ -74,7 +88,9 @@ impl App {
                     IpcKey::Esc => {
                         self.filter.clear();
                         self.mode = Mode::View;
-                        self.status = "p path \u{b7} f filter \u{b7} \u{2191}\u{2193} scroll \u{b7} g goto \u{b7} r reload \u{b7} esc".into();
+                        self.status =
+                            "p path · f filter · ↑↓ scroll · g goto · r reload · l runtime · esc"
+                                .into();
                     }
                     IpcKey::Char('\n') | IpcKey::Char('\r') => {
                         self.mode = Mode::View;
@@ -103,7 +119,7 @@ impl App {
                 true
             }
             IpcKey::Down => {
-                let max_scroll = self.visible_lines().saturating_sub(1);
+                let max_scroll = self.visible_count().saturating_sub(1);
                 self.scroll = self
                     .scroll
                     .min(max_scroll)
@@ -118,7 +134,7 @@ impl App {
             }
             IpcKey::PageDown => {
                 let page = self.area.h.saturating_sub(8) as usize;
-                let max_scroll = self.visible_lines().saturating_sub(1);
+                let max_scroll = self.visible_count().saturating_sub(1);
                 self.scroll = (self.scroll + page).min(max_scroll);
                 true
             }
@@ -127,7 +143,7 @@ impl App {
                 true
             }
             IpcKey::End => {
-                self.scroll = self.visible_lines().saturating_sub(1);
+                self.scroll = self.visible_count().saturating_sub(1);
                 true
             }
             IpcKey::Char('p') if !modifiers.ctrl => {
@@ -147,6 +163,26 @@ impl App {
             }
             IpcKey::Char('g') if !modifiers.ctrl => {
                 self.scroll = 0;
+                true
+            }
+            IpcKey::Char('l') if !modifiers.ctrl => {
+                self.source = match self.source {
+                    LogSource::File => LogSource::Runtime,
+                    LogSource::Runtime => LogSource::File,
+                };
+                self.scroll = if matches!(self.source, LogSource::Runtime) {
+                    self.runtime_logs.len().saturating_sub(1)
+                } else {
+                    0
+                };
+                let label = match self.source {
+                    LogSource::File => "file",
+                    LogSource::Runtime => "runtime",
+                };
+                self.status = format!(
+                    "Switched to {label} logs ({} entries)",
+                    self.visible_count()
+                );
                 true
             }
             _ => true,
@@ -171,14 +207,30 @@ impl App {
         }
     }
 
-    fn visible_lines(&self) -> usize {
-        if self.filter.is_empty() {
-            self.lines.len()
-        } else {
-            self.lines
-                .iter()
-                .filter(|l| l.contains(&self.filter))
-                .count()
+    fn visible_count(&self) -> usize {
+        match self.source {
+            LogSource::File => {
+                if self.filter.is_empty() {
+                    self.lines.len()
+                } else {
+                    self.lines
+                        .iter()
+                        .filter(|l| l.contains(&self.filter))
+                        .count()
+                }
+            }
+            LogSource::Runtime => {
+                if self.filter.is_empty() {
+                    self.runtime_logs.len()
+                } else {
+                    self.runtime_logs
+                        .iter()
+                        .filter(|e| {
+                            e.message.contains(&self.filter) || e.target.contains(&self.filter)
+                        })
+                        .count()
+                }
+            }
         }
     }
 
@@ -192,9 +244,13 @@ impl App {
         let mut cmds: Vec<Value> = Vec::new();
 
         cmds.push(json!({"Rect": {"x": 0, "y": 0, "w": w, "h": h, "bg": t.background}}));
+        let source_label = match self.source {
+            LogSource::File => "File",
+            LogSource::Runtime => "Runtime",
+        };
         cmds.push(json!({"Border": {
             "x": 0, "y": 0, "w": w, "h": h, "fg": t.border, "borders": BORDER_ALL,
-            "bg": t.background_panel, "title": " Log Viewer ",
+            "bg": t.background_panel, "title": format!(" Log Viewer [{source_label}] "),
             "title_fg": t.text, "title_dash_fg": t.border, "border_type": null,
         }}));
 
@@ -216,46 +272,94 @@ impl App {
 
         let content_y = 3u16;
         let content_h = h.saturating_sub(6) as usize;
+        let total = self.visible_count();
 
-        let filtered: Vec<&String> = if self.filter.is_empty() {
-            self.lines.iter().collect()
-        } else {
-            self.lines
-                .iter()
-                .filter(|l| l.contains(&self.filter))
-                .collect()
-        };
-
-        if filtered.is_empty() {
-            cmds.push(json!({"Text": {
-                "x": 2, "y": content_y,
-                "text": if self.lines.is_empty() {
-                    "Press p to enter a log file path, then Enter".to_string()
+        match self.source {
+            LogSource::File => {
+                let filtered: Vec<&String> = if self.filter.is_empty() {
+                    self.lines.iter().collect()
                 } else {
-                    "No matching lines (press f to change filter)".to_string()
-                },
-                "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0,
-            }}));
-        } else {
-            for (i, line) in filtered
-                .iter()
-                .skip(self.scroll)
-                .take(content_h)
-                .enumerate()
-            {
-                cmds.push(json!({"Text": {
-                    "x": 2, "y": content_y + i as u16,
-                    "text": line.to_string(),
-                    "fg": t.text, "bg": null, "bold": false, "modifiers": 0,
-                }}));
+                    self.lines
+                        .iter()
+                        .filter(|l| l.contains(&self.filter))
+                        .collect()
+                };
+
+                if filtered.is_empty() {
+                    cmds.push(json!({"Text": {
+                        "x": 2, "y": content_y,
+                        "text": if self.lines.is_empty() {
+                            "Press p to enter a log file path, then Enter".to_string()
+                        } else {
+                            "No matching lines (press f to change filter)".to_string()
+                        },
+                        "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0,
+                    }}));
+                } else {
+                    for (i, line) in filtered
+                        .iter()
+                        .skip(self.scroll)
+                        .take(content_h)
+                        .enumerate()
+                    {
+                        cmds.push(json!({"Text": {
+                            "x": 2, "y": content_y + i as u16,
+                            "text": line.to_string(),
+                            "fg": t.text, "bg": null, "bold": false, "modifiers": 0,
+                        }}));
+                    }
+                }
+            }
+            LogSource::Runtime => {
+                let filtered: Vec<&LogEntry> = if self.filter.is_empty() {
+                    self.runtime_logs.iter().collect()
+                } else {
+                    self.runtime_logs
+                        .iter()
+                        .filter(|e| {
+                            e.message.contains(&self.filter) || e.target.contains(&self.filter)
+                        })
+                        .collect()
+                };
+
+                if filtered.is_empty() {
+                    cmds.push(json!({"Text": {
+                        "x": 2, "y": content_y,
+                        "text": if self.runtime_logs.is_empty() {
+                            "Waiting for log entries...".to_string()
+                        } else {
+                            "No matching entries (press f to change filter)".to_string()
+                        },
+                        "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0,
+                    }}));
+                } else {
+                    for (i, entry) in filtered
+                        .iter()
+                        .skip(self.scroll)
+                        .take(content_h)
+                        .enumerate()
+                    {
+                        let level_fg = match entry.level.as_str() {
+                            "ERROR" => t.error,
+                            "WARN" => [255, 200, 0],
+                            _ => t.text,
+                        };
+                        let line = format!("[{}] {}: {}", entry.level, entry.target, entry.message);
+                        cmds.push(json!({"Text": {
+                            "x": 2, "y": content_y + i as u16,
+                            "text": line,
+                            "fg": level_fg, "bg": null, "bold": entry.level == "ERROR",
+                            "modifiers": 0,
+                        }}));
+                    }
+                }
             }
         }
 
         cmds.push(json!({"Text": {
             "x": 2, "y": h.saturating_sub(2),
-            "text": format!("{} filtered / {} total [{}..{}]",
-                filtered.len(), self.lines.len(),
-                self.scroll, self.scroll + content_h),
+            "text": format!("{} visible [{}..{}]  {} total in buffer",
+                total, self.scroll, self.scroll + content_h, self.entries_total()),
             "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0,
         }}));
         cmds.push(json!({"Text": {
@@ -267,6 +371,13 @@ impl App {
         self.cached_commands = cmds.clone();
         self.dirty = false;
         cmds
+    }
+
+    fn entries_total(&self) -> usize {
+        match self.source {
+            LogSource::File => self.lines.len(),
+            LogSource::Runtime => self.runtime_logs.len(),
+        }
     }
 }
 
@@ -293,6 +404,7 @@ fn palette_commands() -> Value {
         {"key": "p", "hint": "path"},
         {"key": "f", "hint": "filter"},
         {"key": "r", "hint": "reload"},
+        {"key": "l", "hint": "log source"},
         {"key": "g", "hint": "top"},
     ])
 }
@@ -349,6 +461,19 @@ fn main() {
             Ok(HostMsg::PaletteCommand { .. }) => {
                 app.dirty = true;
                 true
+            }
+            Ok(HostMsg::LogEntries { entries }) => {
+                for entry in entries {
+                    if app.runtime_logs.len() >= 10000 {
+                        app.runtime_logs.remove(0);
+                    }
+                    app.runtime_logs.push(entry);
+                }
+                app.dirty = true;
+                if matches!(app.source, LogSource::Runtime) {
+                    app.scroll = app.runtime_logs.len().saturating_sub(1);
+                }
+                false
             }
             Ok(HostMsg::Shutdown) => break,
             Ok(

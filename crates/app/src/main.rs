@@ -241,11 +241,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return list_plugins();
     }
 
-    let _ = env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))
-        .format_timestamp(None)
-        .format_target(false)
-        .try_init();
-
     let dev = std::env::var("SANTUI_DEV").as_deref() == Ok("1");
     let dir = if dev {
         old_data_dir()
@@ -284,6 +279,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     app.set_data_dir(dir.clone());
     app.set_config_dir(dir);
 
+    // Install a runtime log ring buffer so the log-viewer plugin can display
+    // warnings, errors, and other log output from the host and its plugins.
+    // The buffer forwards to env_logger for stderr output.
+    let mut log_buffer = santui_core::LoggerBuffer::new(10000);
+    let env_logger = env_logger::Builder::new()
+        .filter_level(log::LevelFilter::Warn)
+        .format_timestamp(None)
+        .format_target(false)
+        .build();
+    log_buffer.set_inner(Box::new(env_logger));
+    let log_buffer_arc = Arc::new(log_buffer);
+    app.set_log_buffer(log_buffer_arc.clone());
+    // Leak the Arc so log::set_logger gets a &'static reference.
+    // The Arc keeps the LoggerBuffer alive for the plugin side.
+    let leaked_arc: &'static Arc<santui_core::LoggerBuffer> = Box::leak(Box::new(log_buffer_arc));
+    let leaked_logger: &'static santui_core::LoggerBuffer = leaked_arc.as_ref();
+    let _ = log::set_logger(leaked_logger);
+    log::set_max_level(log::LevelFilter::Trace);
+
     // Set plugin factory: uses IpcPluginHost for IPC-based plugin binaries.
     app.set_plugin_factory(std::sync::Arc::new(santui_ipc::IpcPluginHost::new_boxed));
 
@@ -303,6 +317,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or_else(|| PathBuf::from("santui-registry-plugin"));
     app.register_default_plugin("plugin-registry", "Plugin Registry", &registry_bin);
     app.set_plugin_persistent("plugin-registry", true);
+
+    // Register the log-viewer plugin so it captures logs at startup.
+    let log_viewer_bin = exe_dir
+        .as_ref()
+        .map(|d| {
+            if cfg!(windows) {
+                d.join("santui-log-viewer.exe")
+            } else {
+                d.join("santui-log-viewer")
+            }
+        })
+        .unwrap_or_else(|| PathBuf::from("santui-log-viewer"));
+    let log_consumer_cap = "log-consumer".to_string();
+    app.register_default_plugin("log-viewer", "Log Viewer", &log_viewer_bin);
+    app.set_plugin_persistent("log-viewer", true);
+    app.set_plugin_capabilities("log-viewer", &[log_consumer_cap]);
 
     #[cfg(feature = "auth")]
     {

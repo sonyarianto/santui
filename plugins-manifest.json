@@ -404,8 +404,8 @@
   {
     "id": "log-viewer",
     "name": "Log Viewer",
-    "description": "View and filter log file contents with scrolling support",
-    "capabilities": []
+    "description": "View and filter log file contents with scrolling support; also captures runtime logs from the host",
+    "capabilities": ["log-consumer"]
   },
   {
     "id": "lorem-generator",

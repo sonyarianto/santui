@@ -350,7 +350,8 @@ fn main() {
                 | HostMsg::UserUpdate { .. }
                 | HostMsg::DbValue { .. }
                 | HostMsg::PluginMessage { .. }
-                | HostMsg::Mouse { .. },
+                | HostMsg::Mouse { .. }
+                | HostMsg::LogEntries { .. },
             ) => false,
             Err(e) => {
                 log::error!("[ssl-checker] parse error: {e}: {trimmed}");

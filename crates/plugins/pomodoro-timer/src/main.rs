@@ -422,6 +422,9 @@ fn main() {
                         app.handle_db_value(&key, value);
                         respond(&mut app, false);
                     }
+                    HostMsg::LogEntries { .. } => {
+                        respond(&mut app, false);
+                    }
                     HostMsg::Shutdown => break,
                 }
             }

@@ -1,8 +1,11 @@
 use std::io::{BufRead, BufReader, Write};
 use std::sync::mpsc;
+use std::sync::mpsc::TryRecvError;
+use std::time::Duration;
 
 use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
 use serde_json::{json, Value};
+use ureq::config::Config;
 
 #[derive(Debug, Clone)]
 struct ChatMessage {
@@ -26,6 +29,7 @@ struct App {
     status: String,
     api_url: String,
     api_key: String,
+    model: String,
     fetching: bool,
     rx: Option<mpsc::Receiver<FetchMsg>>,
 }
@@ -46,6 +50,7 @@ impl Default for App {
             status: String::from("Type message, Enter to send"),
             api_url: String::from("https://api.openai.com/v1/chat/completions"),
             api_key: String::new(),
+            model: String::from("gpt-4o-mini"),
             fetching: false,
             rx: None,
         }
@@ -56,13 +61,29 @@ impl App {
     fn handle_key(&mut self, key: IpcKey, _modifiers: IpcKeyModifiers) -> bool {
         self.dirty = true;
         match key {
-            IpcKey::Esc => false,
+            IpcKey::Esc => {
+                if self.fetching {
+                    self.fetching = false;
+                    self.rx = None;
+                    self.status = String::from("Cancelled");
+                    return true;
+                }
+                if !self.input_buffer.is_empty() {
+                    self.input_buffer.clear();
+                    return true;
+                }
+                false
+            }
             IpcKey::Enter => {
                 if self.fetching {
                     return true;
                 }
                 let input = self.input_buffer.trim().to_string();
                 if input.is_empty() {
+                    return true;
+                }
+                if self.api_key.is_empty() {
+                    self.status = String::from("Set OPENAI_API_KEY env var and restart the plugin");
                     return true;
                 }
                 self.messages.push(ChatMessage {
@@ -105,6 +126,7 @@ impl App {
     fn trigger_request(&mut self) {
         let api_url = self.api_url.clone();
         let api_key = self.api_key.clone();
+        let model = self.model.clone();
         let msgs: Vec<Value> = self
             .messages
             .iter()
@@ -118,38 +140,40 @@ impl App {
         let (tx, rx) = mpsc::channel();
         self.rx = Some(rx);
         std::thread::spawn(move || {
+            let agent = ureq::Agent::new_with_config(
+                Config::builder()
+                    .timeout_global(Some(Duration::from_secs(120)))
+                    .build(),
+            );
             let body = json!({
-                String::from("model"): String::from("gpt-4o-mini"),
+                String::from("model"): model,
                 String::from("messages"): msgs,
-                String::from("max_tokens"): 1024,
+                String::from("max_tokens"): 4096,
             });
-            let result = if api_key.is_empty() {
-                Err(String::from("API key not set"))
-            } else {
-                match ureq::post(&api_url)
-                    .header(String::from("Authorization"), format!("Bearer {api_key}"))
-                    .header(
-                        String::from("Content-Type"),
-                        String::from("application/json"),
-                    )
-                    .send_json(&body)
-                {
-                    Ok(mut resp) => {
-                        let body_str = resp.body_mut().read_to_string().unwrap_or_default();
-                        match serde_json::from_str::<Value>(&body_str) {
-                            Ok(v) => {
-                                let content = v[String::from("choices")][0]
-                                    [String::from("message")][String::from("content")]
-                                .as_str()
-                                .unwrap_or("No response")
-                                .to_string();
-                                Ok(content)
-                            }
-                            Err(e) => Err(format!("Parse error: {e}")),
+            let result = match agent
+                .post(&api_url)
+                .header(String::from("Authorization"), format!("Bearer {api_key}"))
+                .header(
+                    String::from("Content-Type"),
+                    String::from("application/json"),
+                )
+                .send_json(&body)
+            {
+                Ok(mut resp) => {
+                    let body_str = resp.body_mut().read_to_string().unwrap_or_default();
+                    match serde_json::from_str::<Value>(&body_str) {
+                        Ok(v) => {
+                            let content = v[String::from("choices")][0][String::from("message")]
+                                [String::from("content")]
+                            .as_str()
+                            .unwrap_or("No response")
+                            .to_string();
+                            Ok(content)
                         }
+                        Err(e) => Err(format!("Parse error: {e}")),
                     }
-                    Err(e) => Err(format!("API error: {e}")),
                 }
+                Err(e) => Err(format!("API error: {e}")),
             };
             match result {
                 Ok(content) => {
@@ -164,21 +188,29 @@ impl App {
 
     fn handle_tick(&mut self) {
         if let Some(ref rx) = self.rx {
-            if let Ok(msg) = rx.try_recv() {
-                self.fetching = false;
-                match msg {
-                    FetchMsg::Response(content) => {
-                        self.messages.push(ChatMessage {
-                            role: String::from("assistant"),
-                            content,
-                        });
-                        self.status = String::from("Response received");
+            match rx.try_recv() {
+                Ok(msg) => {
+                    self.fetching = false;
+                    match msg {
+                        FetchMsg::Response(content) => {
+                            self.messages.push(ChatMessage {
+                                role: String::from("assistant"),
+                                content,
+                            });
+                            self.status = String::from("Response received");
+                        }
+                        FetchMsg::Error(e) => {
+                            self.status = format!("Error: {e}");
+                        }
                     }
-                    FetchMsg::Error(e) => {
-                        self.status = format!("Error: {e}");
-                    }
+                    self.dirty = true;
                 }
-                self.dirty = true;
+                Err(TryRecvError::Disconnected) => {
+                    self.fetching = false;
+                    self.status = String::from("Request failed unexpectedly");
+                    self.dirty = true;
+                }
+                Err(TryRecvError::Empty) => {}
             }
         }
     }
@@ -215,6 +247,26 @@ fn render_ui(app: &App) -> Vec<Value> {
         String::from("title_fg"): t.text,
         String::from("title_dash_fg"): t.border,
     }));
+
+    if app.api_key.is_empty() {
+        cmds.push(json!({
+            String::from("type"): String::from("Text"),
+            String::from("x"): 2, String::from("y"): 4,
+            String::from("text"): String::from("OPENAI_API_KEY not set"),
+            String::from("fg"): t.error,
+            String::from("bold"): true,
+            String::from("modifiers"): 0,
+        }));
+        cmds.push(json!({
+            String::from("type"): String::from("Text"),
+            String::from("x"): 2, String::from("y"): 5,
+            String::from("text"): String::from("Set the environment variable and restart santui"),
+            String::from("fg"): t.text_muted,
+            String::from("bold"): false,
+            String::from("modifiers"): 0,
+        }));
+        return cmds;
+    }
 
     let content_y = 2u16;
     let content_h = h.saturating_sub(6);
@@ -274,7 +326,7 @@ fn render_ui(app: &App) -> Vec<Value> {
     cmds.push(json!({
         String::from("type"): String::from("Text"),
         String::from("x"): 2, String::from("y"): status_y - 1,
-        String::from("text"): String::from("Enter send  ·  ↑↓ scroll  ·  esc back"),
+        String::from("text"): String::from("Enter send  ·  esc cancel  ·  ↑↓ scroll"),
         String::from("fg"): t.text_muted,
         String::from("bold"): false,
         String::from("modifiers"): 0,
@@ -326,7 +378,26 @@ fn main() {
         .format_timestamp(None)
         .format_target(false)
         .try_init();
-    let mut app = App::default();
+
+    let api_key = std::env::var("OPENAI_API_KEY").unwrap_or_default();
+    let api_url = std::env::var("OPENAI_BASE_URL")
+        .map(|u| format!("{}/chat/completions", u.trim_end_matches('/')))
+        .unwrap_or_else(|_| String::from("https://api.openai.com/v1/chat/completions"));
+    let model = std::env::var("OPENAI_MODEL").unwrap_or_else(|_| String::from("gpt-4o-mini"));
+
+    let status = if api_key.is_empty() {
+        String::from("OPENAI_API_KEY not set — see status bar")
+    } else {
+        String::from("Type message, Enter to send")
+    };
+    let mut app = App {
+        api_key,
+        api_url,
+        model,
+        status,
+        ..Default::default()
+    };
+
     let mut reader = BufReader::new(std::io::stdin().lock());
     let mut line = String::new();
     loop {

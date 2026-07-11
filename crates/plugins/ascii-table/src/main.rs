@@ -296,7 +296,8 @@ fn main() {
                 | HostMsg::Blur
                 | HostMsg::UserUpdate { .. }
                 | HostMsg::DbValue { .. }
-                | HostMsg::Mouse { .. },
+                | HostMsg::Mouse { .. }
+                | HostMsg::LogEntries { .. },
             ) => false,
             Err(e) => {
                 log::error!("[ascii-table] parse error: {e}: {trimmed}");

@@ -157,6 +157,7 @@ impl App {
 
             HostMsg::PluginMessage { .. } => {}
             HostMsg::DbValue { .. } => {}
+            HostMsg::LogEntries { .. } => {}
 
             HostMsg::Mouse { event } => {
                 self.status.clear();

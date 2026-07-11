@@ -87,6 +87,12 @@ impl PluginManager {
         }
     }
 
+    pub fn set_capabilities(&mut self, id: &str, capabilities: &[String]) {
+        if let Some(plugin) = self.plugins.iter_mut().find(|p| p.id() == id) {
+            plugin.set_capabilities(capabilities.to_vec());
+        }
+    }
+
     pub fn set_factory(&mut self, factory: PluginFactory) {
         self.plugin_factory = Some(factory);
     }

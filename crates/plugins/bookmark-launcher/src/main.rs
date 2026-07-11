@@ -853,7 +853,8 @@ fn main() {
                 | HostMsg::UserUpdate { .. }
                 | HostMsg::PluginMessage { .. }
                 | HostMsg::PaletteCommand { .. }
-                | HostMsg::Mouse { .. },
+                | HostMsg::Mouse { .. }
+                | HostMsg::LogEntries { .. },
             ) => false,
             Err(e) => {
                 log::error!("[bookmark-launcher] parse error: {e}: {trimmed}");

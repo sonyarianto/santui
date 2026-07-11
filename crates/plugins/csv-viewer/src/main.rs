@@ -368,7 +368,8 @@ fn main() {
                 | HostMsg::Blur
                 | HostMsg::UserUpdate { .. }
                 | HostMsg::DbValue { .. }
-                | HostMsg::Mouse { .. },
+                | HostMsg::Mouse { .. }
+                | HostMsg::LogEntries { .. },
             ) => false,
             Err(e) => {
                 log::error!("[csv-viewer] parse error: {e}: {trimmed}");

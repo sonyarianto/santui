@@ -12,6 +12,7 @@ mod theme_manager;
 use crate::auth::AuthHandle;
 use crate::config::ConfigManager;
 use crate::db_access::DbAccess;
+use crate::logger::LoggerBuffer;
 use crate::plugin::{Plugin, PluginContext};
 use crate::sync::SyncClient;
 use crate::widgets::DimOverlay;
@@ -187,6 +188,9 @@ pub struct Santui {
     pub(super) starfield: starfield::Starfield,
     /// Cached terminal height, updated on resize.
     term_h: u16,
+    /// Runtime log buffer installed as the global `log::Log`. Set by main.rs
+    /// before `run()`. Forwarded to plugins that declare `log-consumer` capability.
+    pub(super) log_buffer: Option<Arc<LoggerBuffer>>,
 }
 
 /// Parsed key bindings used at runtime, resolved once from [`Config`](crate::config::Config).
@@ -242,6 +246,7 @@ impl Santui {
             bindings: ResolvedBindings::from_config(&crate::config::KeyBindings::default()),
             starfield: starfield::Starfield::new(),
             term_h: 24,
+            log_buffer: None,
         }
     }
 
@@ -266,6 +271,12 @@ impl Santui {
     /// whether sync is enabled.
     pub fn set_sync(&mut self, sync: Option<Arc<SyncClient>>) {
         self.sync = sync;
+    }
+
+    /// Set the runtime log buffer. Call before `run()`. The buffer is
+    /// forwarded to plugins that declare the `log-consumer` capability.
+    pub fn set_log_buffer(&mut self, buf: Arc<LoggerBuffer>) {
+        self.log_buffer = Some(buf);
     }
 
     /// Set the config directory and load (or create) `config.toml`.
@@ -413,6 +424,7 @@ impl Santui {
             theme: self.app_state.theme.clone(),
             auth: self.auth.clone(),
             data_dir: self.plugin_manager.data_dir().to_path_buf(),
+            log_buffer: self.log_buffer.clone(),
         };
         self.plugin_manager.init_all(&mut ctx)?;
 

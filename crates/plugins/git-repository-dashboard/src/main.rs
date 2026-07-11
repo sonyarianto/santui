@@ -881,7 +881,8 @@ fn main() {
                 | HostMsg::UserUpdate { .. }
                 | HostMsg::PluginMessage { .. }
                 | HostMsg::PaletteCommand { .. }
-                | HostMsg::Mouse { .. },
+                | HostMsg::Mouse { .. }
+                | HostMsg::LogEntries { .. },
             ) => false,
             Err(e) => {
                 log::error!("[git-repository-dashboard] parse error: {e}: {trimmed}");

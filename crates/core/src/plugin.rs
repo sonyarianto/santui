@@ -138,6 +138,9 @@ pub struct PluginContext {
     /// for persistent storage. The registry plugin uses it to find
     /// installed plugins and `registry.toml`.
     pub data_dir: PathBuf,
+    /// Shared runtime log buffer. When set, the plugin receives log entries
+    /// via the host on each tick. Used by the log-viewer plugin.
+    pub log_buffer: Option<std::sync::Arc<crate::logger::LoggerBuffer>>,
 }
 
 impl PluginContext {
@@ -146,6 +149,7 @@ impl PluginContext {
             theme: Theme::default(),
             auth: None,
             data_dir: PathBuf::new(),
+            log_buffer: None,
         }
     }
 }
