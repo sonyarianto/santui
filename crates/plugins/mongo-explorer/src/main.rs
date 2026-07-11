@@ -287,21 +287,6 @@ impl App {
             "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0,
         }}));
 
-        let hint = match self.view {
-            View::Collections => {
-                String::from("\u{2191}\u{2193} navigate \u{b7} enter select \u{b7} esc close")
-            }
-            View::Documents(_) => {
-                String::from("\u{2191}\u{2193} navigate \u{b7} enter view \u{b7} h/esc back")
-            }
-            View::DocumentDetail(_, _) => String::from("h/esc back to documents"),
-        };
-        cmds.push(json!({"Text": {
-            "x": 2, "y": h.saturating_sub(1),
-            "text": hint,
-            "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0,
-        }}));
-
         self.cached_commands = cmds.clone();
         self.dirty = false;
         cmds

@@ -179,6 +179,14 @@ impl App {
     }
 }
 
+fn hints() -> Vec<(String, String)> {
+    vec![
+        ("enter".into(), "search".into()),
+        ("space".into(), "play preview".into()),
+        ("esc".into(), "back".into()),
+    ]
+}
+
 fn palette_commands() -> Vec<(String, String)> {
     vec![("Music".into(), "Search iTunes previews".into())]
 }
@@ -196,7 +204,7 @@ fn respond(app: &mut App, consumed: bool) {
     let palette = palette_commands();
     let json = serde_json::json!({
         "commands": commands_val,
-        "hints": [],
+        "hints": hints(),
         "palette_commands": palette,
         "request": request,
         "plugin_message": plugin_message,

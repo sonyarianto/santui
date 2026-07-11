@@ -256,17 +256,11 @@ fn render_ui(app: &App) -> Vec<Value> {
         String::from("modifiers"): 0,
     }));
 
-    let hint_y = h.saturating_sub(1);
-    cmds.push(json!({
-        String::from("type"): String::from("Text"),
-        String::from("x"): 2, String::from("y"): hint_y,
-        String::from("text"): String::from("esc back  ·  auto-updates on tick"),
-        String::from("fg"): t.text_muted,
-        String::from("bold"): false,
-        String::from("modifiers"): 0,
-    }));
-
     cmds
+}
+
+fn hints() -> Vec<(String, String)> {
+    vec![("esc".into(), "back".into())]
 }
 
 fn default_theme() -> ThemeData {
@@ -294,7 +288,7 @@ fn respond(app: &mut App, consumed: bool) {
     let commands_val = serde_json::to_value(app.render()).unwrap_or(Value::Null);
     let resp = json!({
         String::from("commands"): commands_val,
-        String::from("hints"): [],
+        String::from("hints"): serde_json::to_value(hints()).unwrap_or_default(),
         String::from("palette_commands"): palette_commands(),
         String::from("request"): null,
         String::from("plugin_message"): null,

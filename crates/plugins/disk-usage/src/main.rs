@@ -220,17 +220,14 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         bold: false,
         modifiers: 0,
     });
-    cmds.push(RenderCmd::Text {
-        x: 2,
-        y: h.saturating_sub(1),
-        text: "\u{2191}\u{2193}/jk navigate \u{b7} esc close".into(),
-        fg: Some(t.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
-
     cmds
+}
+
+fn hints() -> Vec<(String, String)> {
+    vec![
+        ("↑↓/jk".into(), "navigate".into()),
+        ("esc".into(), "back".into()),
+    ]
 }
 
 fn default_theme() -> ThemeData {
@@ -263,7 +260,7 @@ fn respond(app: &mut App, consumed: bool) {
     };
     let json = serde_json::json!({
         "commands": commands_val,
-        "hints": [],
+        "hints": hints(),
         "palette_commands": palette_commands(),
         "request": null,
         "plugin_message": null,

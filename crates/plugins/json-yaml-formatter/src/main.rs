@@ -436,8 +436,21 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         },
         false,
     );
-    push_text(&mut cmds, 2, h.saturating_sub(1), "Tab focus · f format · m minify · j JSON · y YAML · 2 input JSON/YAML/Auto · c copy · r reset", theme.text_muted, false);
     cmds
+}
+
+fn hints() -> Vec<(String, String)> {
+    vec![
+        ("tab".into(), "focus".into()),
+        ("f".into(), "format".into()),
+        ("m".into(), "minify".into()),
+        ("j".into(), "JSON".into()),
+        ("y".into(), "YAML".into()),
+        ("2".into(), "input JSON/YAML/Auto".into()),
+        ("c".into(), "copy".into()),
+        ("r".into(), "reset".into()),
+        ("esc".into(), "back".into()),
+    ]
 }
 
 fn visible_lines(text: &str, scroll: usize, height: u16) -> String {
@@ -536,7 +549,7 @@ fn respond(app: &mut App, consumed: bool) {
     };
     let json = serde_json::json!({
         "commands": commands_val,
-        "hints": [],
+        "hints": hints(),
         "palette_commands": palette_commands(),
         "request": null,
         "plugin_message": null,

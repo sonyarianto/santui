@@ -305,15 +305,6 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         });
         cmds.push(RenderCmd::Text {
             x: 2,
-            y: h.saturating_sub(1),
-            text: String::from("enter save \u{b7} esc cancel"),
-            fg: Some(t.text_muted),
-            bg: None,
-            bold: false,
-            modifiers: 0,
-        });
-        cmds.push(RenderCmd::Text {
-            x: 2,
             y: h.saturating_sub(2),
             text: app.status.clone(),
             fg: Some(t.text_muted),
@@ -442,6 +433,13 @@ fn default_theme() -> ThemeData {
     }
 }
 
+fn hints() -> Vec<(String, String)> {
+    vec![
+        ("enter".into(), "save".into()),
+        ("esc".into(), "back".into()),
+    ]
+}
+
 fn palette_commands() -> serde_json::Value {
     serde_json::json!([("Retro".to_string(), "Open Sprint Retro".to_string())])
 }
@@ -452,7 +450,7 @@ fn respond(app: &mut App, consumed: bool) {
     };
     let json = serde_json::json!({
         "commands": commands_val,
-        "hints": [],
+        "hints": if app.editing { hints() } else { Vec::<(String, String)>::new() },
         "palette_commands": palette_commands(),
         "request": null,
         "plugin_message": null,

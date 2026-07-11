@@ -50,15 +50,6 @@ fn render_story_list(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<
                 bold: false,
                 modifiers: 0,
             });
-            cmds.push(RenderCmd::Text {
-                x: 1,
-                y: h.saturating_sub(1),
-                text: " t=top  n=new  b=best  r=refresh  enter=comments  o=open".into(),
-                fg: Some(theme.text_muted),
-                bg: None,
-                bold: false,
-                modifiers: 0,
-            });
             return cmds;
         }
         FetchState::Error(e) => {
@@ -67,15 +58,6 @@ fn render_story_list(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<
                 y: h / 2,
                 text: format!("\u{26A0} {}", e),
                 fg: Some(theme.error),
-                bg: None,
-                bold: false,
-                modifiers: 0,
-            });
-            cmds.push(RenderCmd::Text {
-                x: 1,
-                y: h.saturating_sub(1),
-                text: " t=top  n=new  b=best  r=refresh  enter=comments  o=open".into(),
-                fg: Some(theme.text_muted),
                 bg: None,
                 bold: false,
                 modifiers: 0,
@@ -90,15 +72,6 @@ fn render_story_list(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<
             x: w / 2 - 10,
             y: h / 2,
             text: "No stories loaded.".into(),
-            fg: Some(theme.text_muted),
-            bg: None,
-            bold: false,
-            modifiers: 0,
-        });
-        cmds.push(RenderCmd::Text {
-            x: 1,
-            y: h.saturating_sub(1),
-            text: " t=top  n=new  b=best  r=refresh  enter=comments  o=open".into(),
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
@@ -179,16 +152,6 @@ fn render_story_list(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         });
     }
 
-    cmds.push(RenderCmd::Text {
-        x: 1,
-        y: h.saturating_sub(1),
-        text: " t=top  n=new  b=best  r=refresh  enter=comments  o=open  tab=cycle".into(),
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
-
     cmds
 }
 
@@ -253,15 +216,6 @@ fn render_comments(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
                 bold: false,
                 modifiers: 0,
             });
-            cmds.push(RenderCmd::Text {
-                x: 1,
-                y: h.saturating_sub(1),
-                text: " \u{2191}\u{2193} navigate  esc back  o open story link".into(),
-                fg: Some(theme.text_muted),
-                bg: None,
-                bold: false,
-                modifiers: 0,
-            });
             return cmds;
         }
         FetchState::Error(e) => {
@@ -270,15 +224,6 @@ fn render_comments(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
                 y: h / 2,
                 text: format!("\u{26A0} {}", e),
                 fg: Some(theme.error),
-                bg: None,
-                bold: false,
-                modifiers: 0,
-            });
-            cmds.push(RenderCmd::Text {
-                x: 1,
-                y: h.saturating_sub(1),
-                text: " \u{2191}\u{2193} navigate  esc back  o open story link".into(),
-                fg: Some(theme.text_muted),
                 bg: None,
                 bold: false,
                 modifiers: 0,
@@ -408,16 +353,6 @@ fn render_comments(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
             }
         }
     }
-
-    cmds.push(RenderCmd::Text {
-        x: 1,
-        y: h.saturating_sub(1),
-        text: " \u{2191}\u{2193} navigate  esc back  o open story link".into(),
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
 
     cmds
 }

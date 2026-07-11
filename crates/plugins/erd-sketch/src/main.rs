@@ -464,11 +464,17 @@ fn render_diagram(app: &App, cmds: &mut Vec<RenderCmd>, t: &ThemeData, _w: u16, 
         bold: false,
         modifiers: 0,
     });
-    cmds.push(RenderCmd::Text {
-        x: 2, y: h.saturating_sub(1),
-        text: "a table \u{b7} / column \u{b7} r relation \u{b7} d remove \u{b7} \u{2191}\u{2193} \u{b7} esc".into(),
-        fg: Some(t.text_muted), bg: None, bold: false, modifiers: 0,
-    });
+}
+
+fn hints() -> Vec<(String, String)> {
+    vec![
+        ("a".into(), "table".into()),
+        ("/".into(), "column".into()),
+        ("r".into(), "relation".into()),
+        ("d".into(), "remove".into()),
+        ("up/down".into(), "navigate".into()),
+        ("esc".into(), "back".into()),
+    ]
 }
 
 fn render_input(
@@ -527,7 +533,7 @@ fn respond(app: &mut App, consumed: bool) {
     };
     let json = serde_json::json!({
         "commands": commands_val,
-        "hints": [],
+        "hints": hints(),
         "palette_commands": palette_commands(),
         "request": null,
         "plugin_message": null,

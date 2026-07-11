@@ -101,16 +101,6 @@ pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
         }
     }
 
-    cmds.push(RenderCmd::Text {
-        x: 1,
-        y: h.saturating_sub(1),
-        text: " enter search  \u{2191}\u{2193} navigate  space play preview  esc quit ".into(),
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
-
     cmds
 }
 

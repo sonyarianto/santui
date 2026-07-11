@@ -688,17 +688,6 @@ fn render_url_editor(
         bold: false,
         modifiers: 0,
     });
-
-    let hint_text = "enter: save  esc: cancel  ctrl+b: default";
-    cmds.push(RenderCmd::Text {
-        x: 2,
-        y: area_h.saturating_sub(1),
-        text: hint_text.into(),
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
 }
 
 #[cfg(test)]

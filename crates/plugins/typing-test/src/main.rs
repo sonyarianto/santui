@@ -271,16 +271,6 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         bold: false,
         modifiers: 0,
     });
-    cmds.push(RenderCmd::Text {
-        x: 2,
-        y: h.saturating_sub(1),
-        text: "type words \u{b7} backspace correct \u{b7} esc quit/reset".into(),
-        fg: Some(t.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
-
     cmds
 }
 
@@ -301,6 +291,13 @@ fn default_theme() -> ThemeData {
     }
 }
 
+fn hints() -> Vec<(String, String)> {
+    vec![
+        ("backspace".into(), "correct".into()),
+        ("esc".into(), "back".into()),
+    ]
+}
+
 fn palette_commands() -> Vec<(String, String)> {
     vec![("Education".into(), "Open typing test".into())]
 }
@@ -310,7 +307,7 @@ fn respond(app: &mut App, consumed: bool) {
         return;
     };
     let json = serde_json::json!({
-        "commands": commands_val, "hints": [], "palette_commands": palette_commands(),
+        "commands": commands_val, "hints": hints(), "palette_commands": palette_commands(),
         "request": null, "plugin_message": null, "consumed": consumed,
     });
     if let Ok(json_str) = serde_json::to_string(&json) {

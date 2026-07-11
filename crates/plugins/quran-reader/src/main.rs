@@ -877,14 +877,6 @@ fn render_surah_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w:
         theme.text_muted,
         false,
     );
-    push_text(
-        cmds,
-        2,
-        h.saturating_sub(1),
-        "Enter read · / search · e translation · r reciter · R refresh · PgUp/PgDn · Esc",
-        theme.text_muted,
-        false,
-    );
 }
 
 fn render_reader(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, h: u16) {
@@ -941,14 +933,6 @@ fn render_reader(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16
         2,
         h.saturating_sub(2),
         status_line(app),
-        theme.text_muted,
-        false,
-    );
-    push_text(
-        cmds,
-        2,
-        h.saturating_sub(1),
-        "j/k scroll · Space ayah · a play surah · x stop · t mode · r repeat · Esc list",
         theme.text_muted,
         false,
     );
@@ -1021,6 +1005,34 @@ fn status_line(app: &App) -> String {
     format!("{} · {}{}", app.status, repeat, fetching)
 }
 
+fn hints(screen: Screen) -> Vec<(String, String)> {
+    match screen {
+        Screen::SurahList => vec![
+            ("enter".into(), "read".into()),
+            ("/".into(), "search".into()),
+            ("e".into(), "translation".into()),
+            ("r".into(), "reciter".into()),
+            ("R".into(), "refresh".into()),
+            ("pgup/pgdn".into(), "scroll".into()),
+            ("esc".into(), "back".into()),
+        ],
+        Screen::Reader => vec![
+            ("j/k".into(), "scroll".into()),
+            ("space".into(), "ayah".into()),
+            ("a".into(), "play surah".into()),
+            ("x".into(), "stop".into()),
+            ("t".into(), "mode".into()),
+            ("r".into(), "repeat".into()),
+            ("esc".into(), "list".into()),
+        ],
+        Screen::TranslationPicker | Screen::ReciterPicker => vec![
+            ("up/down".into(), "navigate".into()),
+            ("enter".into(), "select".into()),
+            ("esc".into(), "back".into()),
+        ],
+    }
+}
+
 fn truncate(value: &str, max_chars: usize) -> String {
     let mut out = String::new();
     for (idx, ch) in value.chars().enumerate() {
@@ -1078,7 +1090,7 @@ fn respond(app: &mut App, consumed: bool) {
         return;
     };
     let request = app.pending_request.take();
-    let json = serde_json::json!({ "commands": commands_val, "hints": [], "palette_commands": palette_commands(), "request": request, "plugin_message": null, "consumed": consumed });
+    let json = serde_json::json!({ "commands": commands_val, "hints": hints(app.screen), "palette_commands": palette_commands(), "request": request, "plugin_message": null, "consumed": consumed });
     if let Ok(json_str) = serde_json::to_string(&json) {
         let mut out = std::io::stdout().lock();
         let _ = writeln!(out, "{json_str}");

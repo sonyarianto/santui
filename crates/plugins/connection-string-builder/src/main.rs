@@ -235,11 +235,6 @@ impl App {
             "text": self.status.clone(),
             "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0,
         }}));
-        cmds.push(json!({"Text": {
-            "x": 2, "y": h.saturating_sub(1),
-            "text": String::from("Tab: cycle fields · \u{2190}\u{2192}: DB type · type: edit · Esc: close"),
-            "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0,
-        }}));
 
         self.cached_commands = cmds.clone();
         self.dirty = false;

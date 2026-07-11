@@ -278,11 +278,6 @@ impl App {
             "text": self.status.clone(),
             "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0,
         }}));
-        cmds.push(json!({"Text": {
-            "x": 2, "y": h.saturating_sub(1),
-            "text": String::from("type \u{b7} enter run \u{b7} m mode \u{b7} esc"),
-            "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0,
-        }}));
 
         self.cached_commands = cmds.clone();
         self.dirty = false;

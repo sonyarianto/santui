@@ -187,18 +187,6 @@ fn render_editor(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         }
     }
 
-    // --- Status bar ---
-    cmds.push(RenderCmd::Text {
-        x: 1,
-        y: h.saturating_sub(1),
-        text: " Send: Ctrl+S | Save: Ctrl+Shift+S | History: H | Saved: Shift+S | Tab: next field "
-            .into(),
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
-
     cmds
 }
 
@@ -254,15 +242,6 @@ fn render_response(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Ve
                 y: row + 1,
                 text: format!("Error: {}", e),
                 fg: Some(theme.error),
-                bg: None,
-                bold: false,
-                modifiers: 0,
-            });
-            cmds.push(RenderCmd::Text {
-                x: 1,
-                y: h.saturating_sub(1),
-                text: " E edit | H history | Esc back ".into(),
-                fg: Some(theme.text_muted),
                 bg: None,
                 bold: false,
                 modifiers: 0,
@@ -393,16 +372,6 @@ fn render_response(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Ve
         });
     }
 
-    cmds.push(RenderCmd::Text {
-        x: 1,
-        y: h.saturating_sub(1),
-        text: " E edit | H history | S save | ↑↓ scroll | Esc back ".into(),
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
-
     cmds
 }
 
@@ -425,16 +394,6 @@ fn render_history(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Vec
 
     render_entry_list(&mut cmds, state, theme, w, h, true);
 
-    cmds.push(RenderCmd::Text {
-        x: 1,
-        y: h.saturating_sub(1),
-        text: " Enter load | S save | d delete | Esc back | ↑↓ navigate ".into(),
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
-
     cmds
 }
 
@@ -456,16 +415,6 @@ fn render_saved(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
     });
 
     render_entry_list(&mut cmds, state, theme, w, h, false);
-
-    cmds.push(RenderCmd::Text {
-        x: 1,
-        y: h.saturating_sub(1),
-        text: " Enter load | d delete | Esc back | ↑↓ navigate ".into(),
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
 
     cmds
 }

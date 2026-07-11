@@ -177,22 +177,15 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         bold: false,
         modifiers: 0,
     });
-    cmds.push(RenderCmd::Text {
-        x: 2,
-        y: h.saturating_sub(1),
-        text: match app.screen {
-            Screen::Inbox => {
-                "\u{2191}\u{2193}/jk navigate \u{b7} enter open \u{b7} esc close".into()
-            }
-            Screen::View => "esc back to inbox".into(),
-        },
-        fg: Some(t.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
-
     cmds
+}
+
+fn hints() -> Vec<(String, String)> {
+    vec![
+        ("↑↓/jk".into(), "navigate".into()),
+        ("enter".into(), "open".into()),
+        ("esc".into(), "back".into()),
+    ]
 }
 
 fn render_inbox(app: &App, cmds: &mut Vec<RenderCmd>, t: &ThemeData, w: u16, _h: u16) {
@@ -313,7 +306,7 @@ fn respond(app: &mut App, consumed: bool) {
     };
     let json = serde_json::json!({
         "commands": commands_val,
-        "hints": [],
+        "hints": hints(),
         "palette_commands": palette_commands(),
         "request": null,
         "plugin_message": null,

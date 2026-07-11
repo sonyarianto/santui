@@ -311,17 +311,6 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         modifiers: 0,
     });
 
-    // Hint bar
-    cmds.push(RenderCmd::Text {
-        x: 2,
-        y: h.saturating_sub(1),
-        text: "g generate \u{b7} v version \u{b7} tab version \u{b7} c copy \u{b7} \u{2191}\u{2193}/j k history \u{b7} \u{23ce} copy".into(),
-        fg: Some(t.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
-
     cmds
 }
 
@@ -349,6 +338,17 @@ fn default_theme() -> ThemeData {
     }
 }
 
+fn hints() -> Vec<(String, String)> {
+    vec![
+        ("g".into(), "generate".into()),
+        ("v".into(), "version".into()),
+        ("tab".into(), "version".into()),
+        ("c".into(), "copy".into()),
+        ("enter".into(), "copy".into()),
+        ("esc".into(), "back".into()),
+    ]
+}
+
 fn palette_commands() -> Vec<(String, String)> {
     vec![("Utilities".into(), "Open UUID generator".into())]
 }
@@ -359,7 +359,7 @@ fn respond(app: &mut App, consumed: bool) {
     };
     let json = serde_json::json!({
         "commands": commands_val,
-        "hints": [],
+        "hints": hints(),
         "palette_commands": palette_commands(),
         "request": null,
         "plugin_message": null,

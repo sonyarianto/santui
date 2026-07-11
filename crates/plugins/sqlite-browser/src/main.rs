@@ -364,20 +364,6 @@ fn render_ui(app: &App) -> Vec<Value> {
         String::from("modifiers"): 0,
     }));
 
-    let hint_y = h.saturating_sub(1);
-    let hint = match app.mode {
-        Mode::PathInput => String::from("Enter confirm  ·  esc back"),
-        Mode::Browse => String::from("↑↓ navigate  ·  esc close"),
-    };
-    cmds.push(json!({
-        String::from("type"): String::from("Text"),
-        String::from("x"): 2, String::from("y"): hint_y,
-        String::from("text"): hint,
-        String::from("fg"): t.text_muted,
-        String::from("bold"): false,
-        String::from("modifiers"): 0,
-    }));
-
     cmds
 }
 
@@ -398,6 +384,13 @@ fn default_theme() -> ThemeData {
     }
 }
 
+fn hints() -> Vec<(String, String)> {
+    vec![
+        ("enter".into(), "confirm".into()),
+        ("esc".into(), "back".into()),
+    ]
+}
+
 fn palette_commands() -> Value {
     json!([[String::from("Data"), String::from("Open SQLite Browser")]])
 }
@@ -406,7 +399,7 @@ fn respond(app: &mut App, consumed: bool) {
     let commands_val = serde_json::to_value(app.render()).unwrap_or(Value::Null);
     let resp = json!({
         String::from("commands"): commands_val,
-        String::from("hints"): [],
+        String::from("hints"): hints(),
         String::from("palette_commands"): palette_commands(),
         String::from("request"): null,
         String::from("plugin_message"): null,

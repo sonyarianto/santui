@@ -409,17 +409,21 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         bold: false,
         modifiers: 0,
     });
-    cmds.push(RenderCmd::Text {
-        x: 2,
-        y: h.saturating_sub(1),
-        text: "g generate \u{b7} l a-z \u{b7} u A-Z \u{b7} d 0-9 \u{b7} s symbols \u{b7} +/- length \u{b7} c/\u{23ce} copy \u{b7} \u{2191}\u{2193} history \u{b7} esc".into(),
-        fg: Some(t.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
-
     cmds
+}
+
+fn hints() -> Vec<(String, String)> {
+    vec![
+        ("g".into(), "generate".into()),
+        ("l".into(), "a-z".into()),
+        ("u".into(), "A-Z".into()),
+        ("d".into(), "0-9".into()),
+        ("s".into(), "symbols".into()),
+        ("+/-".into(), "length".into()),
+        ("c/enter".into(), "copy".into()),
+        ("up/down".into(), "history".into()),
+        ("esc".into(), "back".into()),
+    ]
 }
 
 fn copy_to_clipboard(text: &str) -> Result<(), String> {
@@ -456,7 +460,7 @@ fn respond(app: &mut App, consumed: bool) {
     };
     let json = serde_json::json!({
         "commands": commands_val,
-        "hints": [],
+        "hints": hints(),
         "palette_commands": palette_commands(),
         "request": null,
         "plugin_message": null,

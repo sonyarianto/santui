@@ -241,11 +241,6 @@ impl App {
             "text": self.status.clone(),
             "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0,
         }}));
-        cmds.push(json!({"Text": {
-            "x": 2, "y": h.saturating_sub(1),
-            "text": String::from("tab switch field \u{b7} s scan \u{b7} digits input \u{b7} esc close"),
-            "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0,
-        }}));
 
         self.cached_commands = cmds.clone();
         self.dirty = false;

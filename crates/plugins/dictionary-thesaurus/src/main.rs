@@ -461,14 +461,6 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         theme.text_muted,
         false,
     );
-    push_text(
-        &mut cmds,
-        2,
-        h.saturating_sub(1),
-        "/ search · Enter lookup/drill · Tab focus · c copy · h recent · Backspace return",
-        theme.text_muted,
-        false,
-    );
     cmds
 }
 fn render_results(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, h: u16) {
@@ -683,6 +675,18 @@ fn default_theme() -> ThemeData {
         inverted_text: [20; 3],
     }
 }
+fn hints() -> Vec<(String, String)> {
+    vec![
+        ("/".into(), "search".into()),
+        ("enter".into(), "lookup/drill".into()),
+        ("tab".into(), "focus".into()),
+        ("c".into(), "copy".into()),
+        ("h".into(), "recent".into()),
+        ("backspace".into(), "return".into()),
+        ("esc".into(), "back".into()),
+    ]
+}
+
 fn palette_commands() -> Vec<(String, String)> {
     vec![("Reference".into(), "Open dictionary / thesaurus".into())]
 }
@@ -691,7 +695,7 @@ fn respond(app: &mut App, consumed: bool) {
         return;
     };
     let request = app.pending_request.take();
-    let json = serde_json::json!({ "commands": commands_val, "hints": [], "palette_commands": palette_commands(), "request": request, "plugin_message": null, "consumed": consumed });
+    let json = serde_json::json!({ "commands": commands_val, "hints": hints(), "palette_commands": palette_commands(), "request": request, "plugin_message": null, "consumed": consumed });
     if let Ok(json_str) = serde_json::to_string(&json) {
         let mut out = std::io::stdout().lock();
         let _ = writeln!(out, "{json_str}");

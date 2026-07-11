@@ -371,11 +371,6 @@ impl App {
             "text": self.status.clone(),
             "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0,
         }}));
-        cmds.push(json!({"Text": {
-            "x": 2, "y": h.saturating_sub(1),
-            "text": String::from("Type algebraic notation (e.g. e2e4) + Enter · u: undo · Esc: clear/close"),
-            "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0,
-        }}));
 
         self.cached_commands = cmds.clone();
         self.dirty = false;

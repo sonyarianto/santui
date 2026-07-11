@@ -539,17 +539,6 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         });
     }
 
-    // Bottom hints
-    cmds.push(RenderCmd::Text {
-        x: 1,
-        y: h.saturating_sub(1),
-        text: " 1 cpu  2 mem  3 disk  4 net  5 procs  esc back".into(),
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
-
     cmds
 }
 

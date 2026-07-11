@@ -725,14 +725,6 @@ fn render_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, 
         theme.text_muted,
         false,
     );
-    push_text(
-        cmds,
-        2,
-        h.saturating_sub(1),
-        "a active · y today · o overdue · x completed · n new · e edit · Space toggle · d delete",
-        theme.text_muted,
-        false,
-    );
 }
 
 fn render_edit(
@@ -855,6 +847,19 @@ fn default_theme() -> ThemeData {
         inverted_text: [20; 3],
     }
 }
+fn hints() -> Vec<(String, String)> {
+    vec![
+        ("a".into(), "active".into()),
+        ("y".into(), "today".into()),
+        ("o".into(), "overdue".into()),
+        ("x".into(), "completed".into()),
+        ("n".into(), "new".into()),
+        ("e".into(), "edit".into()),
+        ("space".into(), "toggle".into()),
+        ("d".into(), "delete".into()),
+        ("esc".into(), "back".into()),
+    ]
+}
 fn palette_commands() -> Vec<(String, String)> {
     vec![("Productivity".into(), "Open todo task manager".into())]
 }
@@ -864,7 +869,7 @@ fn respond(app: &mut App, consumed: bool) {
         return;
     };
     let request = app.pending_request.take();
-    let json = serde_json::json!({ "commands": commands_val, "hints": [], "palette_commands": palette_commands(), "request": request, "plugin_message": null, "consumed": consumed });
+    let json = serde_json::json!({ "commands": commands_val, "hints": hints(), "palette_commands": palette_commands(), "request": request, "plugin_message": null, "consumed": consumed });
     if let Ok(json_str) = serde_json::to_string(&json) {
         let mut out = std::io::stdout().lock();
         let _ = writeln!(out, "{json_str}");

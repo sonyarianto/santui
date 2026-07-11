@@ -800,14 +800,6 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         theme.text_muted,
         false,
     );
-    push_text(
-        &mut cmds,
-        2,
-        h.saturating_sub(1),
-        "Tab focus · Enter select · s swap · +/- precision · c copy · Esc clear/back",
-        theme.text_muted,
-        false,
-    );
     cmds
 }
 
@@ -854,6 +846,17 @@ fn default_theme() -> ThemeData {
     }
 }
 
+fn hints() -> Vec<(String, String)> {
+    vec![
+        ("tab".into(), "focus".into()),
+        ("enter".into(), "select".into()),
+        ("s".into(), "swap".into()),
+        ("+/-".into(), "precision".into()),
+        ("c".into(), "copy".into()),
+        ("esc".into(), "back".into()),
+    ]
+}
+
 fn palette_commands() -> Vec<(String, String)> {
     vec![
         ("Utilities".into(), "Open unit converter".into()),
@@ -865,7 +868,7 @@ fn respond(app: &mut App, consumed: bool) {
     let Ok(commands_val) = serde_json::to_value(app.render()) else {
         return;
     };
-    let json = serde_json::json!({ "commands": commands_val, "hints": [], "palette_commands": palette_commands(), "request": null, "plugin_message": null, "consumed": consumed });
+    let json = serde_json::json!({ "commands": commands_val, "hints": hints(), "palette_commands": palette_commands(), "request": null, "plugin_message": null, "consumed": consumed });
     if let Ok(json_str) = serde_json::to_string(&json) {
         let mut out = std::io::stdout().lock();
         let _ = writeln!(out, "{json_str}");

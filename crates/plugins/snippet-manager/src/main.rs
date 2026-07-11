@@ -302,26 +302,6 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         bold: false,
         modifiers: 0,
     });
-    cmds.push(RenderCmd::Text {
-        x: 2,
-        y: h.saturating_sub(1),
-        text: match app.screen {
-            Screen::List => String::from(
-                "\u{2191}\u{2193} navigate \u{b7} n new \u{b7} d delete \u{b7} enter view \u{b7} esc",
-            ),
-            Screen::Detail => {
-                String::from("e edit \u{b7} d delete \u{b7} esc/q back")
-            }
-            Screen::Edit => {
-                String::from("tab field \u{b7} enter save \u{b7} esc cancel")
-            }
-        },
-        fg: Some(t.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
-
     cmds
 }
 
@@ -438,6 +418,28 @@ fn default_theme() -> ThemeData {
     }
 }
 
+fn hints(screen: &Screen) -> Vec<(String, String)> {
+    match screen {
+        Screen::List => vec![
+            ("up/down".into(), "navigate".into()),
+            ("n".into(), "new".into()),
+            ("d".into(), "delete".into()),
+            ("enter".into(), "view".into()),
+            ("esc".into(), "back".into()),
+        ],
+        Screen::Detail => vec![
+            ("e".into(), "edit".into()),
+            ("d".into(), "delete".into()),
+            ("esc/q".into(), "back".into()),
+        ],
+        Screen::Edit => vec![
+            ("tab".into(), "field".into()),
+            ("enter".into(), "save".into()),
+            ("esc".into(), "back".into()),
+        ],
+    }
+}
+
 fn palette_commands() -> serde_json::Value {
     serde_json::json!([("Snippets".to_string(), "Open Snippet Manager".to_string())])
 }
@@ -448,7 +450,7 @@ fn respond(app: &mut App, consumed: bool) {
     };
     let json = serde_json::json!({
         "commands": commands_val,
-        "hints": [],
+        "hints": hints(&app.screen),
         "palette_commands": palette_commands(),
         "request": null,
         "plugin_message": null,

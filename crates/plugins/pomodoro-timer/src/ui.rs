@@ -146,21 +146,6 @@ fn render_main(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         modifiers: 0,
     });
 
-    let hints = match &state.timer_state {
-        TimerState::Idle | TimerState::Paused => "space start  s skip  r reset  , settings",
-        TimerState::Running => "space pause  s skip  r reset  , settings",
-        TimerState::Finished => "space next  s skip",
-    };
-    cmds.push(RenderCmd::Text {
-        x: 2,
-        y: h.saturating_sub(1),
-        text: hints.into(),
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
-
     cmds
 }
 
@@ -282,16 +267,6 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
             modifiers: 0,
         });
     }
-
-    cmds.push(RenderCmd::Text {
-        x: 1,
-        y: h.saturating_sub(1),
-        text: " esc close | \u{2191}\u{2193} navigate | \u{2190}\u{2192} adjust ".into(),
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
 
     cmds
 }

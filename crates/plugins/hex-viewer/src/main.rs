@@ -250,13 +250,18 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         bold: false,
         modifiers: 0,
     });
-    cmds.push(RenderCmd::Text {
-        x: 2, y: h.saturating_sub(1),
-        text: "\u{2191}\u{2193} scroll \u{b7} pgUp/pgDn \u{b7} i input \u{b7} c copy hex \u{b7} home/end \u{b7} esc".into(),
-        fg: Some(t.text_muted), bg: None, bold: false, modifiers: 0,
-    });
-
     cmds
+}
+
+fn hints() -> Vec<(String, String)> {
+    vec![
+        ("↑↓".into(), "scroll".into()),
+        ("pgUp/pgDn".into(), "page".into()),
+        ("i".into(), "input".into()),
+        ("c".into(), "copy hex".into()),
+        ("home/end".into(), "jump".into()),
+        ("esc".into(), "back".into()),
+    ]
 }
 
 fn copy_to_clipboard(text: &str) -> Result<(), String> {
@@ -292,7 +297,7 @@ fn respond(app: &mut App, consumed: bool) {
         return;
     };
     let json = serde_json::json!({
-        "commands": commands_val, "hints": [], "palette_commands": palette_commands(),
+        "commands": commands_val, "hints": hints(), "palette_commands": palette_commands(),
         "request": null, "plugin_message": null, "consumed": consumed,
     });
     if let Ok(json_str) = serde_json::to_string(&json) {

@@ -800,7 +800,18 @@ fn render_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, 
         theme.text_muted,
         false,
     );
-    push_text(cmds, 2, h.saturating_sub(1), "a add · r scan local · R refresh registries (network) · / search · c copy package · o copy URL · d remove first", theme.text_muted, false);
+}
+fn hints() -> Vec<(String, String)> {
+    vec![
+        ("a".into(), "add".into()),
+        ("r".into(), "scan local".into()),
+        ("R".into(), "refresh registries".into()),
+        ("/".into(), "search".into()),
+        ("c".into(), "copy package".into()),
+        ("o".into(), "copy URL".into()),
+        ("d".into(), "remove first".into()),
+        ("esc".into(), "back".into()),
+    ]
 }
 fn render_add(
     app: &App,
@@ -920,7 +931,7 @@ fn respond(app: &mut App, consumed: bool) {
         return;
     };
     let request = app.pending_request.take();
-    let json = serde_json::json!({ "commands": commands_val, "hints": [], "palette_commands": palette_commands(), "request": request, "plugin_message": null, "consumed": consumed });
+    let json = serde_json::json!({ "commands": commands_val, "hints": hints(), "palette_commands": palette_commands(), "request": request, "plugin_message": null, "consumed": consumed });
     if let Ok(json_str) = serde_json::to_string(&json) {
         let mut out = std::io::stdout().lock();
         let _ = writeln!(out, "{json_str}");

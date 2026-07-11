@@ -316,16 +316,6 @@ fn render_hourly(state: &WeatherState, theme: &ThemeData, w: u16, h: u16) -> Vec
         }
     }
 
-    cmds.push(RenderCmd::Text {
-        x: 1,
-        y: h.saturating_sub(1),
-        text: " ← → scroll | esc back ".into(),
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
-
     cmds
 }
 
@@ -506,16 +496,6 @@ fn render_location_search(
             });
         }
     }
-
-    cmds.push(RenderCmd::Text {
-        x: 1,
-        y: h.saturating_sub(1),
-        text: " enter select | esc cancel | ↑↓ navigate ".into(),
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
 
     cmds
 }

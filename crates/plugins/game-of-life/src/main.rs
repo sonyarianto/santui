@@ -237,19 +237,18 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         bold: false,
         modifiers: 0,
     });
-    cmds.push(RenderCmd::Text {
-        x: 2,
-        y: h.saturating_sub(1),
-        text:
-            "space play/pause \u{b7} s step \u{b7} c clear \u{b7} r random \u{b7} + step \u{b7} esc"
-                .into(),
-        fg: Some(t.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
-
     cmds
+}
+
+fn hints() -> Vec<(String, String)> {
+    vec![
+        ("space".into(), "play/pause".into()),
+        ("s".into(), "step".into()),
+        ("c".into(), "clear".into()),
+        ("r".into(), "random".into()),
+        ("+".into(), "step".into()),
+        ("esc".into(), "back".into()),
+    ]
 }
 
 impl App {
@@ -291,7 +290,7 @@ fn respond(app: &mut App, consumed: bool) {
         return;
     };
     let json = serde_json::json!({
-        "commands": commands_val, "hints": [], "palette_commands": palette_commands(),
+        "commands": commands_val, "hints": hints(), "palette_commands": palette_commands(),
         "request": null, "plugin_message": null, "consumed": consumed,
     });
     if let Ok(json_str) = serde_json::to_string(&json) {

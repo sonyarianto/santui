@@ -127,21 +127,6 @@ fn render_overview(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> Vec
         modifiers: 0,
     });
 
-    let hints = if state.filter_mode {
-        " typing: filter habits | esc clear | \u{2191}\u{2193} navigate ".into()
-    } else {
-        " n new | \u{2191}\u{2193} navigate | enter detail | d delete | / filter ".into()
-    };
-    cmds.push(RenderCmd::Text {
-        x: 1,
-        y: h.saturating_sub(1),
-        text: hints,
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
-
     cmds
 }
 
@@ -338,16 +323,6 @@ fn render_detail(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
         }
     }
 
-    cmds.push(RenderCmd::Text {
-        x: 1,
-        y: h.saturating_sub(1),
-        text: " \u{25c9} completed  \u{25cc} missed  \u{2190}\u{2191}\u{2193}\u{2192} move  enter toggle  e edit  n note  esc back ".into(),
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-    modifiers: 0,
-    });
-
     cmds
 }
 
@@ -447,16 +422,6 @@ fn render_editor(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
         modifiers: 0,
     });
 
-    cmds.push(RenderCmd::Text {
-        x: 1,
-        y: h.saturating_sub(1),
-        text: " \u{2191}\u{2193} navigate  enter edit  esc save & back ".into(),
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
-
     cmds
 }
 
@@ -550,20 +515,6 @@ fn render_day_detail(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> V
             modifiers: 0,
         });
     }
-
-    cmds.push(RenderCmd::Text {
-        x: 1,
-        y: h.saturating_sub(1),
-        text: if state.note_editing {
-            " editing note | esc cancel | enter save ".into()
-        } else {
-            " \u{2191}\u{2193} navigate  enter toggle  n add note  esc back ".into()
-        },
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
 
     cmds
 }
