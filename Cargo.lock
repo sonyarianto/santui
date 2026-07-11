@@ -2858,7 +2858,7 @@ dependencies = [
 
 [[package]]
 name = "santui"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -2872,7 +2872,7 @@ dependencies = [
 
 [[package]]
 name = "santui-ai-chat"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -2883,7 +2883,7 @@ dependencies = [
 
 [[package]]
 name = "santui-api-monitor"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -2893,7 +2893,7 @@ dependencies = [
 
 [[package]]
 name = "santui-archive-browser"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -2904,7 +2904,7 @@ dependencies = [
 
 [[package]]
 name = "santui-ascii-table"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -2915,7 +2915,7 @@ dependencies = [
 
 [[package]]
 name = "santui-auth"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "dirs",
  "santui-core",
@@ -2927,7 +2927,7 @@ dependencies = [
 
 [[package]]
 name = "santui-base64-encoder"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "base64",
@@ -2939,7 +2939,7 @@ dependencies = [
 
 [[package]]
 name = "santui-batch-renamer"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -2949,7 +2949,7 @@ dependencies = [
 
 [[package]]
 name = "santui-bmi-calculator"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -2960,7 +2960,7 @@ dependencies = [
 
 [[package]]
 name = "santui-bookmark-launcher"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "chrono",
@@ -2973,7 +2973,7 @@ dependencies = [
 
 [[package]]
 name = "santui-breathing-exercise"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -2983,7 +2983,7 @@ dependencies = [
 
 [[package]]
 name = "santui-budget-tracker"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -2993,7 +2993,7 @@ dependencies = [
 
 [[package]]
 name = "santui-calendar-agenda"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "chrono",
@@ -3006,7 +3006,7 @@ dependencies = [
 
 [[package]]
 name = "santui-case-converter"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "convert_case 0.11.0",
@@ -3018,7 +3018,7 @@ dependencies = [
 
 [[package]]
 name = "santui-cheatsheet-browser"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -3029,7 +3029,7 @@ dependencies = [
 
 [[package]]
 name = "santui-chess"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3040,7 +3040,7 @@ dependencies = [
 
 [[package]]
 name = "santui-clipboard-history"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -3052,7 +3052,7 @@ dependencies = [
 
 [[package]]
 name = "santui-cloud-cost"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3062,7 +3062,7 @@ dependencies = [
 
 [[package]]
 name = "santui-code-runner"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3072,7 +3072,7 @@ dependencies = [
 
 [[package]]
 name = "santui-color-picker"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -3083,7 +3083,7 @@ dependencies = [
 
 [[package]]
 name = "santui-connection-string-builder"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3093,7 +3093,7 @@ dependencies = [
 
 [[package]]
 name = "santui-core"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "crossterm",
  "ctrlc",
@@ -3109,7 +3109,7 @@ dependencies = [
 
 [[package]]
 name = "santui-cron-expression-helper"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "chrono",
@@ -3122,7 +3122,7 @@ dependencies = [
 
 [[package]]
 name = "santui-csv-viewer"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "csv",
@@ -3134,7 +3134,7 @@ dependencies = [
 
 [[package]]
 name = "santui-currency-converter"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3146,7 +3146,7 @@ dependencies = [
 
 [[package]]
 name = "santui-dashboard"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3156,7 +3156,7 @@ dependencies = [
 
 [[package]]
 name = "santui-db"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "rusqlite",
  "serde",
@@ -3165,7 +3165,7 @@ dependencies = [
 
 [[package]]
 name = "santui-dictionary-thesaurus"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -3179,7 +3179,7 @@ dependencies = [
 
 [[package]]
 name = "santui-disk-usage"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3189,7 +3189,7 @@ dependencies = [
 
 [[package]]
 name = "santui-dns-globe"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3199,7 +3199,7 @@ dependencies = [
 
 [[package]]
 name = "santui-dns-lookup"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -3210,7 +3210,7 @@ dependencies = [
 
 [[package]]
 name = "santui-docker-dashboard"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3220,7 +3220,7 @@ dependencies = [
 
 [[package]]
 name = "santui-email-client"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3230,7 +3230,7 @@ dependencies = [
 
 [[package]]
 name = "santui-env-manager"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3240,7 +3240,7 @@ dependencies = [
 
 [[package]]
 name = "santui-erd-sketch"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3250,7 +3250,7 @@ dependencies = [
 
 [[package]]
 name = "santui-expense-splitter"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -3261,7 +3261,7 @@ dependencies = [
 
 [[package]]
 name = "santui-file-diff"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3271,7 +3271,7 @@ dependencies = [
 
 [[package]]
 name = "santui-file-explorer"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3281,7 +3281,7 @@ dependencies = [
 
 [[package]]
 name = "santui-flashcards"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -3293,7 +3293,7 @@ dependencies = [
 
 [[package]]
 name = "santui-fortune-cookie"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -3305,7 +3305,7 @@ dependencies = [
 
 [[package]]
 name = "santui-game-of-life"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3316,7 +3316,7 @@ dependencies = [
 
 [[package]]
 name = "santui-git-repository-dashboard"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -3328,7 +3328,7 @@ dependencies = [
 
 [[package]]
 name = "santui-github-browser"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3339,7 +3339,7 @@ dependencies = [
 
 [[package]]
 name = "santui-gpg-encryptor"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3349,7 +3349,7 @@ dependencies = [
 
 [[package]]
 name = "santui-graphql-playground"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3360,7 +3360,7 @@ dependencies = [
 
 [[package]]
 name = "santui-habit-tracker"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "chrono",
  "env_logger",
@@ -3372,7 +3372,7 @@ dependencies = [
 
 [[package]]
 name = "santui-hacker-news-reader"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3384,7 +3384,7 @@ dependencies = [
 
 [[package]]
 name = "santui-hash-calculator"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -3399,7 +3399,7 @@ dependencies = [
 
 [[package]]
 name = "santui-hex-viewer"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -3410,7 +3410,7 @@ dependencies = [
 
 [[package]]
 name = "santui-http-client"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3422,7 +3422,7 @@ dependencies = [
 
 [[package]]
 name = "santui-ipc"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "crossterm",
  "log",
@@ -3434,7 +3434,7 @@ dependencies = [
 
 [[package]]
 name = "santui-iptv-player"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "libc",
@@ -3448,7 +3448,7 @@ dependencies = [
 
 [[package]]
 name = "santui-irc-client"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3458,7 +3458,7 @@ dependencies = [
 
 [[package]]
 name = "santui-json-yaml-formatter"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -3470,7 +3470,7 @@ dependencies = [
 
 [[package]]
 name = "santui-jwt-inspector"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "base64",
@@ -3482,7 +3482,7 @@ dependencies = [
 
 [[package]]
 name = "santui-k8s-viewer"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3492,7 +3492,7 @@ dependencies = [
 
 [[package]]
 name = "santui-kanban-board"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3502,7 +3502,7 @@ dependencies = [
 
 [[package]]
 name = "santui-loan-calculator"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -3513,7 +3513,7 @@ dependencies = [
 
 [[package]]
 name = "santui-log-viewer"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3523,7 +3523,7 @@ dependencies = [
 
 [[package]]
 name = "santui-lorem-generator"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -3535,7 +3535,7 @@ dependencies = [
 
 [[package]]
 name = "santui-markdown-previewer"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -3547,7 +3547,7 @@ dependencies = [
 
 [[package]]
 name = "santui-math-evaluator"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -3559,7 +3559,7 @@ dependencies = [
 
 [[package]]
 name = "santui-mermaid-renderer"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3569,7 +3569,7 @@ dependencies = [
 
 [[package]]
 name = "santui-mongo-explorer"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3579,7 +3579,7 @@ dependencies = [
 
 [[package]]
 name = "santui-music-player-controller"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3589,7 +3589,7 @@ dependencies = [
 
 [[package]]
 name = "santui-music-preview"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3601,7 +3601,7 @@ dependencies = [
 
 [[package]]
 name = "santui-mysql-browser"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3611,7 +3611,7 @@ dependencies = [
 
 [[package]]
 name = "santui-network-bandwidth-monitor"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3621,7 +3621,7 @@ dependencies = [
 
 [[package]]
 name = "santui-package-manager"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3631,7 +3631,7 @@ dependencies = [
 
 [[package]]
 name = "santui-package-version-monitor"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "chrono",
@@ -3646,7 +3646,7 @@ dependencies = [
 
 [[package]]
 name = "santui-password-generator"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -3658,7 +3658,7 @@ dependencies = [
 
 [[package]]
 name = "santui-path-editor"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3668,7 +3668,7 @@ dependencies = [
 
 [[package]]
 name = "santui-periodic-table"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -3679,7 +3679,7 @@ dependencies = [
 
 [[package]]
 name = "santui-ping-traceroute"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3689,7 +3689,7 @@ dependencies = [
 
 [[package]]
 name = "santui-pipe-runner"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3699,7 +3699,7 @@ dependencies = [
 
 [[package]]
 name = "santui-pixel-art"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3709,7 +3709,7 @@ dependencies = [
 
 [[package]]
 name = "santui-pomodoro-timer"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3721,7 +3721,7 @@ dependencies = [
 
 [[package]]
 name = "santui-port-scanner"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3731,7 +3731,7 @@ dependencies = [
 
 [[package]]
 name = "santui-postgres-console"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3741,7 +3741,7 @@ dependencies = [
 
 [[package]]
 name = "santui-process-manager"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3751,7 +3751,7 @@ dependencies = [
 
 [[package]]
 name = "santui-qr-generator"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -3763,7 +3763,7 @@ dependencies = [
 
 [[package]]
 name = "santui-quick-notes"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3774,7 +3774,7 @@ dependencies = [
 
 [[package]]
 name = "santui-quran-reader"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "libloading",
@@ -3787,7 +3787,7 @@ dependencies = [
 
 [[package]]
 name = "santui-radio-stream-player"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "libc",
@@ -3802,7 +3802,7 @@ dependencies = [
 
 [[package]]
 name = "santui-radio-stream-scraper"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3814,7 +3814,7 @@ dependencies = [
 
 [[package]]
 name = "santui-recipe-manager"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3824,7 +3824,7 @@ dependencies = [
 
 [[package]]
 name = "santui-redis-explorer"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3835,7 +3835,7 @@ dependencies = [
 
 [[package]]
 name = "santui-regex-tester"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -3848,7 +3848,7 @@ dependencies = [
 
 [[package]]
 name = "santui-registry"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "santui-core",
  "serde",
@@ -3860,7 +3860,7 @@ dependencies = [
 
 [[package]]
 name = "santui-registry-plugin"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3872,7 +3872,7 @@ dependencies = [
 
 [[package]]
 name = "santui-rss-reader"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "feed-rs",
@@ -3885,7 +3885,7 @@ dependencies = [
 
 [[package]]
 name = "santui-sdk-playground"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3895,7 +3895,7 @@ dependencies = [
 
 [[package]]
 name = "santui-server"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "axum",
  "clap",
@@ -3913,7 +3913,7 @@ dependencies = [
 
 [[package]]
 name = "santui-service-manager"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3923,7 +3923,7 @@ dependencies = [
 
 [[package]]
 name = "santui-slug-generator"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -3934,7 +3934,7 @@ dependencies = [
 
 [[package]]
 name = "santui-snake-game"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3945,7 +3945,7 @@ dependencies = [
 
 [[package]]
 name = "santui-snippet-manager"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3955,7 +3955,7 @@ dependencies = [
 
 [[package]]
 name = "santui-speed-test"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3966,7 +3966,7 @@ dependencies = [
 
 [[package]]
 name = "santui-sprint-retro"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3976,7 +3976,7 @@ dependencies = [
 
 [[package]]
 name = "santui-sql-playground"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3986,7 +3986,7 @@ dependencies = [
 
 [[package]]
 name = "santui-sqlite-browser"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -3997,7 +3997,7 @@ dependencies = [
 
 [[package]]
 name = "santui-ssh-manager"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -4008,7 +4008,7 @@ dependencies = [
 
 [[package]]
 name = "santui-ssl-checker"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -4019,7 +4019,7 @@ dependencies = [
 
 [[package]]
 name = "santui-stock-ticker"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -4030,7 +4030,7 @@ dependencies = [
 
 [[package]]
 name = "santui-subnet-calculator"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -4041,7 +4041,7 @@ dependencies = [
 
 [[package]]
 name = "santui-system-monitor"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -4053,7 +4053,7 @@ dependencies = [
 
 [[package]]
 name = "santui-terminal-pet"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -4064,7 +4064,7 @@ dependencies = [
 
 [[package]]
 name = "santui-text-toolkit"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -4076,7 +4076,7 @@ dependencies = [
 
 [[package]]
 name = "santui-time-tracker"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -4086,7 +4086,7 @@ dependencies = [
 
 [[package]]
 name = "santui-todo-task-manager"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "chrono",
@@ -4099,7 +4099,7 @@ dependencies = [
 
 [[package]]
 name = "santui-totp-viewer"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -4111,7 +4111,7 @@ dependencies = [
 
 [[package]]
 name = "santui-typing-test"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -4122,7 +4122,7 @@ dependencies = [
 
 [[package]]
 name = "santui-unit-converter"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -4133,7 +4133,7 @@ dependencies = [
 
 [[package]]
 name = "santui-uuid-generator"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "arboard",
  "env_logger",
@@ -4145,7 +4145,7 @@ dependencies = [
 
 [[package]]
 name = "santui-wake-on-lan"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -4155,7 +4155,7 @@ dependencies = [
 
 [[package]]
 name = "santui-water-tracker"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -4165,7 +4165,7 @@ dependencies = [
 
 [[package]]
 name = "santui-weather"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -4177,7 +4177,7 @@ dependencies = [
 
 [[package]]
 name = "santui-webhook-tester"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -4187,7 +4187,7 @@ dependencies = [
 
 [[package]]
 name = "santui-websocket-client"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -4198,7 +4198,7 @@ dependencies = [
 
 [[package]]
 name = "santui-whois-lookup"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "env_logger",
  "log",
@@ -4208,7 +4208,7 @@ dependencies = [
 
 [[package]]
 name = "santui-world-clock"
-version = "0.2.28"
+version = "0.2.29"
 dependencies = [
  "chrono",
  "chrono-tz",

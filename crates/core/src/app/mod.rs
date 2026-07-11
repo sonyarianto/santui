@@ -489,9 +489,6 @@ impl Santui {
                 }
             }
 
-            self.starfield.tick = self.starfield.tick.wrapping_add(1);
-            self.starfield.update();
-
             terminal.draw(|f| self.render(f))?;
 
             if crossterm::event::poll(self.config_manager.tick_rate())? {
@@ -603,7 +600,7 @@ impl Santui {
                 f,
                 chunks[0],
                 &self.app_state.theme,
-                self.starfield.tick,
+                self.starfield.tick(),
                 &self.app_state.builtin_items,
                 self.plugin_manager.dynamic_items(),
                 cmds,
@@ -615,7 +612,7 @@ impl Santui {
                 f,
                 chunks[0],
                 &self.app_state.theme,
-                self.starfield.tick,
+                self.starfield.tick(),
             );
         }
     }

@@ -45,7 +45,7 @@ impl super::Santui {
                     .min(area.height.saturating_sub(1) as u32) as u16;
             let cycle = self
                 .starfield
-                .tick
+                .tick()
                 .wrapping_mul(star.freq as u64)
                 .wrapping_add(star.phase as u64)
                 % 480;

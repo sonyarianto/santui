@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 /// Starfield background animation, extracted from the monolithic Santui struct.
 pub(super) struct Star {
     pub(super) x: u16,
@@ -9,7 +11,7 @@ pub(super) struct Star {
 }
 
 pub(crate) struct Starfield {
-    pub(super) tick: u64,
+    started_at: Instant,
     pub(super) stars: Vec<Star>,
 }
 
@@ -59,9 +61,14 @@ impl Default for Starfield {
 impl Starfield {
     pub(super) fn new() -> Self {
         Starfield {
-            tick: 0,
+            started_at: Instant::now(),
             stars: generate_stars(star_count(80, 24)),
         }
+    }
+
+    /// Time-based tick (1 tick = 100ms of wall-clock time).
+    pub(super) fn tick(&self) -> u64 {
+        self.started_at.elapsed().as_millis() as u64 / 100
     }
 
     /// Rebuild the starfield for a new terminal size.
@@ -70,9 +77,5 @@ impl Starfield {
         if count != self.stars.len() {
             self.stars = generate_stars(count);
         }
-    }
-
-    pub(super) fn update(&mut self) {
-        self.tick = self.tick.wrapping_add(1);
     }
 }
