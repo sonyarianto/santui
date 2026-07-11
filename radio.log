@@ -1,0 +1,4 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.17s
+     Running `target/debug/santui`
+[INFO ] [santui] Filesystem watcher active on ""
+[INFO ] [santui] Filesystem watcher active on "/home/sony/.santui"

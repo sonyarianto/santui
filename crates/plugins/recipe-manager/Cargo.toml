@@ -1,6 +1,6 @@
 [package]
 name = "santui-recipe-manager"
-version = "0.2.28"
+version = "0.2.29"
 edition = "2021"
 
 [[bin]]
@@ -8,7 +8,7 @@ name = "santui-recipe-manager"
 path = "src/main.rs"
 
 [dependencies]
-santui-ipc = { path = "../../ipc", version = "0.2.28", default-features = false }
+santui-ipc = { path = "../../ipc", version = "0.2.29", default-features = false }
 serde_json = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
