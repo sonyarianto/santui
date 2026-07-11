@@ -226,15 +226,17 @@ impl App {
         let w = self.area.w.max(40);
         let h = self.area.h.max(10);
 
-        cmds.push(json!({
-            "type": "Rect", "x": 0, "y": 0, "w": w, "h": h, "bg": t.background
-        }));
-        cmds.push(json!({
-            "type": "Border", "x": 0, "y": 0, "w": w, "h": h, "fg": t.border,
-            "borders": BORDER_ALL, "bg": t.background_panel,
-            "title": " MPD Controller ",
-            "title_fg": t.text, "title_dash_fg": t.border
-        }));
+        cmds.push(json!({"Rect": {
+        "x": 0, "y": 0, "w": w, "h": h, "bg": t.background
+
+        }}));
+        cmds.push(json!({"Border": {
+        "x": 0, "y": 0, "w": w, "h": h, "fg": t.border,
+                    "borders": BORDER_ALL, "bg": t.background_panel,
+                    "title": " MPD Controller ",
+                    "title_fg": t.text, "title_dash_fg": t.border
+
+        }}));
 
         if self.view_playlist {
             let list_y = 2u16;
@@ -248,11 +250,12 @@ impl App {
             {
                 let y = list_y + (i as u16).saturating_sub(self.playlist_scroll);
                 let is_current = i == self.playlist_pos;
-                cmds.push(json!({
-                    "type": "Text", "x": 2, "y": y, "text": song.clone(),
-                    "fg": if is_current { t.accent } else { t.text },
-                    "bg": null, "bold": is_current, "modifiers": 0
-                }));
+                cmds.push(json!({"Text": {
+                "x": 2, "y": y, "text": song.clone(),
+                                    "fg": if is_current { t.accent } else { t.text },
+                                    "bg": null, "bold": is_current, "modifiers": 0
+
+                }}));
             }
         } else {
             let status_icon = match self.state.as_str() {
@@ -261,14 +264,16 @@ impl App {
                 _ => "\u{25A0}",
             };
 
-            cmds.push(json!({
-                "type": "Text", "x": 2, "y": 2, "text": format!("{} {}", status_icon, self.song),
-                "fg": t.accent, "bg": null, "bold": true, "modifiers": 0
-            }));
-            cmds.push(json!({
-                "type": "Text", "x": 2, "y": 3, "text": self.artist.clone(),
-                "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
-            }));
+            cmds.push(json!({"Text": {
+            "x": 2, "y": 2, "text": format!("{} {}", status_icon, self.song),
+                            "fg": t.accent, "bg": null, "bold": true, "modifiers": 0
+
+            }}));
+            cmds.push(json!({"Text": {
+            "x": 2, "y": 3, "text": self.artist.clone(),
+                            "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
+
+            }}));
 
             let gauge_w = w.saturating_sub(4);
             if self.duration > 0 {
@@ -277,12 +282,13 @@ impl App {
                 let elapsed_str = format!("{}:{:02}", self.elapsed / 60, self.elapsed % 60);
                 let dur_str = format!("{}:{:02}", self.duration / 60, self.duration % 60);
                 let label = format!("{} / {}", elapsed_str, dur_str);
-                cmds.push(json!({
-                    "type": "Gauge", "x": 2, "y": 5, "w": gauge_w, "h": 1,
-                    "ratio": ratio, "label": label,
-                    "style": { "fg": t.text_muted, "bg": t.background },
-                    "gauge_style": { "fg": t.accent, "bg": t.background }
-                }));
+                cmds.push(json!({"Gauge": {
+                "x": 2, "y": 5, "w": gauge_w, "h": 1,
+                                    "ratio": ratio, "label": label,
+                                    "style": { "fg": t.text_muted, "bg": t.background },
+                                    "gauge_style": { "fg": t.accent, "bg": t.background }
+
+                }}));
             }
 
             let list_y = 7u16;
@@ -290,26 +296,29 @@ impl App {
             for (i, song) in self.playlist.iter().enumerate().take(list_h) {
                 let y = list_y + i as u16;
                 let is_current = i == self.playlist_pos;
-                cmds.push(json!({
-                    "type": "Text", "x": 2, "y": y, "text": song.clone(),
-                    "fg": if is_current { t.accent } else { t.text_muted },
-                    "bg": null, "bold": is_current, "modifiers": 0
-                }));
+                cmds.push(json!({"Text": {
+                "x": 2, "y": y, "text": song.clone(),
+                                    "fg": if is_current { t.accent } else { t.text_muted },
+                                    "bg": null, "bold": is_current, "modifiers": 0
+
+                }}));
             }
         }
 
-        cmds.push(json!({
-            "type": "Text", "x": 2, "y": h.saturating_sub(1),
-            "text": self.status_msg.clone(),
-            "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
-        }));
+        cmds.push(json!({"Text": {
+        "x": 2, "y": h.saturating_sub(1),
+                    "text": self.status_msg.clone(),
+                    "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
+
+        }}));
 
         if !self.view_playlist {
-            cmds.push(json!({
-                "type": "Text", "x": 2, "y": h,
+            cmds.push(json!({"Text": {
+"x": 2, "y": h,
                 "text": String::from("space play/pause  \u{b7} n next  \u{b7} p prev  \u{b7} r reconnect  \u{b7} l playlist  \u{b7} esc"),
                 "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
-            }));
+
+}}));
         }
 
         self.cached_commands = cmds.clone();

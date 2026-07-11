@@ -225,10 +225,11 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Value {
-    json!([
-        {"key": "esc", "hint": "close"},
-        {"key": "enter", "hint": "run command"},
-    ])
+    json!([["Plugins", "Pipe Runner"]])
+}
+
+fn key_hints() -> Value {
+    json!([["esc", "close"], ["enter", "run command"],])
 }
 
 fn respond(app: &mut App, consumed: bool) {
@@ -236,7 +237,7 @@ fn respond(app: &mut App, consumed: bool) {
         return;
     };
     let json = json!({
-        "commands": commands_val, "hints": [], "palette_commands": palette_commands(),
+        "commands": commands_val, "hints": key_hints(), "palette_commands": palette_commands(),
         "request": null, "plugin_message": null, "consumed": consumed,
     });
     let mut out = std::io::stdout().lock();

@@ -244,26 +244,30 @@ impl App {
         let w = self.area.w.max(40);
         let h = self.area.h.max(10);
 
-        cmds.push(json!({
-            "type": "Rect", "x": 0, "y": 0, "w": w, "h": h, "bg": t.background
-        }));
-        cmds.push(json!({
-            "type": "Border", "x": 0, "y": 0, "w": w, "h": h, "fg": t.border,
-            "borders": BORDER_ALL, "bg": t.background_panel,
-            "title": " Recipe Manager ",
-            "title_fg": t.text, "title_dash_fg": t.border
-        }));
+        cmds.push(json!({"Rect": {
+        "x": 0, "y": 0, "w": w, "h": h, "bg": t.background
+
+        }}));
+        cmds.push(json!({"Border": {
+        "x": 0, "y": 0, "w": w, "h": h, "fg": t.border,
+                    "borders": BORDER_ALL, "bg": t.background_panel,
+                    "title": " Recipe Manager ",
+                    "title_fg": t.text, "title_dash_fg": t.border
+
+        }}));
 
         if self.input_mode && self.input_field == 3 {
-            cmds.push(json!({
-                "type": "Text", "x": 2, "y": 2, "text": String::from("Search: "),
-                "fg": t.text, "bg": null, "bold": false, "modifiers": 0
-            }));
+            cmds.push(json!({"Text": {
+            "x": 2, "y": 2, "text": String::from("Search: "),
+                            "fg": t.text, "bg": null, "bold": false, "modifiers": 0
+
+            }}));
             let cursor_text = format!("{}_", self.input_buffer);
-            cmds.push(json!({
-                "type": "Text", "x": 10, "y": 2, "text": cursor_text,
-                "fg": t.accent, "bg": null, "bold": false, "modifiers": 0
-            }));
+            cmds.push(json!({"Text": {
+            "x": 10, "y": 2, "text": cursor_text,
+                            "fg": t.accent, "bg": null, "bold": false, "modifiers": 0
+
+            }}));
             let filtered = self.filtered_recipes();
             for (i, idx) in filtered.iter().enumerate() {
                 let y = 4 + i as u16;
@@ -271,12 +275,13 @@ impl App {
                     break;
                 }
                 let is_sel = i == self.selected;
-                cmds.push(json!({
-                    "type": "Text", "x": 2, "y": y, "text": self.recipes[*idx].title.clone(),
-                    "fg": if is_sel { t.highlight } else { t.text },
-                    "bg": if is_sel { Some(t.background_overlay) } else { None },
-                    "bold": is_sel, "modifiers": 0
-                }));
+                cmds.push(json!({"Text": {
+                "x": 2, "y": y, "text": self.recipes[*idx].title.clone(),
+                                    "fg": if is_sel { t.highlight } else { t.text },
+                                    "bg": if is_sel { Some(t.background_overlay) } else { None },
+                                    "bold": is_sel, "modifiers": 0
+
+                }}));
             }
         } else if self.input_mode {
             let label = match self.input_field {
@@ -284,44 +289,49 @@ impl App {
                 1 => String::from("Ingredient: "),
                 _ => String::from("Instruction: "),
             };
-            cmds.push(json!({
-                "type": "Text", "x": 2, "y": 2, "text": label,
-                "fg": t.text, "bg": null, "bold": false, "modifiers": 0
-            }));
+            cmds.push(json!({"Text": {
+            "x": 2, "y": 2, "text": label,
+                            "fg": t.text, "bg": null, "bold": false, "modifiers": 0
+
+            }}));
             let cursor_text = format!("{}_", self.input_buffer);
-            cmds.push(json!({
-                "type": "Text", "x": 2, "y": 3, "text": cursor_text,
-                "fg": t.accent, "bg": null, "bold": false, "modifiers": 0
-            }));
+            cmds.push(json!({"Text": {
+            "x": 2, "y": 3, "text": cursor_text,
+                            "fg": t.accent, "bg": null, "bold": false, "modifiers": 0
+
+            }}));
             let mut list_y = 5u16;
             for ing in &self.input_ingredients {
                 if list_y >= h.saturating_sub(2) {
                     break;
                 }
-                cmds.push(json!({
-                    "type": "Text", "x": 4, "y": list_y, "text": format!("- {}", ing),
-                    "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
-                }));
+                cmds.push(json!({"Text": {
+                "x": 4, "y": list_y, "text": format!("- {}", ing),
+                                    "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
+
+                }}));
                 list_y += 1;
             }
             for instr in &self.input_instructions {
                 if list_y >= h.saturating_sub(2) {
                     break;
                 }
-                cmds.push(json!({
-                    "type": "Text", "x": 4, "y": list_y, "text": format!("{}. {}", list_y - 5 - self.input_ingredients.len() as u16 + 1, instr),
+                cmds.push(json!({"Text": {
+"x": 4, "y": list_y, "text": format!("{}. {}", list_y - 5 - self.input_ingredients.len() as u16 + 1, instr),
                     "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
-                }));
+
+}}));
                 list_y += 1;
             }
         } else if self.view_detail {
             let filtered = self.filtered_recipes();
             if let Some(&idx) = filtered.get(self.selected) {
                 let recipe = &self.recipes[idx];
-                cmds.push(json!({
-                    "type": "Text", "x": 2, "y": 2, "text": recipe.title.clone(),
-                    "fg": t.accent, "bg": null, "bold": true, "modifiers": 0
-                }));
+                cmds.push(json!({"Text": {
+                "x": 2, "y": 2, "text": recipe.title.clone(),
+                                    "fg": t.accent, "bg": null, "bold": true, "modifiers": 0
+
+                }}));
                 let content_y = 4u16;
                 let max_y = h.saturating_sub(3);
                 let mut row = content_y;
@@ -340,10 +350,11 @@ impl App {
                     if row >= max_y {
                         break;
                     }
-                    cmds.push(json!({
-                        "type": "Text", "x": 2, "y": row, "text": line.clone(),
-                        "fg": t.text, "bg": null, "bold": false, "modifiers": 0
-                    }));
+                    cmds.push(json!({"Text": {
+                    "x": 2, "y": row, "text": line.clone(),
+                                            "fg": t.text, "bg": null, "bold": false, "modifiers": 0
+
+                    }}));
                     row += 1;
                 }
             }
@@ -359,27 +370,30 @@ impl App {
             {
                 let y = list_y + (i as u16).saturating_sub(self.scroll);
                 let is_sel = i == self.selected;
-                cmds.push(json!({
-                    "type": "Text", "x": 2, "y": y, "text": self.recipes[idx].title.clone(),
-                    "fg": if is_sel { t.highlight } else { t.text },
-                    "bg": if is_sel { Some(t.background_overlay) } else { None },
-                    "bold": is_sel, "modifiers": 0
-                }));
+                cmds.push(json!({"Text": {
+                "x": 2, "y": y, "text": self.recipes[idx].title.clone(),
+                                    "fg": if is_sel { t.highlight } else { t.text },
+                                    "bg": if is_sel { Some(t.background_overlay) } else { None },
+                                    "bold": is_sel, "modifiers": 0
+
+                }}));
             }
         }
 
-        cmds.push(json!({
-            "type": "Text", "x": 2, "y": h.saturating_sub(1),
-            "text": self.status.clone(),
-            "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
-        }));
+        cmds.push(json!({"Text": {
+        "x": 2, "y": h.saturating_sub(1),
+                    "text": self.status.clone(),
+                    "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
+
+        }}));
 
         if !self.input_mode && !self.view_detail {
-            cmds.push(json!({
-                "type": "Text", "x": 2, "y": h,
+            cmds.push(json!({"Text": {
+"x": 2, "y": h,
                 "text": String::from("a add  \u{b7} / search  \u{b7} enter view  \u{b7} \u{2191}\u{2193} nav  \u{b7} esc"),
                 "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
-            }));
+
+}}));
         }
 
         self.cached_commands = cmds.clone();

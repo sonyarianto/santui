@@ -280,52 +280,60 @@ impl App {
         let w = self.area.w.max(40);
         let h = self.area.h.max(10);
 
-        cmds.push(json!({
-            "type": "Rect", "x": 0, "y": 0, "w": w, "h": h, "bg": t.background
-        }));
-        cmds.push(json!({
-            "type": "Border", "x": 0, "y": 0, "w": w, "h": h, "fg": t.border,
-            "borders": BORDER_ALL, "bg": t.background_panel,
-            "title": " Package Manager ",
-            "title_fg": t.text, "title_dash_fg": t.border
-        }));
+        cmds.push(json!({"Rect": {
+        "x": 0, "y": 0, "w": w, "h": h, "bg": t.background
 
-        cmds.push(json!({
-            "type": "Text", "x": 2, "y": 1, "text": format!("PM: {}", self.pm_name),
-            "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
-        }));
+        }}));
+        cmds.push(json!({"Border": {
+        "x": 0, "y": 0, "w": w, "h": h, "fg": t.border,
+                    "borders": BORDER_ALL, "bg": t.background_panel,
+                    "title": " Package Manager ",
+                    "title_fg": t.text, "title_dash_fg": t.border
+
+        }}));
+
+        cmds.push(json!({"Text": {
+        "x": 2, "y": 1, "text": format!("PM: {}", self.pm_name),
+                    "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
+
+        }}));
 
         if self.input_mode {
-            cmds.push(json!({
-                "type": "Text", "x": 2, "y": 2, "text": String::from("Search: "),
-                "fg": t.text, "bg": null, "bold": false, "modifiers": 0
-            }));
+            cmds.push(json!({"Text": {
+            "x": 2, "y": 2, "text": String::from("Search: "),
+                            "fg": t.text, "bg": null, "bold": false, "modifiers": 0
+
+            }}));
             let cursor_text = format!("{}_", self.input_buffer);
-            cmds.push(json!({
-                "type": "Text", "x": 10, "y": 2, "text": cursor_text,
-                "fg": t.accent, "bg": null, "bold": false, "modifiers": 0
-            }));
+            cmds.push(json!({"Text": {
+            "x": 10, "y": 2, "text": cursor_text,
+                            "fg": t.accent, "bg": null, "bold": false, "modifiers": 0
+
+            }}));
         } else if self.view_detail {
             if let Some(pkg) = self.results.get(self.selected) {
-                cmds.push(json!({
-                    "type": "Text", "x": 2, "y": 2, "text": pkg.name.clone(),
-                    "fg": t.accent, "bg": null, "bold": true, "modifiers": 0
-                }));
-                cmds.push(json!({
-                    "type": "Text", "x": 2, "y": 3,
-                    "text": format!("Version: {}", pkg.version),
-                    "fg": t.text, "bg": null, "bold": false, "modifiers": 0
-                }));
+                cmds.push(json!({"Text": {
+                "x": 2, "y": 2, "text": pkg.name.clone(),
+                                    "fg": t.accent, "bg": null, "bold": true, "modifiers": 0
+
+                }}));
+                cmds.push(json!({"Text": {
+                "x": 2, "y": 3,
+                                    "text": format!("Version: {}", pkg.version),
+                                    "fg": t.text, "bg": null, "bold": false, "modifiers": 0
+
+                }}));
                 let desc_lines = word_wrap(&pkg.description, (w.saturating_sub(4)) as usize);
                 for (i, line) in desc_lines.iter().enumerate() {
                     let y = 5 + i as u16;
                     if y >= h.saturating_sub(2) {
                         break;
                     }
-                    cmds.push(json!({
-                        "type": "Text", "x": 2, "y": y, "text": line.clone(),
-                        "fg": t.text, "bg": null, "bold": false, "modifiers": 0
-                    }));
+                    cmds.push(json!({"Text": {
+                    "x": 2, "y": y, "text": line.clone(),
+                                            "fg": t.text, "bg": null, "bold": false, "modifiers": 0
+
+                    }}));
                 }
             }
         } else {
@@ -340,27 +348,30 @@ impl App {
             {
                 let y = list_y + (i as u16).saturating_sub(self.scroll);
                 let is_sel = i == self.selected;
-                cmds.push(json!({
-                    "type": "Text", "x": 2, "y": y, "text": pkg.name.clone(),
-                    "fg": if is_sel { t.highlight } else { t.text },
-                    "bg": if is_sel { Some(t.background_overlay) } else { None },
-                    "bold": is_sel, "modifiers": 0
-                }));
+                cmds.push(json!({"Text": {
+                "x": 2, "y": y, "text": pkg.name.clone(),
+                                    "fg": if is_sel { t.highlight } else { t.text },
+                                    "bg": if is_sel { Some(t.background_overlay) } else { None },
+                                    "bold": is_sel, "modifiers": 0
+
+                }}));
             }
         }
 
-        cmds.push(json!({
-            "type": "Text", "x": 2, "y": h.saturating_sub(1),
-            "text": self.status.clone(),
-            "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
-        }));
+        cmds.push(json!({"Text": {
+        "x": 2, "y": h.saturating_sub(1),
+                    "text": self.status.clone(),
+                    "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
+
+        }}));
 
         if !self.input_mode && !self.view_detail {
-            cmds.push(json!({
-                "type": "Text", "x": 2, "y": h,
+            cmds.push(json!({"Text": {
+"x": 2, "y": h,
                 "text": String::from("/ search  \u{b7} enter detail  \u{b7} \u{2191}\u{2193} nav  \u{b7} esc"),
                 "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
-            }));
+
+}}));
         }
 
         self.cached_commands = cmds.clone();

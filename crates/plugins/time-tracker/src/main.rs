@@ -176,27 +176,31 @@ impl App {
         let w = self.area.w.max(40);
         let h = self.area.h.max(10);
 
-        cmds.push(json!({
-            "type": "Rect", "x": 0, "y": 0, "w": w, "h": h, "bg": t.background
-        }));
-        cmds.push(json!({
-            "type": "Border", "x": 0, "y": 0, "w": w, "h": h, "fg": t.border,
-            "borders": BORDER_ALL, "bg": t.background_panel,
-            "title": " Time Tracker ",
-            "title_fg": t.text, "title_dash_fg": t.border
-        }));
+        cmds.push(json!({"Rect": {
+        "x": 0, "y": 0, "w": w, "h": h, "bg": t.background
+
+        }}));
+        cmds.push(json!({"Border": {
+        "x": 0, "y": 0, "w": w, "h": h, "fg": t.border,
+                    "borders": BORDER_ALL, "bg": t.background_panel,
+                    "title": " Time Tracker ",
+                    "title_fg": t.text, "title_dash_fg": t.border
+
+        }}));
 
         if self.input_mode {
             let prompt = "Name: ";
-            cmds.push(json!({
-                "type": "Text", "x": 2, "y": 2, "text": prompt,
-                "fg": t.text, "bg": null, "bold": false, "modifiers": 0
-            }));
+            cmds.push(json!({"Text": {
+            "x": 2, "y": 2, "text": prompt,
+                            "fg": t.text, "bg": null, "bold": false, "modifiers": 0
+
+            }}));
             let cursor_text = format!("{}_", self.input_buffer);
-            cmds.push(json!({
-                "type": "Text", "x": 2, "y": 3, "text": cursor_text,
-                "fg": t.accent, "bg": null, "bold": false, "modifiers": 0
-            }));
+            cmds.push(json!({"Text": {
+            "x": 2, "y": 3, "text": cursor_text,
+                            "fg": t.accent, "bg": null, "bold": false, "modifiers": 0
+
+            }}));
         } else {
             let mut total_secs_all: u64 = 0;
             let list_y = 2u16;
@@ -232,33 +236,37 @@ impl App {
                 let marker = if entry.running { ">" } else { " " };
                 let prefix = if is_selected { ">" } else { " " };
                 let line = format!("{}{} {} [{}]", prefix, marker, entry.name, time_str);
-                cmds.push(json!({
-                    "type": "Text", "x": 2, "y": y, "text": line,
+                cmds.push(json!({"Text": {
+"x": 2, "y": y, "text": line,
                     "fg": if is_selected { t.highlight } else { t.text },
                     "bg": if is_selected { Some(t.background_overlay) } else { None },
                     "bold": is_selected, "modifiers": 0
-                }));
+
+}}));
             }
 
-            cmds.push(json!({
-                "type": "Text", "x": 2, "y": h.saturating_sub(2),
-                "text": format!("Total: {}", format_secs(total_secs_all)),
-                "fg": t.accent, "bg": null, "bold": true, "modifiers": 0
-            }));
+            cmds.push(json!({"Text": {
+            "x": 2, "y": h.saturating_sub(2),
+                            "text": format!("Total: {}", format_secs(total_secs_all)),
+                            "fg": t.accent, "bg": null, "bold": true, "modifiers": 0
+
+            }}));
         }
 
-        cmds.push(json!({
-            "type": "Text", "x": 2, "y": h.saturating_sub(1),
-            "text": self.status.clone(),
-            "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
-        }));
+        cmds.push(json!({"Text": {
+        "x": 2, "y": h.saturating_sub(1),
+                    "text": self.status.clone(),
+                    "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
+
+        }}));
 
         if !self.input_mode {
-            cmds.push(json!({
-                "type": "Text", "x": 2, "y": h,
+            cmds.push(json!({"Text": {
+"x": 2, "y": h,
                 "text": String::from("a add  \u{b7} space toggle  \u{b7} r reset  \u{b7} d delete  \u{b7} \u{2191}\u{2193} nav  \u{b7} esc"),
                 "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
-            }));
+
+}}));
         }
 
         self.cached_commands = cmds.clone();

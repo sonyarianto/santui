@@ -132,8 +132,8 @@ impl App {
             .iter()
             .map(|m| {
                 json!({
-                    String::from("role"): m.role.clone(),
-                    String::from("content"): m.content.clone(),
+                    "role": m.role.clone(),
+                    "content": m.content.clone(),
                 })
             })
             .collect();
@@ -146,28 +146,24 @@ impl App {
                     .build(),
             );
             let body = json!({
-                String::from("model"): model,
-                String::from("messages"): msgs,
-                String::from("max_tokens"): 4096,
+                "model": model,
+                "messages": msgs,
+                "max_tokens": 4096,
             });
             let result = match agent
                 .post(&api_url)
-                .header(String::from("Authorization"), format!("Bearer {api_key}"))
-                .header(
-                    String::from("Content-Type"),
-                    String::from("application/json"),
-                )
+                .header("Authorization", format!("Bearer {api_key}"))
+                .header("Content-Type", "application/json")
                 .send_json(&body)
             {
                 Ok(mut resp) => {
                     let body_str = resp.body_mut().read_to_string().unwrap_or_default();
                     match serde_json::from_str::<Value>(&body_str) {
                         Ok(v) => {
-                            let content = v[String::from("choices")][0][String::from("message")]
-                                [String::from("content")]
-                            .as_str()
-                            .unwrap_or("No response")
-                            .to_string();
+                            let content = v["choices"][0]["message"]["content"]
+                                .as_str()
+                                .unwrap_or("No response")
+                                .to_string();
                             Ok(content)
                         }
                         Err(e) => Err(format!("Parse error: {e}")),
@@ -230,41 +226,28 @@ fn render_ui(app: &App) -> Vec<Value> {
     let h = app.area.h.max(14);
     let mut cmds: Vec<Value> = Vec::new();
 
-    cmds.push(json!({
-        String::from("type"): String::from("Rect"),
-        String::from("x"): 0, String::from("y"): 0,
-        String::from("w"): w, String::from("h"): h,
-        String::from("bg"): t.background,
-    }));
-    cmds.push(json!({
-        String::from("type"): String::from("Border"),
-        String::from("x"): 0, String::from("y"): 0,
-        String::from("w"): w, String::from("h"): h,
-        String::from("fg"): t.border,
-        String::from("borders"): BORDER_ALL,
-        String::from("bg"): t.background_panel,
-        String::from("title"): String::from(" AI Chat "),
-        String::from("title_fg"): t.text,
-        String::from("title_dash_fg"): t.border,
-    }));
+    cmds.push(json!({"Rect": {
+        "x": 0, "y": 0, "w": w, "h": h, "bg": t.background,
+    }}));
+    cmds.push(json!({"Border": {
+        "x": 0, "y": 0, "w": w, "h": h,
+        "fg": t.border, "borders": BORDER_ALL,
+        "bg": t.background_panel,
+        "title": " AI Chat ", "title_fg": t.text, "title_dash_fg": t.border,
+        "border_type": null,
+    }}));
 
     if app.api_key.is_empty() {
-        cmds.push(json!({
-            String::from("type"): String::from("Text"),
-            String::from("x"): 2, String::from("y"): 4,
-            String::from("text"): String::from("OPENAI_API_KEY not set"),
-            String::from("fg"): t.error,
-            String::from("bold"): true,
-            String::from("modifiers"): 0,
-        }));
-        cmds.push(json!({
-            String::from("type"): String::from("Text"),
-            String::from("x"): 2, String::from("y"): 5,
-            String::from("text"): String::from("Set the environment variable and restart santui"),
-            String::from("fg"): t.text_muted,
-            String::from("bold"): false,
-            String::from("modifiers"): 0,
-        }));
+        cmds.push(json!({"Text": {
+            "x": 2, "y": 4,
+            "text": "OPENAI_API_KEY not set",
+            "fg": t.error, "bg": null, "bold": true, "modifiers": 0,
+        }}));
+        cmds.push(json!({"Text": {
+            "x": 2, "y": 5,
+            "text": "Set the environment variable and restart santui",
+            "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0,
+        }}));
         return cmds;
     }
 
@@ -285,52 +268,40 @@ fn render_ui(app: &App) -> Vec<Value> {
         } else {
             t.accent
         };
-        cmds.push(json!({
-            String::from("type"): String::from("Text"),
-            String::from("x"): 2, String::from("y"): line_y,
-            String::from("text"): format!("{prefix}{}", msg.content),
-            String::from("fg"): fg,
-            String::from("bold"): false,
-            String::from("modifiers"): 0,
-        }));
+        cmds.push(json!({"Text": {
+            "x": 2, "y": line_y,
+            "text": format!("{prefix}{}", msg.content),
+            "fg": fg, "bg": null, "bold": false, "modifiers": 0,
+        }}));
     }
 
     let input_y = h.saturating_sub(3);
-    cmds.push(json!({
-        String::from("type"): String::from("Border"),
-        String::from("x"): 1, String::from("y"): input_y,
-        String::from("w"): w.saturating_sub(2), String::from("h"): 3,
-        String::from("fg"): t.border,
-        String::from("borders"): BORDER_ALL,
-        String::from("bg"): t.background,
-    }));
-    cmds.push(json!({
-        String::from("type"): String::from("Text"),
-        String::from("x"): 3, String::from("y"): input_y + 1,
-        String::from("text"): app.input_buffer.clone(),
-        String::from("fg"): t.text,
-        String::from("bold"): false,
-        String::from("modifiers"): 0,
-    }));
+    cmds.push(json!({"Border": {
+        "x": 1, "y": input_y,
+        "w": w.saturating_sub(2), "h": 3,
+        "fg": t.border, "borders": BORDER_ALL,
+        "bg": t.background,
+        "title": null, "title_fg": null, "title_dash_fg": null,
+        "border_type": null,
+    }}));
+    cmds.push(json!({"Text": {
+        "x": 3, "y": input_y + 1,
+        "text": app.input_buffer.clone(),
+        "fg": t.text, "bg": null, "bold": false, "modifiers": 0,
+    }}));
 
     let status_y = h.saturating_sub(1);
-    cmds.push(json!({
-        String::from("type"): String::from("Text"),
-        String::from("x"): 2, String::from("y"): status_y,
-        String::from("text"): app.status.clone(),
-        String::from("fg"): t.text_muted,
-        String::from("bold"): false,
-        String::from("modifiers"): 0,
-    }));
+    cmds.push(json!({"Text": {
+        "x": 2, "y": status_y,
+        "text": app.status.clone(),
+        "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0,
+    }}));
 
-    cmds.push(json!({
-        String::from("type"): String::from("Text"),
-        String::from("x"): 2, String::from("y"): status_y - 1,
-        String::from("text"): String::from("Enter send  ·  esc cancel  ·  ↑↓ scroll"),
-        String::from("fg"): t.text_muted,
-        String::from("bold"): false,
-        String::from("modifiers"): 0,
-    }));
+    cmds.push(json!({"Text": {
+        "x": 2, "y": status_y - 1,
+        "text": "Enter send  ·  esc cancel  ·  ↑↓ scroll",
+        "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0,
+    }}));
 
     cmds
 }
@@ -359,12 +330,12 @@ fn palette_commands() -> Value {
 fn respond(app: &mut App, consumed: bool) {
     let commands_val = serde_json::to_value(app.render()).unwrap_or(Value::Null);
     let resp = json!({
-        String::from("commands"): commands_val,
-        String::from("hints"): [],
-        String::from("palette_commands"): palette_commands(),
-        String::from("request"): null,
-        String::from("plugin_message"): null,
-        String::from("consumed"): consumed,
+        "commands": commands_val,
+        "hints": [],
+        "palette_commands": palette_commands(),
+        "request": null,
+        "plugin_message": null,
+        "consumed": consumed,
     });
     if let Ok(json_str) = serde_json::to_string(&resp) {
         let mut out = std::io::stdout().lock();

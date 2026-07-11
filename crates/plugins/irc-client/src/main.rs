@@ -394,10 +394,14 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Value {
+    json!([["Plugins", "Irc Client"]])
+}
+
+fn key_hints() -> Value {
     json!([
-        {"key": "ctrl+up/down", "hint": "switch channel"},
-        {"key": "esc", "hint": "close"},
-        {"key": "enter", "hint": "send message"},
+        ["ctrl+up/down", "switch channel"],
+        ["esc", "close"],
+        ["enter", "send message"],
     ])
 }
 
@@ -406,7 +410,7 @@ fn respond(app: &mut App, consumed: bool) {
         return;
     };
     let json = json!({
-        "commands": commands_val, "hints": [], "palette_commands": palette_commands(),
+        "commands": commands_val, "hints": key_hints(), "palette_commands": palette_commands(),
         "request": null, "plugin_message": null, "consumed": consumed,
     });
     let mut out = std::io::stdout().lock();

@@ -287,13 +287,17 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Value {
+    json!([["Plugins", "Kanban Board"]])
+}
+
+fn key_hints() -> Value {
     json!([
-        {"key": "esc", "hint": "close"},
-        {"key": "a", "hint": "add card"},
-        {"key": "d", "hint": "delete card"},
-        {"key": "m", "hint": "move card"},
-        {"key": "c", "hint": "add column"},
-        {"key": "e", "hint": "edit card"},
+        ["esc", "close"],
+        ["a", "add card"],
+        ["d", "delete card"],
+        ["m", "move card"],
+        ["c", "add column"],
+        ["e", "edit card"],
     ])
 }
 
@@ -302,7 +306,7 @@ fn respond(app: &mut App, consumed: bool) {
         return;
     };
     let json = json!({
-        "commands": commands_val, "hints": [], "palette_commands": palette_commands(),
+        "commands": commands_val, "hints": key_hints(), "palette_commands": palette_commands(),
         "request": null, "plugin_message": null, "consumed": consumed,
     });
     let mut out = std::io::stdout().lock();

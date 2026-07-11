@@ -472,10 +472,14 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Value {
+    json!([["Plugins", "Mysql Browser"]])
+}
+
+fn key_hints() -> Value {
     json!([
-        {"key": "tab", "hint": "switch mode"},
-        {"key": "esc", "hint": "close"},
-        {"key": "enter", "hint": "execute query"},
+        ["tab", "switch mode"],
+        ["esc", "close"],
+        ["enter", "execute query"],
     ])
 }
 
@@ -484,7 +488,7 @@ fn respond(app: &mut App, consumed: bool) {
         return;
     };
     let json = json!({
-        "commands": commands_val, "hints": [], "palette_commands": palette_commands(),
+        "commands": commands_val, "hints": key_hints(), "palette_commands": palette_commands(),
         "request": null, "plugin_message": null, "consumed": consumed,
     });
     let mut out = std::io::stdout().lock();

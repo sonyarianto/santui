@@ -455,11 +455,16 @@ impl IpcPluginHost {
                         line.clear();
                         match reader.read_line(&mut line) {
                             Ok(0) | Err(_) => break,
-                            Ok(_) => {
-                                if let Ok(msg) = serde_json::from_str::<PluginMsg>(&line) {
+                            Ok(_) => match serde_json::from_str::<PluginMsg>(&line) {
+                                Ok(msg) => {
                                     let _ = tx.send(msg);
                                 }
-                            }
+                                Err(e) => {
+                                    log::error!(
+                                        "[santui] failed to parse plugin response: {e}: {line}"
+                                    );
+                                }
+                            },
                         }
                     }
                 });

@@ -271,10 +271,14 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Value {
+    json!([["Plugins", "Port Scanner"]])
+}
+
+fn key_hints() -> Value {
     json!([
-        {"key": "esc", "hint": "close"},
-        {"key": "tab", "hint": "switch field"},
-        {"key": "s", "hint": "start scan"},
+        ["esc", "close"],
+        ["tab", "switch field"],
+        ["s", "start scan"],
     ])
 }
 
@@ -283,7 +287,7 @@ fn respond(app: &mut App, consumed: bool) {
         return;
     };
     let json = json!({
-        "commands": commands_val, "hints": [], "palette_commands": palette_commands(),
+        "commands": commands_val, "hints": key_hints(), "palette_commands": palette_commands(),
         "request": null, "plugin_message": null, "consumed": consumed,
     });
     let mut out = std::io::stdout().lock();

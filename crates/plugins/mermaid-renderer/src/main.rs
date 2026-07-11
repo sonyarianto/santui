@@ -289,40 +289,45 @@ impl App {
         let w = self.area.w.max(48);
         let h = self.area.h.max(12);
 
-        cmds.push(json!({
-            "type": "Rect", "x": 0, "y": 0, "w": w, "h": h, "bg": t.background
-        }));
-        cmds.push(json!({
-            "type": "Border", "x": 0, "y": 0, "w": w, "h": h, "fg": t.border,
-            "borders": BORDER_ALL, "bg": t.background_panel,
-            "title": " Mermaid Renderer ",
-            "title_fg": t.text, "title_dash_fg": t.border
-        }));
+        cmds.push(json!({"Rect": {
+        "x": 0, "y": 0, "w": w, "h": h, "bg": t.background
+
+        }}));
+        cmds.push(json!({"Border": {
+        "x": 0, "y": 0, "w": w, "h": h, "fg": t.border,
+                    "borders": BORDER_ALL, "bg": t.background_panel,
+                    "title": " Mermaid Renderer ",
+                    "title_fg": t.text, "title_dash_fg": t.border
+
+        }}));
 
         let input_h = 4u16;
         let output_y = input_h + 2;
         let output_h = h.saturating_sub(output_y + 2);
 
-        cmds.push(json!({
-            "type": "Text", "x": 2, "y": 1,
-            "text": String::from("Source (e to edit, r to render):"),
-            "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
-        }));
+        cmds.push(json!({"Text": {
+        "x": 2, "y": 1,
+                    "text": String::from("Source (e to edit, r to render):"),
+                    "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
+
+        }}));
 
         for (i, line) in self.source.lines().enumerate().take(input_h as usize) {
-            cmds.push(json!({
-                "type": "Text", "x": 2, "y": 2 + i as u16,
-                "text": format!(" {}", line),
-                "fg": t.accent, "bg": null, "bold": false, "modifiers": 0
-            }));
+            cmds.push(json!({"Text": {
+            "x": 2, "y": 2 + i as u16,
+                            "text": format!(" {}", line),
+                            "fg": t.accent, "bg": null, "bold": false, "modifiers": 0
+
+            }}));
         }
 
-        cmds.push(json!({
-            "type": "Border", "x": 1, "y": output_y, "w": w.saturating_sub(2),
-            "h": output_h, "fg": t.border, "borders": BORDER_ALL,
-            "bg": t.background, "title": Some(String::from(" Output ")),
-            "title_fg": Some(t.text), "title_dash_fg": Some(t.border)
-        }));
+        cmds.push(json!({"Border": {
+        "x": 1, "y": output_y, "w": w.saturating_sub(2),
+                    "h": output_h, "fg": t.border, "borders": BORDER_ALL,
+                    "bg": t.background, "title": Some(String::from(" Output ")),
+                    "title_fg": Some(t.text), "title_dash_fg": Some(t.border)
+
+        }}));
 
         let inner_x = 3u16;
         let inner_y = output_y + 1;
@@ -339,25 +344,28 @@ impl App {
             .skip(self.output_scroll as usize)
             .take(inner_h as usize)
         {
-            cmds.push(json!({
-                "type": "Text", "x": inner_x,
-                "y": inner_y + i as u16 - self.output_scroll,
-                "text": line.clone(),
-                "fg": t.text, "bg": null, "bold": false, "modifiers": 0
-            }));
+            cmds.push(json!({"Text": {
+            "x": inner_x,
+                            "y": inner_y + i as u16 - self.output_scroll,
+                            "text": line.clone(),
+                            "fg": t.text, "bg": null, "bold": false, "modifiers": 0
+
+            }}));
         }
 
-        cmds.push(json!({
-            "type": "Text", "x": 2, "y": h.saturating_sub(1),
-            "text": self.status.clone(),
-            "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
-        }));
+        cmds.push(json!({"Text": {
+        "x": 2, "y": h.saturating_sub(1),
+                    "text": self.status.clone(),
+                    "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
 
-        cmds.push(json!({
-            "type": "Text", "x": 2, "y": h,
+        }}));
+
+        cmds.push(json!({"Text": {
+"x": 2, "y": h,
             "text": String::from("e edit  \u{b7} r render  \u{b7} c clear  \u{b7} \u{2191}\u{2193} scroll  \u{b7} esc"),
             "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
-        }));
+
+}}));
 
         self.cached_commands = cmds.clone();
         self.dirty = false;
