@@ -243,23 +243,24 @@ impl App {
                 while let Ok(cmd) = rx_cmd.try_recv() {
                     match cmd {
                         MpvCmd::LoadUrl(url) => {
+                            // Drain ALL stale events from previous operations
+                            // before loading this URL.  Events left in the
+                            // queue from a cancelled prior LoadUrl (e.g. a
+                            // retry that was superseded by a user action) can
+                            // carry FILE_LOADED / END_FILE etc. for the wrong
+                            // URL and would corrupt the state machine.
+                            while let Some(stale) = mpv.wait_event_raw(0.0) {
+                                if stale.event_id == player::MPV_EVENT_SHUTDOWN {
+                                    break;
+                                }
+                            }
                             if let Err(e) = mpv.load_url(&url) {
                                 log::warn!("mpv load_url failed: {e}");
                             }
-                            // Drain stale EndFile events from the file that
-                            // was replaced by this LoadUrl (they carry no
-                            // identifier and would trigger spurious retries
-                            // in the main-thread state machine).
-                            // Do NOT drain FILE_LOADED / PLAYBACK_RESTART
-                            // etc. — those may be from the *new* stream if
-                            // mpv processed the loadfile synchronously.
-                            while let Some(stale) = mpv.wait_event_raw(0.0) {
-                                match stale.event_id {
-                                    player::MPV_EVENT_END_FILE => continue,
-                                    player::MPV_EVENT_SHUTDOWN => break,
-                                    _ => break,
-                                }
-                            }
+                            // Do NOT drain after load_url — any event
+                            // generated now belongs to this URL (END_FILE
+                            // for the replaced stream, FILE_LOADED for the
+                            // new stream).
                         }
                         MpvCmd::Stop => {
                             if let Err(e) = mpv.stop() {
