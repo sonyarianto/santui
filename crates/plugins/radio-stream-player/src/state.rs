@@ -4,6 +4,18 @@ use crate::stations::Station;
 use std::collections::HashSet;
 use std::time::Instant;
 
+pub const MAX_RETRIES: u32 = 10;
+
+pub fn retry_delay_ms(attempt: u32) -> u64 {
+    match attempt {
+        0 => 1000,
+        1 => 2000,
+        2 => 4000,
+        3 => 8000,
+        _ => 16000,
+    }
+}
+
 pub fn wrap_text(text: &str, max_w: usize) -> Vec<String> {
     let mut result = Vec::new();
     for line in text.lines() {
@@ -49,6 +61,7 @@ pub enum PlayState {
     Stopped,
     Connecting(String),
     Playing(String),
+    Retrying(String),
     Error(String),
 }
 
@@ -64,6 +77,9 @@ pub struct RadioState {
     pub track_info: Option<TrackInfo>,
     pub volume: i64,
     pub start_time: Instant,
+    pub retry_deadline: Option<Instant>,
+    pub retry_attempt: u32,
+    pub retry_mode: bool,
     pub scan_msg: Option<String>,
     pub scan_ticks: u64,
     pub query: String,
@@ -95,6 +111,9 @@ impl RadioState {
             track_info: None,
             volume: 100,
             start_time: Instant::now(),
+            retry_deadline: None,
+            retry_attempt: 0,
+            retry_mode: false,
             scan_msg: None,
             scan_ticks: 0,
             query: String::new(),
@@ -245,7 +264,7 @@ impl RadioState {
                     }
                 }
             }
-            PlayState::Error(_) => 2,
+            PlayState::Retrying(_) | PlayState::Error(_) => 2,
         };
         content_rows + 2
     }
@@ -263,6 +282,11 @@ impl RadioState {
         self.lyrics_loading = false;
         self.lyrics_scroll = 0;
         self.lyrics_source.clear();
+    }
+
+    pub fn clear_retry(&mut self) {
+        self.retry_attempt = 0;
+        self.retry_deadline = None;
     }
 
     /// Inner width of the lyrics panel for text wrapping purposes.

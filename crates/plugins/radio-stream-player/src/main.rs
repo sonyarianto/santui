@@ -277,20 +277,7 @@ impl App {
                 }
                 IpcKey::Enter => {
                     self.state.search_mode = false;
-                    if let Some(station) = self.state.selected_station().cloned() {
-                        let idx = self.state.current_filtered_index();
-                        self.state.current_station = Some(idx);
-                        self.state.play_state =
-                            state::PlayState::Connecting(station.name.to_string());
-                        self.state.last_metadata.clear();
-                        self.state.song_title.clear();
-                        self.state.track_info = None;
-                        self.state.clear_lyrics();
-                        self.state.lyrics_loading = true;
-                        self.state.start_time = std::time::Instant::now();
-                        send_cmd(self, MpvCmd::Stop);
-                        send_cmd(self, MpvCmd::LoadUrl(station.url));
-                    }
+                    self.play_selected_station();
                     return true;
                 }
                 IpcKey::Backspace => {
@@ -420,6 +407,7 @@ impl App {
                 self.state.song_title.clear();
                 self.state.track_info = None;
                 self.state.clear_lyrics();
+                self.state.clear_retry();
                 true
             }
             IpcKey::Char('+') | IpcKey::Char('=') => {
@@ -490,6 +478,8 @@ impl App {
         if let Some(station) = self.state.selected_station().cloned() {
             let idx = self.state.current_filtered_index();
             self.state.current_station = Some(idx);
+            self.state.clear_retry();
+            self.state.retry_mode = false;
             self.state.play_state = state::PlayState::Connecting(station.name.to_string());
             self.state.last_metadata.clear();
             self.state.song_title.clear();
@@ -656,28 +646,90 @@ impl App {
                         self.state.lyrics_loading = false;
                         self.state.lyrics_scroll = 0;
                     }
-                    MpvMsg::EndFile(reason) => {
-                        if matches!(self.state.play_state, state::PlayState::Connecting(_)) {
-                            continue;
-                        }
-                        if reason == player::MPV_END_FILE_REASON_EOF {
-                            if let Some(idx) = self.state.current_station {
-                                let station = self.state.stations[idx].clone();
-                                send_cmd(self, MpvCmd::LoadUrl(station.url));
+                    MpvMsg::EndFile(reason) => match &self.state.play_state {
+                        state::PlayState::Playing(name) => match reason {
+                            player::MPV_END_FILE_REASON_EOF | player::MPV_END_FILE_REASON_ERROR => {
+                                if self.state.retry_attempt >= state::MAX_RETRIES {
+                                    self.state.play_state = state::PlayState::Error(format!(
+                                        "connection lost after {} attempts",
+                                        state::MAX_RETRIES
+                                    ));
+                                    self.state.retry_deadline = None;
+                                } else {
+                                    let delay_ms = state::retry_delay_ms(self.state.retry_attempt);
+                                    self.state.retry_deadline = Some(
+                                        std::time::Instant::now()
+                                            + std::time::Duration::from_millis(delay_ms),
+                                    );
+                                    self.state.play_state =
+                                        state::PlayState::Retrying(name.clone());
+                                    self.state.retry_attempt += 1;
+                                }
                             }
-                        } else if reason == player::MPV_END_FILE_REASON_ERROR {
-                            self.state.play_state =
-                                state::PlayState::Error("connection lost".into());
+                            _ => {}
+                        },
+                        state::PlayState::Connecting(name)
+                            if reason == player::MPV_END_FILE_REASON_ERROR
+                                && self.state.retry_mode =>
+                        {
+                            if self.state.retry_attempt >= state::MAX_RETRIES {
+                                self.state.play_state = state::PlayState::Error(format!(
+                                    "connection lost after {} attempts",
+                                    state::MAX_RETRIES
+                                ));
+                                self.state.retry_deadline = None;
+                            } else {
+                                let delay_ms = state::retry_delay_ms(self.state.retry_attempt);
+                                self.state.retry_deadline = Some(
+                                    std::time::Instant::now()
+                                        + std::time::Duration::from_millis(delay_ms),
+                                );
+                                self.state.play_state = state::PlayState::Retrying(name.clone());
+                                self.state.retry_attempt += 1;
+                            }
                         }
-                    }
+                        _ => {}
+                    },
                 }
             }
         }
         if let state::PlayState::Connecting(name) = &self.state.play_state {
             if self.state.start_time.elapsed().as_secs() >= 10 {
-                self.state.play_state =
-                    state::PlayState::Error(format!("timed out connecting to {name}"));
+                if self.state.retry_attempt >= state::MAX_RETRIES {
+                    self.state.play_state = state::PlayState::Error(format!(
+                        "timed out connecting to {name} after {} attempts",
+                        state::MAX_RETRIES
+                    ));
+                    self.state.retry_deadline = None;
+                } else {
+                    let delay_ms = state::retry_delay_ms(self.state.retry_attempt);
+                    self.state.retry_deadline = Some(
+                        std::time::Instant::now() + std::time::Duration::from_millis(delay_ms),
+                    );
+                    self.state.play_state = state::PlayState::Retrying(name.clone());
+                    self.state.retry_attempt += 1;
+                }
                 changed = true;
+            }
+        }
+        if let state::PlayState::Retrying(_) = &self.state.play_state {
+            if let Some(deadline) = self.state.retry_deadline {
+                if std::time::Instant::now() >= deadline {
+                    if let Some(idx) = self.state.current_station {
+                        let station = self.state.stations[idx].clone();
+                        self.state.play_state = state::PlayState::Connecting(station.name.clone());
+                        self.state.retry_mode = true;
+                        self.state.start_time = std::time::Instant::now();
+                        self.state.last_metadata.clear();
+                        self.state.song_title.clear();
+                        self.state.track_info = None;
+                        self.state.clear_lyrics();
+                        self.state.lyrics_loading = true;
+                        send_cmd(self, MpvCmd::Stop);
+                        send_cmd(self, MpvCmd::LoadUrl(station.url));
+                        changed = true;
+                    }
+                }
             }
         }
         self.state.tick_counter += 1;

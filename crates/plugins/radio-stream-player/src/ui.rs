@@ -550,6 +550,38 @@ pub fn render_ui(
                 }
             }
         }
+        PlayState::Retrying(station_name) => {
+            cmds.push(RenderCmd::Text {
+                x: 2,
+                y: np_y + 1,
+                text: ui::truncate(station_name, r_inner_w as usize),
+                fg: Some(theme.accent),
+                bg: None,
+                bold: true,
+                modifiers: 0,
+            });
+            let remaining = state
+                .retry_deadline
+                .map(|d| {
+                    d.saturating_duration_since(std::time::Instant::now())
+                        .as_secs()
+                })
+                .unwrap_or(0);
+            let msg = format!(
+                "Reconnecting in {remaining}s (attempt {}/{})",
+                state.retry_attempt,
+                crate::state::MAX_RETRIES,
+            );
+            ui::text_at(
+                &mut cmds,
+                2,
+                np_y + 2,
+                &msg,
+                theme.text_muted,
+                None,
+                r_inner_w,
+            );
+        }
         PlayState::Error(e) => {
             ui::text_at(
                 &mut cmds,
