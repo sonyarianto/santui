@@ -149,7 +149,7 @@ impl App {
         self.mode = Mode::Running;
         self.status = String::from("Running...");
 
-        let tmpfile = format!("/tmp/santui-code-runner-{}.{}", std::process::id(), &lang);
+        let tmpfile = format!("/tmp/santui-code-runner-{}.{}", std::process::id(), lang);
         if let Err(e) = std::fs::write(&tmpfile, &source) {
             self.output = format!("Error writing temp file: {e}");
             self.mode = Mode::Output;
