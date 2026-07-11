@@ -21,6 +21,7 @@ use santui_ipc::protocol::{
 };
 
 enum MpvMsg {
+    FileLoaded(String),
     Metadata(String),
     TrackInfo(u64, itunes::TrackInfo),
     Lyrics(u64, Option<lrclib::LyricsData>),
@@ -108,6 +109,46 @@ impl App {
         }
     }
 
+    fn apply_metadata(
+        state: &mut state::RadioState,
+        tx_msg: &Option<mpsc::Sender<MpvMsg>>,
+        title: String,
+    ) {
+        if title == state.last_metadata {
+            return;
+        }
+        state.last_metadata = title.clone();
+        state.song_title = title.clone();
+        state.track_info = None;
+        state.clear_lyrics();
+        state.lyrics_loading = true;
+        state.metadata_seq += 1;
+        let seq = state.metadata_seq;
+        let Some(ref tx) = tx_msg else {
+            return;
+        };
+        let tx = tx.clone();
+        let tx2 = tx.clone();
+        let title_for_itunes = title.clone();
+        thread::spawn(move || {
+            if let Ok(Some(info)) = itunes::lookup(&title_for_itunes) {
+                let _ = tx.send(MpvMsg::TrackInfo(seq, info));
+            }
+        });
+        thread::spawn(move || {
+            let (artist, track) = lrclib::split_title(&title);
+            let lyrics = lrclib::fetch(&track, artist.as_deref());
+            match lyrics {
+                Ok(data) => {
+                    let _ = tx2.send(MpvMsg::Lyrics(seq, data));
+                }
+                Err(_) => {
+                    let _ = tx2.send(MpvMsg::Lyrics(seq, None));
+                }
+            }
+        });
+    }
+
     fn handle_init(&mut self, theme: ThemeData, area: Area) {
         self.theme = theme;
         self.area = area;
@@ -158,7 +199,7 @@ impl App {
                             .flatten()
                             .or_else(|| mpv.media_title().ok().flatten())
                             .unwrap_or_default();
-                        let _ = tx_msg_mpv.send(MpvMsg::Metadata(title));
+                        let _ = tx_msg_mpv.send(MpvMsg::FileLoaded(title));
                     }
                     if id == player::MPV_EVENT_PLAYBACK_RESTART {
                         let title = mpv
@@ -167,7 +208,7 @@ impl App {
                             .flatten()
                             .or_else(|| mpv.media_title().ok().flatten())
                             .unwrap_or_default();
-                        let _ = tx_msg_mpv.send(MpvMsg::Metadata(title));
+                        let _ = tx_msg_mpv.send(MpvMsg::FileLoaded(title));
                     }
                     if id == player::MPV_EVENT_PROPERTY_CHANGE {
                         if ev.data.is_null() {
@@ -570,46 +611,33 @@ impl App {
 
     fn handle_tick(&mut self) {
         let mut changed = false;
+        let tx_msg = self.tx_msg.clone();
         if let Some(ref rx) = self.rx_msg {
             while let Ok(msg) = rx.try_recv() {
                 changed = true;
                 match msg {
-                    MpvMsg::Metadata(title) => {
+                    MpvMsg::FileLoaded(title) => {
                         if let state::PlayState::Connecting(name) = &self.state.play_state {
                             self.state.play_state = state::PlayState::Playing(name.clone());
                         }
-                        if title == self.state.last_metadata {
+                        Self::apply_metadata(&mut self.state, &tx_msg, title);
+                    }
+                    MpvMsg::Metadata(title) => {
+                        // PROPERTY_CHANGE events — only update title if already
+                        // Playing.  Do NOT transition Connecting → Playing;
+                        // that transition is reserved for FileLoaded (from
+                        // mpv's FILE_LOADED event), which unambiguously
+                        // signals the new stream has loaded.  Stale PROPERTY_CHANGE
+                        // events from the previous stream can arrive after we
+                        // start Connecting for a new station (the mpv thread
+                        // polls events before processing commands), and would
+                        // otherwise trigger a premature Playing state, causing
+                        // the subsequent EndFile from the old stream to
+                        // spuriously kick off retry logic.
+                        if !matches!(self.state.play_state, state::PlayState::Playing(_)) {
                             continue;
                         }
-                        self.state.last_metadata = title.clone();
-                        self.state.song_title = title.clone();
-                        self.state.track_info = None;
-                        self.state.clear_lyrics();
-                        self.state.lyrics_loading = true;
-                        self.state.metadata_seq += 1;
-                        let seq = self.state.metadata_seq;
-                        let Some(tx) = self.tx_msg.clone() else {
-                            continue;
-                        };
-                        let tx2 = tx.clone();
-                        let title_for_itunes = title.clone();
-                        thread::spawn(move || {
-                            if let Ok(Some(info)) = itunes::lookup(&title_for_itunes) {
-                                let _ = tx.send(MpvMsg::TrackInfo(seq, info));
-                            }
-                        });
-                        thread::spawn(move || {
-                            let (artist, track) = lrclib::split_title(&title);
-                            let lyrics = lrclib::fetch(&track, artist.as_deref());
-                            match lyrics {
-                                Ok(data) => {
-                                    let _ = tx2.send(MpvMsg::Lyrics(seq, data));
-                                }
-                                Err(_) => {
-                                    let _ = tx2.send(MpvMsg::Lyrics(seq, None));
-                                }
-                            }
-                        });
+                        Self::apply_metadata(&mut self.state, &tx_msg, title);
                     }
                     MpvMsg::TrackInfo(seq, info) => {
                         if seq != self.state.metadata_seq {
