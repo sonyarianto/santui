@@ -24,6 +24,10 @@ Dev mode (plugin registry + native deps):
   - Windows: `.\scripts\dev-setup.ps1 ; $env:SANTUI_DEV=1; cargo run -p santui`
   - macOS/Linux: `./scripts/dev-setup.sh && SANTUI_DEV=1 cargo run -p santui`
 
+Fast dev (skip rebuilding all plugins — only the host + registry):
+  - `./scripts/dev-setup.sh --no-build && SANTUI_DEV=1 cargo run -p santui`
+  - After adding/changing plugins, run without `--no-build` to rebuild everything.
+
 Watch: `cargo watch -x "run -p santui"`
 
 ## Workspace
