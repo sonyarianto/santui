@@ -520,7 +520,7 @@ fn parse_genres(html: &str) -> Vec<String> {
         };
         let genre = genre_text[..close_a].trim();
         if !genre.is_empty() {
-            genres.push(genre.to_string());
+            genres.push(unescape_html(genre));
         }
         pos = value_start + quote_end + after_close.find("</a>").unwrap_or(0) + 4;
     }
@@ -776,6 +776,12 @@ mod tests {
     fn test_parse_genres_empty_li_skipped() {
         let html = r#"<ul class="station__tags" role="list"><li><a href="/us/x/"> </a></li></ul>"#;
         assert!(parse_genres(html).is_empty());
+    }
+
+    #[test]
+    fn test_parse_genres_unescapes_entities() {
+        let html = r#"<ul class="station__tags" role="list"><li><a href="/us/x/">r&#39;n&#39;b</a></li></ul>"#;
+        assert_eq!(parse_genres(html), vec!["r'n'b"]);
     }
 
     #[test]
