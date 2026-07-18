@@ -555,7 +555,7 @@ fn cpu_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         bg: None,
         borders: BORDER_ALL,
         title: Some("CPU Detail".into()),
-        title_fg: Some(theme.text),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -643,7 +643,7 @@ fn mem_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         bg: None,
         borders: BORDER_ALL,
         title: Some("Memory Detail".into()),
-        title_fg: Some(theme.text),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -746,7 +746,7 @@ fn disk_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec
         bg: None,
         borders: BORDER_ALL,
         title: Some("Disk Detail".into()),
-        title_fg: Some(theme.text),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -829,7 +829,7 @@ fn net_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         bg: None,
         borders: BORDER_ALL,
         title: Some("Network Detail".into()),
-        title_fg: Some(theme.text),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -913,7 +913,7 @@ fn process_list_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Ve
         bg: None,
         borders: BORDER_ALL,
         title: Some(title),
-        title_fg: Some(theme.text),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });

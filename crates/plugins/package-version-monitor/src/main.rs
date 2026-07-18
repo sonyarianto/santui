@@ -672,7 +672,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         borders: BORDER_ALL,
         bg: Some(theme.background_panel),
         title: Some(" Package Version Monitor ".into()),
-        title_fg: Some(theme.text),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -769,7 +769,7 @@ fn render_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, 
         borders: BORDER_ALL,
         bg: None,
         title: Some(" Detail ".into()),
-        title_fg: Some(theme.text),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });

@@ -25,7 +25,7 @@ fn render_list(state: &NotesState, theme: &ThemeData, w: u16, h: u16) -> Vec<Ren
         borders: 15,
         bg: Some(theme.background_panel),
         title: Some(title),
-        title_fg: Some(theme.text),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -117,7 +117,7 @@ fn render_view(
         borders: 15,
         bg: Some(theme.background_panel),
         title: Some(format!(" {} ", note.title)),
-        title_fg: Some(theme.text),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -158,7 +158,7 @@ fn render_edit(
         borders: 15,
         bg: Some(theme.background_panel),
         title: Some(format!(" Editing: {} ", note.title)),
-        title_fg: Some(theme.text),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -203,7 +203,7 @@ fn render_new_title(state: &NotesState, theme: &ThemeData, w: u16, _h: u16) -> V
         borders: 15,
         bg: Some(theme.background_panel),
         title: Some(" New Note ".into()),
-        title_fg: Some(theme.text),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -254,7 +254,7 @@ fn render_rename(state: &NotesState, theme: &ThemeData, w: u16, _h: u16) -> Vec<
         borders: 15,
         bg: Some(theme.background_panel),
         title: Some(" Rename Note ".into()),
-        title_fg: Some(theme.text),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });

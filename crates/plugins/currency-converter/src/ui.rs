@@ -31,7 +31,7 @@ fn render_main(state: &CurrencyState, theme: &ThemeData, w: u16, _h: u16) -> Vec
         borders: 15,
         bg: Some(theme.background_panel),
         title: Some(" Currency Converter ".into()),
-        title_fg: Some(theme.text),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -278,7 +278,7 @@ fn render_browse(state: &CurrencyState, theme: &ThemeData, w: u16, h: u16) -> Ve
         borders: 15,
         bg: Some(theme.background_panel),
         title: Some(" Select Currency ".into()),
-        title_fg: Some(theme.text),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -355,7 +355,7 @@ fn render_favorites(state: &CurrencyState, theme: &ThemeData, w: u16, h: u16) ->
         borders: 15,
         bg: Some(theme.background_panel),
         title: Some(" Favorites ".into()),
-        title_fg: Some(theme.text),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });

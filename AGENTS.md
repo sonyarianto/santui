@@ -3,7 +3,7 @@
 ## Build & Test
 
 ```bash
-cargo build              # build all workspace crates (including server + plugin binaries)
+cargo build              # build all workspace crates (SLOW + heavy on disk — compiles all 110+ plugin binaries)
 cargo check              # fast compile check
 cargo clippy --workspace -- -D warnings  # lint
 cargo fmt --check        # formatting check
@@ -11,12 +11,12 @@ cargo fmt                # auto-format
 cargo test --workspace   # run tests (SLOW — compiles all 110+ plugin binaries)
 cargo test -p santui-core -p santui-ipc -p santui-registry -p santui-db -p santui-server -p santui-auth  # fast — only crates with tests
 
-When running tests, prefer the short list above over `--workspace` to avoid recompiling all 110+ plugin binaries.
+When running tests, prefer the short list above over `--workspace` to avoid recompiling all 110+ plugin binaries. Same applies to `cargo build` — prefer `cargo build -p santui` (or add specific -p flags) to save disk space.
 ```
 
 lefthook pre-commit runs `cargo fmt --check` + `cargo clippy` automatically. Install hooks: `lefthook install`.
 
-Run: `cargo build --workspace && cargo run -p santui` or `.\target\debug\santui.exe`
+Run: `cargo build -p santui && cargo run -p santui` or `.\target\debug\santui.exe`
 
 Server: `cargo run -p santui-server`
 

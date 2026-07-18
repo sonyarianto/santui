@@ -78,7 +78,11 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
             } else {
                 None
             },
-            title_fg: if is_selected { Some(theme.text) } else { None },
+            title_fg: if is_selected {
+                Some(theme.border)
+            } else {
+                None
+            },
             title_dash_fg: Some(theme.border),
             border_type: None,
         });

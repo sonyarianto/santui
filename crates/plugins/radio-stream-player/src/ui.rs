@@ -29,7 +29,11 @@ fn draw_panel(
     } else {
         theme.text_muted
     };
-    let text_fg = if bright { theme.text } else { theme.text_muted };
+    let text_fg = if bright {
+        theme.border
+    } else {
+        theme.text_muted
+    };
     cmds.push(RenderCmd::Border {
         x,
         y,
@@ -80,7 +84,7 @@ fn draw_panel(
                     x: cx,
                     y: footer_y,
                     text: k,
-                    fg: Some(theme.text),
+                    fg: Some(theme.border),
                     bg: None,
                     bold: false,
                     modifiers: 0,
@@ -465,7 +469,7 @@ pub fn render_ui(
         x: 5u16.saturating_add(NP_TITLE.len() as u16),
         y: np_y,
         text: vol_text,
-        fg: Some(theme.text),
+        fg: Some(theme.border),
         bg: None,
         bold: false,
         modifiers: 0,

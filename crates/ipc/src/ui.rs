@@ -154,7 +154,7 @@ pub fn draw_panel(
         bg: None,
         borders: BORDER_ALL,
         title: Some(title.trim().into()),
-        title_fg: Some(theme.text),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
