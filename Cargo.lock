@@ -3191,16 +3191,6 @@ dependencies = [
 name = "santui-dns-globe"
 version = "0.2.29"
 dependencies = [
- "env_logger",
- "log",
- "santui-ipc",
- "serde_json",
-]
-
-[[package]]
-name = "santui-dns-lookup"
-version = "0.2.29"
-dependencies = [
  "arboard",
  "env_logger",
  "log",

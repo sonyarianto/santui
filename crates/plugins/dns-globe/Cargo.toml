@@ -12,3 +12,4 @@ santui-ipc = { path = "../../ipc", version = "0.2.29", default-features = false 
 serde_json = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
+arboard = "3"

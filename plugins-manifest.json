@@ -278,13 +278,7 @@
   {
     "id": "dns-globe",
     "name": "DNS Globe",
-    "description": "DNS record lookup with global server selection",
-    "capabilities": []
-  },
-  {
-    "id": "dns-lookup",
-    "name": "DNS Lookup",
-    "description": "Look up DNS records for a domain name",
+    "description": "Look up DNS records (A, MX, NS, TXT, CNAME) for a domain and copy results",
     "capabilities": []
   },
   {

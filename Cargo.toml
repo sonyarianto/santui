@@ -76,7 +76,6 @@ members = [
     "crates/plugins/breathing-exercise",
     "crates/plugins/cheatsheet-browser",
     "crates/plugins/dns-globe",
-    "crates/plugins/dns-lookup",
     "crates/plugins/expense-splitter",
     "crates/plugins/flashcards",
     "crates/plugins/fortune-cookie",

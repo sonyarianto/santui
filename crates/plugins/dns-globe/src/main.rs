@@ -35,7 +35,7 @@ impl Default for App {
             cursor_pos: 0,
             record_type: RecordType::A,
             results: Vec::new(),
-            status: "Enter domain and press Enter to resolve DNS".into(),
+            status: "Enter domain and press Enter to resolve DNS · c to copy".into(),
         }
     }
 }
@@ -59,6 +59,18 @@ impl App {
                 };
                 if !self.domain.is_empty() {
                     self.lookup();
+                }
+                true
+            }
+            IpcKey::Char('c') if !modifiers.ctrl => {
+                let text = self.results.join("\n");
+                if text.is_empty() {
+                    self.status = "Nothing to copy".into();
+                } else {
+                    match copy_to_clipboard(&text) {
+                        Ok(()) => self.status = "Copied results".into(),
+                        Err(e) => self.status = format!("Clipboard error: {e}"),
+                    }
                 }
                 true
             }
@@ -253,11 +265,23 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Value {
-    json!([["Plugins", "Dns Globe"]])
+    json!([["Network & Diagnostics", "Open DNS Globe"]])
 }
 
 fn key_hints() -> Value {
-    json!([["esc", "back"], ["enter", "resolve"], ["t", "toggle type"],])
+    json!([
+        ["esc", "back"],
+        ["enter", "resolve"],
+        ["t", "toggle type"],
+        ["c", "copy results"]
+    ])
+}
+
+fn copy_to_clipboard(text: &str) -> Result<(), String> {
+    let mut clipboard = arboard::Clipboard::new().map_err(|e| e.to_string())?;
+    clipboard
+        .set_text(text.to_owned())
+        .map_err(|e| e.to_string())
 }
 
 fn respond(app: &mut App, consumed: bool) {
