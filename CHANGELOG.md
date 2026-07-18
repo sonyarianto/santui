@@ -2,7 +2,54 @@
 
 All notable changes to this project will be documented in this file.
 
-## [unreleased]
+## [0.2.30] - 2026-07-18
+
+### ⚙️ Miscellaneous
+
+- Update radio station database
+- SANTUI_NO_MOUSE env, improve help order and status bar hint
+- Update radio station database (30 enrichment runs)
+
+### 🎨 Refactor
+
+- Use time-based ticks instead of frame-based
+- Move plugin hints from panel bottom border to IPC footer (92 plugins)
+- Merge dns-lookup into dns-globe to remove duplicate DNS plugin
+- Remove JSON fallback from read_plugin_msg
+
+### 🐛 Bug Fixes
+
+- Log-viewer palette_commands format + agent test instructions
+- Correct palette_commands format and render cmd serialization across 37 plugins
+- Ascii-table add 'l' key to load sample data
+- Move hints to IPC footer, persist clipboard, let plugin consume ? key
+- Remove output border box, fix trailing separator dot in status bar
+- Unescape HTML entities in parse_genres, clean 61 existing genre entries
+- Disable mouse capture by default (opt-in via Alt+M)
+- Migrate remaining 111 plugins to binary bincode format
+- Add 10s timeout to all HTTP requests
+- Use Unicode width for info line right-alignment
+- Move alt+m mouse off hint to left side, lowercase alt+m
+
+### 💼 Other
+
+- Increase genre enrichment from 50 to 200 per run
+
+### 📚 Documentation
+
+- Add --no-build fast dev cycle and fix stale plugin counts in AGENTS.md
+- Clarify --prune catches dead URLs without HEAD validation
+- Document that native/radio_stream_stations.db must be committed
+
+### 🚀 Features
+
+- Runtime log capture via LoggerBuffer + log-viewer plugin
+- Rate limiting, UPSERT, radio_id dedup, --db-path, --prune CLI
+- Mouse capture toggle (Alt+M), --no-mouse flag, config option
+- Binary bincode format for PluginMsg (plugin→host)
+- Add plugin favorites (bookmark with ♥, filter with f)
+\nFull Changelog: [v0.2.29...v0.2.30](https://github.com/sonyarianto/santui/compare/v0.2.29...v0.2.30)
+## [0.2.29] - 2026-07-11
 
 ### ⚙️ Miscellaneous
 
@@ -39,7 +86,7 @@ All notable changes to this project will be documented in this file.
 - Add optional self-hosted sync server (santui-server) and sync client
 - Add exponential backoff retry for stream connection failures
 - Persist volume across restarts; remove dead palette_command handler
-\nFull Changelog: [v0.2.28...](https://github.com/sonyarianto/santui/compare/v0.2.28...)
+\nFull Changelog: [v0.2.28...v0.2.29](https://github.com/sonyarianto/santui/compare/v0.2.28...v0.2.29)
 ## [0.2.28] - 2026-07-06
 
 ### ◀️ Revert
