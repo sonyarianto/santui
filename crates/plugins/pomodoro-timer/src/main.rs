@@ -1,7 +1,7 @@
 mod state;
 mod ui;
 
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader};
 
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, PluginMessage, PluginRequest, RenderCmd, ThemeData,
@@ -325,31 +325,16 @@ fn today_date_string() -> String {
 }
 
 fn respond(app: &mut App, consumed: bool) {
-    let commands_val = match serde_json::to_value(app.render()) {
-        Ok(v) => v,
-        Err(e) => {
-            log::error!("failed to serialize render commands: {e}");
-            return;
-        }
-    };
-    let hints = app.status_hints();
-    let palette = palette_commands();
-    let request = app.pending_request.take();
-    let plugin_message = app.pending_plugin_msg.take();
-    let json = serde_json::json!({
-        "commands": commands_val,
-        "hints": hints,
-        "palette_commands": palette,
-        "request": request,
-        "plugin_message": plugin_message,
-        "consumed": consumed,
-    });
-    let Ok(json_str) = serde_json::to_string(&json) else {
-        return;
+    let msg = santui_ipc::protocol::PluginMsg {
+        commands: app.render().to_vec(),
+        hints: app.status_hints(),
+        palette_commands: palette_commands(),
+        request: app.pending_request.take(),
+        plugin_message: app.pending_plugin_msg.take(),
+        consumed,
     };
     let mut out = std::io::stdout().lock();
-    let _ = writeln!(out, "{json_str}");
-    let _ = out.flush();
+    let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
 }
 
 fn main() {

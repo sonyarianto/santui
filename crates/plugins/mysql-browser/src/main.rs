@@ -1,7 +1,8 @@
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader};
 
-use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
-use serde_json::{json, Value};
+use santui_ipc::protocol::{
+    Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, TextStyle, ThemeData, BORDER_ALL,
+};
 
 #[derive(Debug, Clone)]
 struct MockRow {
@@ -19,7 +20,7 @@ struct App {
     theme: ThemeData,
     area: Area,
     dirty: bool,
-    cached_commands: Vec<Value>,
+    cached_commands: Vec<RenderCmd>,
     input: String,
     history: Vec<String>,
     tables: Vec<MockTable>,
@@ -338,73 +339,109 @@ impl App {
         }
     }
 
-    fn render(&mut self) -> Vec<Value> {
+    fn render(&mut self) -> Vec<RenderCmd> {
         if !self.dirty && !self.cached_commands.is_empty() {
             return self.cached_commands.clone();
         }
         let t = &self.theme;
         let w = self.area.w.max(40);
         let h = self.area.h.max(12);
-        let mut cmds: Vec<Value> = Vec::new();
+        let mut cmds: Vec<RenderCmd> = Vec::new();
 
-        cmds.push(json!({"Rect": {"x": 0, "y": 0, "w": w, "h": h, "bg": t.background}}));
-        cmds.push(json!({"Border": {
-            "x": 0, "y": 0, "w": w, "h": h, "fg": t.border, "borders": BORDER_ALL,
-            "bg": t.background_panel, "title": " MySQL Browser ",
-            "title_fg": t.text, "title_dash_fg": t.border, "border_type": null,
-        }}));
+        cmds.push(RenderCmd::Rect {
+            x: 0,
+            y: 0,
+            w,
+            h,
+            bg: t.background,
+        });
+        cmds.push(RenderCmd::Border {
+            x: 0,
+            y: 0,
+            w,
+            h,
+            fg: t.border,
+            borders: BORDER_ALL,
+            bg: Some(t.background_panel),
+            title: Some(String::from(" MySQL Browser ")),
+            title_fg: Some(t.text),
+            title_dash_fg: Some(t.border),
+            border_type: None,
+        });
 
         match self.view {
             View::TableList => {
-                cmds.push(json!({"Text": {
-                    "x": 2, "y": 1,
-                    "text": String::from("Tables in mock_db"),
-                    "fg": t.accent, "bg": null, "bold": true, "modifiers": 0,
-                }}));
+                cmds.push(RenderCmd::Text {
+                    x: 2,
+                    y: 1,
+                    text: String::from("Tables in mock_db"),
+                    fg: Some(t.accent),
+                    bg: None,
+                    bold: true,
+                    modifiers: 0,
+                });
                 for (i, table) in self.tables.iter().enumerate() {
                     let y = 2 + i as u16;
                     if y >= h.saturating_sub(2) {
                         break;
                     }
                     let highlight = i == self.selected_table;
-                    cmds.push(json!({"Text": {
-                        "x": 4, "y": y,
-                        "text": table.name.clone(),
-                        "fg": if highlight { t.inverted_text } else { t.text },
-                        "bg": if highlight { Some(t.highlight) } else { Option::<[u8;3]>::None },
-                        "bold": highlight, "modifiers": 0,
-                    }}));
+                    cmds.push(RenderCmd::Text {
+                        x: 4,
+                        y,
+                        text: table.name.clone(),
+                        fg: if highlight {
+                            Some(t.inverted_text)
+                        } else {
+                            Some(t.text)
+                        },
+                        bg: if highlight { Some(t.highlight) } else { None },
+                        bold: highlight,
+                        modifiers: 0,
+                    });
                     if highlight {
                         let info = format!(
                             "  {} columns x {} rows",
                             table.columns.len(),
                             table.rows.len()
                         );
-                        cmds.push(json!({"Text": {
-                            "x": (4 + table.name.len() as u16 + 1), "y": y,
-                            "text": info,
-                            "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0,
-                        }}));
+                        cmds.push(RenderCmd::Text {
+                            x: (4 + table.name.len() as u16 + 1),
+                            y,
+                            text: info,
+                            fg: Some(t.text_muted),
+                            bg: None,
+                            bold: false,
+                            modifiers: 0,
+                        });
                     }
                 }
             }
             View::QueryResult => {
                 let input_y = 1u16;
-                cmds.push(json!({"Text": {
-                    "x": 2, "y": input_y,
-                    "text": String::from("mysql> "),
-                    "fg": t.accent, "bg": null, "bold": true, "modifiers": 0,
-                }}));
+                cmds.push(RenderCmd::Text {
+                    x: 2,
+                    y: input_y,
+                    text: String::from("mysql> "),
+                    fg: Some(t.accent),
+                    bg: None,
+                    bold: true,
+                    modifiers: 0,
+                });
                 let display = if self.input.is_empty() {
                     String::from("(type SQL query)")
                 } else {
                     self.input.clone()
                 };
-                cmds.push(json!({"Text": {
-                    "x": 9, "y": input_y,
-                    "text": display,
-                    "fg": t.text, "bg": null, "bold": false, "modifiers": 0,
-                }}));
+                cmds.push(RenderCmd::Text {
+                    x: 9,
+                    y: input_y,
+                    text: display,
+                    fg: Some(t.text),
+                    bg: None,
+                    bold: false,
+                    modifiers: 0,
+                });
 
                 let result_y = 3u16;
                 let table = &self.tables[self.selected_table];
@@ -419,29 +456,50 @@ impl App {
                         .map(|r| r.cells.clone())
                         .collect();
 
-                    cmds.push(json!({"Table": {
-                        "x": 1, "y": result_y, "w": w.saturating_sub(2),
-                        "h": table_h.min(rows_str.len().max(1)) as u16,
-                        "header": table.columns,
-                        "header_style": {"fg": t.text, "bg": null, "bold": true, "modifiers": 0},
-                        "rows": rows_str,
-                        "column_widths": col_widths,
-                        "selected": None::<usize>,
-                        "style": {"fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0},
-                        "highlight_style": {"fg": t.inverted_text, "bg": t.highlight, "bold": true, "modifiers": 0},
-                        "current_row": None::<usize>,
-                        "current_style": None::<santui_ipc::protocol::TextStyle>,
-                        "cell_styles": None::<Vec<Vec<Option<santui_ipc::protocol::TextStyle>>>>,
-                    }}));
+                    cmds.push(RenderCmd::Table {
+                        x: 1,
+                        y: result_y,
+                        w: w.saturating_sub(2),
+                        h: table_h.min(rows_str.len().max(1)) as u16,
+                        header: table.columns.clone(),
+                        header_style: TextStyle {
+                            fg: Some(t.text),
+                            bg: None,
+                            bold: true,
+                            modifiers: 0,
+                        },
+                        rows: rows_str,
+                        column_widths: col_widths,
+                        selected: None,
+                        style: TextStyle {
+                            fg: Some(t.text_muted),
+                            bg: None,
+                            bold: false,
+                            modifiers: 0,
+                        },
+                        highlight_style: TextStyle {
+                            fg: Some(t.inverted_text),
+                            bg: Some(t.highlight),
+                            bold: true,
+                            modifiers: 0,
+                        },
+                        current_row: None,
+                        current_style: None,
+                        cell_styles: None,
+                    });
                 }
             }
         }
 
-        cmds.push(json!({"Text": {
-            "x": 2, "y": h.saturating_sub(2),
-            "text": self.status.clone(),
-            "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0,
-        }}));
+        cmds.push(RenderCmd::Text {
+            x: 2,
+            y: h.saturating_sub(2),
+            text: self.status.clone(),
+            fg: Some(t.text_muted),
+            bg: None,
+            bold: false,
+            modifiers: 0,
+        });
 
         self.cached_commands = cmds.clone();
         self.dirty = false;
@@ -466,29 +524,29 @@ fn default_theme() -> ThemeData {
     }
 }
 
-fn palette_commands() -> Value {
-    json!([["Plugins", "Mysql Browser"]])
+fn palette_commands() -> Vec<(String, String)> {
+    vec![("Plugins".to_string(), "Mysql Browser".to_string())]
 }
 
-fn key_hints() -> Value {
-    json!([
-        ["tab", "switch mode"],
-        ["esc", "close"],
-        ["enter", "execute query"],
-    ])
+fn key_hints() -> Vec<(String, String)> {
+    vec![
+        ("tab".to_string(), "switch mode".to_string()),
+        ("esc".to_string(), "close".to_string()),
+        ("enter".to_string(), "execute query".to_string()),
+    ]
 }
 
 fn respond(app: &mut App, consumed: bool) {
-    let Ok(commands_val) = serde_json::to_value(app.render()) else {
-        return;
+    let msg = santui_ipc::protocol::PluginMsg {
+        commands: app.render().to_vec(),
+        hints: key_hints(),
+        palette_commands: palette_commands(),
+        request: None,
+        plugin_message: None,
+        consumed,
     };
-    let json = json!({
-        "commands": commands_val, "hints": key_hints(), "palette_commands": palette_commands(),
-        "request": null, "plugin_message": null, "consumed": consumed,
-    });
     let mut out = std::io::stdout().lock();
-    let _ = writeln!(out, "{json}");
-    let _ = out.flush();
+    let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
 }
 
 fn main() {

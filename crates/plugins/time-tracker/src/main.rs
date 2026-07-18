@@ -1,7 +1,8 @@
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader};
 
-use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
-use serde_json::{json, Value};
+use santui_ipc::protocol::{
+    Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData, BORDER_ALL,
+};
 
 #[derive(Debug, Clone)]
 struct TimeEntry {
@@ -16,7 +17,7 @@ struct App {
     theme: ThemeData,
     area: Area,
     dirty: bool,
-    cached_commands: Vec<Value>,
+    cached_commands: Vec<RenderCmd>,
     entries: Vec<TimeEntry>,
     selected: usize,
     scroll: u16,
@@ -167,7 +168,7 @@ impl App {
         }
     }
 
-    fn render(&mut self) -> Vec<Value> {
+    fn render(&mut self) -> Vec<RenderCmd> {
         if !self.dirty && !self.cached_commands.is_empty() {
             return self.cached_commands.clone();
         }
@@ -176,31 +177,48 @@ impl App {
         let w = self.area.w.max(40);
         let h = self.area.h.max(10);
 
-        cmds.push(json!({"Rect": {
-        "x": 0, "y": 0, "w": w, "h": h, "bg": t.background
-
-        }}));
-        cmds.push(json!({"Border": {
-        "x": 0, "y": 0, "w": w, "h": h, "fg": t.border,
-                    "borders": BORDER_ALL, "bg": t.background_panel,
-                    "title": " Time Tracker ",
-                    "title_fg": t.text, "title_dash_fg": t.border
-
-        }}));
+        cmds.push(RenderCmd::Rect {
+            x: 0,
+            y: 0,
+            w,
+            h,
+            bg: t.background,
+        });
+        cmds.push(RenderCmd::Border {
+            x: 0,
+            y: 0,
+            w,
+            h,
+            fg: t.border,
+            borders: BORDER_ALL,
+            bg: Some(t.background_panel),
+            title: Some(String::from(" Time Tracker ")),
+            title_fg: Some(t.text),
+            title_dash_fg: Some(t.border),
+            border_type: None,
+        });
 
         if self.input_mode {
             let prompt = "Name: ";
-            cmds.push(json!({"Text": {
-            "x": 2, "y": 2, "text": prompt,
-                            "fg": t.text, "bg": null, "bold": false, "modifiers": 0
-
-            }}));
+            cmds.push(RenderCmd::Text {
+                x: 2,
+                y: 2,
+                text: String::from(prompt),
+                fg: Some(t.text),
+                bg: None,
+                bold: false,
+                modifiers: 0,
+            });
             let cursor_text = format!("{}_", self.input_buffer);
-            cmds.push(json!({"Text": {
-            "x": 2, "y": 3, "text": cursor_text,
-                            "fg": t.accent, "bg": null, "bold": false, "modifiers": 0
-
-            }}));
+            cmds.push(RenderCmd::Text {
+                x: 2,
+                y: 3,
+                text: cursor_text,
+                fg: Some(t.accent),
+                bg: None,
+                bold: false,
+                modifiers: 0,
+            });
         } else {
             let mut total_secs_all: u64 = 0;
             let list_y = 2u16;
@@ -236,37 +254,56 @@ impl App {
                 let marker = if entry.running { ">" } else { " " };
                 let prefix = if is_selected { ">" } else { " " };
                 let line = format!("{}{} {} [{}]", prefix, marker, entry.name, time_str);
-                cmds.push(json!({"Text": {
-"x": 2, "y": y, "text": line,
-                    "fg": if is_selected { t.highlight } else { t.text },
-                    "bg": if is_selected { Some(t.background_overlay) } else { None },
-                    "bold": is_selected, "modifiers": 0
-
-}}));
+                cmds.push(RenderCmd::Text {
+                    x: 2,
+                    y,
+                    text: line,
+                    fg: if is_selected {
+                        Some(t.highlight)
+                    } else {
+                        Some(t.text)
+                    },
+                    bg: if is_selected {
+                        Some(t.background_overlay)
+                    } else {
+                        None
+                    },
+                    bold: is_selected,
+                    modifiers: 0,
+                });
             }
 
-            cmds.push(json!({"Text": {
-            "x": 2, "y": h.saturating_sub(2),
-                            "text": format!("Total: {}", format_secs(total_secs_all)),
-                            "fg": t.accent, "bg": null, "bold": true, "modifiers": 0
-
-            }}));
+            cmds.push(RenderCmd::Text {
+                x: 2,
+                y: h.saturating_sub(2),
+                text: format!("Total: {}", format_secs(total_secs_all)),
+                fg: Some(t.accent),
+                bg: None,
+                bold: true,
+                modifiers: 0,
+            });
         }
 
-        cmds.push(json!({"Text": {
-        "x": 2, "y": h.saturating_sub(1),
-                    "text": self.status.clone(),
-                    "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
-
-        }}));
+        cmds.push(RenderCmd::Text {
+            x: 2,
+            y: h.saturating_sub(1),
+            text: self.status.clone(),
+            fg: Some(t.text_muted),
+            bg: None,
+            bold: false,
+            modifiers: 0,
+        });
 
         if !self.input_mode {
-            cmds.push(json!({"Text": {
-"x": 2, "y": h,
-                "text": String::from("a add  \u{b7} space toggle  \u{b7} r reset  \u{b7} d delete  \u{b7} \u{2191}\u{2193} nav  \u{b7} esc"),
-                "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0
-
-}}));
+            cmds.push(RenderCmd::Text {
+                x: 2,
+                y: h,
+                text: String::from("a add  \u{b7} space toggle  \u{b7} r reset  \u{b7} d delete  \u{b7} \u{2191}\u{2193} nav  \u{b7} esc"),
+                fg: Some(t.text_muted),
+                bg: None,
+                bold: false,
+                modifiers: 0,
+            });
         }
 
         self.cached_commands = cmds.clone();
@@ -299,21 +336,28 @@ fn default_theme() -> ThemeData {
     }
 }
 
-fn palette_commands() -> Value {
-    json!([["Time Tracker", "Track time spent on tasks"]])
+fn palette_commands() -> Vec<(String, String)> {
+    vec![(
+        "Time Tracker".to_string(),
+        "Track time spent on tasks".to_string(),
+    )]
+}
+
+fn hints() -> Vec<(String, String)> {
+    vec![]
 }
 
 fn respond(app: &mut App, consumed: bool) {
-    let commands_val = app.render();
-    let json = json!({
-        "commands": commands_val, "hints": [], "palette_commands": palette_commands(),
-        "request": null, "plugin_message": null, "consumed": consumed,
-    });
-    if let Ok(json_str) = serde_json::to_string(&json) {
-        let mut out = std::io::stdout().lock();
-        let _ = writeln!(out, "{json_str}");
-        let _ = out.flush();
-    }
+    let msg = santui_ipc::protocol::PluginMsg {
+        commands: app.render().to_vec(),
+        hints: hints(),
+        palette_commands: palette_commands(),
+        request: None,
+        plugin_message: None,
+        consumed,
+    };
+    let mut out = std::io::stdout().lock();
+    let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
 }
 
 fn main() {

@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader};
 
 use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
 use serde_json::{json, Value};
@@ -280,25 +280,25 @@ fn default_theme() -> ThemeData {
     }
 }
 
-fn palette_commands() -> Value {
-    json!([[String::from("System"), String::from("Open Network Monitor")]])
+fn palette_commands() -> Vec<(String, String)> {
+    vec![("System".into(), "Open Network Monitor".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {
-    let commands_val = serde_json::to_value(app.render()).unwrap_or(Value::Null);
-    let resp = json!({
-        String::from("commands"): commands_val,
-        String::from("hints"): serde_json::to_value(hints()).unwrap_or_default(),
-        String::from("palette_commands"): palette_commands(),
-        String::from("request"): null,
-        String::from("plugin_message"): null,
-        String::from("consumed"): consumed,
-    });
-    if let Ok(json_str) = serde_json::to_string(&resp) {
-        let mut out = std::io::stdout().lock();
-        let _ = writeln!(out, "{json_str}");
-        let _ = out.flush();
-    }
+    let msg = santui_ipc::protocol::PluginMsg {
+        commands: app
+            .render()
+            .iter()
+            .map(|v| serde_json::from_value(v.clone()).unwrap())
+            .collect(),
+        hints: hints(),
+        palette_commands: palette_commands(),
+        request: None,
+        plugin_message: None,
+        consumed,
+    };
+    let mut out = std::io::stdout().lock();
+    let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
 }
 
 fn main() {

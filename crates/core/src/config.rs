@@ -509,6 +509,7 @@ mod tests {
     fn save_to_and_load_from_roundtrip() {
         let tmp = TempDir::new();
         let cfg = Config {
+            mouse_capture: false,
             theme: Some("Nord".into()),
             custom_theme: Some(CustomThemeColors {
                 name: None,

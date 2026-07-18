@@ -1,6 +1,6 @@
 use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
 use serde_json::{json, Value};
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader};
 
 const PROVIDERS: &[&str] = &["AWS", "Azure", "GCP"];
 const SERVICES: &[&str] = &[
@@ -239,25 +239,29 @@ fn default_theme() -> ThemeData {
     }
 }
 
-fn palette_commands() -> Value {
-    json!([["Plugins", "Cloud Cost"]])
+fn palette_commands() -> Vec<(String, String)> {
+    vec![("Plugins".to_string(), "Cloud Cost".to_string())]
 }
 
-fn key_hints() -> Value {
-    json!([["Tab", "cycle focus"],])
+fn key_hints() -> Vec<(String, String)> {
+    vec![("Tab".to_string(), "cycle focus".to_string())]
 }
 
 fn respond(app: &mut App, consumed: bool) {
-    let Ok(commands_val) = serde_json::to_value(app.render()) else {
-        return;
+    let msg = santui_ipc::protocol::PluginMsg {
+        commands: app
+            .render()
+            .iter()
+            .map(|v| serde_json::from_value(v.clone()).unwrap())
+            .collect(),
+        hints: key_hints(),
+        palette_commands: palette_commands(),
+        request: None,
+        plugin_message: None,
+        consumed,
     };
-    let json = json!({
-        "commands": commands_val, "hints": key_hints(), "palette_commands": palette_commands(),
-        "request": null, "plugin_message": null, "consumed": consumed,
-    });
     let mut out = std::io::stdout().lock();
-    let _ = writeln!(out, "{json}");
-    let _ = out.flush();
+    let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
 }
 
 fn main() {

@@ -81,6 +81,7 @@ fn config_load_from_malformed_toml_returns_default() {
 fn config_save_roundtrip() {
     let tmp = TempDir::new();
     let cfg = Config {
+        mouse_capture: false,
         theme: Some("Dracula".into()),
         custom_theme: Some(CustomThemeColors {
             name: None,

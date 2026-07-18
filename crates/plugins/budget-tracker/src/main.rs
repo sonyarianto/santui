@@ -1,6 +1,7 @@
-use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
-use serde_json::{json, Value};
-use std::io::{BufRead, BufReader, Write};
+use santui_ipc::protocol::{
+    Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, TextStyle, ThemeData, BORDER_ALL,
+};
+use std::io::{BufRead, BufReader};
 
 #[derive(Debug, Clone)]
 struct Category {
@@ -21,7 +22,7 @@ struct App {
     theme: ThemeData,
     area: Area,
     dirty: bool,
-    cached_commands: Vec<Value>,
+    cached_commands: Vec<RenderCmd>,
     categories: Vec<Category>,
     edit_mode: EditMode,
     input_name: String,
@@ -170,21 +171,35 @@ impl App {
         self.categories.iter().map(|c| c.spent).sum()
     }
 
-    fn render(&mut self) -> Vec<Value> {
+    fn render(&mut self) -> Vec<RenderCmd> {
         if !self.dirty && !self.cached_commands.is_empty() {
             return self.cached_commands.clone();
         }
         let t = &self.theme;
         let w = self.area.w.max(40);
         let h = self.area.h.max(12);
-        let mut cmds: Vec<Value> = Vec::new();
+        let mut cmds: Vec<RenderCmd> = Vec::new();
 
-        cmds.push(json!({"Rect": {"x": 0, "y": 0, "w": w, "h": h, "bg": t.background}}));
-        cmds.push(json!({"Border": {
-            "x": 0, "y": 0, "w": w, "h": h, "fg": t.border, "borders": BORDER_ALL,
-            "bg": t.background_panel, "title": String::from(" Budget Tracker "),
-            "title_fg": t.text, "title_dash_fg": t.border, "border_type": null,
-        }}));
+        cmds.push(RenderCmd::Rect {
+            x: 0,
+            y: 0,
+            w,
+            h,
+            bg: t.background,
+        });
+        cmds.push(RenderCmd::Border {
+            x: 0,
+            y: 0,
+            w,
+            h,
+            fg: t.border,
+            borders: BORDER_ALL,
+            bg: Some(t.background_panel),
+            title: Some(String::from(" Budget Tracker ")),
+            title_fg: Some(t.text),
+            title_dash_fg: Some(t.border),
+            border_type: None,
+        });
 
         if self.adding {
             let fields = [
@@ -194,26 +209,30 @@ impl App {
             ];
             for (i, (label, value, mode)) in fields.iter().enumerate() {
                 let active = *mode == self.edit_mode;
-                cmds.push(json!({"Text": {
-                    "x": 2, "y": 1 + i as u16, "text": format!(
-                        "{} {}: {}",
-                        if active { ">" } else { " " },
-                        label,
-                        value
-                    ),
-                    "fg": if active { t.accent } else { t.text },
-                    "bg": null, "bold": active, "modifiers": 0,
-                }}));
+                cmds.push(RenderCmd::Text {
+                    x: 2,
+                    y: 1 + i as u16,
+                    text: format!("{} {}: {}", if active { ">" } else { " " }, label, value),
+                    fg: if active { Some(t.accent) } else { Some(t.text) },
+                    bg: None,
+                    bold: active,
+                    modifiers: 0,
+                });
             }
         } else {
             let header = format!(
                 "{:<20} {:>12} {:>12} {:>12}",
                 "Category", "Budgeted", "Spent", "Remaining"
             );
-            cmds.push(json!({"Text": {
-                "x": 2, "y": 1, "text": header,
-                "fg": t.text_muted, "bg": null, "bold": true, "modifiers": 0,
-            }}));
+            cmds.push(RenderCmd::Text {
+                x: 2,
+                y: 1,
+                text: header,
+                fg: Some(t.text_muted),
+                bg: None,
+                bold: true,
+                modifiers: 0,
+            });
 
             let list_y = 2;
             let list_h = h.saturating_sub(6).max(1);
@@ -228,13 +247,30 @@ impl App {
                     )
                 })
                 .collect();
-            cmds.push(json!({"List": {
-                "x": 2, "y": list_y, "w": w.saturating_sub(4), "h": list_h,
-                "items": items,
-                "selected": if self.selected < self.categories.len() { Some(self.selected) } else { None },
-                "style": {"fg": t.text, "bg": null, "bold": false, "modifiers": 0},
-                "highlight_style": {"fg": t.inverted_text, "bg": t.highlight, "bold": true, "modifiers": 0},
-            }}));
+            cmds.push(RenderCmd::List {
+                x: 2,
+                y: list_y,
+                w: w.saturating_sub(4),
+                h: list_h,
+                items,
+                selected: if self.selected < self.categories.len() {
+                    Some(self.selected)
+                } else {
+                    None
+                },
+                style: TextStyle {
+                    fg: Some(t.text),
+                    bg: None,
+                    bold: false,
+                    modifiers: 0,
+                },
+                highlight_style: TextStyle {
+                    fg: Some(t.inverted_text),
+                    bg: Some(t.highlight),
+                    bold: true,
+                    modifiers: 0,
+                },
+            });
 
             let total_line = format!(
                 "Total budgeted: ${:.2}    Total spent: ${:.2}    Remaining: ${:.2}",
@@ -242,18 +278,26 @@ impl App {
                 self.total_spent(),
                 self.total_budgeted() - self.total_spent()
             );
-            cmds.push(json!({"Text": {
-                "x": 2, "y": list_y + list_h,
-                "text": total_line,
-                "fg": t.accent, "bg": null, "bold": true, "modifiers": 0,
-            }}));
+            cmds.push(RenderCmd::Text {
+                x: 2,
+                y: list_y + list_h,
+                text: total_line,
+                fg: Some(t.accent),
+                bg: None,
+                bold: true,
+                modifiers: 0,
+            });
         }
 
-        cmds.push(json!({"Text": {
-            "x": 2, "y": h.saturating_sub(2),
-            "text": self.status.clone(),
-            "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0,
-        }}));
+        cmds.push(RenderCmd::Text {
+            x: 2,
+            y: h.saturating_sub(2),
+            text: self.status.clone(),
+            fg: Some(t.text_muted),
+            bg: None,
+            bold: false,
+            modifiers: 0,
+        });
 
         self.cached_commands = cmds.clone();
         self.dirty = false;
@@ -278,25 +322,28 @@ fn default_theme() -> ThemeData {
     }
 }
 
-fn palette_commands() -> Value {
-    json!([["Plugins", "Budget Tracker"]])
+fn palette_commands() -> Vec<(String, String)> {
+    vec![("Plugins".to_string(), "Budget Tracker".to_string())]
 }
 
-fn key_hints() -> Value {
-    json!([["a", "add category"], ["d", "delete category"],])
+fn key_hints() -> Vec<(String, String)> {
+    vec![
+        ("a".to_string(), "add category".to_string()),
+        ("d".to_string(), "delete category".to_string()),
+    ]
 }
 
 fn respond(app: &mut App, consumed: bool) {
-    let Ok(commands_val) = serde_json::to_value(app.render()) else {
-        return;
+    let msg = santui_ipc::protocol::PluginMsg {
+        commands: app.render().to_vec(),
+        hints: key_hints(),
+        palette_commands: palette_commands(),
+        request: None,
+        plugin_message: None,
+        consumed,
     };
-    let json = json!({
-        "commands": commands_val, "hints": key_hints(), "palette_commands": palette_commands(),
-        "request": null, "plugin_message": null, "consumed": consumed,
-    });
     let mut out = std::io::stdout().lock();
-    let _ = writeln!(out, "{json}");
-    let _ = out.flush();
+    let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
 }
 
 fn main() {

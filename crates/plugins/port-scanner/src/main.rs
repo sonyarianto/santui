@@ -1,4 +1,4 @@
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader};
 use std::net::{TcpStream, ToSocketAddrs};
 use std::time::Duration;
 
@@ -265,29 +265,33 @@ fn default_theme() -> ThemeData {
     }
 }
 
-fn palette_commands() -> Value {
-    json!([["Plugins", "Port Scanner"]])
+fn palette_commands() -> Vec<(String, String)> {
+    vec![("Plugins".into(), "Port Scanner".into())]
 }
 
-fn key_hints() -> Value {
-    json!([
-        ["esc", "close"],
-        ["tab", "switch field"],
-        ["s", "start scan"],
-    ])
+fn key_hints() -> Vec<(String, String)> {
+    vec![
+        ("esc".into(), "close".into()),
+        ("tab".into(), "switch field".into()),
+        ("s".into(), "start scan".into()),
+    ]
 }
 
 fn respond(app: &mut App, consumed: bool) {
-    let Ok(commands_val) = serde_json::to_value(app.render()) else {
-        return;
+    let msg = santui_ipc::protocol::PluginMsg {
+        commands: app
+            .render()
+            .iter()
+            .map(|v| serde_json::from_value(v.clone()).unwrap())
+            .collect(),
+        hints: key_hints(),
+        palette_commands: palette_commands(),
+        request: None,
+        plugin_message: None,
+        consumed,
     };
-    let json = json!({
-        "commands": commands_val, "hints": key_hints(), "palette_commands": palette_commands(),
-        "request": null, "plugin_message": null, "consumed": consumed,
-    });
     let mut out = std::io::stdout().lock();
-    let _ = writeln!(out, "{json}");
-    let _ = out.flush();
+    let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
 }
 
 fn main() {

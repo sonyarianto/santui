@@ -1,4 +1,4 @@
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader};
 
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData, BORDER_ALL,
@@ -440,27 +440,21 @@ fn hints(screen: &Screen) -> Vec<(String, String)> {
     }
 }
 
-fn palette_commands() -> serde_json::Value {
-    serde_json::json!([("Snippets".to_string(), "Open Snippet Manager".to_string())])
+fn palette_commands() -> Vec<(String, String)> {
+    vec![("Snippets".to_string(), "Open Snippet Manager".to_string())]
 }
 
 fn respond(app: &mut App, consumed: bool) {
-    let Ok(commands_val) = serde_json::to_value(app.render()) else {
-        return;
+    let msg = santui_ipc::protocol::PluginMsg {
+        commands: app.render().to_vec(),
+        hints: hints(&app.screen),
+        palette_commands: palette_commands(),
+        request: None,
+        plugin_message: None,
+        consumed,
     };
-    let json = serde_json::json!({
-        "commands": commands_val,
-        "hints": hints(&app.screen),
-        "palette_commands": palette_commands(),
-        "request": null,
-        "plugin_message": null,
-        "consumed": consumed,
-    });
-    if let Ok(json_str) = serde_json::to_string(&json) {
-        let mut out = std::io::stdout().lock();
-        let _ = writeln!(out, "{json_str}");
-        let _ = out.flush();
-    }
+    let mut out = std::io::stdout().lock();
+    let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
 }
 
 fn main() {

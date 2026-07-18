@@ -1,4 +1,4 @@
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader};
 use std::sync::mpsc;
 use std::sync::mpsc::TryRecvError;
 use std::time::Duration;
@@ -323,25 +323,25 @@ fn default_theme() -> ThemeData {
     }
 }
 
-fn palette_commands() -> Value {
-    json!([[String::from("AI & Data"), String::from("Open AI Chat")]])
+fn palette_commands() -> Vec<(String, String)> {
+    vec![("AI & Data".into(), "Open AI Chat".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {
-    let commands_val = serde_json::to_value(app.render()).unwrap_or(Value::Null);
-    let resp = json!({
-        "commands": commands_val,
-        "hints": [],
-        "palette_commands": palette_commands(),
-        "request": null,
-        "plugin_message": null,
-        "consumed": consumed,
-    });
-    if let Ok(json_str) = serde_json::to_string(&resp) {
-        let mut out = std::io::stdout().lock();
-        let _ = writeln!(out, "{json_str}");
-        let _ = out.flush();
-    }
+    let msg = santui_ipc::protocol::PluginMsg {
+        commands: app
+            .render()
+            .iter()
+            .map(|v| serde_json::from_value(v.clone()).unwrap())
+            .collect(),
+        hints: vec![],
+        palette_commands: palette_commands(),
+        request: None,
+        plugin_message: None,
+        consumed,
+    };
+    let mut out = std::io::stdout().lock();
+    let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
 }
 
 fn main() {
