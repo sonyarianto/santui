@@ -57,6 +57,11 @@ impl StatusBar<'_> {
                 spans.push(Span::styled("esc", key));
                 spans.push(Span::styled(" back", dim));
             }
+            if !self.mouse_capture {
+                spans.push(Span::styled(" • ", dim));
+                spans.push(Span::styled("alt+m", key));
+                spans.push(Span::styled(" mouse off", dim));
+            }
             Line::from(spans)
         } else {
             let mut spans = vec![
@@ -71,6 +76,11 @@ impl StatusBar<'_> {
                 spans.push(Span::styled(" • ", dim));
                 spans.push(Span::styled("r", key));
                 spans.push(Span::styled(" restart", dim));
+            }
+            if !self.mouse_capture {
+                spans.push(Span::styled(" • ", dim));
+                spans.push(Span::styled("alt+m", key));
+                spans.push(Span::styled(" mouse off", dim));
             }
             Line::from(spans)
         };
@@ -118,9 +128,6 @@ impl StatusBar<'_> {
                 };
                 right_spans.push(Span::styled(format!("{provider_prefix}{display}"), dim));
                 right_spans.push(Span::styled(" ", dim));
-            }
-            if !self.mouse_capture {
-                right_spans.push(Span::styled("Alt+M mouse off ", key));
             }
             right_spans.push(Span::styled("Santui ", key));
             right_spans.push(Span::styled(super::VERSION, dim));

@@ -44,7 +44,7 @@ impl App {
                 ("↵".into(), "select".into()),
                 ("space".into(), "fav".into()),
                 ("/".into(), "search".into()),
-                ("f".into(), "fav only".into()),
+                ("f".into(), "toggle fav".into()),
             ]
         }
     }
@@ -495,7 +495,7 @@ mod tests {
         assert_eq!(hints[1], ("↵".into(), "select".into()));
         assert_eq!(hints[2], ("space".into(), "fav".into()));
         assert_eq!(hints[3], ("/".into(), "search".into()));
-        assert_eq!(hints[4], ("f".into(), "fav only".into()));
+        assert_eq!(hints[4], ("f".into(), "toggle fav".into()));
     }
 
     #[test]
