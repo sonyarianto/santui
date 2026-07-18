@@ -444,7 +444,6 @@ impl IpcPluginHost {
         // Background thread: continuously read stdout, send parsed
         // responses back via the channel.  This is what makes tick()
         // non-blocking — the main thread never blocks on a read.
-        // Supports both JSON Lines (legacy) and binary bincode frames.
         if let Some(reader) = reader {
             let (tx, rx) = mpsc::channel::<PluginMsg>();
             let handle = thread::Builder::new()
