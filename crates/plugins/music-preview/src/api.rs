@@ -10,7 +10,7 @@ pub struct ItunesResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ItunesTrack {
     #[serde(rename = "trackId")]
-    pub track_id: u32,
+    pub track_id: u64,
     #[serde(rename = "trackName")]
     pub track_name: String,
     #[serde(rename = "artistName")]
@@ -30,7 +30,7 @@ pub struct ItunesTrack {
 pub fn search(query: &str) -> Result<Vec<ItunesTrack>, String> {
     let encoded = url_encode(query);
     let url = format!(
-        "https://itunes.apple.com/search?term={}&media=music&entity=song&limit=25",
+        "https://itunes.apple.com/search?term={}&media=music&entity=song&limit=50",
         encoded
     );
 

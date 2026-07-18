@@ -84,7 +84,7 @@ fn draw_panel(
                     x: cx,
                     y: footer_y,
                     text: k,
-                    fg: Some(theme.border),
+                    fg: Some(theme.text),
                     bg: None,
                     bold: false,
                     modifiers: 0,
@@ -155,11 +155,11 @@ pub fn render_ui(
         Some(&[
             ("↑↓", "navigate"),
             ("↵", "play"),
-            ("space", "fav"),
+            ("space", "toggle fav"),
             ("c", "clear"),
             ("/", "search"),
             ("s", "stop"),
-            ("f", "fav only"),
+            ("f", "toggle fav list"),
             ("r", "reload"),
         ])
     } else if state.lyrics_focused {
@@ -168,10 +168,10 @@ pub fn render_ui(
         Some(&[
             ("↑↓", "navigate"),
             ("↵", "play"),
-            ("space", "fav"),
+            ("space", "toggle fav"),
             ("/", "search"),
             ("s", "stop"),
-            ("f", "fav only"),
+            ("f", "toggle fav list"),
             ("r", "reload"),
         ])
     };
@@ -238,7 +238,7 @@ pub fn render_ui(
             x: 2,
             y: 1,
             text: display_left,
-            fg: Some(theme.accent),
+            fg: Some(theme.text),
             bg: None,
             bold: false,
             modifiers: 0,
@@ -290,7 +290,7 @@ pub fn render_ui(
             x: 2,
             y: 1,
             text: display_left,
-            fg: Some(theme.accent),
+            fg: Some(theme.text),
             bg: None,
             bold: false,
             modifiers: 0,
@@ -305,6 +305,15 @@ pub fn render_ui(
             modifiers: 0,
         });
     } else {
+        cmds.push(RenderCmd::Text {
+            x: 2,
+            y: 1,
+            text: "Search: ".into(),
+            fg: Some(theme.text_muted),
+            bg: None,
+            bold: false,
+            modifiers: 0,
+        });
         let fav_count = state.favorites_count();
         let top_text = if state.show_favorites_only {
             format!("♥ {} favorites", state.filtered.len())

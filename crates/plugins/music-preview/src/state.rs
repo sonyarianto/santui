@@ -15,6 +15,8 @@ pub struct MusicState {
     pub scroll: usize,
     pub fetch_state: FetchState,
     pub dirty: bool,
+    pub tick_counter: u64,
+    pub search_mode: bool,
 }
 
 impl Default for MusicState {
@@ -26,6 +28,8 @@ impl Default for MusicState {
             scroll: 0,
             fetch_state: FetchState::Idle,
             dirty: true,
+            tick_counter: 0,
+            search_mode: false,
         }
     }
 }
@@ -35,7 +39,7 @@ mod tests {
     use super::*;
     use crate::api::ItunesTrack;
 
-    fn make_track(id: u32, name: &str) -> ItunesTrack {
+    fn make_track(id: u64, name: &str) -> ItunesTrack {
         ItunesTrack {
             track_id: id,
             track_name: name.into(),

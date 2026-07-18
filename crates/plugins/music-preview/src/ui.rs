@@ -1,4 +1,4 @@
-use santui_ipc::protocol::{RenderCmd, ThemeData, BORDER_ALL};
+use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData, BORDER_ALL};
 
 use crate::state::{FetchState, MusicState};
 
@@ -24,29 +24,36 @@ pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
         border_type: None,
     });
 
-    let search_prompt = "> search: ";
-    let search_text = format!("{}{}", search_prompt, state.query);
-    let displayed = if search_text.len() > w.saturating_sub(4) as usize {
-        let available = (w as usize)
-            .saturating_sub(4)
-            .saturating_sub(search_prompt.len());
-        format!(
-            "{}{}",
-            search_prompt,
-            &state.query[state.query.len().saturating_sub(available)..]
-        )
+    let cursor = if state.tick_counter % 6 < 3 {
+        '█'
     } else {
-        search_text
+        ' '
     };
-    cmds.push(RenderCmd::Text {
-        x: 2,
-        y: 1,
-        text: displayed,
-        fg: Some(theme.text),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
+    let max_left = w.saturating_sub(4) as usize;
+    if state.search_mode {
+        let text = format!("Search: {}{cursor}", state.query);
+        let display: String = text.chars().take(max_left).collect();
+        cmds.push(RenderCmd::Text {
+            x: 2,
+            y: 1,
+            text: display,
+            fg: Some(theme.text),
+            bg: None,
+            bold: false,
+            modifiers: 0,
+        });
+    } else {
+        let display: String = "Search: ".chars().take(max_left).collect();
+        cmds.push(RenderCmd::Text {
+            x: 2,
+            y: 1,
+            text: display,
+            fg: Some(theme.text_muted),
+            bg: None,
+            bold: false,
+            modifiers: 0,
+        });
+    }
 
     match &state.fetch_state {
         FetchState::Fetching => {
@@ -64,7 +71,7 @@ pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
             cmds.push(RenderCmd::Text {
                 x: 2,
                 y: 3,
-                text: format!("Error: {}", e),
+                text: format!("Error: {e}"),
                 fg: Some(theme.error),
                 bg: None,
                 bold: false,
@@ -83,98 +90,114 @@ pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
                     modifiers: 0,
                 });
             } else {
-                render_results(state, theme, w, h, &mut cmds);
+                render_table(state, theme, w, h, &mut cmds);
             }
         }
-        FetchState::Idle => {
-            if state.query.is_empty() {
-                cmds.push(RenderCmd::Text {
-                    x: 2,
-                    y: 3,
-                    text: "Type a search query and press Enter".into(),
-                    fg: Some(theme.text_muted),
-                    bg: None,
-                    bold: false,
-                    modifiers: 0,
-                });
-            }
-        }
+        FetchState::Idle => {}
     }
 
     cmds
 }
 
-fn render_results(
-    state: &MusicState,
-    theme: &ThemeData,
-    w: u16,
-    h: u16,
-    cmds: &mut Vec<RenderCmd>,
-) {
-    let max_visible = max_visible_tracks(h);
-    let results = &state.results;
-    let selected = state.selected;
+fn render_table(state: &MusicState, theme: &ThemeData, w: u16, h: u16, cmds: &mut Vec<RenderCmd>) {
+    let inner_w = w.saturating_sub(4) as usize;
+    let table_top = 3u16;
 
-    let end = (state.scroll + max_visible).min(results.len());
+    let num_w = 5usize;
+    let dur_w = 9usize;
+    let remaining = inner_w.saturating_sub(num_w + dur_w);
+    let title_w = remaining * 35 / 100;
+    let artist_w = remaining * 25 / 100;
+    let album_w = remaining * 25 / 100;
+    let genre_w = remaining.saturating_sub(title_w + artist_w + album_w);
 
-    for (vi, track) in results
-        .iter()
-        .enumerate()
-        .skip(state.scroll)
-        .take(end - state.scroll)
-    {
-        let y = 3 + vi as u16 * 3 - state.scroll as u16 * 3;
-        let is_selected = vi == selected;
+    let max_visible = (h.saturating_sub(table_top + 2)) as usize;
+    let scroll = state.scroll;
+    let visible_count = max_visible.min(state.results.len().saturating_sub(scroll));
 
-        let prefix = if is_selected { "\u{25B6}" } else { " " };
-        let title = format!("{} {}. {}", prefix, vi + 1, track.track_name);
-        let title = santui_ipc::ui::truncate(&title, w.saturating_sub(4) as usize);
+    if visible_count == 0 {
+        return;
+    }
 
-        cmds.push(RenderCmd::Text {
-            x: 2,
-            y,
-            text: title,
-            fg: if is_selected {
-                Some(theme.accent)
-            } else {
-                Some(theme.text)
-            },
-            bg: None,
-            bold: is_selected,
-            modifiers: 0,
-        });
-
+    let mut rows = Vec::with_capacity(visible_count);
+    for i in 0..visible_count {
+        let track = &state.results[scroll + i];
         let duration = track
             .track_time_millis
             .map(format_duration)
             .unwrap_or_else(|| "--:--".into());
-        let detail = format!(
-            "   {} \u{00B7} {} \u{00B7} {} \u{00B7} {}",
-            track.artist_name, track.collection_name, track.primary_genre_name, duration
-        );
-        let detail = santui_ipc::ui::truncate(&detail, w.saturating_sub(4) as usize);
+        rows.push(vec![
+            format!("{}.", scroll + i + 1),
+            santui_ipc::ui::truncate(&track.track_name, title_w),
+            santui_ipc::ui::truncate(&track.artist_name, artist_w),
+            santui_ipc::ui::truncate(&track.collection_name, album_w),
+            santui_ipc::ui::truncate(&track.primary_genre_name, genre_w),
+            duration,
+        ]);
+    }
 
-        cmds.push(RenderCmd::Text {
-            x: 2,
-            y: y + 1,
-            text: detail,
+    let vis_selected = if state.selected >= scroll && state.selected < scroll + visible_count {
+        Some(state.selected - scroll)
+    } else {
+        None
+    };
+
+    cmds.push(RenderCmd::Table {
+        x: 2,
+        y: table_top,
+        w: inner_w as u16,
+        h: (visible_count + 1) as u16,
+        header: vec![
+            "#".into(),
+            "Title".into(),
+            "Artist".into(),
+            "Album".into(),
+            "Genre".into(),
+            "Duration".into(),
+        ],
+        header_style: TextStyle {
             fg: Some(theme.text_muted),
+            bg: None,
+            bold: true,
+            modifiers: 0,
+        },
+        rows,
+        column_widths: vec![
+            num_w as u16,
+            title_w as u16,
+            artist_w as u16,
+            album_w as u16,
+            genre_w as u16,
+            dur_w as u16,
+        ],
+        selected: vis_selected,
+        style: TextStyle {
+            fg: Some(theme.text),
             bg: None,
             bold: false,
             modifiers: 0,
-        });
-    }
+        },
+        highlight_style: TextStyle {
+            fg: Some(theme.inverted_text),
+            bg: Some(theme.highlight),
+            bold: true,
+            modifiers: 0,
+        },
+        current_row: None,
+        current_style: None,
+        cell_styles: None,
+    });
 }
 
 pub fn max_visible_tracks(h: u16) -> usize {
-    ((h.saturating_sub(3) - 1) / 3).max(1) as usize
+    h.saturating_sub(5) as usize
 }
 
 fn format_duration(millis: u32) -> String {
     let total_secs = millis / 1000;
     let mins = total_secs / 60;
     let secs = total_secs % 60;
-    format!("{}:{:02}", mins, secs)
+    format!("{mins}:{secs:02}")
 }
 
 #[cfg(test)]
@@ -199,7 +222,7 @@ mod tests {
         }
     }
 
-    fn make_track(id: u32, name: &str) -> ItunesTrack {
+    fn make_track(id: u64, name: &str) -> ItunesTrack {
         ItunesTrack {
             track_id: id,
             track_name: name.into(),
@@ -213,26 +236,41 @@ mod tests {
     }
 
     #[test]
-    fn renders_search_bar() {
+    fn renders_search_bar_in_search_mode() {
         let state = MusicState {
             query: "eminem".into(),
+            search_mode: true,
             ..MusicState::default()
         };
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_search = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("> search:") && text.contains("eminem")),
+            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Search: eminem")),
         );
         assert!(has_search);
     }
 
     #[test]
-    fn renders_empty_initial_state() {
+    fn renders_dimmed_search_hint_when_not_searching() {
         let state = MusicState::default();
         let cmds = render_ui(&state, &test_theme(), 80, 24);
-        let has_empty = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Type a search query and press Enter")),
-        );
-        assert!(has_empty);
+        let hint = cmds
+            .iter()
+            .find(|c| matches!(c, RenderCmd::Text { y: 1, .. }));
+        assert!(hint.is_some());
+        if let Some(RenderCmd::Text { text, fg, .. }) = hint {
+            assert_eq!(text, "Search: ");
+            assert_eq!(*fg, Some(test_theme().text_muted));
+        }
+    }
+
+    #[test]
+    fn idle_state_renders_no_instruction_text() {
+        let state = MusicState::default();
+        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let has_text_at_y3 = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { y: 3, .. }));
+        assert!(!has_text_at_y3);
     }
 
     #[test]
@@ -250,7 +288,7 @@ mod tests {
     }
 
     #[test]
-    fn renders_results_list() {
+    fn renders_results_table() {
         let state = MusicState {
             query: "eminem".into(),
             results: vec![make_track(1, "Lose Yourself"), make_track(2, "Stan")],
@@ -260,23 +298,12 @@ mod tests {
             ..MusicState::default()
         };
         let cmds = render_ui(&state, &test_theme(), 80, 24);
-        let has_track = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Lose Yourself")),
-        );
+        let has_table = cmds.iter().any(|c| matches!(c, RenderCmd::Table { .. }));
+        assert!(has_table);
+        let has_track = cmds.iter().any(|c| {
+            matches!(c, RenderCmd::Table { ref rows, .. } if rows.iter().any(|r| r.iter().any(|cell| cell.contains("Lose Yourself"))))
+        });
         assert!(has_track);
-        let has_artist = cmds
-            .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Artist")));
-        assert!(has_artist);
-        // Selected track uses accent + bold
-        let selected_texts: Vec<_> = cmds
-            .iter()
-            .filter(|c| {
-                matches!(c, RenderCmd::Text { ref text, bold, fg, .. }
-                    if *bold && fg == &Some([180; 3]) && text.contains("Lose Yourself"))
-            })
-            .collect();
-        assert!(!selected_texts.is_empty());
     }
 
     #[test]
@@ -316,8 +343,8 @@ mod tests {
 
     #[test]
     fn max_visible_tracks_calculation() {
-        assert_eq!(max_visible_tracks(24), 6);
-        assert_eq!(max_visible_tracks(10), 2);
-        assert_eq!(max_visible_tracks(5), 1);
+        assert_eq!(max_visible_tracks(24), 19);
+        assert_eq!(max_visible_tracks(10), 5);
+        assert_eq!(max_visible_tracks(5), 0);
     }
 }

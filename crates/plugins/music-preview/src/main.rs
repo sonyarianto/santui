@@ -1,4 +1,5 @@
 mod api;
+mod player;
 mod state;
 mod ui;
 
@@ -9,11 +10,12 @@ use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, PluginMessage, PluginRequest, RenderCmd, ThemeData,
 };
 
+use player::Mpv;
 use state::{FetchState, MusicState};
 use ui::{max_visible_tracks, render_ui};
 
 enum FetchMsg {
-    SearchDone(Vec<api::ItunesTrack>),
+    SearchDone(String, Vec<api::ItunesTrack>),
     SearchError(String),
 }
 
@@ -26,6 +28,7 @@ struct App {
     pending_request: Option<PluginRequest>,
     pending_plugin_message: Option<PluginMessage>,
     rx_fetch: Option<mpsc::Receiver<FetchMsg>>,
+    mpv: Option<Mpv>,
 }
 
 impl Default for App {
@@ -52,52 +55,81 @@ impl Default for App {
             pending_request: None,
             pending_plugin_message: None,
             rx_fetch: None,
+            mpv: None,
         }
     }
 }
 
 impl App {
     fn handle_key(&mut self, key: IpcKey) -> bool {
-        match key {
-            IpcKey::Backspace => {
-                self.state.query.pop();
-                self.dirty = true;
-                true
-            }
-            IpcKey::Enter => {
-                let q = self.state.query.trim().to_string();
-                if !q.is_empty() {
-                    self.trigger_search(&q);
+        if self.state.search_mode {
+            match key {
+                IpcKey::Esc => {
+                    self.state.search_mode = false;
+                    self.state.query.clear();
+                    self.dirty = true;
+                    true
                 }
-                self.dirty = true;
-                true
-            }
-            IpcKey::Up | IpcKey::Char('k') => {
-                self.state.selected = self.state.selected.saturating_sub(1);
-                self.adjust_scroll_up();
-                self.dirty = true;
-                true
-            }
-            IpcKey::Down | IpcKey::Char('j') => {
-                let max = self.state.results.len().saturating_sub(1);
-                self.state.selected = self.state.selected.min(max).saturating_add(1).min(max);
-                self.adjust_scroll_down();
-                self.dirty = true;
-                true
-            }
-            IpcKey::Char(' ') => {
-                if !self.state.results.is_empty() {
-                    self.play_selected();
+                IpcKey::Enter => {
+                    let q = self.state.query.trim().to_string();
+                    if !q.is_empty() {
+                        self.state.search_mode = false;
+                        self.trigger_search(q);
+                    }
+                    self.dirty = true;
+                    true
                 }
-                true
+                IpcKey::Backspace => {
+                    self.state.query.pop();
+                    self.dirty = true;
+                    true
+                }
+                IpcKey::Char(c) if !c.is_control() => {
+                    self.state.query.push(c);
+                    self.dirty = true;
+                    true
+                }
+                _ => true,
             }
-            IpcKey::Char(c) if !c.is_control() => {
-                self.state.query.push(c);
-                self.dirty = true;
-                true
+        } else {
+            match key {
+                IpcKey::Char('/') => {
+                    self.state.search_mode = true;
+                    self.state.query.clear();
+                    self.dirty = true;
+                    true
+                }
+                IpcKey::Char(' ') => {
+                    if !self.state.results.is_empty() {
+                        self.play_selected();
+                    }
+                    true
+                }
+                IpcKey::Enter => {
+                    if matches!(self.state.fetch_state, FetchState::Done)
+                        && !self.state.results.is_empty()
+                    {
+                        self.play_selected();
+                    }
+                    self.dirty = true;
+                    true
+                }
+                IpcKey::Up => {
+                    self.state.selected = self.state.selected.saturating_sub(1);
+                    self.adjust_scroll_up();
+                    self.dirty = true;
+                    true
+                }
+                IpcKey::Down => {
+                    let max = self.state.results.len().saturating_sub(1);
+                    self.state.selected = self.state.selected.min(max).saturating_add(1).min(max);
+                    self.adjust_scroll_down();
+                    self.dirty = true;
+                    true
+                }
+                IpcKey::Esc => false,
+                _ => false,
             }
-            IpcKey::Esc => false,
-            _ => false,
         }
     }
 
@@ -125,23 +157,38 @@ impl App {
                 track.artist_name,
                 track.preview_url
             );
-            self.pending_plugin_message = Some(PluginMessage {
-                to: "host".into(),
-                action: "open_url".into(),
-                data: serde_json::json!({"url": track.preview_url}),
-            });
+            match self.mpv {
+                Some(ref mpv) => {
+                    if let Err(e) = mpv.load_url(&track.preview_url) {
+                        log::warn!("mpv load_url failed: {e}");
+                    }
+                }
+                None => match Mpv::new() {
+                    Ok((mpv, errors)) => {
+                        for e in &errors {
+                            log::warn!("mpv init warning: {e}");
+                        }
+                        if let Err(e) = mpv.load_url(&track.preview_url) {
+                            log::warn!("mpv load_url failed: {e}");
+                        }
+                        self.mpv = Some(mpv);
+                    }
+                    Err(e) => {
+                        log::error!("mpv init failed: {e}");
+                    }
+                },
+            }
         }
     }
 
-    fn trigger_search(&mut self, query: &str) {
-        let q = query.to_string();
+    fn trigger_search(&mut self, q: String) {
         let (tx, rx) = mpsc::channel();
         self.rx_fetch = Some(rx);
         self.state.fetch_state = FetchState::Fetching;
         self.dirty = true;
         std::thread::spawn(move || match api::search(&q) {
             Ok(results) => {
-                let _ = tx.send(FetchMsg::SearchDone(results));
+                let _ = tx.send(FetchMsg::SearchDone(q, results));
             }
             Err(e) => {
                 let _ = tx.send(FetchMsg::SearchError(e));
@@ -150,14 +197,20 @@ impl App {
     }
 
     fn handle_tick(&mut self) {
+        self.state.tick_counter += 1;
+        if self.state.tick_counter.is_multiple_of(3) {
+            self.dirty = true;
+        }
         if let Some(ref rx) = self.rx_fetch {
             match rx.try_recv() {
-                Ok(FetchMsg::SearchDone(results)) => {
-                    self.state.results = results;
-                    self.state.fetch_state = FetchState::Done;
-                    self.state.selected = 0;
-                    self.state.scroll = 0;
-                    self.dirty = true;
+                Ok(FetchMsg::SearchDone(q, results)) => {
+                    if q == self.state.query {
+                        self.state.results = results;
+                        self.state.fetch_state = FetchState::Done;
+                        self.state.selected = 0;
+                        self.state.scroll = 0;
+                        self.dirty = true;
+                    }
                 }
                 Ok(FetchMsg::SearchError(e)) => {
                     self.state.fetch_state = FetchState::Error(e);
@@ -181,8 +234,8 @@ impl App {
 
 fn hints() -> Vec<(String, String)> {
     vec![
-        ("enter".into(), "search".into()),
-        ("space".into(), "play preview".into()),
+        ("/".into(), "search".into()),
+        ("space".into(), "play".into()),
         ("esc".into(), "back".into()),
     ]
 }
@@ -292,7 +345,7 @@ mod tests {
     use super::*;
     use crate::api::ItunesTrack;
 
-    fn make_track(id: u32, name: &str, url: &str) -> ItunesTrack {
+    fn make_track(id: u64, name: &str, url: &str) -> ItunesTrack {
         ItunesTrack {
             track_id: id,
             track_name: name.into(),
@@ -306,42 +359,72 @@ mod tests {
     }
 
     #[test]
-    fn handle_key_char_appends_to_query() {
+    fn handle_key_char_outside_search_ignored() {
         let mut app = App::default();
-        assert!(app.handle_key(IpcKey::Char('a')));
-        assert_eq!(app.state.query, "a");
-        assert!(app.handle_key(IpcKey::Char('b')));
-        assert_eq!(app.state.query, "ab");
+        assert!(!app.handle_key(IpcKey::Char('a')));
+        assert_eq!(app.state.query, "");
     }
 
     #[test]
     fn handle_key_backspace_removes_from_query() {
         let mut app = App::default();
+        app.state.search_mode = true;
         app.state.query = "ab".into();
         assert!(app.handle_key(IpcKey::Backspace));
         assert_eq!(app.state.query, "a");
         assert!(app.handle_key(IpcKey::Backspace));
         assert_eq!(app.state.query, "");
-        // Backspace on empty is harmless
-        assert!(app.handle_key(IpcKey::Backspace));
-        assert_eq!(app.state.query, "");
     }
 
     #[test]
-    fn handle_key_enter_triggers_search() {
+    fn handle_key_search_backspace_empty_stays_in_search() {
         let mut app = App::default();
+        app.state.search_mode = true;
+        app.state.query = String::new();
+        app.state.results = vec![make_track(1, "A", "http://a")];
+        app.state.fetch_state = FetchState::Done;
+        app.handle_key(IpcKey::Backspace);
+        assert!(app.state.query.is_empty());
+        assert!(!app.state.results.is_empty());
+        assert_eq!(app.state.fetch_state, FetchState::Done);
+    }
+
+    #[test]
+    fn handle_key_slash_enters_search_mode() {
+        let mut app = App::default();
+        assert!(app.handle_key(IpcKey::Char('/')));
+        assert!(app.state.search_mode);
+    }
+
+    #[test]
+    fn handle_key_search_enter_triggers_search() {
+        let mut app = App::default();
+        app.state.search_mode = true;
         app.state.query = "eminem".into();
         assert!(app.handle_key(IpcKey::Enter));
+        assert!(!app.state.search_mode);
         assert!(matches!(app.state.fetch_state, FetchState::Fetching));
         assert!(app.rx_fetch.is_some());
     }
 
     #[test]
-    fn handle_key_enter_empty_query_does_not_trigger() {
+    fn handle_key_search_enter_empty_does_not_trigger() {
         let mut app = App::default();
+        app.state.search_mode = true;
         app.state.query = "   ".into();
         assert!(app.handle_key(IpcKey::Enter));
+        assert!(app.state.search_mode);
         assert!(matches!(app.state.fetch_state, FetchState::Idle));
+    }
+
+    #[test]
+    fn handle_key_search_esc_exits_search_mode() {
+        let mut app = App::default();
+        app.state.search_mode = true;
+        app.state.query = "test".into();
+        assert!(app.handle_key(IpcKey::Esc));
+        assert!(!app.state.search_mode);
+        assert!(app.state.query.is_empty());
     }
 
     #[test]
@@ -352,15 +435,12 @@ mod tests {
             make_track(2, "B", "http://b"),
             make_track(3, "C", "http://c"),
         ];
-        // Down
         assert!(app.handle_key(IpcKey::Down));
         assert_eq!(app.state.selected, 1);
         assert!(app.handle_key(IpcKey::Down));
         assert_eq!(app.state.selected, 2);
-        // At end, stays
         assert!(app.handle_key(IpcKey::Down));
         assert_eq!(app.state.selected, 2);
-        // Up
         assert!(app.handle_key(IpcKey::Up));
         assert_eq!(app.state.selected, 1);
     }
@@ -380,48 +460,44 @@ mod tests {
     }
 
     #[test]
-    fn handle_key_space_is_consumed() {
+    fn handle_key_space_plays_with_results() {
         let mut app = App::default();
         app.state.results = vec![make_track(1, "A", "http://preview/1")];
         assert!(app.handle_key(IpcKey::Char(' ')));
     }
 
     #[test]
-    fn handle_key_space_sets_plugin_message() {
-        let mut app = App::default();
-        app.state.results = vec![make_track(1, "A", "http://preview/1")];
-        app.handle_key(IpcKey::Char(' '));
-        assert!(app.pending_plugin_message.is_some());
-        let msg = app.pending_plugin_message.as_ref().unwrap();
-        assert_eq!(msg.to, "host");
-        assert_eq!(msg.action, "open_url");
-        assert_eq!(msg.data["url"], "http://preview/1");
-    }
-
-    #[test]
     fn handle_key_space_no_results_no_op() {
         let mut app = App::default();
-        app.handle_key(IpcKey::Char(' '));
-        assert!(app.pending_plugin_message.is_none());
+        assert!(app.handle_key(IpcKey::Char(' ')));
     }
 
     #[test]
-    fn handle_key_char_k_navigates_up() {
+    fn handle_key_enter_plays_when_results_exist() {
         let mut app = App::default();
-        app.state.selected = 1;
-        app.handle_key(IpcKey::Char('k'));
-        assert_eq!(app.state.selected, 0);
+        app.state.results = vec![make_track(1, "A", "http://preview/1")];
+        app.state.fetch_state = FetchState::Done;
+        app.handle_key(IpcKey::Enter);
+        assert_eq!(app.dirty, true);
     }
 
     #[test]
-    fn handle_key_char_j_navigates_down() {
+    fn handle_key_search_chars_append_to_query() {
         let mut app = App::default();
-        app.state.results = vec![
-            make_track(1, "A", "http://a"),
-            make_track(2, "B", "http://b"),
-        ];
-        app.handle_key(IpcKey::Char('j'));
-        assert_eq!(app.state.selected, 1);
+        app.state.search_mode = true;
+        assert!(app.handle_key(IpcKey::Char('k')));
+        assert_eq!(app.state.query, "k");
+        assert!(app.handle_key(IpcKey::Char(' ')));
+        assert_eq!(app.state.query, "k ");
+    }
+
+    #[test]
+    fn handle_key_search_backspace_removes_char() {
+        let mut app = App::default();
+        app.state.search_mode = true;
+        app.state.query = "test".into();
+        assert!(app.handle_key(IpcKey::Backspace));
+        assert_eq!(app.state.query, "tes");
     }
 
     #[test]
@@ -430,16 +506,34 @@ mod tests {
         let (tx, rx) = mpsc::channel();
         app.rx_fetch = Some(rx);
         app.state.fetch_state = FetchState::Fetching;
-        let _ = tx.send(FetchMsg::SearchDone(vec![make_track(
-            1,
-            "Track",
-            "http://url",
-        )]));
+        app.state.query = "test".into();
+        let _ = tx.send(FetchMsg::SearchDone(
+            "test".into(),
+            vec![make_track(1, "Track", "http://url")],
+        ));
         app.handle_tick();
         assert!(matches!(app.state.fetch_state, FetchState::Done));
         assert_eq!(app.state.results.len(), 1);
         assert_eq!(app.state.selected, 0);
         assert_eq!(app.state.scroll, 0);
+    }
+
+    #[test]
+    fn handle_tick_discards_stale_results() {
+        let mut app = App::default();
+        let (tx, rx) = mpsc::channel();
+        app.rx_fetch = Some(rx);
+        app.state.fetch_state = FetchState::Fetching;
+        app.state.query = "newquery".into();
+        // Send stale result from old query
+        let _ = tx.send(FetchMsg::SearchDone(
+            "oldquery".into(),
+            vec![make_track(1, "Stale", "http://url")],
+        ));
+        app.handle_tick();
+        // Should still be fetching because query doesn't match
+        assert!(matches!(app.state.fetch_state, FetchState::Fetching));
+        assert!(app.state.results.is_empty());
     }
 
     #[test]
@@ -486,7 +580,7 @@ mod tests {
     fn scroll_adjusts_up_when_selected_above_view() {
         let mut app = App::default();
         app.state.results = (0..20)
-            .map(|i| make_track(i as u32, &format!("Track {}", i), "http://x"))
+            .map(|i| make_track(i, &format!("Track {}", i), "http://x"))
             .collect();
         app.state.selected = 10;
         app.state.scroll = 10;
@@ -498,14 +592,14 @@ mod tests {
     #[test]
     fn scroll_adjusts_down_when_selected_below_view() {
         let mut app = App::default();
+        app.area.h = 8; // small area: max_visible = 4
         app.state.results = (0..20)
-            .map(|i| make_track(i as u32, &format!("Track {}", i), "http://x"))
+            .map(|i| make_track(i, &format!("Track {}", i), "http://x"))
             .collect();
-        app.state.selected = 5;
+        app.state.selected = 0;
         app.state.scroll = 0;
-        let max_vis = max_visible_tracks(app.area.h);
-        // Move selected to just past the visible range
-        for _ in 0..max_vis {
+        // Move past visible range (scroll=0, visible=0..4)
+        for _ in 0..5 {
             app.handle_key(IpcKey::Down);
         }
         assert!(app.state.scroll > 0);

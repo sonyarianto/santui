@@ -3783,6 +3783,7 @@ name = "santui-music-preview"
 version = "0.2.30"
 dependencies = [
  "env_logger",
+ "libloading",
  "log",
  "santui-ipc",
  "serde",

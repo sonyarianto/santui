@@ -12,5 +12,6 @@ santui-ipc  = { path = "../../ipc",  version = "0.2.30", default-features = fals
 serde       = { workspace = true }
 serde_json  = { workspace = true }
 ureq        = "3"
+libloading  = "0.9"
 log         = { workspace = true }
 env_logger  = { workspace = true }
