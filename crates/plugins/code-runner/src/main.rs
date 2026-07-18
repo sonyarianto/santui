@@ -157,16 +157,13 @@ impl App {
             return;
         }
 
-        let cmd_str = if cfg!(unix) {
-            std::fs::set_permissions(
-                &tmpfile,
-                std::os::unix::fs::PermissionsExt::from_mode(0o755),
-            )
-            .ok();
-            format!("{} {}", lang, tmpfile)
-        } else {
-            format!("{} {}", lang, tmpfile)
-        };
+        #[cfg(unix)]
+        std::fs::set_permissions(
+            &tmpfile,
+            std::os::unix::fs::PermissionsExt::from_mode(0o755),
+        )
+        .ok();
+        let cmd_str = format!("{} {}", lang, tmpfile);
 
         let shell = if cfg!(target_os = "windows") {
             "cmd"
