@@ -34,13 +34,16 @@ impl App {
                 ("↑↓".into(), "navigate".into()),
                 ("↵".into(), "select".into()),
                 ("c".into(), "clear".into()),
+                ("space".into(), "fav".into()),
                 ("/".into(), "search".into()),
             ]
         } else {
             vec![
                 ("↑↓".into(), "navigate".into()),
                 ("↵".into(), "select".into()),
+                ("space".into(), "fav".into()),
                 ("/".into(), "search".into()),
+                ("f".into(), "fav only".into()),
             ]
         }
     }
@@ -96,7 +99,8 @@ impl App {
 
         let info = if self.status.is_empty() {
             self.registry.as_ref().map_or_else(String::new, |reg| {
-                if self.query.is_empty() {
+                let fav_count = self.favorites_count();
+                let base = if self.query.is_empty() {
                     format!("{} available", reg.available.len())
                 } else {
                     format!(
@@ -104,6 +108,13 @@ impl App {
                         self.filtered.len(),
                         reg.available.len()
                     )
+                };
+                if self.show_favorites_only {
+                    format!("♥ {}  {}", self.filtered.len(), base)
+                } else if fav_count > 0 {
+                    format!("{}  ♥ {}", base, fav_count)
+                } else {
+                    base
                 }
             })
         } else {
@@ -214,7 +225,12 @@ impl App {
                     "-"
                 };
 
-                let name_s = ui::truncate(&plugin.name, name_w);
+                let fav_prefix = if self.is_favorite(&plugin.id) {
+                    "♥ "
+                } else {
+                    "  "
+                };
+                let name_s = ui::truncate(&format!("{fav_prefix}{}", plugin.name), name_w);
                 let desc_s = ui::truncate(&plugin.description, desc_w);
                 let publisher_s = ui::truncate(&plugin.publisher, publisher_w);
                 let ver_s = ui::truncate(&plugin.version, ver_w);
@@ -284,6 +300,31 @@ impl App {
                 current_style: None,
                 cell_styles: None,
             });
+
+            let heart_red = [255, 60, 60];
+            for i in 0..visible_count {
+                let row_idx = self.scroll as usize + i;
+                if row_idx >= self.filtered.len() {
+                    break;
+                }
+                let plugin = &reg.available[self.filtered[row_idx]];
+                if self.is_favorite(&plugin.id) {
+                    let bg = if vis_selected == Some(i) {
+                        Some(t.highlight)
+                    } else {
+                        None
+                    };
+                    cmds.push(RenderCmd::Text {
+                        x: 2,
+                        y: list_top + 1 + i as u16,
+                        text: "♥".into(),
+                        fg: Some(heart_red),
+                        bg,
+                        bold: false,
+                        modifiers: 0,
+                    });
+                }
+            }
         }
     }
 
@@ -448,10 +489,12 @@ mod tests {
     fn test_hints_list_mode() {
         let app = App::new();
         let hints = app.hints();
-        assert_eq!(hints.len(), 3);
+        assert_eq!(hints.len(), 5);
         assert_eq!(hints[0], ("↑↓".into(), "navigate".into()));
         assert_eq!(hints[1], ("↵".into(), "select".into()));
-        assert_eq!(hints[2], ("/".into(), "search".into()));
+        assert_eq!(hints[2], ("space".into(), "fav".into()));
+        assert_eq!(hints[3], ("/".into(), "search".into()));
+        assert_eq!(hints[4], ("f".into(), "fav only".into()));
     }
 
     #[test]
@@ -468,8 +511,10 @@ mod tests {
         let mut app = App::new();
         app.query = "test".into();
         let hints = app.hints();
-        assert_eq!(hints.len(), 4);
+        assert_eq!(hints.len(), 5);
         assert_eq!(hints[2], ("c".into(), "clear".into()));
+        assert_eq!(hints[3], ("space".into(), "fav".into()));
+        assert_eq!(hints[4], ("/".into(), "search".into()));
     }
 
     #[test]

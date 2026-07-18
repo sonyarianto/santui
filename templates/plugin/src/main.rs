@@ -1,7 +1,7 @@
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, IpcKeyModifiers, PluginMsg, RenderCmd, ThemeData,
 };
-use std::io::{self, BufRead, Write};
+use std::io::{self, BufRead};
 
 /// Per-plugin state.  Add your own fields below.
 struct PluginState {
@@ -51,7 +51,7 @@ impl PluginState {
         }]
     }
 
-    /// Serialise a `PluginMsg` to stdout so the host can consume it.
+    /// Serialise a `PluginMsg` to stdout as a binary bincode frame.
     fn respond(&self, consumed: bool) {
         let msg = PluginMsg {
             commands: self.render(),
@@ -60,31 +60,21 @@ impl PluginState {
             request: None,
             consumed,
         };
-        let json = serde_json::to_string(&msg).expect("serialise PluginMsg");
         let mut out = io::stdout().lock();
-        let _ = writeln!(out, "{json}");
-        let _ = out.flush();
+        let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
     }
 }
 
 fn main() {
     let mut state: Option<PluginState> = None;
-    let stdin = io::stdin().lock();
-    let mut raw = String::new();
+    let mut stdin = io::stdin().lock();
 
-    for line in stdin.lines() {
-        raw.clear();
-        let line = match line {
-            Ok(l) => l,
-            Err(_) => break,
-        };
-        raw = line;
-
-        let host_msg: HostMsg = match serde_json::from_str(&raw) {
+    loop {
+        let host_msg: HostMsg = match santui_ipc::protocol::read_host_msg_json(&mut stdin) {
             Ok(m) => m,
+            Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break,
             Err(e) => {
                 eprintln!("[{{project-name}}] Failed to parse HostMsg: {e}");
-                eprintln!("[{{project-name}}] Raw input: {raw}");
                 continue;
             }
         };
@@ -145,10 +135,8 @@ fn main() {
                 request: None,
                 consumed: false,
             };
-            let json = serde_json::to_string(&empty).expect("serialise empty PluginMsg");
             let mut out = io::stdout().lock();
-            let _ = writeln!(out, "{json}");
-            let _ = out.flush();
+            let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &empty);
         }
     }
 }

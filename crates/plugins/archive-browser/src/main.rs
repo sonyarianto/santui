@@ -1,6 +1,6 @@
 use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
 use serde_json::{json, Value};
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader};
 
 #[derive(Debug, Clone)]
 struct ArchiveEntry {
@@ -238,29 +238,33 @@ fn default_theme() -> ThemeData {
     }
 }
 
-fn palette_commands() -> Value {
-    json!([["Tools", "Archive Browser"]])
+fn palette_commands() -> Vec<(String, String)> {
+    vec![("Tools".into(), "Archive Browser".into())]
 }
 
-fn key_hints() -> Value {
-    json!([
-        ["o", "open path"],
-        ["Enter", "load archive"],
-        ["r", "reset"],
-    ])
+fn key_hints() -> Vec<(String, String)> {
+    vec![
+        ("o".into(), "open path".into()),
+        ("Enter".into(), "load archive".into()),
+        ("r".into(), "reset".into()),
+    ]
 }
 
 fn respond(app: &mut App, consumed: bool) {
-    let Ok(commands_val) = serde_json::to_value(app.render()) else {
-        return;
+    let msg = santui_ipc::protocol::PluginMsg {
+        commands: app
+            .render()
+            .iter()
+            .map(|v| serde_json::from_value(v.clone()).unwrap())
+            .collect(),
+        hints: key_hints(),
+        palette_commands: palette_commands(),
+        request: None,
+        plugin_message: None,
+        consumed,
     };
-    let json = json!({
-        "commands": commands_val, "hints": key_hints(), "palette_commands": palette_commands(),
-        "request": null, "plugin_message": null, "consumed": consumed,
-    });
     let mut out = std::io::stdout().lock();
-    let _ = writeln!(out, "{json}");
-    let _ = out.flush();
+    let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
 }
 
 fn main() {

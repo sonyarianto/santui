@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use std::ffi::CString;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader};
 use std::sync::{mpsc, Arc};
 use std::thread;
 
@@ -1086,16 +1086,16 @@ fn palette_commands() -> Vec<(String, String)> {
 }
 
 fn respond(app: &mut App, consumed: bool) {
-    let Ok(commands_val) = serde_json::to_value(app.render()) else {
-        return;
+    let msg = santui_ipc::protocol::PluginMsg {
+        commands: app.render().to_vec(),
+        hints: hints(app.screen),
+        palette_commands: palette_commands(),
+        request: app.pending_request.take(),
+        plugin_message: None,
+        consumed,
     };
-    let request = app.pending_request.take();
-    let json = serde_json::json!({ "commands": commands_val, "hints": hints(app.screen), "palette_commands": palette_commands(), "request": request, "plugin_message": null, "consumed": consumed });
-    if let Ok(json_str) = serde_json::to_string(&json) {
-        let mut out = std::io::stdout().lock();
-        let _ = writeln!(out, "{json_str}");
-        let _ = out.flush();
-    }
+    let mut out = std::io::stdout().lock();
+    let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
 }
 
 // Minimal libmpv wrapper for audio-only recitation playback.

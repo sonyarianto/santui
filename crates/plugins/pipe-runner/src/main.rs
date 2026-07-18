@@ -1,13 +1,14 @@
-use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
-use serde_json::{json, Value};
-use std::io::{BufRead, BufReader, Write};
+use santui_ipc::protocol::{
+    Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData, BORDER_ALL,
+};
+use std::io::{BufRead, BufReader};
 use std::process::Command;
 
 struct App {
     theme: ThemeData,
     area: Area,
     dirty: bool,
-    cached_commands: Vec<Value>,
+    cached_commands: Vec<RenderCmd>,
     input: String,
     cursor_pos: usize,
     output: Vec<String>,
@@ -130,71 +131,121 @@ impl App {
         }
     }
 
-    fn render(&mut self) -> Vec<Value> {
+    fn render(&mut self) -> Vec<RenderCmd> {
         if !self.dirty && !self.cached_commands.is_empty() {
             return self.cached_commands.clone();
         }
         let t = &self.theme;
         let w = self.area.w.max(52);
         let h = self.area.h.max(14);
-        let mut cmds: Vec<Value> = Vec::new();
+        let mut cmds: Vec<RenderCmd> = Vec::new();
 
-        cmds.push(json!({"Rect": {"x": 0, "y": 0, "w": w, "h": h, "bg": t.background}}));
-        cmds.push(json!({"Border": {
-            "x": 0, "y": 0, "w": w, "h": h, "fg": t.border, "borders": BORDER_ALL,
-            "bg": t.background_panel, "title": " Pipe Runner ",
-            "title_fg": t.text, "title_dash_fg": t.border, "border_type": null,
-        }}));
+        cmds.push(RenderCmd::Rect {
+            x: 0,
+            y: 0,
+            w,
+            h,
+            bg: t.background,
+        });
+        cmds.push(RenderCmd::Border {
+            x: 0,
+            y: 0,
+            w,
+            h,
+            fg: t.border,
+            borders: BORDER_ALL,
+            bg: Some(t.background_panel),
+            title: Some(String::from(" Pipe Runner ")),
+            title_fg: Some(t.text),
+            title_dash_fg: Some(t.border),
+            border_type: None,
+        });
 
-        cmds.push(json!({"Text": {
-            "x": 2, "y": 1, "text": "$", "fg": t.success, "bg": null,
-            "bold": true, "modifiers": 0,
-        }}));
-        cmds.push(json!({"Text": {
-            "x": 4, "y": 1,
-            "text": if self.input.is_empty() { String::from("ls -la") } else { self.input.clone() },
-            "fg": t.text, "bg": null, "bold": false, "modifiers": 0,
-        }}));
-        cmds.push(json!({"Text": {
-            "x": 4 + self.cursor_pos as u16, "y": 1,
-            "text": String::from("\u{258c}"), "fg": t.accent, "bg": null,
-            "bold": false, "modifiers": 2,
-        }}));
+        cmds.push(RenderCmd::Text {
+            x: 2,
+            y: 1,
+            text: String::from("$"),
+            fg: Some(t.success),
+            bg: None,
+            bold: true,
+            modifiers: 0,
+        });
+        cmds.push(RenderCmd::Text {
+            x: 4,
+            y: 1,
+            text: if self.input.is_empty() {
+                String::from("ls -la")
+            } else {
+                self.input.clone()
+            },
+            fg: Some(t.text),
+            bg: None,
+            bold: false,
+            modifiers: 0,
+        });
+        cmds.push(RenderCmd::Text {
+            x: 4 + self.cursor_pos as u16,
+            y: 1,
+            text: String::from("\u{258c}"),
+            fg: Some(t.accent),
+            bg: None,
+            bold: false,
+            modifiers: 2,
+        });
 
         let box_y = 3;
         let box_w = w.saturating_sub(4);
         let box_h = h.saturating_sub(5).max(4);
 
-        cmds.push(json!({"Border": {
-            "x": 2, "y": box_y, "w": box_w, "h": box_h, "fg": t.accent,
-            "borders": BORDER_ALL, "bg": t.background,
-            "title": " Output ", "title_fg": t.accent,
-            "title_dash_fg": t.border, "border_type": null,
-        }}));
+        cmds.push(RenderCmd::Border {
+            x: 2,
+            y: box_y,
+            w: box_w,
+            h: box_h,
+            fg: t.accent,
+            borders: BORDER_ALL,
+            bg: Some(t.background),
+            title: Some(String::from(" Output ")),
+            title_fg: Some(t.accent),
+            title_dash_fg: Some(t.border),
+            border_type: None,
+        });
 
         if self.output.is_empty() {
-            cmds.push(json!({"Text": {
-                "x": 4, "y": box_y + 1,
-                "text": String::from("Run a command to see output here"),
-                "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0,
-            }}));
+            cmds.push(RenderCmd::Text {
+                x: 4,
+                y: box_y + 1,
+                text: String::from("Run a command to see output here"),
+                fg: Some(t.text_muted),
+                bg: None,
+                bold: false,
+                modifiers: 0,
+            });
         } else {
             let max_rows = box_h.saturating_sub(2) as usize;
             let visible = &self.output[..self.output.len().min(max_rows)];
             for (i, line) in visible.iter().enumerate() {
-                cmds.push(json!({"Text": {
-                    "x": 4, "y": box_y + 1 + i as u16,
-                    "text": line.clone(),
-                    "fg": t.text, "bg": null, "bold": false, "modifiers": 0,
-                }}));
+                cmds.push(RenderCmd::Text {
+                    x: 4,
+                    y: box_y + 1 + i as u16,
+                    text: line.clone(),
+                    fg: Some(t.text),
+                    bg: None,
+                    bold: false,
+                    modifiers: 0,
+                });
             }
         }
 
-        cmds.push(json!({"Text": {
-            "x": 2, "y": h.saturating_sub(2),
-            "text": self.status.clone(),
-            "fg": t.text_muted, "bg": null, "bold": false, "modifiers": 0,
-        }}));
+        cmds.push(RenderCmd::Text {
+            x: 2,
+            y: h.saturating_sub(2),
+            text: self.status.clone(),
+            fg: Some(t.text_muted),
+            bg: None,
+            bold: false,
+            modifiers: 0,
+        });
 
         self.cached_commands = cmds.clone();
         self.dirty = false;
@@ -219,25 +270,28 @@ fn default_theme() -> ThemeData {
     }
 }
 
-fn palette_commands() -> Value {
-    json!([["Plugins", "Pipe Runner"]])
+fn palette_commands() -> Vec<(String, String)> {
+    vec![("Plugins".to_string(), "Pipe Runner".to_string())]
 }
 
-fn key_hints() -> Value {
-    json!([["esc", "close"], ["enter", "run command"],])
+fn key_hints() -> Vec<(String, String)> {
+    vec![
+        ("esc".to_string(), "close".to_string()),
+        ("enter".to_string(), "run command".to_string()),
+    ]
 }
 
 fn respond(app: &mut App, consumed: bool) {
-    let Ok(commands_val) = serde_json::to_value(app.render()) else {
-        return;
+    let msg = santui_ipc::protocol::PluginMsg {
+        commands: app.render().to_vec(),
+        hints: key_hints(),
+        palette_commands: palette_commands(),
+        request: None,
+        plugin_message: None,
+        consumed,
     };
-    let json = json!({
-        "commands": commands_val, "hints": key_hints(), "palette_commands": palette_commands(),
-        "request": null, "plugin_message": null, "consumed": consumed,
-    });
     let mut out = std::io::stdout().lock();
-    let _ = writeln!(out, "{json}");
-    let _ = out.flush();
+    let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
 }
 
 fn main() {

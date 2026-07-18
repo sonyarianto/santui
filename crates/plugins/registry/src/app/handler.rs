@@ -5,6 +5,7 @@ use santui_registry::{plugin_filename, PluginManifest};
 
 use super::state::{Action, App, DownloadEvent};
 
+use std::collections::HashSet;
 use std::sync::mpsc;
 
 impl App {
@@ -49,6 +50,9 @@ impl App {
                         }
                     }
                 }
+                self.pending_request = Some(PluginRequest::DbGet {
+                    key: "favorites".into(),
+                });
                 self.apply_filter();
             }
 
@@ -156,7 +160,9 @@ impl App {
             HostMsg::PaletteCommand { index: _ } => {}
 
             HostMsg::PluginMessage { .. } => {}
-            HostMsg::DbValue { .. } => {}
+            HostMsg::DbValue { key, value } => {
+                self.handle_db_value(&key, value);
+            }
             HostMsg::LogEntries { .. } => {}
 
             HostMsg::Mouse { event } => {
@@ -173,9 +179,20 @@ impl App {
             commands,
             hints,
             palette_commands,
-            request,
+            request: request.or_else(|| self.pending_request.take()),
             plugin_message: None,
             consumed,
+        }
+    }
+
+    fn handle_db_value(&mut self, key: &str, value: Option<String>) {
+        if key == "favorites" {
+            let favs: HashSet<String> = match value {
+                Some(json) => serde_json::from_str(&json).unwrap_or_default(),
+                None => HashSet::new(),
+            };
+            self.set_favorites(favs);
+            self.set_status(format!("♥ {} favorite(s) loaded", self.favorites_count()));
         }
     }
 
@@ -294,6 +311,47 @@ impl App {
 
     fn handle_list_key(&mut self, key: IpcKey, _request: &mut Option<PluginRequest>) -> bool {
         match key {
+            IpcKey::Char(' ') => {
+                let count = self.available_count();
+                if self.cursor < count {
+                    let plugin_idx = self.filtered[self.cursor];
+                    let (plugin_id, plugin_name) = self
+                        .registry
+                        .as_ref()
+                        .and_then(|reg| reg.available.get(plugin_idx))
+                        .map(|p| (p.id.clone(), p.name.clone()))
+                        .unwrap_or_default();
+                    if !plugin_id.is_empty() {
+                        let added = self.toggle_favorite(&plugin_id);
+                        let favs_json =
+                            serde_json::to_string(&self.favorites.iter().collect::<Vec<_>>())
+                                .unwrap_or_default();
+                        self.pending_request = Some(PluginRequest::DbSet {
+                            key: "favorites".into(),
+                            value: favs_json,
+                        });
+                        self.set_status(if added {
+                            format!("♥ {plugin_name} added to favorites")
+                        } else {
+                            format!("{plugin_name} removed from favorites")
+                        });
+                        self.apply_filter();
+                    }
+                }
+                true
+            }
+            IpcKey::Char('f') | IpcKey::Char('F') => {
+                self.show_favorites_only = !self.show_favorites_only;
+                self.apply_filter();
+                self.cursor = 0;
+                self.scroll = 0;
+                self.set_status(if self.show_favorites_only {
+                    "♥ Showing favorites only".into()
+                } else {
+                    "Showing all plugins".into()
+                });
+                true
+            }
             IpcKey::Up => {
                 if self.cursor > 0 {
                     self.cursor -= 1;

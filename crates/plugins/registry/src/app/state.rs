@@ -1,5 +1,6 @@
-use santui_ipc::protocol::{Area, ThemeData};
+use santui_ipc::protocol::{Area, PluginRequest, ThemeData};
 use santui_registry::Registry;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::mpsc;
 
@@ -40,6 +41,9 @@ pub struct App {
     pub(super) query: String,
     pub(super) filtered: Vec<usize>,
     pub(super) tick: u64,
+    pub(super) favorites: HashSet<String>,
+    pub(super) show_favorites_only: bool,
+    pub(super) pending_request: Option<PluginRequest>,
 }
 
 impl Default for App {
@@ -84,6 +88,9 @@ impl App {
             query: String::new(),
             filtered: Vec::new(),
             tick: 0,
+            favorites: HashSet::new(),
+            show_favorites_only: false,
+            pending_request: None,
         }
     }
 
@@ -100,20 +107,20 @@ impl App {
                 return;
             }
         };
-        self.filtered = if q.is_empty() {
-            (0..reg.available.len()).collect()
-        } else {
-            reg.available
-                .iter()
-                .enumerate()
-                .filter(|(_, p)| {
-                    p.name.to_lowercase().contains(&q)
-                        || p.description.to_lowercase().contains(&q)
-                        || p.publisher.to_lowercase().contains(&q)
-                })
-                .map(|(i, _)| i)
-                .collect()
-        };
+        self.filtered = reg
+            .available
+            .iter()
+            .enumerate()
+            .filter(|(_, p)| {
+                let matches_query = q.is_empty()
+                    || p.name.to_lowercase().contains(&q)
+                    || p.description.to_lowercase().contains(&q)
+                    || p.publisher.to_lowercase().contains(&q);
+                let matches_fav = !self.show_favorites_only || self.favorites.contains(&p.id);
+                matches_query && matches_fav
+            })
+            .map(|(i, _)| i)
+            .collect();
         let max = self.filtered.len().saturating_sub(1);
         if self.cursor > max {
             self.cursor = max;
@@ -136,6 +143,29 @@ impl App {
     pub fn set_status(&mut self, msg: String) {
         self.status = msg;
         self.status_ticks = 0;
+    }
+
+    pub fn is_favorite(&self, id: &str) -> bool {
+        self.favorites.contains(id)
+    }
+
+    pub fn toggle_favorite(&mut self, id: &str) -> bool {
+        if self.favorites.contains(id) {
+            self.favorites.remove(id);
+            false
+        } else {
+            self.favorites.insert(id.to_string());
+            true
+        }
+    }
+
+    pub fn set_favorites(&mut self, favs: HashSet<String>) {
+        self.favorites = favs;
+        self.apply_filter();
+    }
+
+    pub fn favorites_count(&self) -> usize {
+        self.favorites.len()
     }
 
     /// Called every Tick (~100 ms). Auto‑dismisses the status after ~2 s.
@@ -176,6 +206,9 @@ mod tests {
         assert!(app.query.is_empty());
         assert!(app.filtered.is_empty());
         assert_eq!(app.tick, 0);
+        assert!(app.favorites.is_empty());
+        assert!(!app.show_favorites_only);
+        assert!(app.pending_request.is_none());
     }
 
     #[test]

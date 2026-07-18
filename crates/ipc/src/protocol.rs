@@ -387,6 +387,52 @@ pub struct PluginMsg {
     pub consumed: bool,
 }
 
+use std::io::{self, BufRead, Write};
+
+/// Read a `PluginMsg` from a binary length-prefixed bincode frame.
+///
+/// Auto-detects JSON Lines format: if the first available byte is `{`, falls
+/// back to reading a line and parsing with `serde_json`. Otherwise reads a
+/// binary frame (`[4-byte LE length][N bytes of bincode]`).
+/// Read a `PluginMsg` from a binary length-prefixed bincode frame.
+///
+/// Format: `[4-byte LE length][N bytes of bincode]`
+pub fn read_plugin_msg<R: BufRead>(r: &mut R) -> io::Result<PluginMsg> {
+    let mut len_buf = [0u8; 4];
+    r.read_exact(&mut len_buf)?;
+    let len = u32::from_le_bytes(len_buf) as usize;
+    let mut payload = vec![0u8; len];
+    r.read_exact(&mut payload)?;
+    let (decoded, _): (PluginMsg, _) =
+        bincode::serde::decode_from_slice(&payload, bincode::config::standard())
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+    Ok(decoded)
+}
+
+/// Write a `PluginMsg` as a binary length-prefixed bincode frame.
+///
+/// Format: `[4-byte LE length][N bytes of bincode]`
+pub fn write_plugin_msg<W: Write>(w: &mut W, msg: &PluginMsg) -> io::Result<()> {
+    let payload = bincode::serde::encode_to_vec(msg, bincode::config::standard())
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+    let len = payload.len() as u32;
+    w.write_all(&len.to_le_bytes())?;
+    w.write_all(&payload)?;
+    w.flush()
+}
+
+/// Read a `HostMsg` from stdin using JSON Lines format (host → plugin
+/// direction stays JSON for backward compat).
+pub fn read_host_msg_json<R: BufRead>(r: &mut R) -> io::Result<HostMsg> {
+    let mut line = String::new();
+    r.read_line(&mut line)?;
+    if line.is_empty() {
+        return Err(io::ErrorKind::UnexpectedEof.into());
+    }
+    let trimmed = line.trim_end_matches('\n').trim_end_matches('\r');
+    serde_json::from_str(trimmed).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
