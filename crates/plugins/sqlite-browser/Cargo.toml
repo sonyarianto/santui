@@ -1,6 +1,6 @@
 [package]
 name = "santui-sqlite-browser"
-version = "0.2.29"
+version = "0.2.30"
 edition = "2021"
 
 [[bin]]
@@ -8,7 +8,7 @@ name = "santui-sqlite-browser"
 path = "src/main.rs"
 
 [dependencies]
-santui-ipc  = { path = "../../ipc",  version = "0.2.29", default-features = false }
+santui-ipc  = { path = "../../ipc",  version = "0.2.30", default-features = false }
 rusqlite    = { version = "0.40", features = ["bundled"] }
 serde_json  = "1"
 log         = "0.4"

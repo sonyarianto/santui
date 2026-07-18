@@ -1,6 +1,6 @@
 [package]
 name = "santui-core"
-version = "0.2.29"
+version = "0.2.30"
 edition = "2021"
 description = "Santui core framework — App, Plugin trait, events, config, palette"
 license = "MIT"

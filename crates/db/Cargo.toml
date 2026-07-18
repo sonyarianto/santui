@@ -1,6 +1,6 @@
 [package]
 name = "santui-db"
-version = "0.2.29"
+version = "0.2.30"
 edition = "2021"
 description = "Santui central SQLite database — per-user state for plugins"
 license = "MIT"

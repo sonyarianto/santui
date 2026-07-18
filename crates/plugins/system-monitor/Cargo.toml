@@ -1,6 +1,6 @@
 [package]
 name = "santui-system-monitor"
-version = "0.2.29"
+version = "0.2.30"
 edition = "2021"
 
 [[bin]]
@@ -8,7 +8,7 @@ name = "santui-system-monitor"
 path = "src/main.rs"
 
 [dependencies]
-santui-ipc = { path = "../../ipc", version = "0.2.29", default-features = false }
+santui-ipc = { path = "../../ipc", version = "0.2.30", default-features = false }
 sysinfo = { version = "0.39", default-features = false, features = ["system", "disk", "network"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
