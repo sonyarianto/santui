@@ -233,6 +233,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Flags:");
         println!("  --version, -V           Print version and exit");
         println!("  --list-plugins, plugins  List installed/available plugins and exit");
+        println!("  --no-mouse              Disable mouse capture at startup");
         println!("  --help, -h              Show this help message");
         return Ok(());
     }
@@ -240,6 +241,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if args.iter().any(|a| a == "--list-plugins" || a == "plugins") {
         return list_plugins();
     }
+
+    let no_mouse = args.iter().any(|a| a == "--no-mouse");
 
     let dev = std::env::var("SANTUI_DEV").as_deref() == Ok("1");
     let dir = if dev {
@@ -278,6 +281,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     app.set_sync(sync_client);
     app.set_data_dir(dir.clone());
     app.set_config_dir(dir);
+
+    // --no-mouse overrides config.toml mouse_capture.
+    if no_mouse {
+        app.set_mouse_capture_startup(false);
+    }
 
     // Install a runtime log ring buffer so the log-viewer plugin can display
     // warnings, errors, and other log output from the host and its plugins.

@@ -20,10 +20,13 @@ pub struct AppState {
     /// Index into `PluginManager::carousel_items()` for the home screen carousel.
     /// `None` means no plugin is selected (bare home screen).
     pub home_selected: Option<usize>,
+    /// Whether mouse capture is enabled (click, scroll in terminal).
+    /// Disable for native text selection at the cost of plugin mouse support.
+    pub mouse_capture: bool,
 }
 
 impl AppState {
-    pub fn new(theme: Theme) -> Self {
+    pub fn new(theme: Theme, mouse_capture: bool) -> Self {
         let builtin_items = super::all_builtins();
         AppState {
             running: true,
@@ -32,6 +35,7 @@ impl AppState {
             theme_picker_open: false,
             builtin_items,
             home_selected: None,
+            mouse_capture,
         }
     }
 

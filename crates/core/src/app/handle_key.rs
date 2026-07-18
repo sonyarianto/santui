@@ -8,6 +8,11 @@ impl super::Santui {
             self.app_state.running = false;
             return;
         }
+        // Alt+M toggles mouse capture globally (text selection vs click/scroll).
+        if matches!(key.code, KeyCode::Char('m') if key.modifiers.contains(KeyModifiers::ALT)) {
+            self.set_mouse_capture(!self.app_state.mouse_capture);
+            return;
+        }
         if self.palette_controller.is_open() {
             return self.handle_key_palette(key);
         }

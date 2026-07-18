@@ -15,12 +15,21 @@ pub struct Config {
     /// Key-binding overrides.
     #[serde(default)]
     pub keybindings: KeyBindings,
+    /// Enable mouse capture (click, scroll) in the terminal.
+    /// When disabled, text selection works without holding Shift.
+    /// Toggle at runtime with Alt+M.
+    #[serde(default = "default_mouse_capture")]
+    pub mouse_capture: bool,
     /// Plugin-specific settings (reserved — schema defined for future use).
     #[serde(default)]
     pub plugins: Option<PluginConfig>,
     /// Optional santui-server connection for state sync.
     #[serde(default)]
     pub server: Option<ServerConfig>,
+}
+
+fn default_mouse_capture() -> bool {
+    true
 }
 
 /// Connection settings for a remote [`santui-server`](https://github.com/sonyarianto/santui).

@@ -27,6 +27,8 @@ pub(super) struct StatusBar<'a> {
     pub auth_message: Option<&'a str>,
     /// Names of crashed plugins to display in red.
     pub plugin_errors: &'a [String],
+    /// Whether mouse capture is enabled.
+    pub mouse_capture: bool,
 }
 
 impl StatusBar<'_> {
@@ -116,6 +118,9 @@ impl StatusBar<'_> {
                 };
                 right_spans.push(Span::styled(format!("{provider_prefix}{display}"), dim));
                 right_spans.push(Span::styled(" ", dim));
+            }
+            if !self.mouse_capture {
+                right_spans.push(Span::styled("mouse off ", key));
             }
             right_spans.push(Span::styled("Santui ", key));
             right_spans.push(Span::styled(super::VERSION, dim));

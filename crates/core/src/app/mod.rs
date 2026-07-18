@@ -16,8 +16,9 @@ use crate::logger::LoggerBuffer;
 use crate::plugin::{Plugin, PluginContext};
 use crate::sync::SyncClient;
 use crate::widgets::DimOverlay;
-use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
-use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers, MouseEvent};
+use crossterm::event::{
+    DisableMouseCapture, Event, KeyCode, KeyEventKind, KeyModifiers, MouseEvent,
+};
 use crossterm::execute;
 use crossterm::terminal::enable_raw_mode;
 use ratatui::backend::CrosstermBackend;
@@ -26,6 +27,7 @@ use ratatui::style::{Color, Style};
 use ratatui::widgets::Widget;
 use ratatui::Frame;
 use ratatui::Terminal;
+use std::io::Write;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -239,7 +241,7 @@ impl Santui {
             auth: None,
             sync: None,
             db: None,
-            app_state: app_state::AppState::new(theme),
+            app_state: app_state::AppState::new(theme, true),
             theme_manager,
             palette_controller: palette_controller::PaletteController::new(),
             config_manager: ConfigManager::new(std::path::PathBuf::new()),
@@ -277,6 +279,27 @@ impl Santui {
     /// forwarded to plugins that declare the `log-consumer` capability.
     pub fn set_log_buffer(&mut self, buf: Arc<LoggerBuffer>) {
         self.log_buffer = Some(buf);
+    }
+
+    /// Toggle mouse capture on/off at runtime.
+    /// When disabled, terminal text selection works without Shift.
+    /// Call after entering alternate screen / raw mode.
+    pub fn set_mouse_capture(&mut self, enabled: bool) {
+        use crossterm::QueueableCommand;
+        self.app_state.mouse_capture = enabled;
+        let mut stdout = std::io::stdout();
+        if enabled {
+            let _ = stdout.queue(crossterm::event::EnableMouseCapture);
+        } else {
+            let _ = stdout.queue(crossterm::event::DisableMouseCapture);
+        }
+        let _ = stdout.flush();
+    }
+
+    /// Set mouse capture flag without applying it (used before run()).
+    /// The actual crossterm call happens at startup inside run().
+    pub fn set_mouse_capture_startup(&mut self, enabled: bool) {
+        self.app_state.mouse_capture = enabled;
     }
 
     /// Set the config directory and load (or create) `config.toml`.
@@ -368,6 +391,7 @@ impl Santui {
             self.event_bus.emit(crate::event::Event::ThemeChanged(t));
         }
 
+        self.app_state.mouse_capture = self.config_manager.config().mouse_capture;
         self.bindings = ResolvedBindings::from_config(&self.config_manager.config().keybindings);
         self.config_manager.ack();
     }
@@ -391,11 +415,8 @@ impl Santui {
 
         enable_raw_mode()?;
         let mut stdout = std::io::stdout();
-        execute!(
-            stdout,
-            crossterm::terminal::EnterAlternateScreen,
-            EnableMouseCapture
-        )?;
+        execute!(stdout, crossterm::terminal::EnterAlternateScreen)?;
+        self.set_mouse_capture(self.app_state.mouse_capture);
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend)?;
         terminal.clear()?;
@@ -515,8 +536,12 @@ impl Santui {
                                 .process_all_requests(db.as_mut(), &self.auth);
                         }
                     }
-                    Event::Mouse(mouse) => {
+                    Event::Mouse(mouse) if self.app_state.mouse_capture => {
                         self.handle_mouse(mouse);
+                    }
+                    Event::Mouse(_) => {
+                        // Mouse capture disabled — events are swallowed
+                        // so they don't interfere with text selection.
                     }
                     _ => {}
                 }
@@ -586,6 +611,7 @@ impl Santui {
             config_error: self.config_manager.error(),
             auth_message: auth_message.as_deref(),
             plugin_errors: self.plugin_manager.crashed_plugins(),
+            mouse_capture: self.app_state.mouse_capture,
         }
         .render(f, chunks[1]);
 
