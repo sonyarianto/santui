@@ -185,14 +185,7 @@ impl App {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![
-        ("Plugins".into(), "Overview".into()),
-        ("Plugins".into(), "CPU detail".into()),
-        ("Plugins".into(), "Memory detail".into()),
-        ("Plugins".into(), "Disk detail".into()),
-        ("Plugins".into(), "Network detail".into()),
-        ("Plugins".into(), "Process list".into()),
-    ]
+    vec![]
 }
 
 fn respond(app: &mut App, consumed: bool) {

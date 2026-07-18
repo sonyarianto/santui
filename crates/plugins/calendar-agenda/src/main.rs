@@ -765,7 +765,7 @@ fn default_theme() -> ThemeData {
     }
 }
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Plugins".into(), "Open calendar agenda".into())]
+    vec![]
 }
 fn respond(app: &mut App, consumed: bool) {
     let msg = santui_ipc::protocol::PluginMsg {

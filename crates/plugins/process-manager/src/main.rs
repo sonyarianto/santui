@@ -203,7 +203,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Plugins".into(), "Process Manager".into())]
+    vec![]
 }
 
 fn key_hints() -> Vec<(String, String)> {

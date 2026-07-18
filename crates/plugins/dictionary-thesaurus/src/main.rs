@@ -688,7 +688,7 @@ fn hints() -> Vec<(String, String)> {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Plugins".into(), "Open dictionary / thesaurus".into())]
+    vec![]
 }
 fn respond(app: &mut App, consumed: bool) {
     let msg = santui_ipc::protocol::PluginMsg {

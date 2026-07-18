@@ -391,7 +391,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Plugins".into(), "Render diagrams as Unicode art".into())]
+    vec![]
 }
 
 fn hints() -> Vec<(String, String)> {

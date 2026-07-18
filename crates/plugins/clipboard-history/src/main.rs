@@ -268,10 +268,7 @@ fn now_secs() -> u64 {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![
-        ("Plugins".into(), "Show history".into()),
-        ("Plugins".into(), "Clear history".into()),
-    ]
+    vec![]
 }
 
 fn respond(app: &mut App, consumed: bool) {

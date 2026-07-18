@@ -480,10 +480,7 @@ impl App {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![
-        ("Plugins".into(), "Open SSH Manager".into()),
-        ("Plugins".into(), "New SSH host".into()),
-    ]
+    vec![]
 }
 
 fn respond(app: &mut App, consumed: bool) {

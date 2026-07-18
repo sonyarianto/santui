@@ -388,12 +388,7 @@ impl App {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![
-        ("Plugins".into(), "Current conditions".into()),
-        ("Plugins".into(), "Hourly forecast".into()),
-        ("Plugins".into(), "7-day forecast".into()),
-        ("Plugins".into(), "Set location".into()),
-    ]
+    vec![]
 }
 
 fn respond(app: &mut App, consumed: bool) {

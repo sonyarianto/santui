@@ -712,11 +712,7 @@ impl App {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![
-        ("Plugins".into(), "Search channels".into()),
-        ("Plugins".into(), "Refresh playlist".into()),
-        ("Plugins".into(), "Edit playlist URL".into()),
-    ]
+    vec![]
 }
 
 fn respond(app: &mut App, consumed: bool) {

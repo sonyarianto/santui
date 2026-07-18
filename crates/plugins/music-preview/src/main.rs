@@ -241,7 +241,7 @@ fn hints() -> Vec<(String, String)> {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Plugins".into(), "Search iTunes previews".into())]
+    vec![]
 }
 
 fn respond(app: &mut App, consumed: bool) {
@@ -562,11 +562,9 @@ mod tests {
     }
 
     #[test]
-    fn palette_commands_returns_music_entry() {
+    fn palette_commands_is_empty() {
         let cmds = palette_commands();
-        assert_eq!(cmds.len(), 1);
-        assert_eq!(cmds[0].0, "Music");
-        assert_eq!(cmds[0].1, "Search iTunes previews");
+        assert!(cmds.is_empty());
     }
 
     #[test]

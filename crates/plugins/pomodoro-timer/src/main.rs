@@ -297,11 +297,7 @@ impl App {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![
-        ("Plugins".into(), "Start focus session".into()),
-        ("Plugins".into(), "Start break".into()),
-        ("Plugins".into(), "View stats".into()),
-    ]
+    vec![]
 }
 
 fn today_date_string() -> String {

@@ -346,7 +346,7 @@ fn hints() -> Vec<(String, String)> {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Plugins".into(), "Open Code Runner".into())]
+    vec![]
 }
 
 fn respond(app: &mut App, consumed: bool) {

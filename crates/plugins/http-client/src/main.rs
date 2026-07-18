@@ -500,11 +500,7 @@ fn load_entry(state: &mut ClientState, entry: &RequestEntry) {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![
-        ("Plugins".into(), "Open HTTP client".into()),
-        ("Plugins".into(), "Send current request".into()),
-        ("Plugins".into(), "Request history".into()),
-    ]
+    vec![]
 }
 
 fn respond(app: &mut App, consumed: bool) {

@@ -337,10 +337,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![(
-        "Plugins".to_string(),
-        "Track time spent on tasks".to_string(),
-    )]
+    vec![]
 }
 
 fn hints() -> Vec<(String, String)> {

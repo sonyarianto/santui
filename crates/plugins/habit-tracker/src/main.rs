@@ -784,11 +784,7 @@ impl App {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![
-        ("Plugins".into(), "Open habit tracker".into()),
-        ("Plugins".into(), "New habit".into()),
-        ("Plugins".into(), "Today's overview".into()),
-    ]
+    vec![]
 }
 
 fn respond(app: &mut App, consumed: bool) {

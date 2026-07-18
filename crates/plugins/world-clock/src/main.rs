@@ -326,7 +326,7 @@ impl App {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Plugins".into(), "Grid".into())]
+    vec![]
 }
 
 fn grid_cols() -> usize {
