@@ -29,30 +29,74 @@ pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
     } else {
         ' '
     };
-    let max_left = w.saturating_sub(4) as usize;
+    let inner_w = w.saturating_sub(4) as usize;
+
+    let count_label = if state.results.is_empty() {
+        String::new()
+    } else {
+        let n = state.results.len();
+        if n == 1 {
+            "1 track".into()
+        } else {
+            format!("{n} tracks")
+        }
+    };
+    let right_len = count_label.len();
+
     if state.search_mode {
-        let text = format!("Search: {}{cursor}", state.query);
-        let display: String = text.chars().take(max_left).collect();
+        let left_text = format!("Search: {}{cursor}", state.query);
+        let max_left = inner_w.saturating_sub(right_len + 1);
+        let display_left: String = left_text.chars().take(max_left).collect();
         cmds.push(RenderCmd::Text {
             x: 2,
             y: 1,
-            text: display,
+            text: display_left,
             fg: Some(theme.text),
             bg: None,
             bold: false,
             modifiers: 0,
         });
+        if !count_label.is_empty() {
+            let right_x = w.saturating_sub(2u16.saturating_add(count_label.len() as u16));
+            cmds.push(RenderCmd::Text {
+                x: right_x,
+                y: 1,
+                text: count_label,
+                fg: Some(theme.text_muted),
+                bg: None,
+                bold: false,
+                modifiers: 0,
+            });
+        }
     } else {
-        let display: String = "Search: ".chars().take(max_left).collect();
+        let left_text = if state.query.is_empty() {
+            "Search: ".to_string()
+        } else {
+            format!("Search: {}", state.query)
+        };
+        let max_left = inner_w.saturating_sub(right_len + 1);
+        let display_left: String = left_text.chars().take(max_left).collect();
         cmds.push(RenderCmd::Text {
             x: 2,
             y: 1,
-            text: display,
+            text: display_left,
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
             modifiers: 0,
         });
+        if !count_label.is_empty() {
+            let right_x = w.saturating_sub(2u16.saturating_add(count_label.len() as u16));
+            cmds.push(RenderCmd::Text {
+                x: right_x,
+                y: 1,
+                text: count_label,
+                fg: Some(theme.text_muted),
+                bg: None,
+                bold: false,
+                modifiers: 0,
+            });
+        }
     }
 
     match &state.fetch_state {
@@ -103,10 +147,9 @@ fn render_table(state: &MusicState, theme: &ThemeData, w: u16, h: u16, cmds: &mu
     let inner_w = w.saturating_sub(4) as usize;
     let table_top = 3u16;
 
-    let num_w = 5usize;
     let dur_w = 9usize;
-    let remaining = inner_w.saturating_sub(num_w + dur_w);
-    let title_w = remaining * 35 / 100;
+    let remaining = inner_w.saturating_sub(dur_w);
+    let title_w = remaining * 40 / 100;
     let artist_w = remaining * 25 / 100;
     let album_w = remaining * 25 / 100;
     let genre_w = remaining.saturating_sub(title_w + artist_w + album_w);
@@ -127,7 +170,6 @@ fn render_table(state: &MusicState, theme: &ThemeData, w: u16, h: u16, cmds: &mu
             .map(format_duration)
             .unwrap_or_else(|| "--:--".into());
         rows.push(vec![
-            format!("{}.", scroll + i + 1),
             santui_ipc::ui::truncate(&track.track_name, title_w),
             santui_ipc::ui::truncate(&track.artist_name, artist_w),
             santui_ipc::ui::truncate(&track.collection_name, album_w),
@@ -148,7 +190,6 @@ fn render_table(state: &MusicState, theme: &ThemeData, w: u16, h: u16, cmds: &mu
         w: inner_w as u16,
         h: (visible_count + 1) as u16,
         header: vec![
-            "#".into(),
             "Title".into(),
             "Artist".into(),
             "Album".into(),
@@ -163,7 +204,6 @@ fn render_table(state: &MusicState, theme: &ThemeData, w: u16, h: u16, cmds: &mu
         },
         rows,
         column_widths: vec![
-            num_w as u16,
             title_w as u16,
             artist_w as u16,
             album_w as u16,

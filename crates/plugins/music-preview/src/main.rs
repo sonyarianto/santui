@@ -127,6 +127,21 @@ impl App {
                     self.dirty = true;
                     true
                 }
+                IpcKey::PageUp => {
+                    let page_size = max_visible_tracks(self.area.h).max(1);
+                    self.state.selected = self.state.selected.saturating_sub(page_size);
+                    self.adjust_scroll_up();
+                    self.dirty = true;
+                    true
+                }
+                IpcKey::PageDown => {
+                    let page_size = max_visible_tracks(self.area.h).max(1);
+                    let max = self.state.results.len().saturating_sub(1);
+                    self.state.selected = self.state.selected.saturating_add(page_size).min(max);
+                    self.adjust_scroll_down();
+                    self.dirty = true;
+                    true
+                }
                 IpcKey::Esc => false,
                 _ => false,
             }
