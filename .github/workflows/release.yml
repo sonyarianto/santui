@@ -156,62 +156,16 @@ jobs:
           export REPO="${{ github.repository }}"
           export TAG="${{ github.ref_name }}"
 
-          python3 -c "
-          import json, hashlib, os, sys
-
-          version = os.environ['VERSION']
-          target = os.environ['TARGET']
-          ext = os.environ['EXT']
-          repo = os.environ['REPO']
-          tag = os.environ['TAG']
-          binary_dir = os.environ.get('BINARY_DIR', 'target/release')
-
-          with open('plugins-manifest.json') as f:
-              manifest = json.load(f)
-
-          plugins = []
-          for p in manifest:
-              pid = p['id']
-              binpath = os.path.join(binary_dir, f'santui-{pid}{ext}')
-              if not os.path.isfile(binpath):
-                  continue
-              sha = hashlib.sha256()
-              with open(binpath, 'rb') as bf:
-                  while True:
-                      chunk = bf.read(65536)
-                      if not chunk:
-                          break
-                      sha.update(chunk)
-              size = os.path.getsize(binpath)
-              dl = f'https://github.com/{repo}/releases/download/{tag}/{pid}-{target}{ext}'
-              plugins.append({
-                  'id': pid,
-                  'name': p['name'],
-                  'description': p['description'],
-                  'publisher': 'Santui',
-                  'version': version,
-                  'download_url': dl,
-                  'sha256': sha.hexdigest(),
-                  'size': size,
-                  'capabilities': p.get('capabilities', [])
-              })
-
-          with open(f'plugins-{target}.json', 'w') as f:
-              json.dump(plugins, f, indent=2)
-          print(f'Generated plugins-{target}.json with {len(plugins)} plugin(s)')
-          "
+          "${BINARY_DIR}/santui-dev-setup" release-json
 
       - name: Collect plugin binaries for upload
         shell: bash
+        env:
+          EXT: ${{ matrix.plugin_ext }}
         run: |
           mkdir -p plugin-binaries
           # Collect binaries for every plugin listed in the central manifest
-          for binary in "${BINARY_DIR}"/santui-*-plugin${{ matrix.plugin_ext }} $(python3 -c "
-          import json, os
-          with open('plugins-manifest.json') as f:
-              ids = [p['id'] for p in json.load(f)]
-          print(' '.join(os.path.join(os.environ.get('BINARY_DIR', 'target/release'), f'santui-{pid}${{ matrix.plugin_ext }}') for pid in ids))
-          "); do
+          for binary in "${BINARY_DIR}"/santui-*-plugin${{ matrix.plugin_ext }} $("${BINARY_DIR}/santui-dev-setup" list-paths); do
             [ -f "$binary" ] || continue
             name="$(basename "$binary")"
             # Strip .exe and also strip the santui- prefix so the filename
@@ -291,7 +245,7 @@ jobs:
           echo "=== Checking for empty files ==="
           has_empty=0
           # Generate glob patterns from plugins-manifest.json (source of truth for all plugin IDs)
-          plugin_ids=$(python3 -c "import json; ids=[p['id'] for p in json.load(open('plugins-manifest.json'))]; print(' '.join(f'{pid}-*' for pid in ids))")
+          plugin_ids=$(jq -r '.[] | "\(.id)-*"' plugins-manifest.json | tr '\n' ' ')
           for f in santui-* plugins-*.json $plugin_ids; do
             if [ -f "$f" ]; then
               size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null)

@@ -259,7 +259,7 @@ fn render_rename(
         bg: Some(theme.background_overlay),
         borders: BORDER_ALL,
         title: Some("Rename".into()),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });

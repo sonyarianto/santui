@@ -61,7 +61,7 @@ fn render_overview(state: &WeatherState, theme: &ThemeData, w: u16, h: u16) -> V
         bg: None,
         borders: BORDER_ALL,
         title: Some(title),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -246,7 +246,7 @@ fn render_hourly(state: &WeatherState, theme: &ThemeData, w: u16, h: u16) -> Vec
         bg: None,
         borders: BORDER_ALL,
         title: Some(format!("Hourly Forecast — {}", location)),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -338,7 +338,7 @@ fn render_daily(state: &WeatherState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         bg: None,
         borders: BORDER_ALL,
         title: Some(format!("7-Day Forecast — {}", location)),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -435,7 +435,7 @@ fn render_location_search(
         bg: Some(theme.background_overlay),
         borders: BORDER_ALL,
         title: Some("Set Location".into()),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });

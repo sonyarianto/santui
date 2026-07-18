@@ -19,7 +19,7 @@ pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
         bg: None,
         borders: BORDER_ALL,
         title: Some("Music Preview".into()),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });

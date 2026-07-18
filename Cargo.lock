@@ -3353,6 +3353,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-dev-setup"
+version = "0.2.30"
+dependencies = [
+ "rayon",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+]
+
+[[package]]
 name = "santui-dictionary-thesaurus"
 version = "0.2.30"
 dependencies = [

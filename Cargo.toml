@@ -120,11 +120,17 @@ members = [
     "crates/plugins/uuid-generator",
     "crates/app",
     "crates/server",
+    "crates/dev-setup",
 ]
 resolver = "2"
 
 [workspace.dependencies]
+sha2 = "0.11"
+rayon = "1"
 log = "0.4"
 env_logger = "0.11"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+
+[profile.dev.package.santui-dev-setup]
+opt-level = 2

@@ -35,7 +35,7 @@ fn render_list(state: &ClipState, theme: &ThemeData, w: u16, h: u16) -> Vec<Rend
         bg: None,
         borders: BORDER_ALL,
         title: Some(title),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -166,7 +166,7 @@ fn render_view(state: &ClipState, theme: &ThemeData, w: u16, h: u16, idx: usize)
         bg: None,
         borders: BORDER_ALL,
         title: Some(title),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });

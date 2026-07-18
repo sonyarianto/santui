@@ -1,0 +1,10 @@
+[package]
+name = "santui-dev-setup"
+version = "0.2.30"
+edition = "2021"
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+sha2.workspace = true
+rayon.workspace = true

@@ -179,7 +179,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         bg: None,
         borders: BORDER_ALL,
         title: Some("Computer".into()),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -236,7 +236,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         bg: None,
         borders: BORDER_ALL,
         title: Some("CPU".into()),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -300,7 +300,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         bg: None,
         borders: BORDER_ALL,
         title: Some("Memory".into()),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -387,7 +387,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         bg: None,
         borders: BORDER_ALL,
         title: Some("Disk".into()),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -444,7 +444,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         bg: None,
         borders: BORDER_ALL,
         title: Some("Network".into()),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -495,7 +495,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         bg: None,
         borders: BORDER_ALL,
         title: Some("Processes".into()),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });

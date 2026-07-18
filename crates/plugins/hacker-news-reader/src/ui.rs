@@ -31,7 +31,7 @@ fn render_story_list(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         bg: None,
         borders: BORDER_ALL,
         title: Some(format!("Hacker News \u{2014} {}", state.category.label())),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -173,7 +173,7 @@ fn render_comments(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         bg: None,
         borders: BORDER_ALL,
         title: Some(format!("Hacker News \u{2014} {}", story_title)),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });

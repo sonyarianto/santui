@@ -40,7 +40,7 @@ fn render_list(state: &SshState, theme: &ThemeData, w: u16, h: u16) -> Vec<Rende
         bg: None,
         borders: BORDER_ALL,
         title: Some(title),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -177,7 +177,7 @@ fn render_detail(state: &SshState, theme: &ThemeData, w: u16, h: u16) -> Vec<Ren
         bg: None,
         borders: BORDER_ALL,
         title: Some(title),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -272,7 +272,7 @@ fn render_connect(state: &SshState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         bg: None,
         borders: BORDER_ALL,
         title: Some("SSH Connect".into()),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });

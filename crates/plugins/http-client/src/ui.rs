@@ -40,7 +40,7 @@ fn render_editor(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         bg: None,
         borders: BORDER_ALL,
         title: Some("HTTP Client".into()),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -202,7 +202,7 @@ fn render_response(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Ve
         bg: None,
         borders: BORDER_ALL,
         title: Some("HTTP Client — Response".into()),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -387,7 +387,7 @@ fn render_history(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Vec
         bg: None,
         borders: BORDER_ALL,
         title: Some("HTTP Client — History".into()),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -409,7 +409,7 @@ fn render_saved(state: &ClientState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
         bg: None,
         borders: BORDER_ALL,
         title: Some("HTTP Client — Saved".into()),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -498,7 +498,7 @@ fn render_method_picker(state: &ClientState, theme: &ThemeData, w: u16, h: u16) 
         bg: Some(theme.background_overlay),
         borders: BORDER_ALL,
         title: Some("Select Method".into()),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });

@@ -67,7 +67,7 @@ fn render_feed_list(
         bg: None,
         borders: BORDER_ALL,
         title: Some(title),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -176,7 +176,7 @@ fn render_item_list(
         bg: None,
         borders: BORDER_ALL,
         title: Some(title),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -278,7 +278,7 @@ fn render_item_view(
         bg: None,
         borders: BORDER_ALL,
         title: Some(title_str),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -365,7 +365,7 @@ fn render_add_feed(cmds: &mut Vec<RenderCmd>, state: &RssState, theme: &ThemeDat
         bg: Some(theme.background_panel),
         borders: BORDER_ALL,
         title: Some("Add Feed".into()),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -424,7 +424,7 @@ fn render_confirm_remove(
         bg: Some(theme.background_panel),
         borders: BORDER_ALL,
         title: Some("Remove Feed?".into()),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });

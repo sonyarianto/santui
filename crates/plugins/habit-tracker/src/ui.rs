@@ -41,7 +41,7 @@ fn render_overview(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> Vec
         bg: None,
         borders: BORDER_ALL,
         title: Some(title),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -183,7 +183,7 @@ fn render_detail(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
         bg: None,
         borders: BORDER_ALL,
         title: Some(title),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -345,7 +345,7 @@ fn render_editor(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
         bg: None,
         borders: BORDER_ALL,
         title: Some(title),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
@@ -440,7 +440,7 @@ fn render_day_detail(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> V
         bg: None,
         borders: BORDER_ALL,
         title: Some(title),
-        title_fg: Some(theme.accent),
+        title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
     });
