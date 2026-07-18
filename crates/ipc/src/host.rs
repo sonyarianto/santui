@@ -12,7 +12,7 @@ use santui_core::theme::Theme;
 use santui_core::LoggerBuffer;
 use santui_core::{AuthHandle, DbAccess, Plugin, PluginCmdItem, PluginContext};
 use std::cell::Cell;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, SyncSender};
@@ -444,27 +444,23 @@ impl IpcPluginHost {
         // Background thread: continuously read stdout, send parsed
         // responses back via the channel.  This is what makes tick()
         // non-blocking — the main thread never blocks on a read.
+        // Supports both JSON Lines (legacy) and binary bincode frames.
         if let Some(reader) = reader {
             let (tx, rx) = mpsc::channel::<PluginMsg>();
             let handle = thread::Builder::new()
                 .name(format!("ipc-reader-{}", self.id))
                 .spawn(move || {
                     let mut reader = reader;
-                    let mut line = String::new();
                     loop {
-                        line.clear();
-                        match reader.read_line(&mut line) {
-                            Ok(0) | Err(_) => break,
-                            Ok(_) => match serde_json::from_str::<PluginMsg>(&line) {
-                                Ok(msg) => {
-                                    let _ = tx.send(msg);
-                                }
-                                Err(e) => {
-                                    log::error!(
-                                        "[santui] failed to parse plugin response: {e}: {line}"
-                                    );
-                                }
-                            },
+                        match crate::protocol::read_plugin_msg(&mut reader) {
+                            Ok(msg) => {
+                                let _ = tx.send(msg);
+                            }
+                            Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => break,
+                            Err(_) => {
+                                // Skip invalid frames and continue.
+                                // The error is already logged inside read_plugin_msg.
+                            }
                         }
                     }
                 });

@@ -9,4 +9,3 @@ edition = "2021"
 #   santui-ipc = { git = "https://github.com/sonyarianto/santui", default-features = false }
 santui-ipc = { path = "../../crates/ipc", default-features = false }
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"

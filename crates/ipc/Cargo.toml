@@ -16,4 +16,12 @@ ratatui = { version = "0.30", optional = true }
 crossterm = { version = "0.29", optional = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+bincode = { version = "2", features = ["serde", "std"] }
 log = { workspace = true }
+
+[dev-dependencies]
+criterion = { version = "0.6", features = ["html_reports"] }
+
+[[bench]]
+name = "ipc_bench"
+harness = false
