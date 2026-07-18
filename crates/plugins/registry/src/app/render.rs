@@ -1,5 +1,6 @@
 use santui_ipc::protocol::{RenderCmd, TextStyle};
 use santui_ipc::ui;
+use unicode_width::UnicodeWidthStr;
 
 use super::state::{Action, App};
 
@@ -121,7 +122,7 @@ impl App {
             self.status.clone()
         };
         if !info.is_empty() {
-            let info_x = aw.saturating_sub(info.len() as u16 + 2);
+            let info_x = aw.saturating_sub(info.width() as u16 + 2);
             cmds.push(RenderCmd::Text {
                 x: info_x,
                 y: 1,

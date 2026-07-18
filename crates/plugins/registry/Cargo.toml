@@ -10,3 +10,4 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
+unicode-width = "0.1"
