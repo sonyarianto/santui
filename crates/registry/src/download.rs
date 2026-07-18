@@ -10,7 +10,8 @@ pub fn download_plugin(
     dest: &Path,
     on_progress: &dyn Fn(u64, u64),
 ) -> Result<(), String> {
-    let resp = ureq::get(url)
+    let resp = crate::AGENT
+        .get(url)
         .header("User-Agent", "santui")
         .call()
         .map_err(|e| format!("Download failed: {e}"))?;

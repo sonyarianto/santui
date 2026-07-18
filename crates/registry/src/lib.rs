@@ -5,6 +5,15 @@ pub use config::InstalledPlugin;
 pub use download::download_plugin;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
+use std::time::Duration;
+
+pub(crate) static AGENT: LazyLock<ureq::Agent> = LazyLock::new(|| {
+    ureq::Agent::config_builder()
+        .timeout_global(Some(Duration::from_secs(10)))
+        .build()
+        .new_agent()
+});
 
 /// A plugin entry advertised in the registry manifest.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -89,7 +98,7 @@ impl Registry {
         let mut last_err = String::new();
         for name in &names_to_try {
             let url = format!("{base_url}/{name}");
-            match ureq::get(&url).call() {
+            match AGENT.get(&url).call() {
                 Ok(mut resp) => {
                     let body = resp
                         .body_mut()
@@ -107,7 +116,8 @@ impl Registry {
 
         // Fallback: GitHub Releases API (subject to rate limiting).
         let api_url = format!("https://api.github.com/repos/{repo}/releases/latest");
-        let mut resp = ureq::get(&api_url)
+        let mut resp = AGENT
+            .get(&api_url)
             .header("User-Agent", "santui")
             .call()
             .map_err(|e| {
@@ -140,7 +150,8 @@ impl Registry {
             .as_str()
             .ok_or_else(|| "Missing download_url".to_string())?;
 
-        let mut manifest_resp = ureq::get(download_url)
+        let mut manifest_resp = AGENT
+            .get(download_url)
             .header("User-Agent", "santui")
             .call()
             .map_err(|e| format!("Failed to fetch manifest: {e}"))?;
