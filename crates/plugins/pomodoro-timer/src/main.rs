@@ -298,9 +298,9 @@ impl App {
 
 fn palette_commands() -> Vec<(String, String)> {
     vec![
-        ("Pomodoro".into(), "Start focus session".into()),
-        ("Pomodoro".into(), "Start break".into()),
-        ("Pomodoro".into(), "View stats".into()),
+        ("Plugins".into(), "Start focus session".into()),
+        ("Plugins".into(), "Start break".into()),
+        ("Plugins".into(), "View stats".into()),
     ]
 }
 

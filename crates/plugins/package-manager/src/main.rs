@@ -420,7 +420,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Package Manager".into(), "Search system packages".into())]
+    vec![("Plugins".into(), "Search system packages".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

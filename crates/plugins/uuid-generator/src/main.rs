@@ -350,7 +350,7 @@ fn hints() -> Vec<(String, String)> {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Utilities".into(), "Open UUID generator".into())]
+    vec![("Plugins".into(), "Open UUID generator".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

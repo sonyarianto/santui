@@ -859,8 +859,8 @@ fn hints() -> Vec<(String, String)> {
 
 fn palette_commands() -> Vec<(String, String)> {
     vec![
-        ("Utilities".into(), "Open unit converter".into()),
-        ("Utilities".into(), "Swap unit conversion".into()),
+        ("Plugins".into(), "Open unit converter".into()),
+        ("Plugins".into(), "Swap unit conversion".into()),
     ]
 }
 

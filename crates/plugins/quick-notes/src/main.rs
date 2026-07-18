@@ -384,8 +384,8 @@ impl App {
 
 fn palette_commands() -> Vec<(String, String)> {
     vec![
-        ("Notes".into(), "Open notes".into()),
-        ("Notes".into(), "New note".into()),
+        ("Plugins".into(), "Open notes".into()),
+        ("Plugins".into(), "New note".into()),
     ]
 }
 

@@ -263,7 +263,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Text & Content".into(), "Open markdown previewer".into())]
+    vec![("Plugins".into(), "Open markdown previewer".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

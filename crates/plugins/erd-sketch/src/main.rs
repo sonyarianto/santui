@@ -524,7 +524,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Developer".into(), "Open ERD diagram sketcher".into())]
+    vec![("Plugins".into(), "Open ERD diagram sketcher".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

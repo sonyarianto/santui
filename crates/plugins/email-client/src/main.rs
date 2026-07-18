@@ -297,7 +297,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Communications".into(), "Open email client".into())]
+    vec![("Plugins".into(), "Open email client".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

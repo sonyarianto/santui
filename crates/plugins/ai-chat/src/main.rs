@@ -324,7 +324,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("AI & Data".into(), "Open AI Chat".into())]
+    vec![("Plugins".into(), "Open AI Chat".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

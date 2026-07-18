@@ -241,7 +241,7 @@ fn hints() -> Vec<(String, String)> {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Music".into(), "Search iTunes previews".into())]
+    vec![("Plugins".into(), "Search iTunes previews".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

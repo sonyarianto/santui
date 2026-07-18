@@ -269,8 +269,8 @@ fn now_secs() -> u64 {
 
 fn palette_commands() -> Vec<(String, String)> {
     vec![
-        ("Clipboard".into(), "Show history".into()),
-        ("Clipboard".into(), "Clear history".into()),
+        ("Plugins".into(), "Show history".into()),
+        ("Plugins".into(), "Clear history".into()),
     ]
 }
 

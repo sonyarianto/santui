@@ -359,8 +359,8 @@ impl App {
 
 fn palette_commands() -> Vec<(String, String)> {
     vec![
-        ("Currency".into(), "Open currency converter".into()),
-        ("Currency".into(), "Swap source/target".into()),
+        ("Plugins".into(), "Open currency converter".into()),
+        ("Plugins".into(), "Swap source/target".into()),
     ]
 }
 

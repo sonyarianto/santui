@@ -289,7 +289,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("File Management".into(), "Open hex viewer".into())]
+    vec![("Plugins".into(), "Open hex viewer".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

@@ -501,9 +501,9 @@ fn load_entry(state: &mut ClientState, entry: &RequestEntry) {
 
 fn palette_commands() -> Vec<(String, String)> {
     vec![
-        ("HTTP".into(), "Open HTTP client".into()),
-        ("HTTP".into(), "Send current request".into()),
-        ("HTTP".into(), "Request history".into()),
+        ("Plugins".into(), "Open HTTP client".into()),
+        ("Plugins".into(), "Send current request".into()),
+        ("Plugins".into(), "Request history".into()),
     ]
 }
 

@@ -356,7 +356,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Utilities".into(), "Open cheat sheet browser".into())]
+    vec![("Plugins".into(), "Open cheat sheet browser".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

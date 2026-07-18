@@ -698,7 +698,7 @@ fn hints() -> Vec<(String, String)> {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Developer".into(), "Open cron expression helper".into())]
+    vec![("Plugins".into(), "Open cron expression helper".into())]
 }
 fn respond(app: &mut App, consumed: bool) {
     let msg = santui_ipc::protocol::PluginMsg {

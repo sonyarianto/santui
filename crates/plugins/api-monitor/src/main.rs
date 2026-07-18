@@ -215,7 +215,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Developer".into(), "API Monitor".into())]
+    vec![("Plugins".into(), "API Monitor".into())]
 }
 
 fn key_hints() -> Vec<(String, String)> {

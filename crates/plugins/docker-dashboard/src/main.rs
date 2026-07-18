@@ -277,7 +277,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("DevOps".into(), "Open Docker dashboard".into())]
+    vec![("Plugins".into(), "Open Docker dashboard".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

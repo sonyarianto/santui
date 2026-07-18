@@ -186,12 +186,12 @@ impl App {
 
 fn palette_commands() -> Vec<(String, String)> {
     vec![
-        ("System Monitor".into(), "Overview".into()),
-        ("System Monitor".into(), "CPU detail".into()),
-        ("System Monitor".into(), "Memory detail".into()),
-        ("System Monitor".into(), "Disk detail".into()),
-        ("System Monitor".into(), "Network detail".into()),
-        ("System Monitor".into(), "Process list".into()),
+        ("Plugins".into(), "Overview".into()),
+        ("Plugins".into(), "CPU detail".into()),
+        ("Plugins".into(), "Memory detail".into()),
+        ("Plugins".into(), "Disk detail".into()),
+        ("Plugins".into(), "Network detail".into()),
+        ("Plugins".into(), "Process list".into()),
     ]
 }
 

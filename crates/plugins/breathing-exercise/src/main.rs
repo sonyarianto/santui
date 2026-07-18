@@ -258,7 +258,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Health & Wellness".into(), "Open breathing exercise".into())]
+    vec![("Plugins".into(), "Open breathing exercise".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

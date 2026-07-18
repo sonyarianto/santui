@@ -225,7 +225,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Network".into(), "Open Speed Test".into())]
+    vec![("Plugins".into(), "Open Speed Test".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

@@ -1082,7 +1082,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Reference".into(), "Open Quran".into())]
+    vec![("Plugins".into(), "Open Quran".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

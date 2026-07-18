@@ -824,7 +824,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Developer".into(), "Open Git repository dashboard".into())]
+    vec![("Plugins".into(), "Open Git repository dashboard".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

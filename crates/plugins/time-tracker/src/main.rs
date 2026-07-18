@@ -338,7 +338,7 @@ fn default_theme() -> ThemeData {
 
 fn palette_commands() -> Vec<(String, String)> {
     vec![(
-        "Time Tracker".to_string(),
+        "Plugins".to_string(),
         "Track time spent on tasks".to_string(),
     )]
 }

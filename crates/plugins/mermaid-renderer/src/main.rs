@@ -391,10 +391,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![(
-        "Mermaid Renderer".into(),
-        "Render diagrams as Unicode art".into(),
-    )]
+    vec![("Plugins".into(), "Render diagrams as Unicode art".into())]
 }
 
 fn hints() -> Vec<(String, String)> {

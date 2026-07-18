@@ -299,7 +299,7 @@ fn hints() -> Vec<(String, String)> {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Education".into(), "Open typing test".into())]
+    vec![("Plugins".into(), "Open typing test".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

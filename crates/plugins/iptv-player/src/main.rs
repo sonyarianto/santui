@@ -713,9 +713,9 @@ impl App {
 
 fn palette_commands() -> Vec<(String, String)> {
     vec![
-        ("IPTV".into(), "Search channels".into()),
-        ("IPTV".into(), "Refresh playlist".into()),
-        ("IPTV".into(), "Edit playlist URL".into()),
+        ("Plugins".into(), "Search channels".into()),
+        ("Plugins".into(), "Refresh playlist".into()),
+        ("Plugins".into(), "Edit playlist URL".into()),
     ]
 }
 

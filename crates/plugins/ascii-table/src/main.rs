@@ -232,7 +232,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Utilities".into(), "Open ASCII table".into())]
+    vec![("Plugins".into(), "Open ASCII table".into())]
 }
 
 fn key_hints() -> Vec<(String, String)> {

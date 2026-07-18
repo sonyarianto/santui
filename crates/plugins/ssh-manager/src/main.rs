@@ -481,8 +481,8 @@ impl App {
 
 fn palette_commands() -> Vec<(String, String)> {
     vec![
-        ("SSH".into(), "Open SSH Manager".into()),
-        ("SSH".into(), "New SSH host".into()),
+        ("Plugins".into(), "Open SSH Manager".into()),
+        ("Plugins".into(), "New SSH host".into()),
     ]
 }
 

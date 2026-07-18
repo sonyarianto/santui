@@ -265,7 +265,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Network & Diagnostics".into(), "Open DNS Globe".into())]
+    vec![("Plugins".into(), "Open DNS Globe".into())]
 }
 
 fn key_hints() -> Vec<(String, String)> {

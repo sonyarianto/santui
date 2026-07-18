@@ -304,7 +304,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Media & Fun".into(), "Open Snake game".into())]
+    vec![("Plugins".into(), "Open Snake game".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

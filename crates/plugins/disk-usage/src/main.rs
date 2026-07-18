@@ -248,10 +248,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![(
-        "System Monitoring".into(),
-        "Open disk usage analyzer".into(),
-    )]
+    vec![("Plugins".into(), "Open disk usage analyzer".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

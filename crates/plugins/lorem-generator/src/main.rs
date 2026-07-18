@@ -392,7 +392,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Utilities".into(), "Open lorem generator".into())]
+    vec![("Plugins".into(), "Open lorem generator".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

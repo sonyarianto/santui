@@ -345,7 +345,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Music Controller".into(), "Control MPD music player".into())]
+    vec![("Plugins".into(), "Control MPD music player".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

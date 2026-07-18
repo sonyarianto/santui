@@ -342,7 +342,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Utilities".into(), "Open slug generator".into())]
+    vec![("Plugins".into(), "Open slug generator".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

@@ -379,9 +379,9 @@ fn open_url(url: &str) {
 
 fn palette_commands() -> Vec<(String, String)> {
     vec![
-        ("RSS".into(), "View feeds".into()),
-        ("RSS".into(), "Add feed".into()),
-        ("RSS".into(), "Refresh all feeds".into()),
+        ("Plugins".into(), "View feeds".into()),
+        ("Plugins".into(), "Add feed".into()),
+        ("Plugins".into(), "Refresh all feeds".into()),
     ]
 }
 

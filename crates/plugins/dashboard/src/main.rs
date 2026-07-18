@@ -265,7 +265,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("System Monitoring".into(), "Open system dashboard".into())]
+    vec![("Plugins".into(), "Open system dashboard".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

@@ -540,7 +540,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Utilities".into(), "Open JSON/YAML formatter".into())]
+    vec![("Plugins".into(), "Open JSON/YAML formatter".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

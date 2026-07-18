@@ -661,7 +661,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Utilities".into(), "Open regex tester".into())]
+    vec![("Plugins".into(), "Open regex tester".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

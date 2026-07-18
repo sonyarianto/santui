@@ -281,7 +281,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("System".into(), "Open Network Monitor".into())]
+    vec![("Plugins".into(), "Open Network Monitor".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

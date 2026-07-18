@@ -383,7 +383,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Developer".into(), "Open file diff viewer".into())]
+    vec![("Plugins".into(), "Open file diff viewer".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

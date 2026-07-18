@@ -348,7 +348,7 @@ fn hints() -> Vec<(String, String)> {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Utilities".into(), "Open subnet calculator".into())]
+    vec![("Plugins".into(), "Open subnet calculator".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

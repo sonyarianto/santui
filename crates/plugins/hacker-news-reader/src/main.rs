@@ -339,9 +339,9 @@ impl App {
 
 fn palette_commands() -> Vec<(String, String)> {
     vec![
-        ("Hacker News".into(), "Top stories".into()),
-        ("Hacker News".into(), "New stories".into()),
-        ("Hacker News".into(), "Best stories".into()),
+        ("Plugins".into(), "Top stories".into()),
+        ("Plugins".into(), "New stories".into()),
+        ("Plugins".into(), "Best stories".into()),
     ]
 }
 

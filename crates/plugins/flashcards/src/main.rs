@@ -258,7 +258,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Education".into(), "Open flashcards".into())]
+    vec![("Plugins".into(), "Open flashcards".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

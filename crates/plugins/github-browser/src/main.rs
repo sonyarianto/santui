@@ -395,7 +395,7 @@ fn hints() -> Vec<(String, String)> {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Development".into(), "Open GitHub Browser".into())]
+    vec![("Plugins".into(), "Open GitHub Browser".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

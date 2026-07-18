@@ -239,7 +239,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Tools".into(), "Archive Browser".into())]
+    vec![("Plugins".into(), "Archive Browser".into())]
 }
 
 fn key_hints() -> Vec<(String, String)> {

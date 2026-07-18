@@ -307,7 +307,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Utilities".into(), "Open case converter".into())]
+    vec![("Plugins".into(), "Open case converter".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {

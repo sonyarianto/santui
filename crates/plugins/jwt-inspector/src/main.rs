@@ -276,7 +276,7 @@ fn default_theme() -> ThemeData {
 }
 
 fn palette_commands() -> Vec<(String, String)> {
-    vec![("Utilities".into(), "Open JWT inspector".into())]
+    vec![("Plugins".into(), "Open JWT inspector".into())]
 }
 
 fn respond(app: &mut App, consumed: bool) {
