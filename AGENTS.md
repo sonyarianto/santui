@@ -42,7 +42,7 @@ crates/
 ├── server/        — optional self-hosted sync server (axum + SQLite + JWT)
 ├── plugins/           — 110+ first-party plugins (see plugins-manifest.json for full list)
 │   ├── radio-stream-player/   — radio plugin
-│   │   └── scraper/           — scrape radio stations into DB
+│   │   └── scraper/           — scrape radio stations into DB (--db-path, --prune, --help)
 │   ├── registry/             — plugin registry UI plugin
 │   └── ... (108 more plugin directories)
 ├── app/           — binary entry point (main.rs)

@@ -4,12 +4,18 @@
 //! ## Usage
 //!
 //! ```bash
-//! cargo run -p santui-radio-stream-scraper
+//! cargo run -p santui-radio-stream-scraper [OPTIONS]
 //! ```
 //!
 //! Fetches the currently-playing station list from every country via the
-//! `?nowlisten=1` endpoint. Deduplicates by `(name, url)` using `UNIQUE`
-//! constraint + `INSERT OR IGNORE`. Run periodically to keep stations fresh.
+//! `?nowlisten=1` endpoint. Deduplicates by `(name, url)` using UPSERT.
+//! Also deduplicates by `radio_id` when available (stable station identifier).
+//! Run periodically to keep stations fresh.
+//!
+//! Options:
+//!   --db-path PATH    Database file path (default: ~/.local/share/santui/...)
+//!   --prune DAYS      Remove stations not seen in DAYS days
+//!   --help, -h        Show this help message
 //!
 //! The database is shared with the radio plugin at:
 //! - **Windows**: `%APPDATA%\santui\radio_stream_stations.db`
@@ -257,6 +263,59 @@ const ALL_COUNTRIES: &[(&str, &str)] = &[
     ("uk", "GB"), // onlineradiobox uses 'uk' for United Kingdom
 ];
 
+/// Max concurrent HTTP requests (rate limiting for onlineradiobox).
+const MAX_CONCURRENT_HTTP: usize = 8;
+
+/// Simple counting semaphore using std::sync primitives.
+struct HttpSemaphore {
+    available: std::sync::Mutex<usize>,
+    condvar: std::sync::Condvar,
+}
+
+impl HttpSemaphore {
+    fn new(max: usize) -> Self {
+        Self {
+            available: std::sync::Mutex::new(max),
+            condvar: std::sync::Condvar::new(),
+        }
+    }
+
+    fn acquire(&self) -> HttpPermit<'_> {
+        let mut available = self.available.lock().unwrap();
+        while *available == 0 {
+            available = self.condvar.wait(available).unwrap();
+        }
+        *available -= 1;
+        HttpPermit { inner: self }
+    }
+}
+
+struct HttpPermit<'a> {
+    inner: &'a HttpSemaphore,
+}
+
+impl Drop for HttpPermit<'_> {
+    fn drop(&mut self) {
+        let mut available = self.inner.available.lock().unwrap();
+        *available += 1;
+        self.inner.condvar.notify_one();
+    }
+}
+
+fn print_usage() {
+    eprintln!("Radio Station Scraper");
+    eprintln!("Usage: cargo run -p santui-radio-stream-scraper [OPTIONS]");
+    eprintln!();
+    eprintln!("Options:");
+    eprintln!("  --db-path PATH    Database file path");
+    eprintln!("                     (default: ~/.local/share/santui/radio_stream_stations.db)");
+    eprintln!("  --prune DAYS      Remove stations not seen in DAYS days (default: 90)");
+    eprintln!("  --help, -h        Show this help message");
+    eprintln!();
+    eprintln!("Environment:");
+    eprintln!("  SANTUI_RADIO_DB   Alternative to --db-path");
+}
+
 #[derive(serde::Deserialize)]
 struct RadioBoxResponse {
     data: String,
@@ -275,7 +334,13 @@ fn app_data_dir() -> PathBuf {
     path.unwrap_or_else(|| PathBuf::from(".")).join("santui")
 }
 
-fn db_path() -> PathBuf {
+fn db_path(override_path: Option<&str>) -> PathBuf {
+    if let Some(path) = override_path {
+        return PathBuf::from(path);
+    }
+    if let Ok(env_path) = std::env::var("SANTUI_RADIO_DB") {
+        return PathBuf::from(env_path);
+    }
     app_data_dir().join("radio_stream_stations.db")
 }
 
@@ -297,11 +362,30 @@ fn migrate(conn: &Connection) -> Result<(), rusqlite::Error> {
     if !has_column(conn, "radio_id")? {
         conn.execute_batch("ALTER TABLE stations ADD COLUMN radio_id TEXT NOT NULL DEFAULT '';")?;
     }
+    if !has_column(conn, "last_seen_at")? {
+        conn.execute_batch(
+            "ALTER TABLE stations ADD COLUMN last_seen_at TEXT NOT NULL DEFAULT '';",
+        )?;
+    }
+    if !has_column(conn, "genre_updated_at")? {
+        conn.execute_batch(
+            "ALTER TABLE stations ADD COLUMN genre_updated_at TEXT NOT NULL DEFAULT '';",
+        )?;
+    }
+    conn.execute(
+        "DELETE FROM stations WHERE radio_id != '' AND rowid NOT IN (
+            SELECT MIN(rowid) FROM stations WHERE radio_id != '' GROUP BY radio_id
+        )",
+        [],
+    )?;
+    conn.execute_batch(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_stations_radio_id ON stations(radio_id) WHERE radio_id != '';"
+    )?;
     Ok(())
 }
 
-fn open_db() -> Result<Connection, rusqlite::Error> {
-    let path = db_path();
+fn open_db(override_path: Option<&str>) -> Result<Connection, rusqlite::Error> {
+    let path = db_path(override_path);
     if let Some(parent) = path.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
@@ -313,7 +397,9 @@ fn open_db() -> Result<Connection, rusqlite::Error> {
             url TEXT NOT NULL,
             country TEXT NOT NULL DEFAULT '',
             genre TEXT NOT NULL DEFAULT '',
-            radio_id TEXT NOT NULL DEFAULT ''
+            radio_id TEXT NOT NULL DEFAULT '',
+            last_seen_at TEXT NOT NULL DEFAULT '',
+            genre_updated_at TEXT NOT NULL DEFAULT ''
         );",
     )?;
     migrate(&conn)?;
@@ -475,7 +561,7 @@ fn pick_radio_ids(conn: &Connection, where_clause: &str, limit: usize) -> Vec<St
 
 /// Enrich a random sample of stations — fill new and refresh existing.
 /// HTTP fetches run concurrently, DB updates are serial.
-fn enrich_genres(conn: &Connection) {
+fn enrich_genres(conn: &Connection, http_permits: &HttpSemaphore, now: &str) {
     let new_limit = GENRE_SAMPLE_SIZE - REFRESH_PER_RUN;
     let mut rows: Vec<(String, String)> = pick_radio_ids(conn, "genre = ''", new_limit)
         .into_iter()
@@ -508,12 +594,14 @@ fn enrich_genres(conn: &Connection) {
     let (tx, rx) = std::sync::mpsc::channel::<(String, String, Result<String, String>)>();
 
     let chunk_size = rows.len().div_ceil(num_workers);
+    let hp = http_permits;
     std::thread::scope(|s| {
         for chunk in rows.chunks(chunk_size) {
             let tx = tx.clone();
             let chunk: Vec<(String, String)> = chunk.to_vec();
             s.spawn(move || {
                 for (radio_id, tag) in &chunk {
+                    let _permit = hp.acquire();
                     let result = fetch_and_parse_genre(radio_id);
                     let _ = tx.send((radio_id.clone(), tag.clone(), result));
                 }
@@ -528,8 +616,8 @@ fn enrich_genres(conn: &Connection) {
                 Ok(genres) => {
                     if !genres.is_empty() {
                         let _ = conn.execute(
-                            "UPDATE stations SET genre = ?1 WHERE radio_id = ?2",
-                            rusqlite::params![genres, radio_id],
+                            "UPDATE stations SET genre = ?1, genre_updated_at = ?2 WHERE radio_id = ?3",
+                            rusqlite::params![genres, now, radio_id],
                         );
                     }
                     enriched += 1;
@@ -705,13 +793,15 @@ mod tests {
         migrate(&conn).unwrap();
         assert!(has_column(&conn, "genre").unwrap());
         assert!(has_column(&conn, "radio_id").unwrap());
+        assert!(has_column(&conn, "last_seen_at").unwrap());
+        assert!(has_column(&conn, "genre_updated_at").unwrap());
     }
 
     #[test]
     fn test_migrate_idempotent() {
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch(
-            "CREATE TABLE stations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, url TEXT NOT NULL, country TEXT NOT NULL DEFAULT '', genre TEXT NOT NULL DEFAULT '', radio_id TEXT NOT NULL DEFAULT '');"
+            "CREATE TABLE stations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, url TEXT NOT NULL, country TEXT NOT NULL DEFAULT '', genre TEXT NOT NULL DEFAULT '', radio_id TEXT NOT NULL DEFAULT '', last_seen_at TEXT NOT NULL DEFAULT '', genre_updated_at TEXT NOT NULL DEFAULT '');"
         ).unwrap();
         migrate(&conn).unwrap();
     }
@@ -720,7 +810,7 @@ mod tests {
     fn test_pick_radio_ids_empty() {
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch(
-            "CREATE TABLE stations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, url TEXT NOT NULL, country TEXT NOT NULL DEFAULT '', genre TEXT NOT NULL DEFAULT '', radio_id TEXT NOT NULL DEFAULT '');"
+            "CREATE TABLE stations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, url TEXT NOT NULL, country TEXT NOT NULL DEFAULT '', genre TEXT NOT NULL DEFAULT '', radio_id TEXT NOT NULL DEFAULT '', last_seen_at TEXT NOT NULL DEFAULT '', genre_updated_at TEXT NOT NULL DEFAULT '');"
         ).unwrap();
         assert!(pick_radio_ids(&conn, "genre = ''", 5).is_empty());
     }
@@ -729,7 +819,7 @@ mod tests {
     fn test_pick_radio_ids_returns_matching() {
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch(
-            "CREATE TABLE stations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, url TEXT NOT NULL, country TEXT NOT NULL DEFAULT '', genre TEXT NOT NULL DEFAULT '', radio_id TEXT NOT NULL DEFAULT '');"
+            "CREATE TABLE stations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, url TEXT NOT NULL, country TEXT NOT NULL DEFAULT '', genre TEXT NOT NULL DEFAULT '', radio_id TEXT NOT NULL DEFAULT '', last_seen_at TEXT NOT NULL DEFAULT '', genre_updated_at TEXT NOT NULL DEFAULT '');"
         ).unwrap();
         conn.execute(
             "INSERT INTO stations (name, url, radio_id, genre) VALUES ('test', 'http://example.com', 'us.test', '')",
@@ -749,7 +839,7 @@ mod tests {
     fn test_pick_radio_ids_respects_limit() {
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch(
-            "CREATE TABLE stations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, url TEXT NOT NULL, country TEXT NOT NULL DEFAULT '', genre TEXT NOT NULL DEFAULT '', radio_id TEXT NOT NULL DEFAULT '');"
+            "CREATE TABLE stations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, url TEXT NOT NULL, country TEXT NOT NULL DEFAULT '', genre TEXT NOT NULL DEFAULT '', radio_id TEXT NOT NULL DEFAULT '', last_seen_at TEXT NOT NULL DEFAULT '', genre_updated_at TEXT NOT NULL DEFAULT '');"
         ).unwrap();
         for i in 0..5 {
             conn.execute(
@@ -770,7 +860,7 @@ mod tests {
 
     #[test]
     fn test_db_path_ends_with_correct_filename() {
-        let path = db_path();
+        let path = db_path(None);
         assert!(path.ends_with("radio_stream_stations.db"));
         assert!(path.to_string_lossy().contains("santui"));
     }
@@ -805,18 +895,53 @@ fn main() {
         .format_timestamp(None)
         .format_target(false)
         .try_init();
-    println!("Radio Station Scraper");
+
+    // Parse CLI args
+    let mut db_override: Option<String> = None;
+    let mut prune_days: Option<u64> = None;
+    let mut args = std::env::args().skip(1);
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
+            "--db-path" => {
+                db_override = Some(args.next().expect("--db-path requires a PATH argument"));
+            }
+            "--prune" => {
+                prune_days = Some(args.next().and_then(|v| v.parse().ok()).unwrap_or(90));
+            }
+            "--help" | "-h" => {
+                print_usage();
+                std::process::exit(0);
+            }
+            _ => {
+                eprintln!("Unknown argument: {arg}");
+                print_usage();
+                std::process::exit(1);
+            }
+        }
+    }
+
+    let db_path_str = db_override.as_deref();
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+        .to_string();
+
     let num_workers: usize = std::thread::available_parallelism()
         .map(|n| n.get())
         .unwrap_or(4);
+    let http_permits = HttpSemaphore::new(MAX_CONCURRENT_HTTP);
+
+    println!("Radio Station Scraper");
     println!(
-        "{} countries to scan ({} workers)",
+        "{} countries to scan ({} workers, {} max HTTP)",
         ALL_COUNTRIES.len(),
-        num_workers
+        num_workers,
+        MAX_CONCURRENT_HTTP,
     );
     println!();
 
-    let conn = match open_db() {
+    let conn = match open_db(db_path_str) {
         Ok(c) => c,
         Err(e) => {
             log::error!("Failed to open database: {e}");
@@ -862,12 +987,14 @@ fn main() {
     let mut total_fetched = 0usize;
     let mut countries_with_data = 0usize;
 
+    let hp = &http_permits;
     std::thread::scope(|s| {
         for chunk in countries.chunks(chunk_size) {
             let tx = tx.clone();
             let chunk: Vec<(&str, &str)> = chunk.to_vec();
             s.spawn(move || {
                 for &(url_code, iso_code) in &chunk {
+                    let _permit = hp.acquire();
                     match fetch_country_http(url_code) {
                         Ok(stations) => {
                             let _ = tx.send((iso_code.to_string(), url_code.to_string(), stations));
@@ -891,8 +1018,8 @@ fn main() {
             let mut inserted = 0usize;
             for (name, url, radio_id) in &stations {
                 match conn.execute(
-                    "INSERT OR IGNORE INTO stations (name, url, country, genre, radio_id) VALUES (?1, ?2, ?3, ?4, ?5)",
-                    rusqlite::params![name, url, iso_code, "", radio_id],
+                    "INSERT INTO stations (name, url, country, genre, radio_id, last_seen_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT(name, url) DO UPDATE SET last_seen_at = ?6",
+                    rusqlite::params![name, url, iso_code, "", radio_id, now],
                 ) {
                     Ok(rows) => {
                         if rows > 0 {
@@ -925,6 +1052,26 @@ fn main() {
         std::process::exit(1);
     }
 
+    if let Some(days) = prune_days {
+        let cutoff = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            .saturating_sub(days * 86400)
+            .to_string();
+        match conn.execute(
+            "DELETE FROM stations WHERE last_seen_at != '' AND last_seen_at < ?1",
+            rusqlite::params![cutoff],
+        ) {
+            Ok(count) => {
+                if count > 0 {
+                    println!("\nPruned {count} stations not seen in {days} days");
+                }
+            }
+            Err(e) => log::warn!("Prune error: {e}"),
+        }
+    }
+
     let total: i64 = conn
         .query_row("SELECT COUNT(*) FROM stations", [], |row| row.get(0))
         .unwrap_or(0);
@@ -935,7 +1082,7 @@ fn main() {
          stations, {total_fetched} stations fetched, \
          {total} total in DB"
     );
-    println!("Database: {}", db_path().display());
+    println!("Database: {}", db_path(db_path_str).display());
 
-    enrich_genres(&conn);
+    enrich_genres(&conn, &http_permits, &now);
 }
