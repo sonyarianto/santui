@@ -120,7 +120,7 @@ impl StatusBar<'_> {
                 right_spans.push(Span::styled(" ", dim));
             }
             if !self.mouse_capture {
-                right_spans.push(Span::styled("mouse off ", key));
+                right_spans.push(Span::styled("Alt+M mouse off ", key));
             }
             right_spans.push(Span::styled("Santui ", key));
             right_spans.push(Span::styled(super::VERSION, dim));

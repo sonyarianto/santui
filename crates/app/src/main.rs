@@ -233,8 +233,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Flags:");
         println!("  --version, -V           Print version and exit");
         println!("  --list-plugins, plugins  List installed/available plugins and exit");
-        println!("  --no-mouse              Disable mouse capture at startup");
         println!("  --help, -h              Show this help message");
+        println!(
+            "  --no-mouse              Disable mouse capture at startup (or SANTUI_NO_MOUSE=1)"
+        );
         return Ok(());
     }
 
@@ -242,7 +244,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return list_plugins();
     }
 
-    let no_mouse = args.iter().any(|a| a == "--no-mouse");
+    let no_mouse = args.iter().any(|a| a == "--no-mouse")
+        || std::env::var("SANTUI_NO_MOUSE").as_deref() == Ok("1");
 
     let dev = std::env::var("SANTUI_DEV").as_deref() == Ok("1");
     let dir = if dev {
