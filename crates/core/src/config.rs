@@ -29,7 +29,7 @@ pub struct Config {
 }
 
 fn default_mouse_capture() -> bool {
-    true
+    false
 }
 
 /// Connection settings for a remote [`santui-server`](https://github.com/sonyarianto/santui).

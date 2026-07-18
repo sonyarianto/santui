@@ -241,7 +241,7 @@ impl Santui {
             auth: None,
             sync: None,
             db: None,
-            app_state: app_state::AppState::new(theme, true),
+            app_state: app_state::AppState::new(theme, false),
             theme_manager,
             palette_controller: palette_controller::PaletteController::new(),
             config_manager: ConfigManager::new(std::path::PathBuf::new()),
