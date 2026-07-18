@@ -476,7 +476,7 @@ fn fetch_country_http(url_code: &str) -> Result<Vec<(String, String, String)>, S
 }
 
 /// How many station-genre pages to fetch per scraper run.
-const GENRE_SAMPLE_SIZE: usize = 50;
+const GENRE_SAMPLE_SIZE: usize = 200;
 
 /// Parse genre names out of a station detail page HTML that contains:
 /// ```html
