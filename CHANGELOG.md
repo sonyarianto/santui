@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.31] - 2026-07-19
+
+### ⚙️ Miscellaneous
+
+- Add generated plugins.json to gitignore
+
+### 🎨 Refactor
+
+- Replace Python build scripts with Rust (santui-dev-setup)
+- Normalize all palette categories to 'Plugins'
+- Remove redundant palette_commands() from all plugins
+
+### 🐛 Bug Fixes
+
+- Checkout repo before validating asset sizes
+
+### 🚀 Features
+
+- Add mpv playback, search mode, and dimmed search hint
+
 ## [0.2.30] - 2026-07-18
 
 ### ⚙️ Miscellaneous
