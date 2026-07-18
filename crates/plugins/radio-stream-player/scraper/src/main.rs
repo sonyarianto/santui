@@ -14,7 +14,9 @@
 //!
 //! Options:
 //!   --db-path PATH    Database file path (default: ~/.local/share/santui/...)
-//!   --prune DAYS      Remove stations not seen in DAYS days
+//!   --prune DAYS      Remove stations not found by the last DAYS of scrapes
+//!                     (default: 90). Catches stations with dead or changed URLs
+//!                     without requiring HTTP HEAD requests.
 //!   --help, -h        Show this help message
 //!
 //! The database is shared with the radio plugin at:
@@ -309,7 +311,9 @@ fn print_usage() {
     eprintln!("Options:");
     eprintln!("  --db-path PATH    Database file path");
     eprintln!("                     (default: ~/.local/share/santui/radio_stream_stations.db)");
-    eprintln!("  --prune DAYS      Remove stations not seen in DAYS days (default: 90)");
+    eprintln!("  --prune DAYS      Remove stations not found by the last DAYS of scrapes");
+    eprintln!("                     (default: 90). This catches stations with dead or");
+    eprintln!("                     changed URLs — no HEAD request validation needed.");
     eprintln!("  --help, -h        Show this help message");
     eprintln!();
     eprintln!("Environment:");
