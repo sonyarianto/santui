@@ -1,6 +1,6 @@
 {
   "name": "santui",
-  "version": "0.2.32",
+  "version": "0.2.33",
   "description": "Your terminal home base — a modern TUI launcher for plugins",
   "homepage": "https://github.com/sonyarianto/santui",
   "license": "MIT",

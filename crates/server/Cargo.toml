@@ -1,13 +1,13 @@
 [package]
 name = "santui-server"
-version = "0.2.32"
+version = "0.2.33"
 edition = "2021"
 description = "Santui backend server — sync, auth, and web UI"
 license = "MIT"
 repository = "https://github.com/sonyarianto/santui"
 
 [dependencies]
-santui-core = { path = "../core", version = "0.2.32" }
+santui-core = { path = "../core", version = "0.2.33" }
 axum = "0.8"
 tokio = { version = "1", features = ["full"] }
 tower-http = { version = "0.7", features = ["cors", "fs"] }
