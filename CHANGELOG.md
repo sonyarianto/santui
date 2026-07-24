@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.33] - 2026-07-24
+
+### ⚙️ Miscellaneous
+
+- Skip workspace test, remove redundant cargo check
+
+### 🐛 Bug Fixes
+
+- Drain high-priority messages before exiting writer loop on low channel disconnect
+- Upload plugin binaries sequentially to avoid GitHub secondary rate limit
+\nFull Changelog: [v0.2.32...v0.2.33](https://github.com/sonyarianto/santui/compare/v0.2.32...v0.2.33)
 ## [0.2.32] - 2026-07-24
 
 ### 🐛 Bug Fixes
