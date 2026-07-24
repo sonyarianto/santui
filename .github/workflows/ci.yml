@@ -22,11 +22,12 @@ jobs:
       - name: Install deps
         run: sudo apt-get update && sudo apt-get install -y libmpv-dev
 
-      - run: cargo check --workspace
+      # clippy subsumes cargo check — only run it once
       - run: cargo clippy --workspace -- -D warnings
       - run: cargo fmt --check
 
-      - run: cargo test --workspace
+      # Only test the crates that actually have tests (avoids building all 110+ plugin test binaries)
+      - run: cargo test -p santui-core -p santui-ipc -p santui-registry -p santui-db -p santui-server -p santui-auth
 
       - name: Install & run cargo-audit
         run: |
