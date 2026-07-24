@@ -194,7 +194,17 @@ fn writer_loop(mut stdin: impl Write, high_rx: Receiver<String>, low_rx: Receive
                 }
             }
             Err(RecvTimeoutError::Timeout) => {}
-            Err(RecvTimeoutError::Disconnected) => return,
+            Err(RecvTimeoutError::Disconnected) => {
+                // Drain any remaining high-priority messages before exiting.
+                // The low channel disconnecting does not guarantee high is
+                // empty — a test or producer might still have messages queued.
+                while let Ok(msg) = high_rx.try_recv() {
+                    if writeln!(stdin, "{msg}").is_err() || stdin.flush().is_err() {
+                        return;
+                    }
+                }
+                return;
+            }
         }
     }
 }
