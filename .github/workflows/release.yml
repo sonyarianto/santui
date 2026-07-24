@@ -174,6 +174,9 @@ jobs:
             id="${stem#santui-}"
             target_name="${id}-${{ matrix.target }}${{ matrix.plugin_ext }}"
             cp "$binary" "plugin-binaries/$target_name"
+            # Also include in the main archive so install.sh (which downloads
+            # only the main archive) gets all plugin binaries.
+            cp "$binary" "staging/$name"
             size="$(stat -c%s "plugin-binaries/$target_name" 2>/dev/null || stat -f%z "plugin-binaries/$target_name" 2>/dev/null)"
             if [ -z "$size" ] || [ "$size" -eq 0 ]; then
               echo "❌ ERROR: plugin binary $target_name has size 0 or could not read size"

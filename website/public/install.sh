@@ -65,7 +65,7 @@ tar xzf "${TMP}/santui.tar.gz" -C "${TMP}"
 
 mkdir -p "${BIN_DIR}"
 cp -r "${TMP}/"* "${BIN_DIR}/"
-chmod +x "${BIN_DIR}/santui" "${BIN_DIR}/santui-radio-stream-player" 2>/dev/null || true
+chmod +x "${BIN_DIR}/santui" "${BIN_DIR}"/santui-* 2>/dev/null || true
 
 # ── PATH ──
 UPDATED=""

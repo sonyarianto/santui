@@ -23,10 +23,13 @@ if (Test-Path $Stage) { Remove-Item $Stage -Recurse -Force }
 New-Item -ItemType Directory -Path "$Stage\native" -Force | Out-Null
 
 Copy-Item "$Target\santui.exe" $Stage
-Copy-Item "$Target\santui-registry-plugin.exe" $Stage
-Copy-Item "$Target\santui-radio-stream-player.exe" $Stage
 Copy-Item "$Root\native\libmpv-2.dll" "$Stage\native\"
 Copy-Item "$Root\native\radio_stream_stations.db" "$Stage\native\"
+
+# Copy all plugin binaries (santui-*) into the archive
+Get-ChildItem "$Target\santui-*" -File | ForEach-Object {
+    Copy-Item $_.FullName $Stage
+}
 
 # ── zip ──
 $ZipName = "santui-$Arch.zip"

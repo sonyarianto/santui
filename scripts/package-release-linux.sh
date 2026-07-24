@@ -24,9 +24,13 @@ STAGE="$(mktemp -d)/santui-pkg/$VERSION"
 mkdir -p "$STAGE/native"
 
 cp "$TARGET/santui"                       "$STAGE/"
-cp "$TARGET/santui-registry-plugin"       "$STAGE/"
-cp "$TARGET/santui-radio-stream-player" "$STAGE/"
 cp "$ROOT/native/radio_stream_stations.db" "$STAGE/native/"
+
+# Copy all plugin binaries (santui-*) into the archive
+for plugin in "$TARGET"/santui-*; do
+    [ -f "$plugin" ] || continue
+    cp "$plugin" "$STAGE/"
+done
 
 # ── archive ──
 ARCHIVE_NAME="santui-${TRIPLE}.tar.gz"
