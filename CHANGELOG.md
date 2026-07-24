@@ -2,7 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.2.31] - 2026-07-19
+## [0.2.32] - 2026-07-24
+
+### 🐛 Bug Fixes
+
+- Include all plugin binaries in release archive to fix santui-log-viewer startup failure
+
+### 🚀 Features
+
+- Add filter indicator, pgup/pgdn, remove # column
+\nFull Changelog: [v0.2.31...v0.2.32](https://github.com/sonyarianto/santui/compare/v0.2.31...v0.2.32)
+## [0.2.31] - 2026-07-18
 
 ### ⚙️ Miscellaneous
 
@@ -21,7 +31,7 @@ All notable changes to this project will be documented in this file.
 ### 🚀 Features
 
 - Add mpv playback, search mode, and dimmed search hint
-
+\nFull Changelog: [v0.2.30...v0.2.31](https://github.com/sonyarianto/santui/compare/v0.2.30...v0.2.31)
 ## [0.2.30] - 2026-07-18
 
 ### ⚙️ Miscellaneous
@@ -50,6 +60,7 @@ All notable changes to this project will be documented in this file.
 - Add 10s timeout to all HTTP requests
 - Use Unicode width for info line right-alignment
 - Move alt+m mouse off hint to left side, lowercase alt+m
+- Use #[cfg(unix)] for PermissionsExt to fix Windows build
 
 ### 💼 Other
 
