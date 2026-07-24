@@ -272,9 +272,26 @@ jobs:
           files: |
             santui-*
             plugins-*.json
-            *
           fail_on_unmatched_files: false
           generate_release_notes: true
+          # Plugin binaries are uploaded separately (below) with delays to
+          # avoid GitHub's secondary rate limit on concurrent API calls.
+
+      - name: Upload plugin binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Upload individually with a delay between each to stay within
+          # GitHub's secondary rate limits (~440 files × 1s ≈ 7.5 min).
+          for f in *; do
+            case "$f" in
+              santui-*|plugins-*.json) continue ;;
+            esac
+            [ -f "$f" ] || continue
+            echo "Uploading $f …"
+            gh release upload "${{ github.ref_name }}" "$f" --clobber
+            sleep 1
+          done
 
   publish-npm:
     if: startsWith(github.ref, 'refs/tags/v')
