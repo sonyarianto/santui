@@ -1,10 +1,10 @@
 [package]
-name = "santui-quran-reader"
+name = "santui-quran"
 version = "0.2.35"
 edition = "2021"
 
 [[bin]]
-name = "santui-quran-reader"
+name = "santui-quran"
 path = "src/main.rs"
 
 [dependencies]

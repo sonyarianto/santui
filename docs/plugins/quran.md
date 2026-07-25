@@ -1,4 +1,4 @@
-# Plugin Spec: Quran Reader
+# Plugin Spec: Quran
 
 ## Core Purpose
 Browse and read Quran surahs with Arabic text, translations, and ayah-by-ayah recitation playback via mpv.

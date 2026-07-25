@@ -191,7 +191,7 @@ impl Mpv {
             ("vo", "null"),
             ("terminal", "no"),
             ("msg-level", "all=no"),
-            ("audio-client-name", "santui-quran-reader"),
+            ("audio-client-name", "santui-quran"),
         ] {
             if let Err(e) = mpv.set_option(k, v) {
                 errors.push(format!("  {k}: {e}"));

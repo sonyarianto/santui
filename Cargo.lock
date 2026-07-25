@@ -3977,7 +3977,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "santui-quran-reader"
+name = "santui-quran"
 version = "0.2.35"
 dependencies = [
  "env_logger",
