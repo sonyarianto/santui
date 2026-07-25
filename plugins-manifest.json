@@ -5,7 +5,8 @@
     "description": "Listen to thousands of radio stations worldwide",
     "capabilities": [
       "background"
-    ]
+    ],
+    "status": "stable"
   },
   {
     "id": "weather",
@@ -141,7 +142,8 @@
     "id": "music-preview",
     "name": "Music Preview",
     "description": "Search and preview iTunes music tracks",
-    "capabilities": []
+    "capabilities": [],
+    "status": "stable"
   },
   {
     "id": "pomodoro-timer",
@@ -399,7 +401,8 @@
     "id": "log-viewer",
     "name": "Log Viewer",
     "description": "View and filter log file contents with scrolling support; also captures runtime logs from the host",
-    "capabilities": ["log-consumer"]
+    "capabilities": ["log-consumer"],
+    "status": "stable"
   },
   {
     "id": "lorem-generator",

@@ -14,6 +14,16 @@ struct ManifestPlugin {
     description: String,
     #[serde(default)]
     capabilities: Vec<String>,
+    #[serde(default = "default_status")]
+    status: String,
+}
+
+fn default_status() -> String {
+    "experimental".to_string()
+}
+
+fn is_stable(p: &ManifestPlugin) -> bool {
+    p.status == "stable"
 }
 
 #[derive(Serialize)]
@@ -155,6 +165,7 @@ fn cmd_release_json() {
 
     let plugins: Vec<PluginEntry> = manifest
         .par_iter()
+        .filter(|p| is_stable(p))
         .filter_map(|p| {
             let binpath = Path::new(&binary_dir).join(format!("santui-{}{}", p.id, ext));
             if !binpath.exists() {
@@ -189,7 +200,11 @@ fn cmd_release_json() {
 
 fn cmd_list_ids() {
     let manifest = load_manifest();
-    let ids: Vec<&str> = manifest.iter().map(|p| p.id.as_str()).collect();
+    let ids: Vec<&str> = manifest
+        .iter()
+        .filter(|p| is_stable(p))
+        .map(|p| p.id.as_str())
+        .collect();
     println!("{}", ids.join(" "));
 }
 
@@ -199,6 +214,7 @@ fn cmd_list_paths() {
     let manifest = load_manifest();
     let paths: Vec<String> = manifest
         .iter()
+        .filter(|p| is_stable(p))
         .map(|p| format!("{binary_dir}/santui-{}{ext}", p.id))
         .collect();
     println!("{}", paths.join(" "));
@@ -206,6 +222,10 @@ fn cmd_list_paths() {
 
 fn cmd_list_globs() {
     let manifest = load_manifest();
-    let globs: Vec<String> = manifest.iter().map(|p| format!("{}-*", p.id)).collect();
+    let globs: Vec<String> = manifest
+        .iter()
+        .filter(|p| is_stable(p))
+        .map(|p| format!("{}-*", p.id))
+        .collect();
     println!("{}", globs.join(" "));
 }
