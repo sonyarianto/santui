@@ -101,8 +101,8 @@ git cliff -o CHANGELOG.md   # auto-generate changelog from conventional commits
 git add -A && git commit -m "chore: bump version to x.y.z"
 git tag vx.y.z && git push origin main vx.y.z
 # CI builds binaries and publishes to npm and crates.io.
-# Then create the GitHub Release with proper notes from CHANGELOG.md:
-gh release create vx.y.z --notes-file CHANGELOG.md --title "vx.y.z"
+# Then create the GitHub Release with only the new section from CHANGELOG.md:
+git cliff --unreleased --strip header | gh release create vx.y.z --notes-file - --title "vx.y.z"
 ```
 
 Prerequisites:
