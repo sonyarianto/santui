@@ -114,6 +114,7 @@ pub enum FetchMsg {
 
 pub enum MpvCmd {
     Load { url: String, surah: u16, ayah: u16 },
+    PlaySurah { ayahs: Vec<(String, u16, u16)> },
     TogglePause,
     Stop,
     Quit,

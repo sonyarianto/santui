@@ -55,37 +55,70 @@ pub fn render_ui(app: &App) -> Vec<RenderCmd> {
 
 fn render_surah_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, h: u16) {
     let list = app.filtered_surahs();
+    let search_display = if app.search_mode {
+        format!("{}█", app.search)
+    } else {
+        app.search.clone()
+    };
     let header = format!(
-        "Surahs: {} · Search: {} · Translation: {} · Reciter: {}",
+        "Surahs: {} • Translation: {} • Reciter: {} • Search: {}",
         app.surahs.len(),
-        app.search,
         app.prefs.translation_edition,
-        app.prefs.reciter
+        app.prefs.reciter,
+        search_display,
     );
     push_text(
         cmds,
         2,
         1,
         truncate(&header, w as usize - 4),
-        theme.text,
-        true,
+        theme.text_muted,
+        false,
     );
-    let list_h = h.saturating_sub(6).max(4);
-    let items: Vec<String> = list
+    if app.fetching {
+        push_text(
+            cmds,
+            w.saturating_sub(12),
+            1,
+            "Loading...",
+            theme.text_muted,
+            false,
+        );
+    }
+    let inner_w = w.saturating_sub(4) as usize;
+    let cols = ["No", "Name", "Translation", "Ayahs"];
+    let col_w = [
+        4usize,
+        25usize.min(inner_w.saturating_sub(39)),
+        25usize.min(inner_w.saturating_sub(39)),
+        6usize,
+    ];
+    let list_h = h.saturating_sub(4).max(4);
+    let rows: Vec<Vec<String>> = list
         .iter()
         .map(|s| {
-            format!(
-                "{:>3}. {:<24} {:<24} {} ayahs",
-                s.number, s.english_name, s.english_translation, s.ayah_count
-            )
+            vec![
+                format!("{}", s.number),
+                truncate(&s.english_name, col_w[1]),
+                truncate(&s.english_translation, col_w[2]),
+                format!("{}", s.ayah_count),
+            ]
         })
         .collect();
-    cmds.push(RenderCmd::List {
+    cmds.push(RenderCmd::Table {
         x: 2,
         y: 3,
-        w: w.saturating_sub(4),
+        w: inner_w as u16,
         h: list_h,
-        items,
+        header: cols.iter().map(|c| (*c).to_string()).collect(),
+        header_style: TextStyle {
+            fg: Some(theme.text_muted),
+            bg: None,
+            bold: true,
+            modifiers: 0,
+        },
+        rows,
+        column_widths: col_w.iter().map(|&c| c as u16).collect(),
         selected: Some(app.selected_surah.min(list.len().saturating_sub(1))),
         style: TextStyle {
             fg: Some(theme.text),
@@ -99,15 +132,10 @@ fn render_surah_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w:
             bold: true,
             modifiers: 0,
         },
+        current_row: None,
+        current_style: None,
+        cell_styles: None,
     });
-    push_text(
-        cmds,
-        2,
-        h.saturating_sub(2),
-        status_line(app),
-        theme.text_muted,
-        false,
-    );
 }
 
 fn render_reader(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, h: u16) {
@@ -131,7 +159,7 @@ fn render_reader(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16
         theme.text,
         true,
     );
-    let list_h = h.saturating_sub(6).max(4);
+    let list_h = h.saturating_sub(4).max(4);
     let items: Vec<String> = content
         .ayahs
         .iter()
@@ -159,14 +187,6 @@ fn render_reader(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16
             modifiers: 0,
         },
     });
-    push_text(
-        cmds,
-        2,
-        h.saturating_sub(2),
-        status_line(app),
-        theme.text_muted,
-        false,
-    );
 }
 
 fn render_picker(
@@ -182,9 +202,9 @@ fn render_picker(
         cmds,
         2,
         1,
-        format!("Choose {title} · Enter select · Esc cancel"),
-        theme.text,
-        true,
+        truncate(title, w as usize - 4),
+        theme.text_muted,
+        false,
     );
     let items: Vec<String> = options.iter().map(|s| (*s).to_string()).collect();
     cmds.push(RenderCmd::List {
@@ -227,28 +247,43 @@ fn ayah_row(ayah: &Ayah, mode: DisplayMode, width: usize) -> String {
 }
 
 fn status_line(app: &App) -> String {
-    let repeat = if app.repeat_ayah {
-        "repeat on"
-    } else {
-        "repeat off"
-    };
-    let fetching = if app.fetching { " · fetching" } else { "" };
-    format!("{} · {}{}", app.status, repeat, fetching)
+    let mut parts = Vec::new();
+    if !app.status.is_empty() {
+        parts.push(app.status.as_str());
+    }
+    if app.repeat_ayah {
+        parts.push("repeat on");
+    }
+    if app.fetching {
+        parts.push("fetching");
+    }
+    parts.join(" · ")
 }
 
-pub fn hints(screen: Screen) -> Vec<(String, String)> {
+pub fn hints(
+    screen: Screen,
+    _search_mode: bool,
+    surahs_loaded: bool,
+    _fetching: bool,
+) -> Vec<(String, String)> {
     match screen {
-        Screen::SurahList => vec![
-            ("enter".into(), "read".into()),
-            ("/".into(), "search".into()),
-            ("e".into(), "translation".into()),
-            ("r".into(), "reciter".into()),
-            ("R".into(), "refresh".into()),
-            ("pgup/pgdn".into(), "scroll".into()),
-            ("esc".into(), "back".into()),
-        ],
+        Screen::SurahList => {
+            let mut v = vec![
+                ("\u{2191}\u{2193}".into(), "navigate".into()),
+                ("\u{21B5}".into(), "read".into()),
+                ("/".into(), "search".into()),
+                ("e".into(), "translation".into()),
+                ("r".into(), "reciter".into()),
+                ("esc".into(), "back".into()),
+            ];
+            if surahs_loaded {
+                v.insert(2, ("p".into(), "play".into()));
+                v.push(("x".into(), "stop".into()));
+            }
+            v
+        }
         Screen::Reader => vec![
-            ("j/k".into(), "scroll".into()),
+            ("\u{2191}\u{2193}".into(), "scroll".into()),
             ("space".into(), "ayah".into()),
             ("a".into(), "play surah".into()),
             ("x".into(), "stop".into()),
@@ -257,8 +292,8 @@ pub fn hints(screen: Screen) -> Vec<(String, String)> {
             ("esc".into(), "list".into()),
         ],
         Screen::TranslationPicker | Screen::ReciterPicker => vec![
-            ("up/down".into(), "navigate".into()),
-            ("enter".into(), "select".into()),
+            ("\u{2191}\u{2193}".into(), "navigate".into()),
+            ("\u{21B5}".into(), "select".into()),
             ("esc".into(), "back".into()),
         ],
     }

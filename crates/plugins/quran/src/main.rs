@@ -28,6 +28,7 @@ struct App {
     selected_ayah: usize,
     scroll: usize,
     search: String,
+    search_mode: bool,
     picker_cursor: usize,
     fetching: bool,
     status: String,
@@ -38,6 +39,8 @@ struct App {
     audio_state: AudioState,
     play_surah_mode: bool,
     repeat_ayah: bool,
+    play_on_load: bool,
+    playlist_mode: bool,
 }
 
 impl Default for App {
@@ -56,9 +59,10 @@ impl Default for App {
             selected_ayah: 0,
             scroll: 0,
             search: String::new(),
+            search_mode: false,
             picker_cursor: 0,
             fetching: false,
-            status: "Fetching surah list…".into(),
+            status: String::new(),
             rx_fetch: None,
             tx_mpv: None,
             rx_mpv: None,
@@ -66,6 +70,8 @@ impl Default for App {
             audio_state: AudioState::Stopped,
             play_surah_mode: false,
             repeat_ayah: false,
+            play_on_load: false,
+            playlist_mode: false,
         }
     }
 }
@@ -115,6 +121,9 @@ impl App {
     }
 
     fn handle_list_key(&mut self, key: IpcKey) -> bool {
+        if self.search_mode {
+            return self.handle_list_search_key(key);
+        }
         match key {
             IpcKey::Up | IpcKey::Char('k') => {
                 self.selected_surah = self.selected_surah.saturating_sub(1);
@@ -140,8 +149,9 @@ impl App {
                 self.open_selected_surah();
                 true
             }
-            IpcKey::Char('s') | IpcKey::Char('/') => {
+            IpcKey::Char('/') => {
                 self.search.clear();
+                self.search_mode = true;
                 self.status = "Search surahs".into();
                 true
             }
@@ -161,8 +171,45 @@ impl App {
                     .unwrap_or(0);
                 true
             }
-            IpcKey::Char('R') => {
-                self.start_fetch_surahs();
+            IpcKey::Char('p') => {
+                self.status = "Playing surah…".into();
+                self.play_selected_surah();
+                true
+            }
+            IpcKey::Char('x') => {
+                self.stop_audio();
+                true
+            }
+            IpcKey::Esc => false,
+            _ => false,
+        }
+    }
+
+    fn handle_list_search_key(&mut self, key: IpcKey) -> bool {
+        match key {
+            IpcKey::Up | IpcKey::Char('k') => {
+                self.selected_surah = self.selected_surah.saturating_sub(1);
+                true
+            }
+            IpcKey::Down | IpcKey::Char('j') => {
+                let max = self.filtered_surahs().len().saturating_sub(1);
+                self.selected_surah = self.selected_surah.min(max).saturating_add(1).min(max);
+                true
+            }
+            IpcKey::PageUp => {
+                let page = (self.area.h.saturating_sub(6).max(4) as usize).saturating_sub(1);
+                self.selected_surah = self.selected_surah.saturating_sub(page);
+                true
+            }
+            IpcKey::PageDown => {
+                let max = self.filtered_surahs().len().saturating_sub(1);
+                let page = (self.area.h.saturating_sub(6).max(4) as usize).saturating_sub(1);
+                self.selected_surah = (self.selected_surah + page).min(max);
+                true
+            }
+            IpcKey::Enter => {
+                self.search_mode = false;
+                self.open_selected_surah();
                 true
             }
             IpcKey::Backspace => {
@@ -174,17 +221,18 @@ impl App {
                     false
                 }
             }
+            IpcKey::Esc => {
+                self.search.clear();
+                self.search_mode = false;
+                self.status.clear();
+                self.selected_surah = 0;
+                true
+            }
             IpcKey::Char(c) if !c.is_control() => {
                 self.search.push(c);
                 self.selected_surah = 0;
                 true
             }
-            IpcKey::Esc if !self.search.is_empty() => {
-                self.search.clear();
-                self.selected_surah = 0;
-                true
-            }
-            IpcKey::Esc => false,
             _ => false,
         }
     }
@@ -360,12 +408,22 @@ impl App {
             Ok(content) => {
                 let number = content.summary.number;
                 self.content_cache.insert(number, content);
-                self.screen = Screen::Reader;
                 self.selected_ayah = self.prefs.last_ayah.unwrap_or(1).saturating_sub(1) as usize;
                 self.adjust_scroll();
-                self.status = "Surah loaded".into();
+                self.status.clear();
+                if self.play_on_load {
+                    self.play_on_load = false;
+                    self.play_surah_mode = true;
+                    self.play_all_ayahs();
+                } else {
+                    self.screen = Screen::Reader;
+                }
+                self.dirty = true;
             }
-            Err(e) => self.status = format!("Surah fetch error: {e}"),
+            Err(e) => {
+                self.status = format!("Surah fetch error: {e}");
+                self.dirty = true;
+            }
         }
     }
 
@@ -381,6 +439,11 @@ impl App {
     }
 
     fn handle_audio_end(&mut self) {
+        if self.playlist_mode {
+            self.audio_state = AudioState::Stopped;
+            self.play_surah_mode = false;
+            return;
+        }
         if self.repeat_ayah {
             self.play_current_ayah();
             return;
@@ -405,7 +468,7 @@ impl App {
         let (tx, rx) = mpsc::channel();
         self.rx_fetch = Some(rx);
         self.fetching = true;
-        self.status = "Fetching surah list…".into();
+        self.status.clear();
         thread::spawn(move || {
             let _ = tx.send(FetchMsg::SurahList(fetch_surah_list()));
         });
@@ -424,6 +487,36 @@ impl App {
             self.scroll = 0;
             return;
         }
+        let translation = self.prefs.translation_edition.clone();
+        let reciter = self.prefs.reciter.clone();
+        let (tx, rx) = mpsc::channel();
+        self.rx_fetch = Some(rx);
+        self.fetching = true;
+        self.status = format!("Fetching Surah {}…", summary.english_name);
+        thread::spawn(move || {
+            let _ = tx.send(FetchMsg::Surah(fetch_surah_content(
+                summary,
+                &translation,
+                &reciter,
+            )));
+        });
+    }
+
+    fn play_selected_surah(&mut self) {
+        let Some(summary) = self.filtered_surahs().get(self.selected_surah).cloned() else {
+            return;
+        };
+        self.prefs.last_surah = Some(summary.number);
+        self.prefs.last_ayah = Some(1);
+        self.save_prefs();
+        if self.content_cache.contains_key(&summary.number) {
+            self.selected_ayah = 0;
+            self.scroll = 0;
+            self.play_surah_mode = true;
+            self.play_all_ayahs();
+            return;
+        }
+        self.play_on_load = true;
         let translation = self.prefs.translation_edition.clone();
         let reciter = self.prefs.reciter.clone();
         let (tx, rx) = mpsc::channel();
@@ -471,7 +564,6 @@ impl App {
         if self.selected_ayah >= self.scroll + visible {
             self.scroll = self.selected_ayah.saturating_sub(visible.saturating_sub(1));
         }
-        self.prefs.last_ayah = Some((self.selected_ayah + 1) as u16);
     }
 
     fn play_current_ayah(&mut self) {
@@ -491,6 +583,7 @@ impl App {
         };
         let surah = content.summary.number;
         let ayah_no = ayah.number;
+        self.playlist_mode = false;
         if let Some(tx) = &self.tx_mpv {
             let _ = tx.send(MpvCmd::Load {
                 url,
@@ -500,6 +593,34 @@ impl App {
             self.audio_state = AudioState::Buffering {
                 surah,
                 ayah: ayah_no,
+            };
+        }
+    }
+
+    fn play_all_ayahs(&mut self) {
+        let Some(content) = self.current_content() else {
+            return;
+        };
+        let surah = content.summary.number;
+        let ayahs: Vec<(String, u16, u16)> = content
+            .ayahs
+            .iter()
+            .filter_map(|a| {
+                let url = a.audio_url.clone()?;
+                Some((url, surah, a.number))
+            })
+            .collect();
+        if ayahs.is_empty() {
+            self.audio_state = AudioState::Error("no audio URLs".into());
+            return;
+        }
+        let first_ayah = ayahs[0].2;
+        self.playlist_mode = true;
+        if let Some(tx) = &self.tx_mpv {
+            let _ = tx.send(MpvCmd::PlaySurah { ayahs });
+            self.audio_state = AudioState::Buffering {
+                surah,
+                ayah: first_ayah,
             };
         }
     }
@@ -531,6 +652,7 @@ impl App {
         }
         self.audio_state = AudioState::Stopped;
         self.play_surah_mode = false;
+        self.playlist_mode = false;
     }
 
     fn save_prefs(&mut self) {
@@ -579,7 +701,12 @@ fn palette_commands() -> Vec<(String, String)> {
 fn respond(app: &mut App, consumed: bool) {
     let msg = santui_ipc::protocol::PluginMsg {
         commands: app.render().to_vec(),
-        hints: hints(app.screen),
+        hints: hints(
+            app.screen,
+            app.search_mode,
+            !app.surahs.is_empty(),
+            app.fetching,
+        ),
         palette_commands: palette_commands(),
         request: app.pending_request.take(),
         plugin_message: None,
@@ -590,31 +717,63 @@ fn respond(app: &mut App, consumed: bool) {
 }
 
 fn mpv_thread(mut mpv: Mpv, rx_cmd: mpsc::Receiver<MpvCmd>, tx_msg: mpsc::Sender<MpvMsg>) {
+    let mut playlist: Vec<(String, u16, u16)> = Vec::new();
+    let mut playlist_index: usize = 0;
     loop {
         if let Some(ev) = mpv.wait_event_raw(0.1) {
             if ev.event_id == MPV_EVENT_SHUTDOWN {
                 break;
             }
             if ev.event_id == MPV_EVENT_END_FILE {
-                let _ = tx_msg.send(MpvMsg::EndFile);
+                if playlist_index + 1 < playlist.len() {
+                    playlist_index += 1;
+                } else {
+                    playlist.clear();
+                    let _ = tx_msg.send(MpvMsg::EndFile);
+                }
+            }
+            if ev.event_id == MPV_EVENT_FILE_LOADED && !playlist.is_empty() {
+                let (_, surah, ayah) = &playlist[playlist_index];
+                let _ = tx_msg.send(MpvMsg::Started {
+                    surah: *surah,
+                    ayah: *ayah,
+                });
             }
         }
         while let Ok(cmd) = rx_cmd.try_recv() {
             match cmd {
-                MpvCmd::Load { url, surah, ayah } => match mpv.load_url(&url) {
-                    Ok(()) => {
-                        let _ = tx_msg.send(MpvMsg::Started { surah, ayah });
+                MpvCmd::Load { url, surah, ayah } => {
+                    playlist.clear();
+                    match mpv.load_url(&url) {
+                        Ok(()) => {
+                            let _ = tx_msg.send(MpvMsg::Started { surah, ayah });
+                        }
+                        Err(e) => {
+                            let _ = tx_msg.send(MpvMsg::Error(e.to_string()));
+                        }
                     }
-                    Err(e) => {
-                        let _ = tx_msg.send(MpvMsg::Error(e.to_string()));
+                }
+                MpvCmd::PlaySurah { ayahs } => {
+                    if let Some((first_url, _, _)) = ayahs.first() {
+                        let first_url = first_url.clone();
+                        playlist = ayahs;
+                        playlist_index = 0;
+                        if let Err(e) = mpv.load_url(&first_url) {
+                            let _ = tx_msg.send(MpvMsg::Error(e.to_string()));
+                            playlist.clear();
+                        }
+                        for (url, _, _) in &playlist[1..] {
+                            let _ = mpv.command(&["loadfile", url, "append"]);
+                        }
                     }
-                },
+                }
                 MpvCmd::TogglePause => {
                     if let Err(e) = mpv.toggle_pause() {
                         let _ = tx_msg.send(MpvMsg::Error(e.to_string()));
                     }
                 }
                 MpvCmd::Stop => {
+                    playlist.clear();
                     if let Err(e) = mpv.stop() {
                         let _ = tx_msg.send(MpvMsg::Error(e.to_string()));
                     }
