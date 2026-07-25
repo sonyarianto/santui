@@ -281,7 +281,6 @@ jobs:
             santui-*
             plugins-*.json
           fail_on_unmatched_files: false
-          generate_release_notes: true
           # Plugin binaries are uploaded separately (below) with delays to
           # avoid GitHub's secondary rate limit on concurrent API calls.
 

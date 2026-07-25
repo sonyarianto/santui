@@ -102,7 +102,12 @@ git add -A && git commit -m "chore: bump version to x.y.z"
 git tag vx.y.z && git push origin main vx.y.z
 # CI builds binaries and publishes to npm and crates.io.
 # Then create the GitHub Release with only the new section from CHANGELOG.md:
-git cliff --unreleased --strip header | gh release create vx.y.z --notes-file - --title "vx.y.z"
+git cliff -o CHANGELOG.md   # regenerate (now tag exists → [unreleased] becomes vx.y.z)
+git add -A && git commit -m "chore: update changelog for vx.y.z" && git push
+# Extract just the new section (between ## [vx.y.z] and next ## [)
+VERSION="$(git describe --tags --abbrev=0 | sed 's/^v//')"
+awk 'BEGIN{f=0} /^## \['"$VERSION"'\]/{f=1; next} /^## \[/{if(f) exit} f' CHANGELOG.md | \
+  gh release create vx.y.z --notes-file - --title "vx.y.z"
 ```
 
 Prerequisites:
