@@ -197,6 +197,12 @@ impl App {
                     }
                     true
                 }
+                IpcKey::Char('s') => {
+                    if self.state.now_playing.is_some() {
+                        self.stop_playback();
+                    }
+                    true
+                }
                 IpcKey::Esc => false,
                 _ => false,
             }
@@ -272,6 +278,7 @@ impl App {
             if next < self.state.results.len() {
                 self.state.now_playing = Some(next);
                 self.state.selected = next;
+                self.adjust_scroll_down();
                 let url = self.state.results.get(next).map(|t| t.preview_url.clone());
                 if let Some(ref url) = url {
                     log::warn!("auto-advance: {url}");
@@ -359,6 +366,7 @@ fn hints() -> Vec<(String, String)> {
     vec![
         ("/".into(), "search".into()),
         ("c".into(), "clear".into()),
+        ("s".into(), "stop".into()),
         ("space".into(), "play".into()),
         ("esc".into(), "back".into()),
     ]
