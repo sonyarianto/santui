@@ -34,9 +34,9 @@ $pluginBinaries = Get-ChildItem -LiteralPath $OutDir -Filter "santui-*.exe" | Wh
     $_.Name -notmatch 'scraper|registry-plugin'
 }
 
-# Load plugin metadata from central manifest
+# Load plugin metadata from central manifest, only stable plugins
 $manifestPath = Join-Path $Root "plugins-manifest.json"
-$manifest = Get-Content $manifestPath | ConvertFrom-Json
+$manifest = Get-Content $manifestPath | ConvertFrom-Json | Where-Object { $_.status -eq 'stable' }
 $pluginMeta = @{}
 foreach ($p in $manifest) {
     $pluginMeta[$p.id] = @($p.name, $p.description, [array]$p.capabilities)

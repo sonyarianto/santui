@@ -86,6 +86,7 @@ fn cmd_dev_json() {
         serde_json::from_str(&manifest_json).expect("Failed to parse plugins-manifest.json");
     let manifest: HashMap<String, ManifestPlugin> = manifest_list
         .into_iter()
+        .filter(is_stable)
         .map(|p| (p.id.clone(), p))
         .collect();
 
