@@ -137,7 +137,22 @@ pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
                 render_table(state, theme, w, h, &mut cmds);
             }
         }
-        FetchState::Idle => {}
+        FetchState::Idle => {
+            if !state.search_mode && state.query.is_empty() && state.results.is_empty() {
+                let text = "press / to start search";
+                let text_x = (w.saturating_sub(text.len() as u16)) / 2;
+                let text_y = h / 2;
+                cmds.push(RenderCmd::Text {
+                    x: text_x,
+                    y: text_y,
+                    text: text.into(),
+                    fg: Some(theme.text_muted),
+                    bg: None,
+                    bold: false,
+                    modifiers: 0,
+                });
+            }
+        }
     }
 
     cmds
@@ -184,6 +199,14 @@ fn render_table(state: &MusicState, theme: &ThemeData, w: u16, h: u16, cmds: &mu
         None
     };
 
+    let vis_now_playing = state.now_playing.and_then(|np| {
+        if np >= scroll && np < scroll + visible_count {
+            Some(np - scroll)
+        } else {
+            None
+        }
+    });
+
     cmds.push(RenderCmd::Table {
         x: 2,
         y: table_top,
@@ -223,8 +246,13 @@ fn render_table(state: &MusicState, theme: &ThemeData, w: u16, h: u16, cmds: &mu
             bold: true,
             modifiers: 0,
         },
-        current_row: None,
-        current_style: None,
+        current_row: vis_now_playing,
+        current_style: Some(TextStyle {
+            fg: Some(theme.accent),
+            bg: None,
+            bold: true,
+            modifiers: 0,
+        }),
         cell_styles: None,
     });
 }
@@ -304,13 +332,18 @@ mod tests {
     }
 
     #[test]
-    fn idle_state_renders_no_instruction_text() {
+    fn idle_state_shows_centered_hint() {
         let state = MusicState::default();
         let cmds = render_ui(&state, &test_theme(), 80, 24);
-        let has_text_at_y3 = cmds
-            .iter()
-            .any(|c| matches!(c, RenderCmd::Text { y: 3, .. }));
-        assert!(!has_text_at_y3);
+        let hint = cmds.iter().find(
+            |c| matches!(c, RenderCmd::Text { text, .. } if text == "press / to start search"),
+        );
+        assert!(hint.is_some());
+        if let Some(RenderCmd::Text { x, y, fg, .. }) = hint {
+            assert_eq!(*x, (80 - 23) / 2);
+            assert_eq!(*y, 12);
+            assert_eq!(*fg, Some(test_theme().text_muted));
+        }
     }
 
     #[test]

@@ -5,14 +5,52 @@ mod ui;
 
 use std::io::{BufRead, BufReader};
 use std::sync::mpsc;
+use std::time::{Duration, Instant};
 
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, PluginMessage, PluginRequest, RenderCmd, ThemeData,
 };
 
-use player::Mpv;
+use player::{Mpv, MpvWakeup};
 use state::{FetchState, MusicState};
 use ui::{max_visible_tracks, render_ui};
+
+const PREVIEW_DURATION: Duration = Duration::from_secs(30);
+
+enum MpvCommand {
+    LoadUrl(String),
+    Stop,
+}
+
+type MpvIo = (mpsc::Sender<MpvCommand>, MpvWakeup);
+
+fn spawn_mpv_thread() -> Result<MpvIo, Box<dyn std::error::Error>> {
+    let (cmd_tx, cmd_rx) = mpsc::channel::<MpvCommand>();
+
+    let (mpv, errors) = Mpv::new()?;
+    for e in &errors {
+        log::warn!("mpv init warning: {e}");
+    }
+    let wakeup = mpv.make_wakeup();
+
+    std::thread::spawn(move || loop {
+        while let Ok(cmd) = cmd_rx.try_recv() {
+            match cmd {
+                MpvCommand::LoadUrl(url) => {
+                    if let Err(e) = mpv.load_url(&url) {
+                        log::warn!("mpv load_url failed: {e}");
+                    }
+                }
+                MpvCommand::Stop => {
+                    let _ = mpv.stop();
+                }
+            }
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    });
+
+    Ok((cmd_tx, wakeup))
+}
 
 enum FetchMsg {
     SearchDone(String, Vec<api::ItunesTrack>),
@@ -28,7 +66,9 @@ struct App {
     pending_request: Option<PluginRequest>,
     pending_plugin_message: Option<PluginMessage>,
     rx_fetch: Option<mpsc::Receiver<FetchMsg>>,
-    mpv: Option<Mpv>,
+    mpv_tx: Option<mpsc::Sender<MpvCommand>>,
+    mpv_wakeup: Option<MpvWakeup>,
+    track_start: Option<Instant>,
 }
 
 impl Default for App {
@@ -55,7 +95,9 @@ impl Default for App {
             pending_request: None,
             pending_plugin_message: None,
             rx_fetch: None,
-            mpv: None,
+            mpv_tx: None,
+            mpv_wakeup: None,
+            track_start: None,
         }
     }
 }
@@ -94,6 +136,7 @@ impl App {
         } else {
             match key {
                 IpcKey::Char('/') => {
+                    self.stop_playback();
                     self.state.search_mode = true;
                     self.state.query.clear();
                     self.dirty = true;
@@ -142,6 +185,18 @@ impl App {
                     self.dirty = true;
                     true
                 }
+                IpcKey::Char('c') => {
+                    if !self.state.results.is_empty() {
+                        self.stop_playback();
+                        self.state.results.clear();
+                        self.state.fetch_state = FetchState::Idle;
+                        self.state.query.clear();
+                        self.state.selected = 0;
+                        self.state.scroll = 0;
+                        self.dirty = true;
+                    }
+                    true
+                }
                 IpcKey::Esc => false,
                 _ => false,
             }
@@ -164,34 +219,76 @@ impl App {
         }
     }
 
+    fn ensure_mpv(&mut self) {
+        if self.mpv_tx.is_none() {
+            match spawn_mpv_thread() {
+                Ok((tx, wakeup)) => {
+                    self.mpv_tx = Some(tx);
+                    self.mpv_wakeup = Some(wakeup);
+                }
+                Err(e) => {
+                    log::error!("mpv init failed: {e}");
+                }
+            }
+        }
+    }
+
     fn play_selected(&mut self) {
-        if let Some(track) = self.state.results.get(self.state.selected) {
-            log::info!(
-                "play preview: {} — {} ({})",
-                track.track_name,
-                track.artist_name,
-                track.preview_url
-            );
-            match self.mpv {
-                Some(ref mpv) => {
-                    if let Err(e) = mpv.load_url(&track.preview_url) {
-                        log::warn!("mpv load_url failed: {e}");
+        let url = self
+            .state
+            .results
+            .get(self.state.selected)
+            .map(|t| t.preview_url.clone());
+        if let Some(ref url) = url {
+            log::warn!("play preview: {url}");
+            self.ensure_mpv();
+            if let Some(ref tx) = self.mpv_tx {
+                let _ = tx.send(MpvCommand::LoadUrl(url.clone()));
+                if let Some(ref wakeup) = self.mpv_wakeup {
+                    wakeup.wakeup();
+                }
+            }
+            self.state.now_playing = Some(self.state.selected);
+            self.track_start = Some(Instant::now());
+            self.dirty = true;
+        }
+    }
+
+    fn stop_playback(&mut self) {
+        if let Some(ref tx) = self.mpv_tx {
+            let _ = tx.send(MpvCommand::Stop);
+            if let Some(ref wakeup) = self.mpv_wakeup {
+                wakeup.wakeup();
+            }
+        }
+        self.state.now_playing = None;
+        self.track_start = None;
+        self.dirty = true;
+    }
+
+    fn advance_to_next_track(&mut self) {
+        if let Some(playing) = self.state.now_playing {
+            let next = playing + 1;
+            if next < self.state.results.len() {
+                self.state.now_playing = Some(next);
+                self.state.selected = next;
+                let url = self.state.results.get(next).map(|t| t.preview_url.clone());
+                if let Some(ref url) = url {
+                    log::warn!("auto-advance: {url}");
+                    self.ensure_mpv();
+                    if let Some(ref tx) = self.mpv_tx {
+                        let _ = tx.send(MpvCommand::LoadUrl(url.clone()));
+                        if let Some(ref wakeup) = self.mpv_wakeup {
+                            wakeup.wakeup();
+                        }
                     }
                 }
-                None => match Mpv::new() {
-                    Ok((mpv, errors)) => {
-                        for e in &errors {
-                            log::warn!("mpv init warning: {e}");
-                        }
-                        if let Err(e) = mpv.load_url(&track.preview_url) {
-                            log::warn!("mpv load_url failed: {e}");
-                        }
-                        self.mpv = Some(mpv);
-                    }
-                    Err(e) => {
-                        log::error!("mpv init failed: {e}");
-                    }
-                },
+                self.track_start = Some(Instant::now());
+                self.dirty = true;
+            } else {
+                self.state.now_playing = None;
+                self.track_start = None;
+                self.dirty = true;
             }
         }
     }
@@ -216,10 +313,12 @@ impl App {
         if self.state.tick_counter.is_multiple_of(3) {
             self.dirty = true;
         }
+
         if let Some(ref rx) = self.rx_fetch {
             match rx.try_recv() {
                 Ok(FetchMsg::SearchDone(q, results)) => {
                     if q == self.state.query {
+                        self.stop_playback();
                         self.state.results = results;
                         self.state.fetch_state = FetchState::Done;
                         self.state.selected = 0;
@@ -233,6 +332,15 @@ impl App {
                 }
                 Err(mpsc::TryRecvError::Empty) => {}
                 Err(mpsc::TryRecvError::Disconnected) => {}
+            }
+        }
+
+        if self.state.now_playing.is_some() {
+            if let Some(start) = self.track_start {
+                if start.elapsed() >= PREVIEW_DURATION {
+                    log::warn!("timer-based auto-advance after {:?}", start.elapsed());
+                    self.advance_to_next_track();
+                }
             }
         }
     }
@@ -250,6 +358,7 @@ impl App {
 fn hints() -> Vec<(String, String)> {
     vec![
         ("/".into(), "search".into()),
+        ("c".into(), "clear".into()),
         ("space".into(), "play".into()),
         ("esc".into(), "back".into()),
     ]

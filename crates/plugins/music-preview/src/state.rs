@@ -17,6 +17,7 @@ pub struct MusicState {
     pub dirty: bool,
     pub tick_counter: u64,
     pub search_mode: bool,
+    pub now_playing: Option<usize>,
 }
 
 impl Default for MusicState {
@@ -30,6 +31,7 @@ impl Default for MusicState {
             dirty: true,
             tick_counter: 0,
             search_mode: false,
+            now_playing: None,
         }
     }
 }

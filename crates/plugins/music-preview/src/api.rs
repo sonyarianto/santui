@@ -30,7 +30,7 @@ pub struct ItunesTrack {
 pub fn search(query: &str) -> Result<Vec<ItunesTrack>, String> {
     let encoded = url_encode(query);
     let url = format!(
-        "https://itunes.apple.com/search?term={}&media=music&entity=song&limit=50",
+        "https://itunes.apple.com/search?term={}&media=music&entity=song&limit=200",
         encoded
     );
 
