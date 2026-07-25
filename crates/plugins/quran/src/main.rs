@@ -126,13 +126,13 @@ impl App {
                 true
             }
             IpcKey::PageUp => {
-                let page = (self.area.h.saturating_sub(7).max(4) as usize).saturating_sub(1);
+                let page = (self.area.h.saturating_sub(6).max(4) as usize).saturating_sub(1);
                 self.selected_surah = self.selected_surah.saturating_sub(page);
                 true
             }
             IpcKey::PageDown => {
                 let max = self.filtered_surahs().len().saturating_sub(1);
-                let page = (self.area.h.saturating_sub(7).max(4) as usize).saturating_sub(1);
+                let page = (self.area.h.saturating_sub(6).max(4) as usize).saturating_sub(1);
                 self.selected_surah = (self.selected_surah + page).min(max);
                 true
             }

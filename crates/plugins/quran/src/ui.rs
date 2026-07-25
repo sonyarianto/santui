@@ -65,12 +65,12 @@ fn render_surah_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w:
     push_text(
         cmds,
         2,
-        2,
+        1,
         truncate(&header, w as usize - 4),
         theme.text,
         true,
     );
-    let list_h = h.saturating_sub(7).max(4);
+    let list_h = h.saturating_sub(6).max(4);
     let items: Vec<String> = list
         .iter()
         .map(|s| {
@@ -82,7 +82,7 @@ fn render_surah_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w:
         .collect();
     cmds.push(RenderCmd::List {
         x: 2,
-        y: 4,
+        y: 3,
         w: w.saturating_sub(4),
         h: list_h,
         items,
@@ -112,7 +112,7 @@ fn render_surah_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w:
 
 fn render_reader(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, h: u16) {
     let Some(content) = app.current_content() else {
-        push_text(cmds, 2, 4, "No surah loaded", theme.error, true);
+        push_text(cmds, 2, 3, "No surah loaded", theme.error, true);
         return;
     };
     let header = format!(
@@ -126,12 +126,12 @@ fn render_reader(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16
     push_text(
         cmds,
         2,
-        2,
+        1,
         truncate(&header, w as usize - 4),
         theme.text,
         true,
     );
-    let list_h = h.saturating_sub(7).max(4);
+    let list_h = h.saturating_sub(6).max(4);
     let items: Vec<String> = content
         .ayahs
         .iter()
@@ -141,7 +141,7 @@ fn render_reader(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16
         .collect();
     cmds.push(RenderCmd::List {
         x: 2,
-        y: 4,
+        y: 3,
         w: w.saturating_sub(4),
         h: list_h,
         items,
@@ -181,7 +181,7 @@ fn render_picker(
     push_text(
         cmds,
         2,
-        2,
+        1,
         format!("Choose {title} · Enter select · Esc cancel"),
         theme.text,
         true,
@@ -189,9 +189,9 @@ fn render_picker(
     let items: Vec<String> = options.iter().map(|s| (*s).to_string()).collect();
     cmds.push(RenderCmd::List {
         x: 2,
-        y: 4,
+        y: 3,
         w: w.saturating_sub(4),
-        h: h.saturating_sub(7),
+        h: h.saturating_sub(5),
         items,
         selected: Some(app.picker_cursor.min(options.len().saturating_sub(1))),
         style: TextStyle {
