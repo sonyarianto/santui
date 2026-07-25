@@ -149,7 +149,8 @@
     "id": "music-lyrics",
     "name": "Music Lyrics",
     "description": "Search song lyrics from LRCLib",
-    "capabilities": []
+    "capabilities": [],
+    "status": "stable"
   },
   {
     "id": "pomodoro-timer",
