@@ -3769,6 +3769,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "santui-music-lyrics"
+version = "0.2.34"
+dependencies = [
+ "env_logger",
+ "log",
+ "santui-ipc",
+ "serde",
+ "serde_json",
+ "ureq",
+]
+
+[[package]]
 name = "santui-music-player-controller"
 version = "0.2.34"
 dependencies = [

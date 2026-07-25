@@ -146,6 +146,12 @@
     "status": "stable"
   },
   {
+    "id": "music-lyrics",
+    "name": "Music Lyrics",
+    "description": "Search song lyrics from LRCLib",
+    "capabilities": []
+  },
+  {
     "id": "pomodoro-timer",
     "name": "Pomodoro Timer",
     "description": "Focus timer with work and break sessions",
