@@ -77,10 +77,15 @@ jobs:
       - name: Build
         shell: bash
         run: |
+          STABLE=""
+          for id in $(jq -r '.[] | select(.status == "stable") | .id' plugins-manifest.json); do
+            STABLE="$STABLE -p santui-$id"
+          done
+          PKGS="-p santui -p santui-dev-setup -p santui-registry-plugin -p santui-log-viewer $STABLE"
           if [ "${{ matrix.cross_compile }}" = "true" ]; then
-            cargo build --release --workspace --target ${{ matrix.target }}
+            cargo build --release --target ${{ matrix.target }} $PKGS
           else
-            cargo build --release --workspace
+            cargo build --release $PKGS
           fi
 
       - name: Prepare Windows artifacts
