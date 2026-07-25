@@ -118,7 +118,7 @@ From the registry you can:
 - **Enable / Disable** — toggle plugins on and off
 - **Installed plugins** appear in your command palette under the **Modules** category
 
-To get started, install a plugin from the registry — try **Radio Stream Player** for internet radio, **Hacker News Reader** for tech stories, **Weather** for forecasts, **System Monitor** for resource usage, or **World Clock** for timezone conversion. Then open `Ctrl+P` and select it to start using it.
+To get started, install a plugin from the registry — try **Radio Stream Player** for internet radio or **Music Preview** to preview audio files. Then open `Ctrl+P` and select it to start using it.
 
 > **Radio Stream Player** requires [libmpv](https://mpv.io/installation/) for audio playback. On Windows it's bundled in the release archive; on macOS/Linux install via `apt`/`brew`/`pacman`.
 
