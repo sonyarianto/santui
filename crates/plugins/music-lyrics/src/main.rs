@@ -77,9 +77,9 @@ impl App {
                 }
                 IpcKey::Down => {
                     if self.lyrics_needs_scroll() {
-                        let line_count = self.state.lyrics_text.lines().count().saturating_sub(1);
+                        let max_scroll = self.lyrics_max_scroll();
                         self.state.lyrics_scroll =
-                            self.state.lyrics_scroll.saturating_add(1).min(line_count);
+                            self.state.lyrics_scroll.saturating_add(1).min(max_scroll);
                         self.dirty = true;
                     }
                     true
@@ -95,12 +95,12 @@ impl App {
                 IpcKey::PageDown => {
                     if self.lyrics_needs_scroll() {
                         let page = self.lyrics_visible_lines().max(1);
-                        let line_count = self.state.lyrics_text.lines().count().saturating_sub(1);
+                        let max_scroll = self.lyrics_max_scroll();
                         self.state.lyrics_scroll = self
                             .state
                             .lyrics_scroll
                             .saturating_add(page)
-                            .min(line_count);
+                            .min(max_scroll);
                         self.dirty = true;
                     }
                     true
@@ -220,8 +220,14 @@ impl App {
         (self.area.h.saturating_sub(6)) as usize
     }
 
+    fn lyrics_max_scroll(&self) -> usize {
+        let n = self.state.lyrics_text.lines().count();
+        let v = self.lyrics_visible_lines();
+        n.saturating_sub(v)
+    }
+
     fn lyrics_needs_scroll(&self) -> bool {
-        self.state.lyrics_text.lines().count() > self.lyrics_visible_lines()
+        self.lyrics_max_scroll() > 0
     }
 
     fn adjust_scroll_up(&mut self) {
@@ -622,15 +628,11 @@ mod tests {
         assert_eq!(app.state.lyrics_scroll, 1);
         assert!(app.handle_key(IpcKey::Down));
         assert_eq!(app.state.lyrics_scroll, 2);
+        // stays at max (6 lines - 4 visible = 2)
         assert!(app.handle_key(IpcKey::Down));
-        assert_eq!(app.state.lyrics_scroll, 3);
-        // stays at max (line_count = 5)
+        assert_eq!(app.state.lyrics_scroll, 2);
         assert!(app.handle_key(IpcKey::Down));
-        assert_eq!(app.state.lyrics_scroll, 4);
-        assert!(app.handle_key(IpcKey::Down));
-        assert_eq!(app.state.lyrics_scroll, 5);
-        assert!(app.handle_key(IpcKey::Down));
-        assert_eq!(app.state.lyrics_scroll, 5);
+        assert_eq!(app.state.lyrics_scroll, 2);
     }
 
     #[test]
