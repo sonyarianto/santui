@@ -142,12 +142,6 @@ impl App {
                     self.dirty = true;
                     true
                 }
-                IpcKey::Char(' ') => {
-                    if !self.state.results.is_empty() {
-                        self.play_selected();
-                    }
-                    true
-                }
                 IpcKey::Enter => {
                     if matches!(self.state.fetch_state, FetchState::Done)
                         && !self.state.results.is_empty()
@@ -275,11 +269,21 @@ impl App {
     fn advance_to_next_track(&mut self) {
         if let Some(playing) = self.state.now_playing {
             let next = playing + 1;
-            if next < self.state.results.len() {
-                self.state.now_playing = Some(next);
-                self.state.selected = next;
-                self.adjust_scroll_down();
-                let url = self.state.results.get(next).map(|t| t.preview_url.clone());
+            let wrapped = next >= self.state.results.len();
+            let target = if wrapped { 0 } else { next };
+            if target < self.state.results.len() {
+                self.state.now_playing = Some(target);
+                self.state.selected = target;
+                if wrapped {
+                    self.state.scroll = 0;
+                } else {
+                    self.adjust_scroll_down();
+                }
+                let url = self
+                    .state
+                    .results
+                    .get(target)
+                    .map(|t| t.preview_url.clone());
                 if let Some(ref url) = url {
                     log::warn!("auto-advance: {url}");
                     self.ensure_mpv();
@@ -367,7 +371,7 @@ fn hints() -> Vec<(String, String)> {
         ("/".into(), "search".into()),
         ("c".into(), "clear".into()),
         ("s".into(), "stop".into()),
-        ("enter".into(), "play".into()),
+        ("\u{23CE}".into(), "play".into()),
         ("esc".into(), "back".into()),
     ]
 }
@@ -589,19 +593,6 @@ mod tests {
     fn handle_key_esc_not_consumed() {
         let mut app = App::default();
         assert!(!app.handle_key(IpcKey::Esc));
-    }
-
-    #[test]
-    fn handle_key_space_plays_with_results() {
-        let mut app = App::default();
-        app.state.results = vec![make_track(1, "A", "http://preview/1")];
-        assert!(app.handle_key(IpcKey::Char(' ')));
-    }
-
-    #[test]
-    fn handle_key_space_no_results_no_op() {
-        let mut app = App::default();
-        assert!(app.handle_key(IpcKey::Char(' ')));
     }
 
     #[test]
