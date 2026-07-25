@@ -110,6 +110,7 @@ fn render_lyrics_view(
 
     let lines: Vec<&str> = state.lyrics_text.lines().collect();
     let scroll = state.lyrics_scroll.min(lines.len().saturating_sub(1));
+    let mut last_y = 5u16;
     for i in 0..max_lines {
         let idx = scroll + i;
         if idx >= lines.len() {
@@ -121,6 +122,27 @@ fn render_lyrics_view(
             y: (5 + i) as u16,
             text: display,
             fg: Some(theme.text),
+            bg: None,
+            bold: false,
+            modifiers: 0,
+        });
+        last_y = 5 + i as u16;
+    }
+
+    let total = lines.len();
+    if total > max_lines {
+        let max_scroll = total.saturating_sub(max_lines);
+        let pct = (scroll * 100)
+            .checked_div(max_scroll)
+            .map(|v| v.min(100))
+            .unwrap_or(0);
+        let scroll_text = format!("{pct}%");
+        let sx = (2 + line_w).saturating_sub(scroll_text.len() + 1) as u16;
+        cmds.push(RenderCmd::Text {
+            x: sx,
+            y: last_y,
+            text: scroll_text,
+            fg: Some(theme.text_muted),
             bg: None,
             bold: false,
             modifiers: 0,
@@ -537,5 +559,45 @@ mod tests {
         assert_eq!(max_visible_tracks(24), 19);
         assert_eq!(max_visible_tracks(10), 5);
         assert_eq!(max_visible_tracks(5), 0);
+    }
+
+    #[test]
+    fn lyrics_scroll_shows_percentage_when_overflow() {
+        let state = LyricsState {
+            show_lyrics: true,
+            lyrics_text: (0..50)
+                .map(|i| format!("line {i}"))
+                .collect::<Vec<_>>()
+                .join("\n"),
+            lyrics_scroll: 30,
+            ..LyricsState::default()
+        };
+        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let texts: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Text { .. }))
+            .collect();
+        let has_pct = texts.iter().any(|t| {
+            if let RenderCmd::Text { text, .. } = t {
+                text.ends_with('%')
+            } else {
+                false
+            }
+        });
+        assert!(has_pct, "expected scroll percentage indicator");
+    }
+
+    #[test]
+    fn lyrics_scroll_no_percentage_when_fits() {
+        let state = LyricsState {
+            show_lyrics: true,
+            lyrics_text: "only three lines".into(),
+            ..LyricsState::default()
+        };
+        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let has_pct = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.ends_with('%')));
+        assert!(!has_pct, "no percentage when content fits");
     }
 }
