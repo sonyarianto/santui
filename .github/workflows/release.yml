@@ -247,16 +247,20 @@ jobs:
         with:
           pattern: plugin-binaries-*
           merge-multiple: true
+          path: _assets
 
-      - name: List all assets for release
-        run: ls -la
+      - name: Move artifacts to _assets
+        run: |
+          mv santui-* plugins-*.json _assets/ 2>/dev/null || true
+          ls -la _assets/
 
       - name: Validate asset sizes
+        working-directory: _assets
         run: |
           echo "=== Checking for empty files ==="
           has_empty=0
           # Generate glob patterns from plugins-manifest.json (source of truth for all plugin IDs)
-          plugin_ids=$(jq -r '.[] | "\(.id)-*"' plugins-manifest.json | tr '\n' ' ')
+          plugin_ids=$(jq -r '.[] | "\(.id)-*"' ../../plugins-manifest.json | tr '\n' ' ')
           for f in santui-* plugins-*.json $plugin_ids; do
             if [ -f "$f" ]; then
               size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null)
@@ -278,8 +282,8 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           files: |
-            santui-*
-            plugins-*.json
+            _assets/santui-*
+            _assets/plugins-*.json
           fail_on_unmatched_files: false
           # Plugin binaries are uploaded separately (below) with delays to
           # avoid GitHub's secondary rate limit on concurrent API calls.
@@ -287,6 +291,7 @@ jobs:
       - name: Upload plugin binaries
         env:
           GH_TOKEN: ${{ github.token }}
+        working-directory: _assets
         run: |
           # Upload individually with a delay between each to stay within
           # GitHub's secondary rate limits (~440 files × 1s ≈ 7.5 min).
