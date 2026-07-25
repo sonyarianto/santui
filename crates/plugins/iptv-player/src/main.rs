@@ -672,10 +672,13 @@ impl App {
         if self.dirty || self.cached_commands.is_empty() {
             if let Some(ref err) = self.init_error {
                 if self.mpv_warnings.is_empty() {
+                    let text = format!("MPV: {err}");
+                    let x = self.area.w.saturating_sub(text.len() as u16) / 2;
+                    let y = self.area.h / 2;
                     self.cached_commands = vec![RenderCmd::Text {
-                        x: 0,
-                        y: 0,
-                        text: format!("MPV: {err}"),
+                        x,
+                        y,
+                        text,
                         fg: Some(self.theme.error),
                         bg: None,
                         bold: false,
@@ -690,16 +693,21 @@ impl App {
                     lines.push(
                         "  Controls: j/k navigate, / search, g filter groups, u edit URL.".into(),
                     );
-                    let joined = lines.join("\n");
-                    self.cached_commands = vec![RenderCmd::Text {
-                        x: 0,
-                        y: 0,
-                        text: joined,
-                        fg: Some(self.theme.error),
-                        bg: None,
-                        bold: false,
-                        modifiers: 0,
-                    }];
+                    let start_y = self.area.h.saturating_sub(lines.len() as u16) / 2;
+                    let mut cmds = Vec::with_capacity(lines.len());
+                    for (i, line) in lines.iter().enumerate() {
+                        let x = self.area.w.saturating_sub(line.len() as u16) / 2;
+                        cmds.push(RenderCmd::Text {
+                            x,
+                            y: start_y + i as u16,
+                            text: line.clone(),
+                            fg: Some(self.theme.error),
+                            bg: None,
+                            bold: false,
+                            modifiers: 0,
+                        });
+                    }
+                    self.cached_commands = cmds;
                 }
             } else {
                 self.cached_commands =

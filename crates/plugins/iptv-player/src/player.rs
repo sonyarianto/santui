@@ -112,7 +112,7 @@ impl Mpv {
                 let hint = if cfg!(target_os = "macos") {
                     "Try: brew install mpv"
                 } else if cfg!(target_os = "linux") {
-                    "Install libmpv via your package manager (e.g. apt install libmpv2)"
+                    "Install libmpv: apt install libmpv2/libmpv2t64 (Debian/Ubuntu) or dnf install libmpv (Fedora)"
                 } else if cfg!(target_os = "windows") {
                     "Ensure libmpv-2.dll is in the native/ directory"
                 } else {
