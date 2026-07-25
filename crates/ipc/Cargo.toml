@@ -1,6 +1,6 @@
 [package]
 name = "santui-ipc"
-version = "0.2.33"
+version = "0.2.34"
 edition = "2021"
 description = "Santui IPC protocol — typed messages and host plugin runner over JSON lines"
 license = "MIT"

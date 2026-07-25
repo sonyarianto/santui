@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.34] - 2026-07-25
+
+### 📚 Documentation
+
+- Update getting-started guide to reflect only stable plugins are in release
+
+### 🚀 Features
+
+- Add status field to manifest, only package stable plugins in release
+\nFull Changelog: [v0.2.33...v0.2.34](https://github.com/sonyarianto/santui/compare/v0.2.33...v0.2.34)
 ## [0.2.33] - 2026-07-24
 
 ### ⚙️ Miscellaneous

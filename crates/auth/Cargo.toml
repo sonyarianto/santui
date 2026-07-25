@@ -1,6 +1,6 @@
 [package]
 name = "santui-auth"
-version = "0.2.33"
+version = "0.2.34"
 edition = "2021"
 description = "Santui authentication — GitHub OAuth client with device flow support"
 license = "MIT"

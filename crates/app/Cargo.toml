@@ -1,6 +1,6 @@
 [package]
 name = "santui"
-version = "0.2.33"
+version = "0.2.34"
 edition = "2021"
 description = "Santui — keyboard-driven TUI plugin launcher with OAuth sign-in"
 license = "MIT"

@@ -1,6 +1,6 @@
 [package]
 name = "santui-server"
-version = "0.2.33"
+version = "0.2.34"
 edition = "2021"
 description = "Santui backend server — sync, auth, and web UI"
 license = "MIT"
