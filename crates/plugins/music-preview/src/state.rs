@@ -18,6 +18,7 @@ pub struct MusicState {
     pub tick_counter: u64,
     pub search_mode: bool,
     pub now_playing: Option<usize>,
+    pub track_elapsed: Option<u64>,
 }
 
 impl Default for MusicState {
@@ -32,6 +33,7 @@ impl Default for MusicState {
             tick_counter: 0,
             search_mode: false,
             now_playing: None,
+            track_elapsed: None,
         }
     }
 }

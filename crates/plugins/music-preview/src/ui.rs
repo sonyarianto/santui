@@ -162,7 +162,7 @@ fn render_table(state: &MusicState, theme: &ThemeData, w: u16, h: u16, cmds: &mu
     let inner_w = w.saturating_sub(4) as usize;
     let table_top = 3u16;
 
-    let dur_w = 9usize;
+    let dur_w = 13usize;
     let remaining = inner_w.saturating_sub(dur_w);
     let title_w = remaining * 40 / 100;
     let artist_w = remaining * 25 / 100;
@@ -180,10 +180,26 @@ fn render_table(state: &MusicState, theme: &ThemeData, w: u16, h: u16, cmds: &mu
     let mut rows = Vec::with_capacity(visible_count);
     for i in 0..visible_count {
         let track = &state.results[scroll + i];
-        let duration = track
-            .track_time_millis
-            .map(format_duration)
-            .unwrap_or_else(|| "--:--".into());
+        let is_now_playing = state.now_playing == Some(scroll + i);
+        let duration = if is_now_playing {
+            if let Some(elapsed) = state.track_elapsed {
+                let total = track
+                    .track_time_millis
+                    .map(format_duration)
+                    .unwrap_or_else(|| "--:--".into());
+                format!("{} / {}", format_duration((elapsed * 1000) as u32), total)
+            } else {
+                track
+                    .track_time_millis
+                    .map(format_duration)
+                    .unwrap_or_else(|| "--:--".into())
+            }
+        } else {
+            track
+                .track_time_millis
+                .map(format_duration)
+                .unwrap_or_else(|| "--:--".into())
+        };
         rows.push(vec![
             santui_ipc::ui::truncate(&track.track_name, title_w),
             santui_ipc::ui::truncate(&track.artist_name, artist_w),
@@ -377,6 +393,25 @@ mod tests {
             matches!(c, RenderCmd::Table { ref rows, .. } if rows.iter().any(|r| r.iter().any(|cell| cell.contains("Lose Yourself"))))
         });
         assert!(has_track);
+    }
+
+    #[test]
+    fn shows_countdown_on_now_playing_row() {
+        let state = MusicState {
+            query: "test".into(),
+            results: vec![make_track(1, "Track A"), make_track(2, "Track B")],
+            selected: 0,
+            scroll: 0,
+            now_playing: Some(0),
+            track_elapsed: Some(12),
+            fetch_state: FetchState::Done,
+            ..MusicState::default()
+        };
+        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let has_countdown = cmds.iter().any(|c| {
+            matches!(c, RenderCmd::Table { ref rows, .. } if rows[0].last().map(|s| s.as_str()) == Some("0:12 / 3:00"))
+        });
+        assert!(has_countdown, "expected countdown in now-playing row");
     }
 
     #[test]

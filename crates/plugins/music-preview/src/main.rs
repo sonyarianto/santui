@@ -262,6 +262,7 @@ impl App {
             }
         }
         self.state.now_playing = None;
+        self.state.track_elapsed = None;
         self.track_start = None;
         self.dirty = true;
     }
@@ -298,6 +299,7 @@ impl App {
                 self.dirty = true;
             } else {
                 self.state.now_playing = None;
+                self.state.track_elapsed = None;
                 self.track_start = None;
                 self.dirty = true;
             }
@@ -347,6 +349,7 @@ impl App {
         }
 
         if self.state.now_playing.is_some() {
+            self.state.track_elapsed = self.track_start.map(|start| start.elapsed().as_secs());
             if let Some(start) = self.track_start {
                 if start.elapsed() >= PREVIEW_DURATION {
                     log::warn!("timer-based auto-advance after {:?}", start.elapsed());
