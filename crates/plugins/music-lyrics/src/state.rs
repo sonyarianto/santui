@@ -59,7 +59,7 @@ mod tests {
             track_name: name.into(),
             artist_name: "Artist".into(),
             album_name: "Album".into(),
-            duration: 200,
+            duration: 200.0,
             instrumental: false,
             plain_lyrics: None,
             synced_lyrics: None,

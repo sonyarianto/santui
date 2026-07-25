@@ -1,3 +1,27 @@
+fn de_f64_lenient<'de, D>(deserializer: D) -> Result<f64, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de;
+    struct F64Visitor;
+    impl<'de> de::Visitor<'de> for F64Visitor {
+        type Value = f64;
+        fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            f.write_str("a number (integer or float)")
+        }
+        fn visit_f64<E: de::Error>(self, v: f64) -> Result<f64, E> {
+            Ok(v)
+        }
+        fn visit_i64<E: de::Error>(self, v: i64) -> Result<f64, E> {
+            Ok(v as f64)
+        }
+        fn visit_u64<E: de::Error>(self, v: u64) -> Result<f64, E> {
+            Ok(v as f64)
+        }
+    }
+    deserializer.deserialize_any(F64Visitor)
+}
+
 use serde::Deserialize;
 
 #[derive(Debug, Clone)]
@@ -14,7 +38,8 @@ pub struct LRCLibTrack {
     pub track_name: String,
     pub artist_name: String,
     pub album_name: String,
-    pub duration: u32,
+    #[serde(deserialize_with = "de_f64_lenient")]
+    pub duration: f64,
     #[serde(default)]
     pub instrumental: bool,
     #[serde(default)]
@@ -162,7 +187,7 @@ mod tests {
         assert_eq!(tracks[0].track_name, "Lose Yourself");
         assert_eq!(tracks[0].artist_name, "Eminem");
         assert_eq!(tracks[0].album_name, "8 Mile Soundtrack");
-        assert_eq!(tracks[0].duration, 326);
+        assert!((tracks[0].duration - 326.0).abs() < f64::EPSILON);
         assert!(!tracks[0].instrumental);
         assert_eq!(
             tracks[0].plain_lyrics,
@@ -177,7 +202,7 @@ mod tests {
             track_name: "Test".into(),
             artist_name: "A".into(),
             album_name: "B".into(),
-            duration: 100,
+            duration: 100.0,
             instrumental: false,
             plain_lyrics: Some("line one\nline two".into()),
             synced_lyrics: None,
@@ -194,7 +219,7 @@ mod tests {
             track_name: "Test".into(),
             artist_name: "A".into(),
             album_name: "B".into(),
-            duration: 100,
+            duration: 100.0,
             instrumental: false,
             plain_lyrics: None,
             synced_lyrics: Some("[00:01.00]line one\n[00:02.00]line two".into()),
@@ -211,7 +236,7 @@ mod tests {
             track_name: "Test".into(),
             artist_name: "A".into(),
             album_name: "B".into(),
-            duration: 100,
+            duration: 100.0,
             instrumental: true,
             plain_lyrics: Some("noise".into()),
             synced_lyrics: None,
@@ -226,7 +251,7 @@ mod tests {
             track_name: "Test".into(),
             artist_name: "A".into(),
             album_name: "B".into(),
-            duration: 100,
+            duration: 100.0,
             instrumental: false,
             plain_lyrics: None,
             synced_lyrics: None,
