@@ -69,32 +69,40 @@ impl App {
                     true
                 }
                 IpcKey::Up => {
-                    self.state.lyrics_scroll = self.state.lyrics_scroll.saturating_sub(1);
-                    self.dirty = true;
+                    if self.lyrics_needs_scroll() {
+                        self.state.lyrics_scroll = self.state.lyrics_scroll.saturating_sub(1);
+                        self.dirty = true;
+                    }
                     true
                 }
                 IpcKey::Down => {
-                    let line_count = self.state.lyrics_text.lines().count().saturating_sub(1);
-                    self.state.lyrics_scroll =
-                        self.state.lyrics_scroll.saturating_add(1).min(line_count);
-                    self.dirty = true;
+                    if self.lyrics_needs_scroll() {
+                        let line_count = self.state.lyrics_text.lines().count().saturating_sub(1);
+                        self.state.lyrics_scroll =
+                            self.state.lyrics_scroll.saturating_add(1).min(line_count);
+                        self.dirty = true;
+                    }
                     true
                 }
                 IpcKey::PageUp => {
-                    let page = (self.area.h.saturating_sub(5) as usize).max(1);
-                    self.state.lyrics_scroll = self.state.lyrics_scroll.saturating_sub(page);
-                    self.dirty = true;
+                    if self.lyrics_needs_scroll() {
+                        let page = self.lyrics_visible_lines().max(1);
+                        self.state.lyrics_scroll = self.state.lyrics_scroll.saturating_sub(page);
+                        self.dirty = true;
+                    }
                     true
                 }
                 IpcKey::PageDown => {
-                    let page = (self.area.h.saturating_sub(5) as usize).max(1);
-                    let line_count = self.state.lyrics_text.lines().count().saturating_sub(1);
-                    self.state.lyrics_scroll = self
-                        .state
-                        .lyrics_scroll
-                        .saturating_add(page)
-                        .min(line_count);
-                    self.dirty = true;
+                    if self.lyrics_needs_scroll() {
+                        let page = self.lyrics_visible_lines().max(1);
+                        let line_count = self.state.lyrics_text.lines().count().saturating_sub(1);
+                        self.state.lyrics_scroll = self
+                            .state
+                            .lyrics_scroll
+                            .saturating_add(page)
+                            .min(line_count);
+                        self.dirty = true;
+                    }
                     true
                 }
                 IpcKey::Char('c') => {
@@ -208,6 +216,14 @@ impl App {
         }
     }
 
+    fn lyrics_visible_lines(&self) -> usize {
+        (self.area.h.saturating_sub(6)) as usize
+    }
+
+    fn lyrics_needs_scroll(&self) -> bool {
+        self.state.lyrics_text.lines().count() > self.lyrics_visible_lines()
+    }
+
     fn adjust_scroll_up(&mut self) {
         if self.state.selected < self.state.scroll {
             self.state.scroll = self.state.selected;
@@ -281,6 +297,10 @@ impl App {
                 Err(mpsc::TryRecvError::Empty) => {}
                 Err(mpsc::TryRecvError::Disconnected) => {}
             }
+        }
+
+        if self.state.show_lyrics && !self.lyrics_needs_scroll() {
+            self.state.lyrics_scroll = 0;
         }
     }
 
@@ -521,9 +541,38 @@ mod tests {
     }
 
     #[test]
-    fn handle_key_esc_not_consumed() {
+    fn lyrics_scroll_blocked_when_content_fits() {
         let mut app = App::default();
-        assert!(!app.handle_key(IpcKey::Esc));
+        app.area.h = 20; // lyrics_visible_lines = 14
+        app.state.show_lyrics = true;
+        app.state.lyrics_text = "only three lines\nline two\nline three".into();
+        assert!(!app.lyrics_needs_scroll());
+        app.handle_key(IpcKey::Up);
+        assert_eq!(app.state.lyrics_scroll, 0);
+        app.handle_key(IpcKey::Down);
+        assert_eq!(app.state.lyrics_scroll, 0);
+        app.handle_key(IpcKey::PageUp);
+        assert_eq!(app.state.lyrics_scroll, 0);
+        app.handle_key(IpcKey::PageDown);
+        assert_eq!(app.state.lyrics_scroll, 0);
+    }
+
+    #[test]
+    fn lyrics_scroll_works_when_content_overflows() {
+        let mut app = App::default();
+        app.area.h = 10; // lyrics_visible_lines = 4
+        app.state.show_lyrics = true;
+        app.state.lyrics_text = (0..10)
+            .map(|i| format!("line {i}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(app.lyrics_needs_scroll());
+        app.handle_key(IpcKey::Down);
+        assert_eq!(app.state.lyrics_scroll, 1);
+        app.handle_key(IpcKey::Down);
+        assert_eq!(app.state.lyrics_scroll, 2);
+        app.handle_key(IpcKey::Up);
+        assert_eq!(app.state.lyrics_scroll, 1);
     }
 
     #[test]
@@ -560,8 +609,10 @@ mod tests {
     #[test]
     fn handle_key_up_down_in_lyrics_scrolls() {
         let mut app = App::default();
+        app.area.h = 10; // lyrics_visible_lines = 4
         app.state.show_lyrics = true;
-        app.state.lyrics_text = "line1\nline2\nline3".into();
+        app.state.lyrics_text = "line1\nline2\nline3\nline4\nline5\nline6".into();
+        assert!(app.lyrics_needs_scroll());
         app.state.lyrics_scroll = 1;
         assert!(app.handle_key(IpcKey::Up));
         assert_eq!(app.state.lyrics_scroll, 0);
@@ -572,7 +623,14 @@ mod tests {
         assert!(app.handle_key(IpcKey::Down));
         assert_eq!(app.state.lyrics_scroll, 2);
         assert!(app.handle_key(IpcKey::Down));
-        assert_eq!(app.state.lyrics_scroll, 2);
+        assert_eq!(app.state.lyrics_scroll, 3);
+        // stays at max (line_count = 5)
+        assert!(app.handle_key(IpcKey::Down));
+        assert_eq!(app.state.lyrics_scroll, 4);
+        assert!(app.handle_key(IpcKey::Down));
+        assert_eq!(app.state.lyrics_scroll, 5);
+        assert!(app.handle_key(IpcKey::Down));
+        assert_eq!(app.state.lyrics_scroll, 5);
     }
 
     #[test]
