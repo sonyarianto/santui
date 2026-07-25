@@ -162,7 +162,7 @@ fn render_table(state: &MusicState, theme: &ThemeData, w: u16, h: u16, cmds: &mu
     let inner_w = w.saturating_sub(4) as usize;
     let table_top = 3u16;
 
-    let dur_w = 13usize;
+    let dur_w = 9usize;
     let remaining = inner_w.saturating_sub(dur_w);
     let title_w = remaining * 40 / 100;
     let artist_w = remaining * 25 / 100;
@@ -183,11 +183,7 @@ fn render_table(state: &MusicState, theme: &ThemeData, w: u16, h: u16, cmds: &mu
         let is_now_playing = state.now_playing == Some(scroll + i);
         let duration = if is_now_playing {
             if let Some(elapsed) = state.track_elapsed {
-                let total = track
-                    .track_time_millis
-                    .map(format_duration)
-                    .unwrap_or_else(|| "--:--".into());
-                format!("{} / {}", format_duration((elapsed * 1000) as u32), total)
+                format_duration((elapsed * 1000) as u32)
             } else {
                 track
                     .track_time_millis
@@ -409,7 +405,7 @@ mod tests {
         };
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_countdown = cmds.iter().any(|c| {
-            matches!(c, RenderCmd::Table { ref rows, .. } if rows[0].last().map(|s| s.as_str()) == Some("0:12 / 3:00"))
+            matches!(c, RenderCmd::Table { ref rows, .. } if rows[0].last().map(|s| s.as_str()) == Some("0:12"))
         });
         assert!(has_countdown, "expected countdown in now-playing row");
     }

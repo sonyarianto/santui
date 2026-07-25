@@ -374,7 +374,7 @@ fn hints() -> Vec<(String, String)> {
         ("/".into(), "search".into()),
         ("c".into(), "clear".into()),
         ("s".into(), "stop".into()),
-        ("\u{23CE}".into(), "play".into()),
+        ("\u{21B5}".into(), "play".into()),
         ("esc".into(), "back".into()),
     ]
 }
