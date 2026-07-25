@@ -69,6 +69,7 @@ struct App {
     mpv_tx: Option<mpsc::Sender<MpvCommand>>,
     mpv_wakeup: Option<MpvWakeup>,
     track_start: Option<Instant>,
+    init_error: Option<String>,
 }
 
 impl Default for App {
@@ -98,6 +99,7 @@ impl Default for App {
             mpv_tx: None,
             mpv_wakeup: None,
             track_start: None,
+            init_error: None,
         }
     }
 }
@@ -137,6 +139,7 @@ impl App {
             match key {
                 IpcKey::Char('/') => {
                     self.stop_playback();
+                    self.init_error = None;
                     self.state.search_mode = true;
                     self.state.query.clear();
                     self.dirty = true;
@@ -182,6 +185,7 @@ impl App {
                 IpcKey::Char('c') => {
                     if !self.state.results.is_empty() {
                         self.stop_playback();
+                        self.init_error = None;
                         self.state.results.clear();
                         self.state.fetch_state = FetchState::Idle;
                         self.state.query.clear();
@@ -225,9 +229,12 @@ impl App {
                 Ok((tx, wakeup)) => {
                     self.mpv_tx = Some(tx);
                     self.mpv_wakeup = Some(wakeup);
+                    self.init_error = None;
                 }
                 Err(e) => {
-                    log::error!("mpv init failed: {e}");
+                    let msg = e.to_string();
+                    log::error!("mpv init failed: {msg}");
+                    self.init_error = Some(msg);
                 }
             }
         }
@@ -361,12 +368,35 @@ impl App {
 
     fn render(&mut self) -> &[RenderCmd] {
         if self.dirty || self.cached_commands.is_empty() {
-            self.cached_commands = render_ui(&self.state, &self.theme, self.area.w, self.area.h);
+            self.cached_commands = if let Some(ref err) = self.init_error {
+                render_centered_error(err, &self.theme, self.area.w, self.area.h)
+            } else {
+                render_ui(&self.state, &self.theme, self.area.w, self.area.h)
+            };
             self.state.dirty = false;
             self.dirty = false;
         }
         &self.cached_commands
     }
+}
+
+fn render_centered_error(text: &str, theme: &ThemeData, w: u16, h: u16) -> Vec<RenderCmd> {
+    let lines: Vec<&str> = text.lines().collect();
+    let start_y = (h.saturating_sub(lines.len() as u16)) / 2;
+    let mut cmds = Vec::with_capacity(lines.len());
+    for (i, line) in lines.iter().enumerate() {
+        let x = (w.saturating_sub(line.len() as u16)) / 2;
+        cmds.push(RenderCmd::Text {
+            x,
+            y: start_y + i as u16,
+            text: line.to_string(),
+            fg: Some(theme.error),
+            bg: None,
+            bold: false,
+            modifiers: 0,
+        });
+    }
+    cmds
 }
 
 fn hints() -> Vec<(String, String)> {

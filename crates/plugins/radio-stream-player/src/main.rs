@@ -1178,15 +1178,22 @@ impl App {
     fn render(&mut self) -> &[RenderCmd] {
         if self.dirty || self.cached_commands.is_empty() {
             self.cached_commands = if let Some(ref err) = self.init_error {
-                vec![RenderCmd::Text {
-                    x: 0,
-                    y: 0,
-                    text: err.clone(),
-                    fg: Some(self.theme.error),
-                    bg: None,
-                    bold: false,
-                    modifiers: 0,
-                }]
+                let mut cmds = Vec::new();
+                let lines: Vec<&str> = err.lines().collect();
+                let start_y = (self.area.h.saturating_sub(lines.len() as u16)) / 2;
+                for (i, line) in lines.iter().enumerate() {
+                    let x = (self.area.w.saturating_sub(line.len() as u16)) / 2;
+                    cmds.push(RenderCmd::Text {
+                        x,
+                        y: start_y + i as u16,
+                        text: line.to_string(),
+                        fg: Some(self.theme.error),
+                        bg: None,
+                        bold: false,
+                        modifiers: 0,
+                    });
+                }
+                cmds
             } else {
                 ui::render_ui(&self.state, &self.theme, self.area.w, self.area.h)
             };
