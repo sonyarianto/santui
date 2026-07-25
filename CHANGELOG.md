@@ -2,6 +2,58 @@
 
 All notable changes to this project will be documented in this file.
 
+## [unreleased]
+
+### ⚙️ Miscellaneous
+
+- Re-scrape radio stations — 17289 total (+1917 new), 196 genres enriched
+- Re-scrape radio stations (10 more runs) — 17396 total
+- Re-scrape radio stations (10 more runs) — 17512 total
+- Re-scrape radio stations (10 more runs) — 17618 total
+- Re-scrape radio stations (10 more runs) — 17692 total
+- Re-scrape radio stations (10 more runs) — 17815 total
+- Replace space hint with enter for play
+- Use ↵ symbol for enter hint
+- Mark as stable plugin
+
+### ⚡ Performance
+
+- Only build host + stable plugins in dev-setup, not full workspace
+
+### 🐛 Bug Fixes
+
+- Filter cmd_dev_json to stable-only, update PS script too
+- Remove log-viewer from manifest (internal builtin, like registry-plugin)
+- Always sync station DB from bundled version on startup
+- Decode all numeric HTML entities (&#xxx;) in station names
+- Decode &amp; and other named HTML entities in existing station names
+- Handle float duration from LRCLib API
+- Block scroll when lyrics fit viewport
+- Cap scroll at last visible line
+- Center mpv init errors and improve install hints
+- Center mpv init errors and update install hints
+
+### 💼 Other
+
+- Split title/artist into two lines in lyrics view
+- Scroll percentage indicator in lyrics view
+
+### 📚 Documentation
+
+- Document plugin status field and dev-setup behavior in AGENTS.md + development.md
+- Sync libmpv install instructions across website and quran-reader
+- Add gh release create --notes-file to release workflow
+
+### 🚀 Features
+
+- Add Log Viewer to System category in command palette
+- Continuous play, auto-advance, and centered hint
+- Add 's' key to stop playback, auto-scroll on advance
+- Endless loop — wrap to first track on last item
+- Live countdown on now-playing Duration cell
+- Auto-sync dev plugin binaries on startup
+- New plugin to search lyrics from LRCLib
+\nFull Changelog: [v0.2.34...](https://github.com/sonyarianto/santui/compare/v0.2.34...)
 ## [0.2.34] - 2026-07-25
 
 ### 📚 Documentation
