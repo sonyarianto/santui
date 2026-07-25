@@ -66,6 +66,11 @@ impl super::Santui {
                             self.plugin_manager.set_active(Some(idx));
                         }
                     }
+                    super::BuiltinId::LogViewer => {
+                        if let Some(idx) = self.plugin_manager.find_by_id("log-viewer") {
+                            self.plugin_manager.set_active(Some(idx));
+                        }
+                    }
                     super::BuiltinId::SwitchTheme => {
                         self.app_state.theme_picker_open = true;
                         let tm = &mut self.theme_manager;
