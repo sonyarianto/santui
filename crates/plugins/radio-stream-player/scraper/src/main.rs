@@ -454,11 +454,32 @@ fn extract_attr(fragment: &str, attr: &str) -> Option<String> {
 }
 
 fn unescape_html(s: &str) -> String {
-    s.replace("&amp;", "&")
+    let s = s
+        .replace("&amp;", "&")
         .replace("&#39;", "'")
         .replace("&quot;", "\"")
+        .replace("&#34;", "\"")
         .replace("&lt;", "<")
-        .replace("&gt;", ">")
+        .replace("&gt;", ">");
+    // Decode remaining decimal HTML entities (&#xxx;)
+    let mut result = String::with_capacity(s.len());
+    let mut rest = s.as_str();
+    while let Some(start) = rest.find("&#") {
+        result.push_str(&rest[..start]);
+        rest = &rest[start + 2..];
+        let end = rest.find(';').unwrap_or(0);
+        if end > 0 {
+            let code: u32 = rest[..end].parse().unwrap_or(0);
+            if let Some(c) = char::from_u32(code) {
+                result.push(c);
+            }
+            rest = &rest[end + 1..];
+        } else {
+            result.push_str("&#");
+        }
+    }
+    result.push_str(rest);
+    result
 }
 
 fn fetch_country_http(url_code: &str) -> Result<Vec<(String, String, String)>, String> {
