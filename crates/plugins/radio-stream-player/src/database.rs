@@ -62,24 +62,25 @@ pub fn open() -> Result<Connection, rusqlite::Error> {
             log::warn!("failed to create DB parent directory: {e}");
         }
     }
-    if !path.exists() {
-        let bundled = std::env::current_exe()
-            .ok()
-            .and_then(|p| {
-                p.parent()
-                    .map(|d| d.join("native").join("radio_stream_stations.db"))
-            })
-            .filter(|p| p.exists())
-            .or_else(|| {
-                std::env::var_os("SANTUI_NATIVE_DIR")
-                    .map(PathBuf::from)
-                    .map(|d| d.join("radio_stream_stations.db"))
-                    .filter(|p| p.exists())
-            });
-        if let Some(bundled) = bundled {
-            if let Err(e) = std::fs::copy(&bundled, &path) {
-                log::warn!("failed to copy bundled station DB: {e}");
-            }
+
+    // Always copy from bundled version if available, so new releases
+    // (or re-scraped databases in dev mode) take effect immediately.
+    let bundled = std::env::current_exe()
+        .ok()
+        .and_then(|p| {
+            p.parent()
+                .map(|d| d.join("native").join("radio_stream_stations.db"))
+        })
+        .filter(|p| p.exists())
+        .or_else(|| {
+            std::env::var_os("SANTUI_NATIVE_DIR")
+                .map(PathBuf::from)
+                .map(|d| d.join("radio_stream_stations.db"))
+                .filter(|p| p.exists())
+        });
+    if let Some(bundled) = bundled {
+        if let Err(e) = std::fs::copy(&bundled, &path) {
+            log::warn!("failed to copy bundled station DB: {e}");
         }
     }
     let conn = Connection::open(&path)?;
