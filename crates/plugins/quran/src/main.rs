@@ -344,7 +344,7 @@ impl App {
         match result {
             Ok(list) => {
                 self.surahs = list;
-                self.status = format!("Loaded {} surahs", self.surahs.len());
+                self.status = String::new();
                 if let Some(last) = self.prefs.last_surah {
                     if let Some(idx) = self.surahs.iter().position(|s| s.number == last) {
                         self.selected_surah = idx;
