@@ -1,139 +1,18 @@
 use std::collections::BTreeMap;
-use std::ffi::CString;
 use std::io::{BufRead, BufReader};
-use std::sync::{mpsc, Arc};
+use std::sync::mpsc;
 use std::thread;
 
-use libloading::Library;
-use santui_ipc::protocol::{
-    Area, HostMsg, IpcKey, PluginRequest, RenderCmd, TextStyle, ThemeData, BORDER_ALL,
-};
-use serde::{Deserialize, Serialize};
+mod api;
+mod player;
+mod types;
+mod ui;
 
-const DB_KEY: &str = "quran-reader-preferences";
-const ARABIC_EDITION: &str = "quran-uthmani";
-const DEFAULT_TRANSLATION: &str = "en.sahih";
-const DEFAULT_RECITER: &str = "ar.alafasy";
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct SurahSummary {
-    number: u16,
-    name: String,
-    english_name: String,
-    english_translation: String,
-    ayah_count: u16,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct Ayah {
-    number: u16,
-    arabic: String,
-    translation: String,
-    audio_url: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct SurahContent {
-    summary: SurahSummary,
-    ayahs: Vec<Ayah>,
-    translation_edition: String,
-    reciter: String,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-enum DisplayMode {
-    Arabic,
-    Translation,
-    Both,
-}
-
-impl DisplayMode {
-    fn next(self) -> Self {
-        match self {
-            Self::Arabic => Self::Translation,
-            Self::Translation => Self::Both,
-            Self::Both => Self::Arabic,
-        }
-    }
-
-    fn label(self) -> &'static str {
-        match self {
-            Self::Arabic => "Arabic",
-            Self::Translation => "Translation",
-            Self::Both => "Arabic + Translation",
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct Preferences {
-    translation_edition: String,
-    reciter: String,
-    display_mode: DisplayMode,
-    last_surah: Option<u16>,
-    last_ayah: Option<u16>,
-}
-
-impl Default for Preferences {
-    fn default() -> Self {
-        Self {
-            translation_edition: DEFAULT_TRANSLATION.into(),
-            reciter: DEFAULT_RECITER.into(),
-            display_mode: DisplayMode::Both,
-            last_surah: None,
-            last_ayah: None,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Screen {
-    SurahList,
-    Reader,
-    TranslationPicker,
-    ReciterPicker,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum AudioState {
-    Unavailable(String),
-    Stopped,
-    Buffering { surah: u16, ayah: u16 },
-    Playing { surah: u16, ayah: u16 },
-    Paused { surah: u16, ayah: u16 },
-    Error(String),
-}
-
-impl AudioState {
-    fn label(&self) -> String {
-        match self {
-            Self::Unavailable(e) => format!("audio unavailable: {e}"),
-            Self::Stopped => "stopped".into(),
-            Self::Buffering { surah, ayah } => format!("buffering {surah}:{ayah}"),
-            Self::Playing { surah, ayah } => format!("playing {surah}:{ayah}"),
-            Self::Paused { surah, ayah } => format!("paused {surah}:{ayah}"),
-            Self::Error(e) => format!("audio error: {e}"),
-        }
-    }
-}
-
-enum FetchMsg {
-    SurahList(Result<Vec<SurahSummary>, String>),
-    Surah(Result<SurahContent, String>),
-}
-
-enum MpvCmd {
-    Load { url: String, surah: u16, ayah: u16 },
-    TogglePause,
-    Stop,
-    Quit,
-}
-
-enum MpvMsg {
-    Started { surah: u16, ayah: u16 },
-    EndFile,
-    Error(String),
-}
+use api::*;
+use player::*;
+use santui_ipc::protocol::{Area, HostMsg, IpcKey, PluginRequest, RenderCmd, ThemeData};
+use types::*;
+use ui::*;
 
 struct App {
     theme: ThemeData,
@@ -215,13 +94,13 @@ impl App {
         let (tx_cmd, rx_cmd) = mpsc::channel();
         let (tx_msg, rx_msg) = mpsc::channel();
         match Mpv::new() {
-            Ok(mpv) => {
+            Ok((mpv, _errors)) => {
                 self.tx_mpv = Some(tx_cmd);
                 self.rx_mpv = Some(rx_msg);
                 self.audio_state = AudioState::Stopped;
                 self.mpv_thread = Some(thread::spawn(move || mpv_thread(mpv, rx_cmd, tx_msg)));
             }
-            Err(e) => self.audio_state = AudioState::Unavailable(e),
+            Err(e) => self.audio_state = AudioState::Unavailable(e.to_string()),
         }
     }
 
@@ -578,6 +457,7 @@ impl App {
     fn current_surah_number(&self) -> Option<u16> {
         self.prefs.last_surah
     }
+
     fn current_content(&self) -> Option<&SurahContent> {
         self.current_surah_number()
             .and_then(|n| self.content_cache.get(&n))
@@ -675,395 +555,6 @@ impl App {
     }
 }
 
-fn translation_options() -> Vec<&'static str> {
-    vec!["en.sahih", "en.asad", "id.indonesian"]
-}
-fn reciter_options() -> Vec<&'static str> {
-    vec![
-        "ar.alafasy",
-        "ar.abdulbasitmurattal",
-        "ar.husary",
-        "ar.minshawi",
-    ]
-}
-
-fn fetch_json(url: &str) -> Result<serde_json::Value, String> {
-    let mut resp = ureq::get(url).call().map_err(|e| e.to_string())?;
-    let body = resp
-        .body_mut()
-        .read_to_string()
-        .map_err(|e| e.to_string())?;
-    serde_json::from_str(&body).map_err(|e| e.to_string())
-}
-
-fn fetch_surah_list() -> Result<Vec<SurahSummary>, String> {
-    parse_surah_list_value(&fetch_json("https://api.alquran.cloud/v1/surah")?)
-}
-
-fn parse_surah_list_value(value: &serde_json::Value) -> Result<Vec<SurahSummary>, String> {
-    let data = value["data"]
-        .as_array()
-        .ok_or_else(|| "missing data array".to_string())?;
-    let mut out = Vec::new();
-    for item in data {
-        out.push(SurahSummary {
-            number: item["number"]
-                .as_u64()
-                .ok_or_else(|| "missing surah number".to_string())? as u16,
-            name: item["name"].as_str().unwrap_or_default().to_string(),
-            english_name: item["englishName"].as_str().unwrap_or_default().to_string(),
-            english_translation: item["englishNameTranslation"]
-                .as_str()
-                .unwrap_or_default()
-                .to_string(),
-            ayah_count: item["numberOfAyahs"].as_u64().unwrap_or(0) as u16,
-        });
-    }
-    Ok(out)
-}
-
-fn fetch_surah_content(
-    summary: SurahSummary,
-    translation: &str,
-    reciter: &str,
-) -> Result<SurahContent, String> {
-    let n = summary.number;
-    let arabic = fetch_json(&format!(
-        "https://api.alquran.cloud/v1/surah/{n}/{ARABIC_EDITION}"
-    ))?;
-    let trans = fetch_json(&format!(
-        "https://api.alquran.cloud/v1/surah/{n}/{translation}"
-    ))?;
-    let audio = fetch_json(&format!("https://api.alquran.cloud/v1/surah/{n}/{reciter}"))?;
-    let ayahs = parse_surah_ayahs(&arabic, &trans, &audio)?;
-    Ok(SurahContent {
-        summary,
-        ayahs,
-        translation_edition: translation.into(),
-        reciter: reciter.into(),
-    })
-}
-
-fn parse_surah_ayahs(
-    arabic: &serde_json::Value,
-    translation: &serde_json::Value,
-    audio: &serde_json::Value,
-) -> Result<Vec<Ayah>, String> {
-    let arabic_arr = arabic["data"]["ayahs"]
-        .as_array()
-        .ok_or_else(|| "missing Arabic ayahs".to_string())?;
-    let trans_arr = translation["data"]["ayahs"]
-        .as_array()
-        .ok_or_else(|| "missing translation ayahs".to_string())?;
-    let audio_arr = audio["data"]["ayahs"]
-        .as_array()
-        .ok_or_else(|| "missing audio ayahs".to_string())?;
-    let mut out = Vec::new();
-    for (idx, item) in arabic_arr.iter().enumerate() {
-        let number = item["numberInSurah"].as_u64().unwrap_or((idx + 1) as u64) as u16;
-        out.push(Ayah {
-            number,
-            arabic: item["text"].as_str().unwrap_or_default().to_string(),
-            translation: trans_arr
-                .get(idx)
-                .and_then(|v| v["text"].as_str())
-                .unwrap_or_default()
-                .to_string(),
-            audio_url: audio_arr
-                .get(idx)
-                .and_then(|v| v["audio"].as_str())
-                .map(str::to_string),
-        });
-    }
-    Ok(out)
-}
-
-fn render_ui(app: &App) -> Vec<RenderCmd> {
-    let mut cmds = Vec::new();
-    let theme = app.theme.clone();
-    let w = app.area.w.max(76);
-    let h = app.area.h.max(18);
-    cmds.push(RenderCmd::Rect {
-        x: 0,
-        y: 0,
-        w,
-        h,
-        bg: theme.background,
-    });
-    cmds.push(RenderCmd::Border {
-        x: 0,
-        y: 0,
-        w,
-        h,
-        fg: theme.border,
-        borders: BORDER_ALL,
-        bg: Some(theme.background_panel),
-        title: Some(" Quran ".into()),
-        title_fg: Some(theme.border),
-        title_dash_fg: Some(theme.border),
-        border_type: None,
-    });
-    match app.screen {
-        Screen::SurahList => render_surah_list(app, &mut cmds, &theme, w, h),
-        Screen::Reader => render_reader(app, &mut cmds, &theme, w, h),
-        Screen::TranslationPicker => render_picker(
-            app,
-            &mut cmds,
-            &theme,
-            w,
-            h,
-            "Translation",
-            &translation_options(),
-        ),
-        Screen::ReciterPicker => {
-            render_picker(app, &mut cmds, &theme, w, h, "Reciter", &reciter_options())
-        }
-    }
-    cmds
-}
-
-fn render_surah_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, h: u16) {
-    let list = app.filtered_surahs();
-    let header = format!(
-        "Surahs: {} · Search: {} · Translation: {} · Reciter: {}",
-        app.surahs.len(),
-        app.search,
-        app.prefs.translation_edition,
-        app.prefs.reciter
-    );
-    push_text(
-        cmds,
-        2,
-        2,
-        truncate(&header, w as usize - 4),
-        theme.text,
-        true,
-    );
-    let list_h = h.saturating_sub(7).max(4);
-    let items: Vec<String> = list
-        .iter()
-        .map(|s| {
-            format!(
-                "{:>3}. {:<24} {:<24} {} ayahs",
-                s.number, s.english_name, s.english_translation, s.ayah_count
-            )
-        })
-        .collect();
-    cmds.push(RenderCmd::List {
-        x: 2,
-        y: 4,
-        w: w.saturating_sub(4),
-        h: list_h,
-        items,
-        selected: Some(app.selected_surah.min(list.len().saturating_sub(1))),
-        style: TextStyle {
-            fg: Some(theme.text),
-            bg: None,
-            bold: false,
-            modifiers: 0,
-        },
-        highlight_style: TextStyle {
-            fg: Some(theme.inverted_text),
-            bg: Some(theme.highlight),
-            bold: true,
-            modifiers: 0,
-        },
-    });
-    push_text(
-        cmds,
-        2,
-        h.saturating_sub(2),
-        status_line(app),
-        theme.text_muted,
-        false,
-    );
-}
-
-fn render_reader(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, h: u16) {
-    let Some(content) = app.current_content() else {
-        push_text(cmds, 2, 4, "No surah loaded", theme.error, true);
-        return;
-    };
-    let header = format!(
-        "{} ({}) · {} · mode: {} · audio: {}",
-        content.summary.english_name,
-        content.summary.name,
-        content.summary.english_translation,
-        app.prefs.display_mode.label(),
-        app.audio_state.label()
-    );
-    push_text(
-        cmds,
-        2,
-        2,
-        truncate(&header, w as usize - 4),
-        theme.text,
-        true,
-    );
-    let list_h = h.saturating_sub(7).max(4);
-    let items: Vec<String> = content
-        .ayahs
-        .iter()
-        .skip(app.scroll)
-        .take(list_h as usize)
-        .map(|ayah| ayah_row(ayah, app.prefs.display_mode, w.saturating_sub(8) as usize))
-        .collect();
-    cmds.push(RenderCmd::List {
-        x: 2,
-        y: 4,
-        w: w.saturating_sub(4),
-        h: list_h,
-        items,
-        selected: app.selected_ayah.checked_sub(app.scroll),
-        style: TextStyle {
-            fg: Some(theme.text),
-            bg: None,
-            bold: false,
-            modifiers: 0,
-        },
-        highlight_style: TextStyle {
-            fg: Some(theme.inverted_text),
-            bg: Some(theme.highlight),
-            bold: true,
-            modifiers: 0,
-        },
-    });
-    push_text(
-        cmds,
-        2,
-        h.saturating_sub(2),
-        status_line(app),
-        theme.text_muted,
-        false,
-    );
-}
-
-fn render_picker(
-    app: &App,
-    cmds: &mut Vec<RenderCmd>,
-    theme: &ThemeData,
-    w: u16,
-    h: u16,
-    title: &str,
-    options: &[&str],
-) {
-    push_text(
-        cmds,
-        2,
-        2,
-        format!("Choose {title} · Enter select · Esc cancel"),
-        theme.text,
-        true,
-    );
-    let items: Vec<String> = options.iter().map(|s| (*s).to_string()).collect();
-    cmds.push(RenderCmd::List {
-        x: 2,
-        y: 4,
-        w: w.saturating_sub(4),
-        h: h.saturating_sub(7),
-        items,
-        selected: Some(app.picker_cursor.min(options.len().saturating_sub(1))),
-        style: TextStyle {
-            fg: Some(theme.text),
-            bg: None,
-            bold: false,
-            modifiers: 0,
-        },
-        highlight_style: TextStyle {
-            fg: Some(theme.inverted_text),
-            bg: Some(theme.highlight),
-            bold: true,
-            modifiers: 0,
-        },
-    });
-    push_text(
-        cmds,
-        2,
-        h.saturating_sub(1),
-        status_line(app),
-        theme.text_muted,
-        false,
-    );
-}
-
-fn ayah_row(ayah: &Ayah, mode: DisplayMode, width: usize) -> String {
-    let text = match mode {
-        DisplayMode::Arabic => ayah.arabic.clone(),
-        DisplayMode::Translation => ayah.translation.clone(),
-        DisplayMode::Both => format!("{}  /  {}", ayah.arabic, ayah.translation),
-    };
-    format!("{:>3}. {}", ayah.number, truncate(&text, width))
-}
-
-fn status_line(app: &App) -> String {
-    let repeat = if app.repeat_ayah {
-        "repeat on"
-    } else {
-        "repeat off"
-    };
-    let fetching = if app.fetching { " · fetching" } else { "" };
-    format!("{} · {}{}", app.status, repeat, fetching)
-}
-
-fn hints(screen: Screen) -> Vec<(String, String)> {
-    match screen {
-        Screen::SurahList => vec![
-            ("enter".into(), "read".into()),
-            ("/".into(), "search".into()),
-            ("e".into(), "translation".into()),
-            ("r".into(), "reciter".into()),
-            ("R".into(), "refresh".into()),
-            ("pgup/pgdn".into(), "scroll".into()),
-            ("esc".into(), "back".into()),
-        ],
-        Screen::Reader => vec![
-            ("j/k".into(), "scroll".into()),
-            ("space".into(), "ayah".into()),
-            ("a".into(), "play surah".into()),
-            ("x".into(), "stop".into()),
-            ("t".into(), "mode".into()),
-            ("r".into(), "repeat".into()),
-            ("esc".into(), "list".into()),
-        ],
-        Screen::TranslationPicker | Screen::ReciterPicker => vec![
-            ("up/down".into(), "navigate".into()),
-            ("enter".into(), "select".into()),
-            ("esc".into(), "back".into()),
-        ],
-    }
-}
-
-fn truncate(value: &str, max_chars: usize) -> String {
-    let mut out = String::new();
-    for (idx, ch) in value.chars().enumerate() {
-        if idx >= max_chars.saturating_sub(1) {
-            out.push('…');
-            return out;
-        }
-        out.push(ch);
-    }
-    out
-}
-
-fn push_text(
-    cmds: &mut Vec<RenderCmd>,
-    x: u16,
-    y: u16,
-    text: impl Into<String>,
-    fg: [u8; 3],
-    bold: bool,
-) {
-    cmds.push(RenderCmd::Text {
-        x,
-        y,
-        text: text.into(),
-        fg: Some(fg),
-        bg: None,
-        bold,
-        modifiers: 0,
-    });
-}
-
 fn default_theme() -> ThemeData {
     ThemeData {
         text: [220; 3],
@@ -1098,187 +589,13 @@ fn respond(app: &mut App, consumed: bool) {
     let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
 }
 
-// Minimal libmpv wrapper for audio-only recitation playback.
-type MpvHandle = std::ffi::c_void;
-const MPV_EVENT_NONE: u32 = 0;
-const MPV_EVENT_SHUTDOWN: u32 = 1;
-const MPV_EVENT_END_FILE: u32 = 25;
-
-type CreateFn = unsafe extern "C" fn() -> *mut MpvHandle;
-type InitializeFn = unsafe extern "C" fn(*mut MpvHandle) -> i32;
-type SetOptFn = unsafe extern "C" fn(*mut MpvHandle, *const i8, *const i8) -> i32;
-type CommandFn = unsafe extern "C" fn(*mut MpvHandle, *const *const i8) -> i32;
-type WaitEventFn = unsafe extern "C" fn(*mut MpvHandle, f64) -> *mut MpvEvent;
-type DestroyFn = unsafe extern "C" fn(*mut MpvHandle);
-
-#[repr(C)]
-struct MpvEvent {
-    event_id: u32,
-    error: i32,
-    reply_userdata: u64,
-    data: *mut std::ffi::c_void,
-}
-struct MpvFuncs {
-    create: CreateFn,
-    initialize: InitializeFn,
-    set_option: SetOptFn,
-    command: CommandFn,
-    wait_event: WaitEventFn,
-    destroy: DestroyFn,
-}
-struct Mpv {
-    handle: *mut MpvHandle,
-    _lib: Arc<Library>,
-    funcs: Box<MpvFuncs>,
-}
-unsafe impl Send for Mpv {}
-
-impl Mpv {
-    fn new() -> Result<Self, String> {
-        let native_names = [
-            "libmpv-2.dll",
-            "libmpv.so.2",
-            "libmpv.so",
-            "libmpv.2.dylib",
-            "libmpv.dylib",
-        ];
-        let native_dir = std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().map(|d| d.join("native")));
-        let lib = unsafe {
-            native_dir
-                .as_ref()
-                .and_then(|d| {
-                    native_names
-                        .iter()
-                        .find_map(|n| Library::new(d.join(n)).ok())
-                })
-                .or_else(|| {
-                    std::env::var_os("SANTUI_NATIVE_DIR").and_then(|d| {
-                        native_names
-                            .iter()
-                            .find_map(|n| Library::new(std::path::PathBuf::from(&d).join(n)).ok())
-                    })
-                })
-                .or_else(|| Library::new("libmpv-2.dll").ok())
-                .or_else(|| Library::new("mpv.dll").ok())
-                .or_else(|| Library::new("libmpv.so.2").ok())
-                .or_else(|| Library::new("libmpv.so").ok())
-                .or_else(|| Library::new("/opt/homebrew/lib/libmpv.2.dylib").ok())
-                .or_else(|| Library::new("/opt/homebrew/lib/libmpv.dylib").ok())
-                .or_else(|| Library::new("/usr/local/lib/libmpv.2.dylib").ok())
-                .or_else(|| Library::new("/usr/local/lib/libmpv.dylib").ok())
-                .or_else(|| Library::new("libmpv.2.dylib").ok())
-                .or_else(|| Library::new("libmpv.dylib").ok())
-        }
-        .ok_or_else(|| {
-            let hint = if cfg!(target_os = "macos") {
-                "Try: brew install mpv"
-            } else if cfg!(target_os = "linux") {
-                "Install: apt install libmpv2 (Debian/Ubuntu) or dnf install libmpv (Fedora)"
-            } else if cfg!(target_os = "windows") {
-                "Ensure libmpv-2.dll is in the native/ directory"
-            } else {
-                "Install libmpv for your platform"
-            };
-            format!("libmpv not found. {hint}")
-        })?;
-        let lib = Arc::new(lib);
-        macro_rules! sym {
-            ($name:literal) => {{
-                unsafe { lib.get($name).map(|s| *s).map_err(|e| e.to_string())? }
-            }};
-        }
-        let funcs = Box::new(MpvFuncs {
-            create: sym!(b"mpv_create\0"),
-            initialize: sym!(b"mpv_initialize\0"),
-            set_option: sym!(b"mpv_set_option_string\0"),
-            command: sym!(b"mpv_command\0"),
-            wait_event: sym!(b"mpv_wait_event\0"),
-            destroy: sym!(b"mpv_destroy\0"),
-        });
-        let handle = unsafe { (funcs.create)() };
-        if handle.is_null() {
-            return Err("mpv_create returned null".into());
-        }
-        let mpv = Self {
-            handle,
-            _lib: lib,
-            funcs,
-        };
-        for (k, v) in [
-            ("config", "no"),
-            ("vo", "null"),
-            ("audio-client-name", "santui-quran-reader"),
-        ] {
-            mpv.set_option(k, v)?;
-        }
-        mpv.initialize()?;
-        Ok(mpv)
-    }
-    fn set_option(&self, name: &str, value: &str) -> Result<(), String> {
-        let n = CString::new(name).map_err(|e| e.to_string())?;
-        let v = CString::new(value).map_err(|e| e.to_string())?;
-        rc(
-            unsafe { (self.funcs.set_option)(self.handle, n.as_ptr(), v.as_ptr()) },
-            name,
-        )
-    }
-    fn initialize(&self) -> Result<(), String> {
-        rc(
-            unsafe { (self.funcs.initialize)(self.handle) },
-            "initialize",
-        )
-    }
-    fn command(&self, args: &[&str]) -> Result<(), String> {
-        let cstrs = args
-            .iter()
-            .map(|a| CString::new(*a).map_err(|e| e.to_string()))
-            .collect::<Result<Vec<_>, _>>()?;
-        let mut ptrs: Vec<*const i8> = cstrs.iter().map(|c| c.as_ptr()).collect();
-        ptrs.push(std::ptr::null());
-        rc(
-            unsafe { (self.funcs.command)(self.handle, ptrs.as_ptr()) },
-            "command",
-        )
-    }
-    fn load_url(&self, url: &str) -> Result<(), String> {
-        self.command(&["loadfile", url, "replace"])
-    }
-    fn toggle_pause(&self) -> Result<(), String> {
-        self.command(&["cycle", "pause"])
-    }
-    fn stop(&self) -> Result<(), String> {
-        self.command(&["stop"])
-    }
-    fn wait_event(&self, timeout: f64) -> Option<u32> {
-        unsafe {
-            let ev = (self.funcs.wait_event)(self.handle, timeout);
-            if ev.is_null() || (*ev).event_id == MPV_EVENT_NONE {
-                None
-            } else {
-                Some((*ev).event_id)
-            }
-        }
-    }
-    fn destroy(&self) {
-        unsafe { (self.funcs.destroy)(self.handle) }
-    }
-}
-fn rc(code: i32, ctx: &str) -> Result<(), String> {
-    if code >= 0 {
-        Ok(())
-    } else {
-        Err(format!("mpv {ctx} failed: {code}"))
-    }
-}
-fn mpv_thread(mpv: Mpv, rx_cmd: mpsc::Receiver<MpvCmd>, tx_msg: mpsc::Sender<MpvMsg>) {
+fn mpv_thread(mut mpv: Mpv, rx_cmd: mpsc::Receiver<MpvCmd>, tx_msg: mpsc::Sender<MpvMsg>) {
     loop {
-        if let Some(id) = mpv.wait_event(0.1) {
-            if id == MPV_EVENT_SHUTDOWN {
+        if let Some(ev) = mpv.wait_event_raw(0.1) {
+            if ev.event_id == MPV_EVENT_SHUTDOWN {
                 break;
             }
-            if id == MPV_EVENT_END_FILE {
+            if ev.event_id == MPV_EVENT_END_FILE {
                 let _ = tx_msg.send(MpvMsg::EndFile);
             }
         }
@@ -1289,17 +606,17 @@ fn mpv_thread(mpv: Mpv, rx_cmd: mpsc::Receiver<MpvCmd>, tx_msg: mpsc::Sender<Mpv
                         let _ = tx_msg.send(MpvMsg::Started { surah, ayah });
                     }
                     Err(e) => {
-                        let _ = tx_msg.send(MpvMsg::Error(e));
+                        let _ = tx_msg.send(MpvMsg::Error(e.to_string()));
                     }
                 },
                 MpvCmd::TogglePause => {
                     if let Err(e) = mpv.toggle_pause() {
-                        let _ = tx_msg.send(MpvMsg::Error(e));
+                        let _ = tx_msg.send(MpvMsg::Error(e.to_string()));
                     }
                 }
                 MpvCmd::Stop => {
                     if let Err(e) = mpv.stop() {
-                        let _ = tx_msg.send(MpvMsg::Error(e));
+                        let _ = tx_msg.send(MpvMsg::Error(e.to_string()));
                     }
                 }
                 MpvCmd::Quit => {

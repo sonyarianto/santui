@@ -110,7 +110,8 @@
     "description": "Read Quran text and translations with recitation playback",
     "capabilities": [
       "background"
-    ]
+    ],
+    "status": "stable"
   },
   {
     "id": "iptv-player",
