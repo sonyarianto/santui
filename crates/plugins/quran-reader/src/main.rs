@@ -1172,7 +1172,16 @@ impl Mpv {
                 .or_else(|| Library::new("libmpv.dylib").ok())
         }
         .ok_or_else(|| {
-            "libmpv not found; install mpv/libmpv or use bundled native deps".to_string()
+            let hint = if cfg!(target_os = "macos") {
+                "Try: brew install mpv"
+            } else if cfg!(target_os = "linux") {
+                "Install: apt install libmpv2 (Debian/Ubuntu) or dnf install libmpv (Fedora)"
+            } else if cfg!(target_os = "windows") {
+                "Ensure libmpv-2.dll is in the native/ directory"
+            } else {
+                "Install libmpv for your platform"
+            };
+            format!("libmpv not found. {hint}")
         })?;
         let lib = Arc::new(lib);
         macro_rules! sym {

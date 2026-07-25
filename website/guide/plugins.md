@@ -284,7 +284,7 @@ hints: vec![
 ],
 ```
 
-> **Radio Stream Player** requires [libmpv](https://mpv.io/installation/) for audio playback. On Windows it's bundled in the release archive; on macOS/Linux install via `apt`/`brew`/`pacman`. It also demonstrates data persistence — station favorites are stored in the central `santui.db` via `DbGet`/`DbSet`.
+> **Radio Stream Player** requires [libmpv](https://mpv.io/installation/) for audio playback. On Windows it's bundled in the release archive; on macOS `brew install mpv`; on Linux `apt install libmpv2` (Debian/Ubuntu) or `dnf install libmpv` (Fedora). It also demonstrates data persistence — station favorites are stored in the central `santui.db` via `DbGet`/`DbSet`.
 
 ## Next steps
 

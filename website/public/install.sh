@@ -40,7 +40,7 @@ case "${OS}" in
     esac
     # check for libmpv
     if ! ldconfig -p 2>/dev/null | grep -q libmpv; then
-      echo "  [!] libmpv not found. Install it: sudo apt install libmpv-dev (Debian) or sudo dnf install mpv-libs-devel (Fedora)"
+      echo "  [!] libmpv not found. Install: sudo apt install libmpv2 (Debian/Ubuntu) or sudo dnf install libmpv (Fedora)"
     fi
     ;;
   *)

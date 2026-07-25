@@ -56,9 +56,9 @@ curl -fsSL https://santuiapp.vercel.app/install.sh | sh
 
 > **Linux users:** Install [libmpv](https://mpv.io/installation/) for the Radio Stream Player:
 > ```bash
-> sudo apt install mpv      # Debian / Ubuntu / Pop!_OS
-> sudo dnf install mpv      # Fedora
-> sudo pacman -S mpv        # Arch
+> sudo apt install libmpv2      # Debian / Ubuntu
+> sudo dnf install libmpv       # Fedora
+> sudo pacman -S mpv            # Arch
 > ```
 
 > **Note:** The npm method requires [Node.js](https://nodejs.org/) to be installed. No plugins included — install them from the Plugin Registry after launching.
@@ -120,7 +120,7 @@ From the registry you can:
 
 To get started, install a plugin from the registry — try **Radio Stream Player** for internet radio or **Music Preview** to preview audio files. Then open `Ctrl+P` and select it to start using it.
 
-> **Radio Stream Player** requires [libmpv](https://mpv.io/installation/) for audio playback. On Windows it's bundled in the release archive; on macOS/Linux install via `apt`/`brew`/`pacman`.
+> **Radio Stream Player** requires [libmpv](https://mpv.io/installation/) for audio playback. On Windows it's bundled in the release archive; on macOS `brew install mpv`; on Linux `apt install libmpv2` (Debian/Ubuntu) or `dnf install libmpv` (Fedora).
 
 ## Development
 
@@ -129,7 +129,7 @@ To build Santui from source and test plugins locally without a GitHub release:
 ### Prerequisites
 
 - [Rust](https://rustup.rs/) 1.70+
-- For the Radio Stream Player: [libmpv](https://mpv.io/installation/) (`apt install mpv`, `brew install mpv`, or bundled on Windows)
+- For the Radio Stream Player: [libmpv](https://mpv.io/installation/) (`apt install libmpv2`, `brew install mpv`, `dnf install libmpv`, or bundled on Windows)
 
 ### Build & run
 
