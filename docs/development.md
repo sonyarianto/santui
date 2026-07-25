@@ -25,9 +25,13 @@ When building plugins, dev mode lets you test installation and native dependenci
 
 ### What dev-setup does
 
-1. Builds the workspace (`cargo build --workspace`)
-2. Copies native assets from `native/` (e.g. `libmpv-2.dll`) into `target/debug/native/`
-3. Scans `target/debug/` for plugin binaries and generates `plugins.json` with real SHA-256 hashes, file sizes, and declared capabilities (e.g. `"capabilities": ["background"]`)
+1. Builds the host binary + dev-setup + builtins (`santui`, `santui-dev-setup`, `santui-registry-plugin`)
+2. Queries `santui-dev-setup list-ids` for stable plugins (those with `"status": "stable"` in `plugins-manifest.json`)
+3. Builds those stable plugins only — experimental plugins are skipped
+4. Copies native assets from `native/` (e.g. `libmpv-2.dll`) into `target/debug/native/`
+5. Scans `target/debug/` for plugin binaries and generates `plugins.json` with real SHA-256 hashes, file sizes, and declared capabilities (e.g. `"capabilities": ["background"]`)
+
+> To build **all** plugins (rarely needed), run `cargo build --workspace` explicitly.
 
 ### How dev mode works
 
@@ -60,6 +64,15 @@ santui/
 ├── native/             — runtime native dependencies (mpv DLLs, station DB)
 └── Cargo.toml          — workspace root
 ```
+
+### Plugin status
+
+Each plugin entry in `plugins-manifest.json` can include an optional `"status"` field:
+
+- **`"stable"`** — plugin is ready for release. Included in release archives and visible in the Plugin Registry in release mode. Built automatically by `dev-setup.sh`.
+- **omitted** (defaults to `"experimental"`) — plugin is in development. Excluded from release packaging and release registry JSON, but still available in dev mode (`SANTUI_DEV=1`).
+
+Currently 4 plugins are marked stable: `log-viewer`, `radio-stream-player`, `music-preview`. The Plugin Registry UI plugin (`santui-registry-plugin`) is a builtin — always bundled, not listed in the manifest.
 
 ## CLI flags
 

@@ -24,9 +24,10 @@ Dev mode (plugin registry + native deps):
   - Windows: `.\scripts\dev-setup.ps1 ; $env:SANTUI_DEV=1; cargo run -p santui`
   - macOS/Linux: `./scripts/dev-setup.sh && SANTUI_DEV=1 cargo run -p santui`
 
-Fast dev (skip rebuilding all plugins — only the host + registry):
+Fast dev (skip building plugins entirely — just run the app):
   - `./scripts/dev-setup.sh --no-build && SANTUI_DEV=1 cargo run -p santui`
-  - After adding/changing plugins, run without `--no-build` to rebuild everything.
+
+Dev-setup now builds only the host binary + builtins (`santui`, `santui-dev-setup`, `santui-registry-plugin`) plus plugins with `"status": "stable"` in `plugins-manifest.json`. Other experimental plugins are compiled only when running `cargo build --workspace` explicitly.
 
 Watch: `cargo watch -x "run -p santui"`
 
@@ -63,7 +64,7 @@ crates/
 - **No fragile solutions**: every approach must be solid, reliable, and performant. Avoid heuristics (hint-text comparisons, inferred state), silent race windows (timeout + fallback without guarding consumed), unbounded growth (height/width caps), and false positives (marking a plugin as crashed when the channel is merely full). Match on specific error variants rather than `.is_err()` catch-alls.
 - **IPC `consumed` protocol**: `PluginMsg.consumed` must be set to `true` when a plugin handles a key event internally (e.g., closing a sub-dialog on Esc). The host uses this to decide whether to fall back to default handling (e.g., closing the plugin on Esc). Every key handler should return a `bool` consumed flag; do NOT rely on heuristics like hint text comparison.
 - **plugins-manifest.json + Cargo.toml**: When adding a new plugin you MUST update **both**:
-  1. `plugins-manifest.json` — add an entry with `id`, `name`, `description`, `capabilities`. This is the source of truth for the registry (read by `dev-setup.sh` and CI `release.yml`). `plugins.json` (gitignored) is auto-generated.
+  1. `plugins-manifest.json` — add an entry with `id`, `name`, `description`, `capabilities`. Optionally add `"status": "stable"` for plugins ready to ship in releases (otherwise defaults to `"experimental"` in dev-setup and is excluded from release packaging). This is the source of truth for the registry (read by `dev-setup.sh` and CI `release.yml`). `plugins.json` (gitignored) is auto-generated.
   2. `Cargo.toml` (root workspace) — add `"crates/plugins/{id}"` to the `members` list. Without this, `cargo build` and `dev-setup.sh` will skip the plugin entirely (as happened with 31 orphaned plugins that had manifest entries but no workspace membership).
 - **Never delete code unintentionally**: Every `edit` must preserve all existing lines, functions, and logic unless the user explicitly asked for removal. Before applying an edit, verify that `oldString` matches *only* the intended target and that `newString` includes everything that should remain — especially surrounding code, closing braces, and adjacent statements. When in doubt, prefer a more specific `oldString` with extra context lines to avoid matching the wrong block. After each edit, re-read the file to confirm nothing was silently dropped. A single missing brace or removed line can silently break the build and waste a debugging cycle.
 - **Architectural skepticism**: If the AI struggles to fix a bug across multiple attempts (patch after patch, each adding complexity without solving it), step back and question the architecture itself. A fragile timing assumption or wrong abstraction is often the root cause — patching around it never works. The correct fix is to eliminate the assumption, not widen the window. No magic-number timeouts; no "should be fast enough" reasoning.
