@@ -124,6 +124,7 @@ pub enum MpvMsg {
     Started { surah: u16, ayah: u16 },
     EndFile,
     Error(String),
+    AyahStarted { index: usize },
 }
 
 pub fn translation_options() -> Vec<&'static str> {
