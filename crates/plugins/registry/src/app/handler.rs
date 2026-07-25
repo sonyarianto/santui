@@ -26,29 +26,37 @@ impl App {
                 let reg = santui_registry::Registry::new(data);
                 self.registry = Some(reg);
                 self.set_status("Fetching plugins…".to_string());
-                if let Some(ref mut reg) = self.registry {
-                    let dev = std::env::var("SANTUI_DEV").as_deref() == Ok("1");
-                    if dev {
+
+                let dev = std::env::var("SANTUI_DEV").as_deref() == Ok("1");
+                if dev {
+                    let (available, installed, status) = {
+                        let reg = self.registry.as_mut().expect("registry just set");
                         reg.set_dev_mode(true);
                         let path = std::env::var("SANTUI_DEV_MANIFEST")
                             .map(std::path::PathBuf::from)
                             .unwrap_or_else(|_| std::path::PathBuf::from("plugins.json"));
                         match reg.load_local_manifest(&path) {
-                            Ok(()) => {
-                                let s = reg.status.clone();
-                                self.set_status(s);
-                            }
-                            Err(e) => self.set_status(format!("Error: {e}")),
+                            Ok(()) => (
+                                Some(reg.available.clone()),
+                                Some(reg.installed.clone()),
+                                reg.status.clone(),
+                            ),
+                            Err(e) => (None, None, format!("Error: {e}")),
                         }
-                    } else {
-                        match reg.fetch_manifest() {
-                            Ok(()) => {
-                                let s = reg.status.clone();
-                                self.set_status(s);
-                            }
-                            Err(e) => self.set_status(format!("Error: {e}")),
-                        }
+                    };
+                    self.set_status(status);
+                    if let (Some(avail), Some(inst)) = (available, installed) {
+                        self.sync_dev_plugins(&avail, &inst);
                     }
+                } else {
+                    let status = {
+                        let reg = self.registry.as_mut().expect("registry just set");
+                        match reg.fetch_manifest() {
+                            Ok(()) => reg.status.clone(),
+                            Err(e) => format!("Error: {e}"),
+                        }
+                    };
+                    self.set_status(status);
                 }
                 self.pending_request = Some(PluginRequest::DbGet {
                     key: "favorites".into(),
@@ -577,6 +585,25 @@ impl App {
                     name: plugin.name.clone(),
                 });
                 self.detail_idx = None;
+            }
+        }
+    }
+
+    fn sync_dev_plugins(
+        &mut self,
+        available: &[santui_registry::PluginManifest],
+        installed: &[santui_registry::InstalledPlugin],
+    ) {
+        let installed_ids: Vec<String> = installed.iter().map(|p| p.id.clone()).collect();
+        for id in &installed_ids {
+            if let Some(manifest) = available.iter().find(|m| &m.id == id) {
+                let dest = self.plugins_dir.join(santui_registry::plugin_filename(id));
+                let src = std::path::Path::new(&manifest.download_url);
+                if src.exists() {
+                    if let Err(e) = std::fs::copy(src, &dest) {
+                        log::warn!("sync_dev_plugins: failed to copy {src:?} -> {dest:?}: {e}");
+                    }
+                }
             }
         }
     }
