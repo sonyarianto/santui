@@ -12,7 +12,7 @@ body = """
     {% endfor %}
 {% endfor %}\
 {% if previous.version %}\
-    \\nFull Changelog: [{{ previous.version }}...{{ version }}](https://github.com/sonyarianto/santui/compare/{{ previous.version }}...{{ version }})
+    \nFull Changelog: [{{ previous.version }}...{{ version }}](https://github.com/sonyarianto/santui/compare/{{ previous.version }}...{{ version }})
 {% endif %}
 """
 trim = true
