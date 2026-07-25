@@ -31,7 +31,6 @@ jobs:
 
       - name: Install & run cargo-audit
         run: |
-          cargo install cargo-binstall
-          cargo binstall cargo-audit -y
+          cargo install cargo-audit --locked
           cargo audit --ignore RUSTSEC-2026-0194 --ignore RUSTSEC-2026-0195
 
