@@ -42,13 +42,8 @@ fn render_lyrics_view(
 ) {
     let inner_w = w.saturating_sub(4) as usize;
 
-    let header = if state.lyrics_title.is_empty() && state.lyrics_artist.is_empty() {
-        String::new()
-    } else {
-        format!("{} - {}", state.lyrics_title, state.lyrics_artist)
-    };
-    if !header.is_empty() {
-        let display: String = header.chars().take(inner_w).collect();
+    if !state.lyrics_title.is_empty() {
+        let display: String = state.lyrics_title.chars().take(inner_w).collect();
         cmds.push(RenderCmd::Text {
             x: 2,
             y: 1,
@@ -59,12 +54,24 @@ fn render_lyrics_view(
             modifiers: 0,
         });
     }
+    if !state.lyrics_artist.is_empty() {
+        let display: String = state.lyrics_artist.chars().take(inner_w).collect();
+        cmds.push(RenderCmd::Text {
+            x: 2,
+            y: 2,
+            text: display,
+            fg: Some(theme.text_muted),
+            bg: None,
+            bold: false,
+            modifiers: 0,
+        });
+    }
 
     let source_text = format!("Source: {}", state.lyrics_source);
     let display_src: String = source_text.chars().take(inner_w).collect();
     cmds.push(RenderCmd::Text {
         x: 2,
-        y: 2,
+        y: 3,
         text: display_src,
         fg: Some(theme.text_muted),
         bg: None,
@@ -72,13 +79,13 @@ fn render_lyrics_view(
         modifiers: 0,
     });
 
-    let max_lines = h.saturating_sub(5) as usize;
+    let max_lines = h.saturating_sub(6) as usize;
     let line_w = w.saturating_sub(4) as usize;
 
     if state.lyrics_loading {
         cmds.push(RenderCmd::Text {
             x: 2,
-            y: 4,
+            y: 5,
             text: "Searching lyrics...".into(),
             fg: Some(theme.text_muted),
             bg: None,
@@ -91,7 +98,7 @@ fn render_lyrics_view(
     if state.lyrics_text.is_empty() {
         cmds.push(RenderCmd::Text {
             x: 2,
-            y: 4,
+            y: 5,
             text: "No lyrics found".into(),
             fg: Some(theme.text_muted),
             bg: None,
@@ -111,7 +118,7 @@ fn render_lyrics_view(
         let display: String = lines[idx].chars().take(line_w).collect();
         cmds.push(RenderCmd::Text {
             x: 2,
-            y: (4 + i) as u16,
+            y: (5 + i) as u16,
             text: display,
             fg: Some(theme.text),
             bg: None,
@@ -478,10 +485,14 @@ mod tests {
             ..LyricsState::default()
         };
         let cmds = render_ui(&state, &test_theme(), 80, 24);
-        let has_header = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Lose Yourself - Eminem")),
-        );
-        assert!(has_header);
+        let has_title = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text == "Lose Yourself"));
+        assert!(has_title);
+        let has_artist = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text == "Eminem"));
+        assert!(has_artist);
         let has_source = cmds.iter().any(
             |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Source: LRCLib")),
         );
