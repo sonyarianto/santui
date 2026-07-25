@@ -149,7 +149,7 @@ fn render_reader(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16
         content.summary.name,
         content.summary.english_translation,
         app.prefs.display_mode.label(),
-        app.audio_state.label()
+        app.audio_state.label(),
     );
     push_text(
         cmds,
@@ -270,7 +270,7 @@ pub fn hints(
         Screen::SurahList => {
             let mut v = vec![
                 ("\u{2191}\u{2193}".into(), "navigate".into()),
-                ("\u{21B5}".into(), "read".into()),
+                ("\u{21B5}".into(), "open".into()),
                 ("/".into(), "search".into()),
                 ("e".into(), "translation".into()),
                 ("r".into(), "reciter".into()),
@@ -278,15 +278,15 @@ pub fn hints(
             ];
             if surahs_loaded {
                 v.insert(2, ("p".into(), "play".into()));
-                v.push(("x".into(), "stop".into()));
+                v.push(("s".into(), "stop".into()));
             }
             v
         }
         Screen::Reader => vec![
             ("\u{2191}\u{2193}".into(), "scroll".into()),
-            ("space".into(), "ayah".into()),
-            ("a".into(), "play surah".into()),
-            ("x".into(), "stop".into()),
+            ("p".into(), "play/pause".into()),
+            ("a".into(), "play all".into()),
+            ("s".into(), "stop".into()),
             ("t".into(), "mode".into()),
             ("r".into(), "repeat".into()),
             ("esc".into(), "list".into()),

@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::io::{BufRead, BufReader};
 use std::sync::mpsc;
 use std::thread;
+use std::time::Instant;
 
 mod api;
 mod player;
@@ -41,6 +42,9 @@ struct App {
     repeat_ayah: bool,
     play_on_load: bool,
     playlist_mode: bool,
+    ayahs_queue: Vec<(String, u16, u16)>,
+    ayahs_queue_pos: usize,
+    ayahs_queue_start: Option<Instant>,
 }
 
 impl Default for App {
@@ -72,6 +76,9 @@ impl Default for App {
             repeat_ayah: false,
             play_on_load: false,
             playlist_mode: false,
+            ayahs_queue: Vec::new(),
+            ayahs_queue_pos: 0,
+            ayahs_queue_start: None,
         }
     }
 }
@@ -176,7 +183,7 @@ impl App {
                 self.play_selected_surah();
                 true
             }
-            IpcKey::Char('x') => {
+            IpcKey::Char('s') => {
                 self.stop_audio();
                 true
             }
@@ -284,16 +291,17 @@ impl App {
                 );
                 true
             }
-            IpcKey::Char('x') => {
+            IpcKey::Char('s') => {
                 self.stop_audio();
                 true
             }
             IpcKey::Char('a') => {
-                self.play_surah_mode = true;
-                self.play_current_ayah();
+                self.selected_ayah = 0;
+                self.scroll = 0;
+                self.play_all_ayahs();
                 true
             }
-            IpcKey::Char(' ') => {
+            IpcKey::Char('p') => {
                 self.toggle_play_pause();
                 true
             }
@@ -386,6 +394,35 @@ impl App {
             }
             self.rx_mpv = Some(rx);
         }
+        self.handle_ayahs_cursor();
+    }
+
+    fn handle_ayahs_cursor(&mut self) {
+        if self.ayahs_queue.is_empty() || self.ayahs_queue_pos >= self.ayahs_queue.len() {
+            return;
+        }
+        let Some(start) = self.ayahs_queue_start else {
+            return;
+        };
+        if start.elapsed().as_secs() < 2 {
+            return;
+        }
+        let content = match self.current_content() {
+            Some(c) => c,
+            None => return,
+        };
+        let max = content.ayahs.len().saturating_sub(1);
+        if self.ayahs_queue_pos < max {
+            self.ayahs_queue_pos += 1;
+            self.ayahs_queue_start = Some(Instant::now());
+            self.selected_ayah = self.ayahs_queue_pos;
+            self.adjust_scroll();
+            self.dirty = true;
+        } else {
+            self.ayahs_queue.clear();
+            self.ayahs_queue_pos = 0;
+            self.ayahs_queue_start = None;
+        }
     }
 
     fn handle_surah_list(&mut self, result: Result<Vec<SurahSummary>, String>) {
@@ -430,7 +467,7 @@ impl App {
     fn handle_mpv_msg(&mut self, msg: MpvMsg) {
         match msg {
             MpvMsg::Started { surah, ayah } => {
-                self.audio_state = AudioState::Playing { surah, ayah }
+                self.audio_state = AudioState::Playing { surah, ayah };
             }
             MpvMsg::Error(e) => self.audio_state = AudioState::Error(e),
             MpvMsg::EndFile => self.handle_audio_end(),
@@ -442,23 +479,14 @@ impl App {
         if self.playlist_mode {
             self.audio_state = AudioState::Stopped;
             self.play_surah_mode = false;
+            self.ayahs_queue.clear();
+            self.ayahs_queue_pos = 0;
+            self.ayahs_queue_start = None;
             return;
         }
         if self.repeat_ayah {
             self.play_current_ayah();
             return;
-        }
-        if self.play_surah_mode {
-            let max = self
-                .current_content()
-                .map(|c| c.ayahs.len().saturating_sub(1))
-                .unwrap_or(0);
-            if self.selected_ayah < max {
-                self.selected_ayah += 1;
-                self.adjust_scroll();
-                self.play_current_ayah();
-                return;
-            }
         }
         self.audio_state = AudioState::Stopped;
         self.play_surah_mode = false;
@@ -616,6 +644,9 @@ impl App {
         }
         let first_ayah = ayahs[0].2;
         self.playlist_mode = true;
+        self.ayahs_queue = ayahs.clone();
+        self.ayahs_queue_pos = 0;
+        self.ayahs_queue_start = Some(Instant::now());
         if let Some(tx) = &self.tx_mpv {
             let _ = tx.send(MpvCmd::PlaySurah { ayahs });
             self.audio_state = AudioState::Buffering {
@@ -653,6 +684,9 @@ impl App {
         self.audio_state = AudioState::Stopped;
         self.play_surah_mode = false;
         self.playlist_mode = false;
+        self.ayahs_queue.clear();
+        self.ayahs_queue_pos = 0;
+        self.ayahs_queue_start = None;
     }
 
     fn save_prefs(&mut self) {
