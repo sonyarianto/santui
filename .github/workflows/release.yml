@@ -90,6 +90,7 @@ jobs:
           mkdir staging -Force
           Copy-Item "target\release\santui.exe" staging\
           Copy-Item "target\release\santui-registry-plugin.exe" staging\
+          Copy-Item "target\release\santui-log-viewer.exe" staging\
 
       - name: Prepare macOS artifacts
         if: startsWith(matrix.os, 'macos')
@@ -97,6 +98,7 @@ jobs:
           mkdir -p staging/native
           cp "${BINARY_DIR}/santui" staging/
           cp "${BINARY_DIR}/santui-registry-plugin" staging/
+          cp "${BINARY_DIR}/santui-log-viewer" staging/
           cp native/radio_stream_stations.db staging/native/
 
       - name: Prepare Linux artifacts
@@ -105,6 +107,7 @@ jobs:
           mkdir -p staging/native
           cp target/release/santui staging/
           cp target/release/santui-registry-plugin staging/
+          cp target/release/santui-log-viewer staging/
           cp native/radio_stream_stations.db staging/native/
 
       - name: Get version
@@ -165,7 +168,7 @@ jobs:
         run: |
           mkdir -p plugin-binaries
           # Collect binaries for every plugin listed in the central manifest
-          for binary in "${BINARY_DIR}"/santui-*-plugin${{ matrix.plugin_ext }} $("${BINARY_DIR}/santui-dev-setup" list-paths); do
+          for binary in "${BINARY_DIR}"/santui-*-plugin${{ matrix.plugin_ext }} "${BINARY_DIR}"/santui-log-viewer${{ matrix.plugin_ext }} $("${BINARY_DIR}/santui-dev-setup" list-paths); do
             [ -f "$binary" ] || continue
             name="$(basename "$binary")"
             # Strip .exe and also strip the santui- prefix so the filename

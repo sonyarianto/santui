@@ -72,7 +72,7 @@ Each plugin entry in `plugins-manifest.json` can include an optional `"status"` 
 - **`"stable"`** — plugin is ready for release. Included in release archives and visible in the Plugin Registry in release mode. Built automatically by `dev-setup.sh`.
 - **omitted** (defaults to `"experimental"`) — plugin is in development. Excluded from release packaging and release registry JSON, but still available in dev mode (`SANTUI_DEV=1`).
 
-Currently 4 plugins are marked stable: `log-viewer`, `radio-stream-player`, `music-preview`. The Plugin Registry UI plugin (`santui-registry-plugin`) is a builtin — always bundled, not listed in the manifest.
+Currently 3 plugins are marked stable: `radio-stream-player`, `music-preview`. The Plugin Registry UI plugin (`santui-registry-plugin`) and Log Viewer (`santui-log-viewer`) are builtins — always bundled, not listed in the manifest.
 
 ## CLI flags
 

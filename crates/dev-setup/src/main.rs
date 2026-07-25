@@ -106,7 +106,10 @@ fn cmd_dev_json() {
             if name == "santui" || name == "santui.exe" {
                 return false;
             }
-            if name.contains("-scraper") || name.contains("registry-plugin") {
+            if name.contains("-scraper")
+                || name.contains("registry-plugin")
+                || name.contains("log-viewer")
+            {
                 return false;
             }
             true

@@ -7,7 +7,7 @@ $OutDir = "$Root\target\debug"
 $Version = (Select-String -Path "$Root\crates\core\Cargo.toml" -Pattern '^version\s*=\s*"(.*)"').Matches.Groups[1].Value
 
 Write-Host ">> Building host + dev-setup + builtins ..." -ForegroundColor Cyan
-cargo build -p santui -p santui-dev-setup -p santui-registry-plugin
+cargo build -p santui -p santui-dev-setup -p santui-registry-plugin -p santui-log-viewer
 if ($LASTEXITCODE -ne 0) { throw "build failed" }
 
 Write-Host ">> Building stable plugins ..." -ForegroundColor Cyan

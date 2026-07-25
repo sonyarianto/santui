@@ -23,7 +23,7 @@ if [ "$NO_BUILD" -eq 1 ]; then
     fi
 else
     echo ">> Building host + dev-setup + builtins ..."
-    cargo build -p santui -p santui-dev-setup -p santui-registry-plugin
+    cargo build -p santui -p santui-dev-setup -p santui-registry-plugin -p santui-log-viewer
 
     echo ">> Building stable plugins ..."
     STABLE_IDS=$(BINARY_DIR="$OUTDIR" "$OUTDIR/santui-dev-setup" list-ids 2>/dev/null || true)
