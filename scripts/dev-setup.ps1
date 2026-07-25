@@ -6,9 +6,17 @@ $OutDir = "$Root\target\debug"
 # Derive version from the single source of truth — crates/core/Cargo.toml
 $Version = (Select-String -Path "$Root\crates\core\Cargo.toml" -Pattern '^version\s*=\s*"(.*)"').Matches.Groups[1].Value
 
-Write-Host ">> Building workspace (debug) ..." -ForegroundColor Cyan
-cargo build --workspace
+Write-Host ">> Building host + dev-setup + builtins ..." -ForegroundColor Cyan
+cargo build -p santui -p santui-dev-setup -p santui-registry-plugin
 if ($LASTEXITCODE -ne 0) { throw "build failed" }
+
+Write-Host ">> Building stable plugins ..." -ForegroundColor Cyan
+$stableIds = & "$OutDir\santui-dev-setup" list-ids 2>$null
+if ($stableIds) {
+    $pArgs = ($stableIds -split ' ' | ForEach-Object { "-p", "santui-$_" })
+    cargo build @pArgs
+    if ($LASTEXITCODE -ne 0) { throw "build failed" }
+}
 
 # -- copy native assets --
 Write-Host ">> Copying native assets to $OutDir\native\ ..."

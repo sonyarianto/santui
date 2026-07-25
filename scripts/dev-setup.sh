@@ -16,14 +16,21 @@ export OUTDIR="$ROOT/target/debug"
 export VERSION="$(grep '^version' "$ROOT/crates/core/Cargo.toml" | head -1 | cut -d'"' -f2)"
 
 if [ "$NO_BUILD" -eq 1 ]; then
-    echo ">> Skipping workspace build (--no-build)"
+    echo ">> Skipping build (--no-build)"
     if [ ! -d "$OUTDIR" ]; then
         echo "error: $OUTDIR does not exist — run without --no-build first" >&2
         exit 1
     fi
 else
-    echo ">> Building workspace (debug) ..."
-    cargo build --workspace
+    echo ">> Building host + dev-setup + builtins ..."
+    cargo build -p santui -p santui-dev-setup -p santui-registry-plugin
+
+    echo ">> Building stable plugins ..."
+    STABLE_IDS=$(BINARY_DIR="$OUTDIR" "$OUTDIR/santui-dev-setup" list-ids 2>/dev/null || true)
+    if [ -n "$STABLE_IDS" ]; then
+        # shellcheck disable=SC2086
+        cargo build $(for id in $STABLE_IDS; do echo "-p santui-$id"; done)
+    fi
 fi
 
 # -- copy native assets --
