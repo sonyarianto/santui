@@ -178,7 +178,7 @@ pub fn render_ui(
     let stations_footer_rows: u16 = if stations_footer.is_some() { 2 } else { 0 };
 
     // ---- Stations panel (top-left) ----
-    let stations_focused = !state.show_lyrics || !state.lyrics_focused;
+    let stations_focused = true;
     draw_panel(
         &mut cmds,
         theme,
