@@ -457,7 +457,9 @@ impl App {
                 self.selected_ayah = index;
                 self.adjust_scroll();
                 if let Some(surah) = self.current_surah_number() {
-                    self.track_ayah(surah, index as u16 + 1);
+                    let ayah = index as u16 + 1;
+                    self.track_ayah(surah, ayah);
+                    self.audio_state = AudioState::Playing { surah, ayah };
                 }
             }
             MpvMsg::Error(e) => self.audio_state = AudioState::Error(e),
