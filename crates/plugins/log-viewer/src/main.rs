@@ -46,7 +46,7 @@ impl Default for App {
             scroll: 0,
             filter: String::new(),
             mode: Mode::View,
-            status: "p path · f filter · ↑↓ scroll · g goto · r reload · l runtime · esc".into(),
+            status: String::new(),
             source: LogSource::File,
             runtime_logs: Vec::new(),
         }
@@ -61,9 +61,6 @@ impl App {
                 match key {
                     IpcKey::Esc => {
                         self.mode = Mode::View;
-                        self.status =
-                            "p path · f filter · ↑↓ scroll · g goto · r reload · l runtime · esc"
-                                .into();
                     }
                     IpcKey::Char('\n') | IpcKey::Char('\r') => {
                         self.mode = Mode::View;
@@ -88,9 +85,6 @@ impl App {
                     IpcKey::Esc => {
                         self.filter.clear();
                         self.mode = Mode::View;
-                        self.status =
-                            "p path · f filter · ↑↓ scroll · g goto · r reload · l runtime · esc"
-                                .into();
                     }
                     IpcKey::Char('\n') | IpcKey::Char('\r') => {
                         self.mode = Mode::View;
@@ -251,7 +245,7 @@ impl App {
         cmds.push(json!({"Border": {
             "x": 0, "y": 0, "w": w, "h": h, "fg": t.border, "borders": BORDER_ALL,
             "bg": t.background_panel, "title": format!(" Log Viewer [{source_label}] "),
-            "title_fg": t.text, "title_dash_fg": t.border, "border_type": null,
+            "title_fg": t.border, "title_dash_fg": t.border, "border_type": null,
         }}));
 
         let mode_text = match self.mode {
@@ -379,6 +373,28 @@ impl App {
             LogSource::Runtime => self.runtime_logs.len(),
         }
     }
+
+    fn status_hints(&self) -> Vec<(String, String)> {
+        match self.mode {
+            Mode::Path | Mode::Filter => {
+                vec![
+                    ("enter".into(), "confirm".into()),
+                    ("esc".into(), "cancel".into()),
+                ]
+            }
+            Mode::View => {
+                let mut hints = vec![
+                    ("p".into(), "path".into()),
+                    ("f".into(), "filter".into()),
+                    ("l".into(), "source".into()),
+                ];
+                if matches!(self.source, LogSource::File) {
+                    hints.push(("r".into(), "reload".into()));
+                }
+                hints
+            }
+        }
+    }
 }
 
 fn default_theme() -> ThemeData {
@@ -402,17 +418,6 @@ fn palette_commands() -> Vec<(String, String)> {
     vec![]
 }
 
-fn key_hints() -> Vec<(String, String)> {
-    vec![
-        ("esc".into(), "close".into()),
-        ("p".into(), "path".into()),
-        ("f".into(), "filter".into()),
-        ("r".into(), "reload".into()),
-        ("l".into(), "log source".into()),
-        ("g".into(), "top".into()),
-    ]
-}
-
 fn respond(app: &mut App, consumed: bool) {
     let msg = santui_ipc::protocol::PluginMsg {
         commands: app
@@ -420,7 +425,7 @@ fn respond(app: &mut App, consumed: bool) {
             .iter()
             .map(|v| serde_json::from_value(v.clone()).unwrap())
             .collect(),
-        hints: key_hints(),
+        hints: app.status_hints(),
         palette_commands: palette_commands(),
         request: None,
         plugin_message: None,

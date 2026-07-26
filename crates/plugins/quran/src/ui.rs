@@ -86,22 +86,34 @@ fn render_surah_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w:
         );
     }
     let inner_w = w.saturating_sub(4) as usize;
-    let cols = ["No", "Name", "Translation", "Ayahs"];
+    let playing = match &app.audio_state {
+        types::AudioState::Buffering { surah, ayah }
+        | types::AudioState::Playing { surah, ayah }
+        | types::AudioState::Paused { surah, ayah } => Some((*surah, *ayah)),
+        _ => None,
+    };
+    let cols = ["No", "Name", "Translation", "Ayahs", "Last Active"];
     let col_w = [
         4usize,
-        25usize.min(inner_w.saturating_sub(39)),
-        25usize.min(inner_w.saturating_sub(39)),
-        6usize,
+        20usize.min(inner_w.saturating_sub(39)),
+        20usize.min(inner_w.saturating_sub(39)),
+        4usize,
+        11usize,
     ];
     let list_h = h.saturating_sub(4).max(4);
     let rows: Vec<Vec<String>> = list
         .iter()
         .map(|s| {
+            let active = match playing {
+                Some((surah, ayah)) if surah == s.number => format!("v{}", ayah),
+                _ => "—".into(),
+            };
             vec![
                 format!("{}", s.number),
                 truncate(&s.english_name, col_w[1]),
                 truncate(&s.english_translation, col_w[2]),
                 format!("{}", s.ayah_count),
+                active,
             ]
         })
         .collect();
@@ -277,8 +289,8 @@ pub fn hints(
                 ("esc".into(), "back".into()),
             ];
             if surahs_loaded {
-                v.insert(2, ("p".into(), "play".into()));
-                v.push(("s".into(), "stop".into()));
+                v.insert(3, ("p".into(), "play".into()));
+                v.insert(4, ("s".into(), "stop".into()));
             }
             v
         }
