@@ -290,18 +290,13 @@ impl RadioState {
         self.retry_deadline = None;
     }
 
-    /// Inner width of the lyrics panel for text wrapping purposes.
+    /// Inner width of the lyrics popup for text wrapping purposes.
     pub fn lyrics_inner_w(&self, area_w: u16) -> u16 {
-        let left_w = if self.show_lyrics {
-            (area_w * 3 / 5).max(20)
-        } else {
-            area_w
-        };
-        let right_w = area_w.saturating_sub(left_w);
-        right_w.saturating_sub(4)
+        let popup_w = area_w.saturating_sub(8);
+        popup_w.saturating_sub(4)
     }
 
-    /// Number of visible lines in the lyrics content area (inside panel borders,
+    /// Number of visible lines in the lyrics content area (inside popup border,
     /// below header, above footer).
     pub fn lyrics_content_height(&self, area_h: u16) -> usize {
         let footer_rows = if self.show_lyrics { 2 } else { 0 };

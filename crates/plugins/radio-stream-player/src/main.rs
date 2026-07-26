@@ -413,8 +413,10 @@ impl App {
                 true
             }
             IpcKey::Up => {
-                if self.state.show_lyrics && self.state.lyrics_focused {
-                    self.state.lyrics_scroll_up();
+                if self.state.show_lyrics {
+                    if self.state.lyrics_focused {
+                        self.state.lyrics_scroll_up();
+                    }
                 } else {
                     self.state.select_prev();
                     let info_h = self.state.info_h();
@@ -424,10 +426,12 @@ impl App {
                 true
             }
             IpcKey::Down => {
-                if self.state.show_lyrics && self.state.lyrics_focused {
-                    let panel_h = self.state.lyrics_content_height(self.area.h);
-                    let inner_w = self.state.lyrics_inner_w(self.area.w);
-                    self.state.lyrics_scroll_down(panel_h, inner_w);
+                if self.state.show_lyrics {
+                    if self.state.lyrics_focused {
+                        let panel_h = self.state.lyrics_content_height(self.area.h);
+                        let inner_w = self.state.lyrics_inner_w(self.area.w);
+                        self.state.lyrics_scroll_down(panel_h, inner_w);
+                    }
                 } else {
                     self.state.select_next();
                     let info_h = self.state.info_h();
@@ -437,9 +441,11 @@ impl App {
                 true
             }
             IpcKey::PageUp => {
-                if self.state.show_lyrics && self.state.lyrics_focused {
-                    let panel_h = self.state.lyrics_content_height(self.area.h);
-                    self.state.lyrics_page_up(panel_h.max(1));
+                if self.state.show_lyrics {
+                    if self.state.lyrics_focused {
+                        let panel_h = self.state.lyrics_content_height(self.area.h);
+                        self.state.lyrics_page_up(panel_h.max(1));
+                    }
                 } else {
                     let info_h = self.state.info_h();
                     let page = self.area.h.saturating_sub(info_h + LIST_OVERHEAD) as usize;
@@ -449,10 +455,12 @@ impl App {
                 true
             }
             IpcKey::PageDown => {
-                if self.state.show_lyrics && self.state.lyrics_focused {
-                    let panel_h = self.state.lyrics_content_height(self.area.h);
-                    let inner_w = self.state.lyrics_inner_w(self.area.w);
-                    self.state.lyrics_page_down(panel_h.max(1), inner_w);
+                if self.state.show_lyrics {
+                    if self.state.lyrics_focused {
+                        let panel_h = self.state.lyrics_content_height(self.area.h);
+                        let inner_w = self.state.lyrics_inner_w(self.area.w);
+                        self.state.lyrics_page_down(panel_h.max(1), inner_w);
+                    }
                 } else {
                     let info_h = self.state.info_h();
                     let page = self.area.h.saturating_sub(info_h + LIST_OVERHEAD) as usize;
@@ -462,7 +470,7 @@ impl App {
                 true
             }
             IpcKey::Char('/') => {
-                if !self.state.lyrics_focused {
+                if !self.state.show_lyrics && !self.state.lyrics_focused {
                     self.state.search_mode = true;
                     self.state.query.clear();
                     self.state.apply_filter();
@@ -474,15 +482,13 @@ impl App {
                 }
             }
             IpcKey::Enter => {
-                if self.state.lyrics_focused {
-                    // no-op while lyrics focused
-                } else {
+                if !self.state.show_lyrics {
                     self.play_selected_station();
                 }
                 true
             }
             IpcKey::Char('r') => {
-                if !self.state.lyrics_focused {
+                if !self.state.show_lyrics && !self.state.lyrics_focused {
                     if let Some(ref db) = self.db {
                         let new_stations = crate::stations::reload(db);
                         let count = new_stations.len();
@@ -497,14 +503,16 @@ impl App {
                 true
             }
             IpcKey::Char('s') => {
-                send_cmd(self, MpvCmd::Stop);
-                self.state.play_state = state::PlayState::Stopped;
-                self.state.current_station = None;
-                self.state.last_metadata.clear();
-                self.state.song_title.clear();
-                self.state.track_info = None;
-                self.state.clear_lyrics();
-                self.state.clear_retry();
+                if !self.state.show_lyrics {
+                    send_cmd(self, MpvCmd::Stop);
+                    self.state.play_state = state::PlayState::Stopped;
+                    self.state.current_station = None;
+                    self.state.last_metadata.clear();
+                    self.state.song_title.clear();
+                    self.state.track_info = None;
+                    self.state.clear_lyrics();
+                    self.state.clear_retry();
+                }
                 true
             }
             IpcKey::Char('+') | IpcKey::Char('=') => {
@@ -525,14 +533,24 @@ impl App {
                 });
                 true
             }
+            IpcKey::Esc => {
+                if self.state.show_lyrics {
+                    self.state.show_lyrics = false;
+                    self.state.lyrics_scroll = 0;
+                    self.state.lyrics_focused = false;
+                    true
+                } else {
+                    false
+                }
+            }
             IpcKey::Char('l') => {
                 self.state.show_lyrics = !self.state.show_lyrics;
                 self.state.lyrics_scroll = 0;
-                self.state.lyrics_focused = false;
+                self.state.lyrics_focused = self.state.show_lyrics;
                 true
             }
             IpcKey::Char(' ') => {
-                if self.state.lyrics_focused {
+                if self.state.show_lyrics {
                     return false;
                 }
                 let station_url = self.state.selected_station().map(|s| s.url.clone());
@@ -555,7 +573,7 @@ impl App {
                 true
             }
             IpcKey::Char('f') => {
-                if self.state.lyrics_focused {
+                if self.state.show_lyrics {
                     return false;
                 }
                 self.state.show_favorites_only = !self.state.show_favorites_only;
@@ -569,7 +587,7 @@ impl App {
                 }
                 true
             }
-            IpcKey::Char('c') if !self.state.lyrics_focused && !self.state.query.is_empty() => {
+            IpcKey::Char('c') if !self.state.show_lyrics && !self.state.query.is_empty() => {
                 self.state.set_query(String::new());
                 self.state.selected = 0;
                 self.state.scroll = 0;
@@ -610,12 +628,6 @@ impl App {
         let area_w = self.area.w;
         let area_h = self.area.h;
 
-        let left_w = if self.state.show_lyrics {
-            (area_w * 3 / 5).max(20)
-        } else {
-            area_w
-        };
-        let right_w = area_w.saturating_sub(left_w);
         let info_h = self.state.info_h();
         let stations_h = area_h.saturating_sub(info_h);
 
@@ -629,7 +641,7 @@ impl App {
                 }
 
                 // Stations table rows
-                if x < left_w && y > ui::TABLE_TOP {
+                if y > ui::TABLE_TOP {
                     let table_avail =
                         stations_h.saturating_sub(ui::TABLE_TOP + ui::HEADER_H + 1 + 2);
                     let max_visible = table_avail as usize;
@@ -649,10 +661,20 @@ impl App {
                     }
                 }
 
-                // Lyrics panel — focus on click
-                if self.state.show_lyrics && x >= left_w && x < left_w + right_w {
-                    self.state.lyrics_focused = true;
-                    return true;
+                // Lyrics side panel — focus on click
+                if self.state.show_lyrics {
+                    let popup_w = (area_w * 2 / 5).max(20);
+                    let popup_x = area_w - popup_w;
+                    let popup_y = 0u16;
+                    let popup_h = area_h;
+                    if x >= popup_x
+                        && x < popup_x + popup_w
+                        && y >= popup_y
+                        && y < popup_y + popup_h
+                    {
+                        self.state.lyrics_focused = true;
+                        return true;
+                    }
                 }
 
                 false
@@ -1770,7 +1792,7 @@ mod tests {
         assert!(!app.state.show_lyrics);
         assert!(app.handle_key(IpcKey::Char('l')));
         assert!(app.state.show_lyrics);
-        assert!(!app.state.lyrics_focused);
+        assert!(app.state.lyrics_focused);
         assert_eq!(app.state.lyrics_scroll, 0);
     }
 

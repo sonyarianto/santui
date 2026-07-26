@@ -55,26 +55,44 @@ pub fn render_ui(app: &App) -> Vec<RenderCmd> {
 
 fn render_surah_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, h: u16) {
     let list = app.filtered_surahs();
-    let search_display = if app.search_mode {
-        format!("{}█", app.search)
+    if app.search_mode {
+        let header = format!(
+            "Surahs: {} • Translation: {} • Reciter: {} • Search: {}",
+            app.surahs.len(),
+            app.prefs.translation_edition,
+            app.prefs.reciter,
+            app.search,
+        );
+        let truncated = truncate(&header, w as usize - 4);
+        push_text(cmds, 2, 1, &truncated, theme.text_muted, false);
+        if app.cursor_visible {
+            let cx = 2u16 + truncated.chars().count() as u16;
+            cmds.push(RenderCmd::Text {
+                x: cx.min(w.saturating_sub(1)),
+                y: 1,
+                text: "█".into(),
+                fg: Some(theme.text_muted),
+                bg: None,
+                bold: false,
+                modifiers: 0,
+            });
+        }
     } else {
-        app.search.clone()
-    };
-    let header = format!(
-        "Surahs: {} • Translation: {} • Reciter: {} • Search: {}",
-        app.surahs.len(),
-        app.prefs.translation_edition,
-        app.prefs.reciter,
-        search_display,
-    );
-    push_text(
-        cmds,
-        2,
-        1,
-        truncate(&header, w as usize - 4),
-        theme.text_muted,
-        false,
-    );
+        let header = format!(
+            "Surahs: {} • Translation: {} • Reciter: {}",
+            app.surahs.len(),
+            app.prefs.translation_edition,
+            app.prefs.reciter,
+        );
+        push_text(
+            cmds,
+            2,
+            1,
+            truncate(&header, w as usize - 4),
+            theme.text_muted,
+            false,
+        );
+    }
     if app.fetching {
         push_text(
             cmds,

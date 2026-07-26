@@ -138,12 +138,7 @@ pub fn render_ui(
         h: area_h,
     });
 
-    let left_w = if state.show_lyrics {
-        (area_w * 3 / 5).max(20)
-    } else {
-        area_w
-    };
-    let right_w = area_w.saturating_sub(left_w);
+    let left_w = area_w;
 
     const GAP: u16 = 0;
     let info_h = state.info_h();
@@ -609,163 +604,182 @@ pub fn render_ui(
         }
     }
 
-    // ---- Lyrics panel (right side) ----
-    if state.show_lyrics && right_w >= 15 {
-        let ly_x = left_w;
-        let ly_panel_w = right_w;
-        draw_panel(
-            &mut cmds,
-            theme,
-            ly_x,
-            0,
-            ly_panel_w,
-            area_h,
-            "Lyrics",
-            state.lyrics_focused,
-            lyrics_footer,
-            true,
-        );
-
-        if !state.lyrics_text.is_empty() && !state.lyrics_source.is_empty() {
-            let footer_y = area_h.saturating_sub(2);
-            let sx = ly_x + ly_panel_w.saturating_sub(state.lyrics_source.len() as u16 + 2);
-            cmds.push(RenderCmd::Text {
-                x: sx,
-                y: footer_y,
-                text: state.lyrics_source.clone(),
-                fg: Some(theme.text_muted),
-                bg: None,
-                bold: false,
-                modifiers: 0,
+    // ---- Lyrics side panel (snapped right, dim behind) ----
+    if state.show_lyrics {
+        let popup_w = (area_w * 2 / 5).max(20);
+        let popup_x = area_w - popup_w;
+        let popup_y = 0u16;
+        let popup_h = area_h;
+        if popup_x < 4 || area_h < 10 {
+            // too small for a useful popup
+        } else {
+            cmds.push(RenderCmd::Dim {
+                x: 0,
+                y: 0,
+                w: 4096,
+                h: 4096,
+                bg: theme.background_overlay,
             });
-        }
 
-        let ly_inner_w = ly_panel_w.saturating_sub(4);
+            cmds.push(RenderCmd::Rect {
+                x: popup_x,
+                y: popup_y,
+                w: popup_w,
+                h: popup_h,
+                bg: theme.background_panel,
+            });
 
-        // Title/artist header from iTunes (track_info) or station metadata (song_title)
-        let (header_title, header_artist) = if !state.lyrics_text.is_empty() {
-            if let Some(ref info) = state.track_info {
-                let title = info
-                    .title
-                    .clone()
-                    .or_else(|| (!state.song_title.is_empty()).then(|| state.song_title.clone()));
-                (title, info.artist.clone())
-            } else if !state.song_title.is_empty() {
-                let (artist, title) = lrclib::split_title(&state.song_title);
-                (Some(title), artist)
-            } else {
-                (None, None)
-            }
-        } else {
-            (None, None)
-        };
-        let header_rows = match (&header_title, &header_artist) {
-            (Some(_), Some(_)) => 3,
-            (Some(_), None) => 2,
-            (None, Some(_)) => 2,
-            (None, None) => 0,
-        };
-        let content_top = 1 + header_rows;
-
-        if state.lyrics_loading {
-            ui::text_at(
+            draw_panel(
                 &mut cmds,
-                ly_x + 2,
-                1,
-                "Searching lyrics...",
-                theme.text_muted,
-                None,
-                ly_inner_w,
+                theme,
+                popup_x,
+                popup_y,
+                popup_w,
+                popup_h,
+                "Lyrics",
+                state.lyrics_focused,
+                lyrics_footer,
+                true,
             );
-        } else if state.lyrics_text.is_empty() {
-            ui::text_at(
-                &mut cmds,
-                ly_x + 2,
-                1,
-                "No lyrics found",
-                theme.text_muted,
-                None,
-                ly_inner_w,
-            );
-        } else {
-            // Render title header
-            let focused = state.lyrics_focused;
-            let title_fg = if focused {
-                theme.accent
-            } else {
-                theme.text_muted
-            };
-            let artist_fg = if focused {
-                theme.text
-            } else {
-                theme.text_muted
-            };
-            if let Some(ref title) = header_title {
-                cmds.push(RenderCmd::Text {
-                    x: ly_x + 2,
-                    y: 1,
-                    text: title.chars().take(ly_inner_w as usize).collect(),
-                    fg: Some(title_fg),
-                    bg: None,
-                    bold: true,
-                    modifiers: 0,
-                });
-            }
-            if let Some(ref artist) = header_artist {
-                cmds.push(RenderCmd::Text {
-                    x: ly_x + 2,
-                    y: 2,
-                    text: artist.chars().take(ly_inner_w as usize).collect(),
-                    fg: Some(artist_fg),
-                    bg: None,
-                    bold: false,
-                    modifiers: 0,
-                });
-            }
-            // Blank line at y=3 (both) or y=2 (title only) is implicit
 
-            let ly_h = state.lyrics_content_height(area_h);
-            let wrapped = wrap_text(&state.lyrics_text, ly_inner_w as usize);
-            let total_visual = wrapped.len();
-            let scroll = state.lyrics_scroll.min(total_visual.saturating_sub(1));
-            for i in 0..ly_h {
-                let line_idx = scroll + i;
-                if line_idx >= total_visual {
-                    break;
-                }
-                let lyrics_body_fg = if focused {
-                    theme.text
-                } else {
-                    theme.text_muted
-                };
-                cmds.push(RenderCmd::Text {
-                    x: ly_x + 2,
-                    y: content_top + i as u16,
-                    text: wrapped[line_idx].clone(),
-                    fg: Some(lyrics_body_fg),
-                    bg: None,
-                    bold: false,
-                    modifiers: 0,
-                });
-            }
-            if total_visual > ly_h {
-                let max_scroll = total_visual.saturating_sub(ly_h);
-                let pct = (scroll * 100)
-                    .checked_div(max_scroll)
-                    .map(|v| v.min(100))
-                    .unwrap_or(0);
-                let scroll_text = format!("{pct}%");
-                let indicator_y = content_top + ly_h as u16 - 1;
-                let sx = ly_x + ly_panel_w.saturating_sub(scroll_text.len() as u16 + 2);
+            let ly_inner_w = popup_w.saturating_sub(4);
+
+            if !state.lyrics_text.is_empty() && !state.lyrics_source.is_empty() {
+                let footer_y = popup_y + popup_h - 2;
+                let sx = popup_x + popup_w.saturating_sub(state.lyrics_source.len() as u16 + 2);
                 cmds.push(RenderCmd::Text {
                     x: sx,
-                    y: indicator_y,
-                    text: scroll_text,
+                    y: footer_y,
+                    text: state.lyrics_source.clone(),
                     fg: Some(theme.text_muted),
                     bg: None,
                     bold: false,
                     modifiers: 0,
                 });
+            }
+
+            // Title/artist header from iTunes (track_info) or station metadata (song_title)
+            let (header_title, header_artist) = if !state.lyrics_text.is_empty() {
+                if let Some(ref info) = state.track_info {
+                    let title = info.title.clone().or_else(|| {
+                        (!state.song_title.is_empty()).then(|| state.song_title.clone())
+                    });
+                    (title, info.artist.clone())
+                } else if !state.song_title.is_empty() {
+                    let (artist, title) = lrclib::split_title(&state.song_title);
+                    (Some(title), artist)
+                } else {
+                    (None, None)
+                }
+            } else {
+                (None, None)
+            };
+            let header_rows = match (&header_title, &header_artist) {
+                (Some(_), Some(_)) => 3,
+                (Some(_), None) => 2,
+                (None, Some(_)) => 2,
+                (None, None) => 0,
+            };
+            let content_top = popup_y + 1 + header_rows;
+
+            if state.lyrics_loading {
+                ui::text_at(
+                    &mut cmds,
+                    popup_x + 2,
+                    popup_y + 1,
+                    "Searching lyrics...",
+                    theme.text_muted,
+                    None,
+                    ly_inner_w,
+                );
+            } else if state.lyrics_text.is_empty() {
+                ui::text_at(
+                    &mut cmds,
+                    popup_x + 2,
+                    popup_y + 1,
+                    "No lyrics found",
+                    theme.text_muted,
+                    None,
+                    ly_inner_w,
+                );
+            } else {
+                let focused = state.lyrics_focused;
+                let title_fg = if focused {
+                    theme.accent
+                } else {
+                    theme.text_muted
+                };
+                let artist_fg = if focused {
+                    theme.text
+                } else {
+                    theme.text_muted
+                };
+                if let Some(ref title) = header_title {
+                    cmds.push(RenderCmd::Text {
+                        x: popup_x + 2,
+                        y: popup_y + 1,
+                        text: title.chars().take(ly_inner_w as usize).collect(),
+                        fg: Some(title_fg),
+                        bg: None,
+                        bold: true,
+                        modifiers: 0,
+                    });
+                }
+                if let Some(ref artist) = header_artist {
+                    cmds.push(RenderCmd::Text {
+                        x: popup_x + 2,
+                        y: popup_y + 2,
+                        text: artist.chars().take(ly_inner_w as usize).collect(),
+                        fg: Some(artist_fg),
+                        bg: None,
+                        bold: false,
+                        modifiers: 0,
+                    });
+                }
+
+                let ly_h = state.lyrics_content_height(area_h);
+                let wrapped = wrap_text(&state.lyrics_text, ly_inner_w as usize);
+                let total_visual = wrapped.len();
+                let scroll = state.lyrics_scroll.min(total_visual.saturating_sub(1));
+                for i in 0..ly_h {
+                    let line_idx = scroll + i;
+                    if line_idx >= total_visual {
+                        break;
+                    }
+                    let lyrics_body_fg = if focused {
+                        theme.text
+                    } else {
+                        theme.text_muted
+                    };
+                    cmds.push(RenderCmd::Text {
+                        x: popup_x + 2,
+                        y: content_top + i as u16,
+                        text: wrapped[line_idx].clone(),
+                        fg: Some(lyrics_body_fg),
+                        bg: None,
+                        bold: false,
+                        modifiers: 0,
+                    });
+                }
+                if total_visual > ly_h {
+                    let max_scroll = total_visual.saturating_sub(ly_h);
+                    let pct = (scroll * 100)
+                        .checked_div(max_scroll)
+                        .map(|v| v.min(100))
+                        .unwrap_or(0);
+                    let scroll_text = format!("{pct}%");
+                    let indicator_y = content_top + ly_h as u16 - 1;
+                    let sx = popup_x + popup_w.saturating_sub(scroll_text.len() as u16 + 2);
+                    cmds.push(RenderCmd::Text {
+                        x: sx,
+                        y: indicator_y,
+                        text: scroll_text,
+                        fg: Some(theme.text_muted),
+                        bg: None,
+                        bold: false,
+                        modifiers: 0,
+                    });
+                }
             }
         }
     }
@@ -1263,26 +1277,31 @@ mod tests {
                 false
             }
         });
-        assert!(!has_lyrics, "lyrics hidden when right panel < 15 wide");
+        assert!(!has_lyrics, "lyrics hidden when area too small for popup");
     }
 
     #[test]
-    fn split_layout_when_lyrics_shown() {
+    fn lyrics_overlay_renders_right_snapped_popup() {
         let mut st = state_with(5);
         st.show_lyrics = true;
         let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let has_dim = cmds.iter().any(|c| matches!(c, RenderCmd::Dim { .. }));
+        assert!(has_dim, "expected Dim command for overlay");
         let borders: Vec<&RenderCmd> = cmds
             .iter()
             .filter(|c| matches!(c, RenderCmd::Border { .. }))
             .collect();
         assert_eq!(borders.len(), 3);
-        // First border (Stations) should have width = 80*3/5 = 48
+        // Stations panel stays full width (not split)
         if let RenderCmd::Border { w, .. } = borders[0] {
-            assert_eq!(*w, 48);
+            assert_eq!(*w, 80);
         }
-        // Third border (Lyrics) should start at x = 48
-        if let RenderCmd::Border { x, .. } = borders[2] {
+        // Lyrics popup snapped to right edge: x=48, w=32, full height
+        if let RenderCmd::Border { x, w, y, h, .. } = borders[2] {
             assert_eq!(*x, 48);
+            assert_eq!(*w, 32);
+            assert_eq!(*y, 0);
+            assert_eq!(*h, 24);
         }
     }
 
