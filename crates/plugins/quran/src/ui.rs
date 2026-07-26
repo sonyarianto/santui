@@ -92,11 +92,19 @@ fn render_surah_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w:
         | types::AudioState::Paused { surah, ayah } => Some((*surah, *ayah)),
         _ => None,
     };
-    let cols = ["No", "Name", "Translation", "Ayahs", "Last Active"];
+    let cols = [
+        "No",
+        "Arabic",
+        "Name",
+        "Translation",
+        "Ayahs",
+        "Last Active",
+    ];
     let col_w = [
         4usize,
-        20usize.min(inner_w.saturating_sub(39)),
-        20usize.min(inner_w.saturating_sub(39)),
+        23usize,
+        15usize.min(inner_w.saturating_sub(67)),
+        25usize.min(inner_w.saturating_sub(57)),
         4usize,
         11usize,
     ];
@@ -110,8 +118,9 @@ fn render_surah_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w:
             };
             vec![
                 format!("{}", s.number),
-                truncate(&s.english_name, col_w[1]),
-                truncate(&s.english_translation, col_w[2]),
+                truncate(&s.name, col_w[1]),
+                truncate(&s.english_name, col_w[2]),
+                truncate(&s.english_translation, col_w[3]),
                 format!("{}", s.ayah_count),
                 active,
             ]
