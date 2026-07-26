@@ -47,11 +47,24 @@ App
 - Play station via mpv with auto-reconnect on failure
 - Real-time metadata display (song title, artist)
 - iTunes track info lookup (album art, genre)
-- LRCLib lyrics fetch with synced/plain support
+- LRCLib lyrics fetch with synced/plain support, displayed as overlay
 - Favorites management with DB persistence
 - Volume control (per-plugin, persisted)
 - Mouse support (scroll, click rows)
 - Preferences persisted via `PluginRequest::DbSet`
+
+## Lyrics Overlay
+
+Press `l` to toggle lyrics overlay. The lyrics panel snaps to the right (40% width) with a dim overlay over the stations panel. While the overlay is active:
+- `↑↓` / `PgUp` / `PgDn` scroll lyrics
+- `Tab` toggles focus between lyrics and stations (cosmetic border highlight)
+- `Esc` or `l` closes the overlay
+- `+/-` volume still works
+- All station actions (search, play, stop, favorites, reload) are blocked
+- The stations panel underneath renders at full brightness (the `RenderCmd::Dim` handles visual dimming, not panel colour changes)
+- Artist text always uses muted styling
+
+## Key Bindings
 
 ## Constraints & Rules
 - `consumed` flag must be `true` on Esc to prevent host from closing the plugin (can_background)
