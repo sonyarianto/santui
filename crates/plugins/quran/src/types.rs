@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 pub const DB_KEY: &str = "quran-reader-preferences";
 pub const ARABIC_EDITION: &str = "quran-uthmani";
@@ -61,7 +62,7 @@ pub struct Preferences {
     pub reciter: String,
     pub display_mode: DisplayMode,
     pub last_surah: Option<u16>,
-    pub last_ayah: Option<u16>,
+    pub per_surah_ayah: BTreeMap<u16, u16>,
 }
 
 impl Default for Preferences {
@@ -71,7 +72,7 @@ impl Default for Preferences {
             reciter: DEFAULT_RECITER.into(),
             display_mode: DisplayMode::Both,
             last_surah: None,
-            last_ayah: None,
+            per_surah_ayah: BTreeMap::new(),
         }
     }
 }

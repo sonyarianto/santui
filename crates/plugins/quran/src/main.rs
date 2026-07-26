@@ -242,7 +242,9 @@ impl App {
             IpcKey::Up | IpcKey::Char('k') => {
                 self.selected_ayah = self.selected_ayah.saturating_sub(1);
                 self.adjust_scroll();
-                self.save_prefs();
+                if let Some(surah) = self.current_surah_number() {
+                    self.track_ayah(surah, self.selected_ayah as u16 + 1);
+                }
                 true
             }
             IpcKey::Down | IpcKey::Char('j') => {
@@ -252,13 +254,17 @@ impl App {
                     .unwrap_or(0);
                 self.selected_ayah = self.selected_ayah.min(max).saturating_add(1).min(max);
                 self.adjust_scroll();
-                self.save_prefs();
+                if let Some(surah) = self.current_surah_number() {
+                    self.track_ayah(surah, self.selected_ayah as u16 + 1);
+                }
                 true
             }
             IpcKey::PageUp => {
                 self.selected_ayah = self.selected_ayah.saturating_sub(10);
                 self.adjust_scroll();
-                self.save_prefs();
+                if let Some(surah) = self.current_surah_number() {
+                    self.track_ayah(surah, self.selected_ayah as u16 + 1);
+                }
                 true
             }
             IpcKey::PageDown => {
@@ -268,7 +274,9 @@ impl App {
                     .unwrap_or(0);
                 self.selected_ayah = (self.selected_ayah + 10).min(max);
                 self.adjust_scroll();
-                self.save_prefs();
+                if let Some(surah) = self.current_surah_number() {
+                    self.track_ayah(surah, self.selected_ayah as u16 + 1);
+                }
                 true
             }
             IpcKey::Char('t') => {
@@ -409,7 +417,8 @@ impl App {
             Ok(content) => {
                 let number = content.summary.number;
                 self.content_cache.insert(number, content);
-                self.selected_ayah = self.prefs.last_ayah.unwrap_or(1).saturating_sub(1) as usize;
+                let last = self.prefs.per_surah_ayah.get(&number).copied().unwrap_or(1);
+                self.selected_ayah = last.saturating_sub(1) as usize;
                 self.adjust_scroll();
                 self.status.clear();
                 if self.play_on_load {
@@ -432,10 +441,14 @@ impl App {
         match msg {
             MpvMsg::Started { surah, ayah } => {
                 self.audio_state = AudioState::Playing { surah, ayah };
+                self.track_ayah(surah, ayah);
             }
             MpvMsg::AyahStarted { index } => {
                 self.selected_ayah = index;
                 self.adjust_scroll();
+                if let Some(surah) = self.current_surah_number() {
+                    self.track_ayah(surah, index as u16 + 1);
+                }
             }
             MpvMsg::Error(e) => self.audio_state = AudioState::Error(e),
             MpvMsg::EndFile => self.handle_audio_end(),
@@ -472,8 +485,7 @@ impl App {
             return;
         };
         self.prefs.last_surah = Some(summary.number);
-        self.prefs.last_ayah = Some(1);
-        self.save_prefs();
+        self.track_ayah(summary.number, 1);
         if self.content_cache.contains_key(&summary.number) {
             self.screen = Screen::Reader;
             self.selected_ayah = 0;
@@ -500,8 +512,7 @@ impl App {
             return;
         };
         self.prefs.last_surah = Some(summary.number);
-        self.prefs.last_ayah = Some(1);
-        self.save_prefs();
+        self.track_ayah(summary.number, 1);
         if self.content_cache.contains_key(&summary.number) {
             self.selected_ayah = 0;
             self.scroll = 0;
@@ -646,6 +657,11 @@ impl App {
         self.audio_state = AudioState::Stopped;
         self.play_surah_mode = false;
         self.playlist_mode = false;
+    }
+
+    fn track_ayah(&mut self, surah: u16, ayah: u16) {
+        self.prefs.per_surah_ayah.insert(surah, ayah);
+        self.save_prefs();
     }
 
     fn save_prefs(&mut self) {
@@ -892,14 +908,15 @@ mod tests {
 
     #[test]
     fn preferences_roundtrip() {
-        let prefs = Preferences {
-            last_surah: Some(2),
-            last_ayah: Some(3),
-            ..Preferences::default()
-        };
+        let mut prefs = Preferences::default();
+        prefs.last_surah = Some(2);
+        prefs.per_surah_ayah.insert(2, 3);
+        prefs.per_surah_ayah.insert(36, 5);
         let json = serde_json::to_string(&prefs).unwrap();
         let decoded: Preferences = serde_json::from_str(&json).unwrap();
         assert_eq!(decoded.last_surah, Some(2));
+        assert_eq!(*decoded.per_surah_ayah.get(&2).unwrap(), 3);
+        assert_eq!(*decoded.per_surah_ayah.get(&36).unwrap(), 5);
         assert_eq!(decoded.display_mode, DisplayMode::Both);
     }
 }

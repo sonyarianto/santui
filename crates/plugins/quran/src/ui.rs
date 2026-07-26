@@ -114,7 +114,11 @@ fn render_surah_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w:
         .map(|s| {
             let active = match playing {
                 Some((surah, ayah)) if surah == s.number => format!("v{}", ayah),
-                _ => "—".into(),
+                _ => app
+                    .prefs
+                    .per_surah_ayah
+                    .get(&s.number)
+                    .map_or("—".into(), |a| format!("v{}", a)),
             };
             vec![
                 format!("{}", s.number),
