@@ -709,11 +709,7 @@ pub fn render_ui(
                 } else {
                     theme.text_muted
                 };
-                let artist_fg = if focused {
-                    theme.text
-                } else {
-                    theme.text_muted
-                };
+                let artist_fg = theme.text_muted;
                 if let Some(ref title) = header_title {
                     cmds.push(RenderCmd::Text {
                         x: popup_x + 2,
