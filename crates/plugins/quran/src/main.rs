@@ -41,6 +41,8 @@ struct App {
     repeat_ayah: bool,
     play_on_load: bool,
     playlist_mode: bool,
+    cursor_visible: bool,
+    tick_count: u64,
 }
 
 impl Default for App {
@@ -72,6 +74,8 @@ impl Default for App {
             repeat_ayah: false,
             play_on_load: false,
             playlist_mode: false,
+            cursor_visible: true,
+            tick_count: 0,
         }
     }
 }
@@ -152,6 +156,7 @@ impl App {
             IpcKey::Char('/') => {
                 self.search.clear();
                 self.search_mode = true;
+                self.cursor_visible = true;
                 self.status = "Search surahs".into();
                 true
             }
@@ -369,6 +374,11 @@ impl App {
     }
 
     fn handle_tick(&mut self) {
+        self.tick_count += 1;
+        if self.search_mode && self.tick_count.is_multiple_of(6) {
+            self.cursor_visible = !self.cursor_visible;
+            self.dirty = true;
+        }
         if let Some(rx) = self.rx_fetch.take() {
             match rx.try_recv() {
                 Ok(FetchMsg::SurahList(result)) => {

@@ -154,11 +154,11 @@ pub fn render_ui(
     } else if !state.query.is_empty() {
         Some(&[
             ("↑↓", "navigate"),
+            ("/", "search"),
             ("↵", "play"),
+            ("s", "stop"),
             ("space", "toggle fav"),
             ("c", "clear"),
-            ("/", "search"),
-            ("s", "stop"),
             ("f", "toggle fav list"),
             ("r", "reload"),
         ])
@@ -167,10 +167,10 @@ pub fn render_ui(
     } else {
         Some(&[
             ("↑↓", "navigate"),
-            ("↵", "play"),
-            ("space", "toggle fav"),
             ("/", "search"),
+            ("↵", "play"),
             ("s", "stop"),
+            ("space", "toggle fav"),
             ("f", "toggle fav list"),
             ("r", "reload"),
         ])
