@@ -145,7 +145,7 @@ impl App {
                     self.dirty = true;
                     true
                 }
-                IpcKey::Enter | IpcKey::Char('p') => {
+                IpcKey::Enter => {
                     if matches!(self.state.fetch_state, FetchState::Done)
                         && !self.state.results.is_empty()
                     {
@@ -403,7 +403,7 @@ fn hints() -> Vec<(String, String)> {
     vec![
         ("/".into(), "search".into()),
         ("c".into(), "clear".into()),
-        ("\u{21B5}/p".into(), "play".into()),
+        ("\u{21B5}".into(), "play".into()),
         ("s".into(), "stop".into()),
         ("esc".into(), "back".into()),
     ]
