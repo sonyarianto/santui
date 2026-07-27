@@ -38,6 +38,7 @@ struct App {
     mpv_thread: Option<thread::JoinHandle<()>>,
     audio_state: AudioState,
     play_surah_mode: bool,
+    playing_surah: Option<u16>,
     repeat_ayah: bool,
     play_on_load: bool,
     playlist_mode: bool,
@@ -71,6 +72,7 @@ impl Default for App {
             mpv_thread: None,
             audio_state: AudioState::Stopped,
             play_surah_mode: false,
+            playing_surah: None,
             repeat_ayah: false,
             play_on_load: false,
             playlist_mode: false,
@@ -450,13 +452,15 @@ impl App {
     fn handle_mpv_msg(&mut self, msg: MpvMsg) {
         match msg {
             MpvMsg::Started { surah, ayah } => {
+                self.playing_surah = Some(surah);
                 self.audio_state = AudioState::Playing { surah, ayah };
                 self.track_ayah(surah, ayah);
             }
             MpvMsg::AyahStarted { index } => {
                 self.selected_ayah = index;
                 self.adjust_scroll();
-                if let Some(surah) = self.current_surah_number() {
+                let surah = self.playing_surah.or_else(|| self.current_surah_number());
+                if let Some(surah) = surah {
                     let ayah = index as u16 + 1;
                     self.track_ayah(surah, ayah);
                     self.audio_state = AudioState::Playing { surah, ayah };
@@ -472,6 +476,7 @@ impl App {
         if self.playlist_mode {
             self.audio_state = AudioState::Stopped;
             self.play_surah_mode = false;
+            self.playing_surah = None;
             return;
         }
         if self.repeat_ayah {
@@ -480,6 +485,7 @@ impl App {
         }
         self.audio_state = AudioState::Stopped;
         self.play_surah_mode = false;
+        self.playing_surah = None;
     }
 
     fn start_fetch_surahs(&mut self) {
@@ -669,6 +675,7 @@ impl App {
         self.audio_state = AudioState::Stopped;
         self.play_surah_mode = false;
         self.playlist_mode = false;
+        self.playing_surah = None;
     }
 
     fn track_ayah(&mut self, surah: u16, ayah: u16) {
