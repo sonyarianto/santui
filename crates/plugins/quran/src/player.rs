@@ -15,6 +15,7 @@ pub const MPV_EVENT_FILE_LOADED: u32 = 8;
 pub const MPV_EVENT_PLAYBACK_RESTART: u32 = 21;
 pub const MPV_EVENT_PROPERTY_CHANGE: u32 = 22;
 pub const MPV_FORMAT_NODE_OBSERVE: u32 = 6;
+pub const MPV_FORMAT_INT64: u32 = 4;
 pub const MPV_FORMAT_STRING: u32 = 1;
 
 pub const MPV_END_FILE_REASON_EOF: u32 = 0;
@@ -303,6 +304,26 @@ impl Mpv {
         } else {
             Ok(Some(s))
         }
+    }
+
+    pub fn get_property_int64(
+        &self,
+        name: &str,
+    ) -> Result<Option<i64>, Box<dyn std::error::Error>> {
+        let mut val: i64 = 0;
+        let n = CString::new(name)?;
+        let rc = unsafe {
+            (self.funcs.get_property)(
+                self.handle,
+                n.as_ptr(),
+                MPV_FORMAT_INT64,
+                &mut val as *mut i64 as *mut std::ffi::c_void,
+            )
+        };
+        if rc < 0 {
+            return Ok(None);
+        }
+        Ok(Some(val))
     }
 
     pub fn wait_event_raw(&self, timeout: f64) -> Option<&MpvEvent> {
