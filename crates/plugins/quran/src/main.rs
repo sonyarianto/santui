@@ -763,9 +763,7 @@ fn mpv_thread(mut mpv: Mpv, rx_cmd: mpsc::Receiver<MpvCmd>, tx_msg: mpsc::Sender
                     });
                 }
             }
-            if ev.event_id == MPV_EVENT_END_FILE && !playlist.is_empty() {
-                playlist.clear();
-                playlist_replaced = false;
+            if ev.event_id == MPV_EVENT_END_FILE {
                 let _ = tx_msg.send(MpvMsg::EndFile);
             }
             if ev.event_id == MPV_EVENT_FILE_LOADED && !playlist.is_empty() {
