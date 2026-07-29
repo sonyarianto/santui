@@ -8,10 +8,12 @@ type MpvHandle = std::ffi::c_void;
 
 pub const MPV_EVENT_NONE: u32 = 0;
 pub const MPV_EVENT_SHUTDOWN: u32 = 1;
-pub const MPV_EVENT_FILE_LOADED: u32 = 6;
-pub const MPV_EVENT_PLAYBACK_RESTART: u32 = 18;
+pub const MPV_EVENT_LOG_MESSAGE: u32 = 2;
+pub const MPV_EVENT_START_FILE: u32 = 6;
+pub const MPV_EVENT_END_FILE: u32 = 7;
+pub const MPV_EVENT_FILE_LOADED: u32 = 8;
+pub const MPV_EVENT_PLAYBACK_RESTART: u32 = 21;
 pub const MPV_EVENT_PROPERTY_CHANGE: u32 = 22;
-pub const MPV_EVENT_END_FILE: u32 = 25;
 pub const MPV_FORMAT_NODE_OBSERVE: u32 = 6;
 pub const MPV_FORMAT_STRING: u32 = 1;
 
