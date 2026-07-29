@@ -766,6 +766,9 @@ fn mpv_thread(mut mpv: Mpv, rx_cmd: mpsc::Receiver<MpvCmd>, tx_msg: mpsc::Sender
                     }
                 }
             }
+            if ev.event_id == MPV_EVENT_END_FILE && playlist.is_empty() {
+                let _ = tx_msg.send(MpvMsg::EndFile);
+            }
         }
         while let Ok(cmd) = rx_cmd.try_recv() {
             match cmd {
