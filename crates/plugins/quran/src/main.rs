@@ -747,24 +747,24 @@ fn respond(app: &mut App, consumed: bool) {
 fn mpv_thread(mut mpv: Mpv, rx_cmd: mpsc::Receiver<MpvCmd>, tx_msg: mpsc::Sender<MpvMsg>) {
     let mut playlist: Vec<(String, u16, u16)> = Vec::new();
     let mut playlist_index: usize = 0;
+    let mut playlist_replaced = false;
     loop {
         if let Some(ev) = mpv.wait_event_raw(0.1) {
             if ev.event_id == MPV_EVENT_SHUTDOWN {
                 break;
             }
-        }
-        if let Ok(Some(pos)) = mpv.get_property_int64("playlist-pos") {
-            if !playlist.is_empty() && pos >= 0 {
-                let pos = pos as usize;
-                if pos != playlist_index && pos < playlist.len() {
-                    playlist_index = pos;
+            if ev.event_id == MPV_EVENT_START_FILE {
+                if playlist_replaced {
+                    playlist_replaced = false;
+                } else if !playlist.is_empty() && playlist_index + 1 < playlist.len() {
+                    playlist_index += 1;
                     let _ = tx_msg.send(MpvMsg::AyahStarted {
                         index: playlist_index,
                     });
+                    if playlist_index + 1 == playlist.len() {
+                        let _ = tx_msg.send(MpvMsg::EndFile);
+                    }
                 }
-            } else if !playlist.is_empty() && playlist_index > 0 && pos == -1 {
-                let _ = tx_msg.send(MpvMsg::EndFile);
-                playlist_index = 0;
             }
         }
         while let Ok(cmd) = rx_cmd.try_recv() {
@@ -772,6 +772,7 @@ fn mpv_thread(mut mpv: Mpv, rx_cmd: mpsc::Receiver<MpvCmd>, tx_msg: mpsc::Sender
                 MpvCmd::Load { url, surah, ayah } => {
                     playlist.clear();
                     playlist_index = 0;
+                    playlist_replaced = false;
                     match mpv.load_url(&url) {
                         Ok(()) => {
                             let _ = tx_msg.send(MpvMsg::Started { surah, ayah });
@@ -783,10 +784,9 @@ fn mpv_thread(mut mpv: Mpv, rx_cmd: mpsc::Receiver<MpvCmd>, tx_msg: mpsc::Sender
                 }
                 MpvCmd::PlaySurah { ayahs } => {
                     if let Some((first_url, surah, ayah)) = ayahs.first().cloned() {
-                        let _ = mpv.stop();
                         playlist = ayahs;
                         playlist_index = 0;
-                        let _ = tx_msg.send(MpvMsg::Started { surah, ayah });
+                        playlist_replaced = true;
                         if let Err(e) = mpv.load_url(&first_url) {
                             let _ = tx_msg.send(MpvMsg::Error(e.to_string()));
                             playlist.clear();
@@ -794,6 +794,7 @@ fn mpv_thread(mut mpv: Mpv, rx_cmd: mpsc::Receiver<MpvCmd>, tx_msg: mpsc::Sender
                         for (url, _, _) in &playlist[1..] {
                             let _ = mpv.command(&["loadfile", url, "append"]);
                         }
+                        let _ = tx_msg.send(MpvMsg::Started { surah, ayah });
                     }
                 }
                 MpvCmd::TogglePause => {
@@ -804,6 +805,7 @@ fn mpv_thread(mut mpv: Mpv, rx_cmd: mpsc::Receiver<MpvCmd>, tx_msg: mpsc::Sender
                 MpvCmd::Stop => {
                     playlist.clear();
                     playlist_index = 0;
+                    playlist_replaced = false;
                     if let Err(e) = mpv.stop() {
                         let _ = tx_msg.send(MpvMsg::Error(e.to_string()));
                     }
