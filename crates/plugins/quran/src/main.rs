@@ -754,20 +754,19 @@ fn mpv_thread(mut mpv: Mpv, rx_cmd: mpsc::Receiver<MpvCmd>, tx_msg: mpsc::Sender
                 break;
             }
             if ev.event_id == MPV_EVENT_START_FILE {
-                playlist_replaced = false;
-            }
-            if ev.event_id == MPV_EVENT_END_FILE {
                 if playlist_replaced {
                     playlist_replaced = false;
-                } else if playlist_index + 1 < playlist.len() {
+                } else if !playlist.is_empty() && playlist_index + 1 < playlist.len() {
                     playlist_index += 1;
                     let _ = tx_msg.send(MpvMsg::AyahStarted {
                         index: playlist_index,
                     });
-                } else {
-                    playlist.clear();
-                    let _ = tx_msg.send(MpvMsg::EndFile);
                 }
+            }
+            if ev.event_id == MPV_EVENT_END_FILE && !playlist.is_empty() {
+                playlist.clear();
+                playlist_replaced = false;
+                let _ = tx_msg.send(MpvMsg::EndFile);
             }
             if ev.event_id == MPV_EVENT_FILE_LOADED && !playlist.is_empty() {
                 let (_, surah, ayah) = &playlist[playlist_index];
