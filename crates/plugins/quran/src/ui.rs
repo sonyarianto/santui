@@ -286,7 +286,7 @@ fn ayah_row(ayah: &Ayah, mode: DisplayMode, width: usize) -> String {
         DisplayMode::Translation => ayah.translation.clone(),
         DisplayMode::Both => format!("{}  /  {}", ayah.arabic, ayah.translation),
     };
-    format!("{:>3}. {}", ayah.number, truncate(&text, width))
+    format!("{:>3}. {}", ayah.number, wrap_text(&text, width))
 }
 
 fn status_line(app: &App) -> String {
@@ -340,6 +340,41 @@ pub fn hints(
             ("esc".into(), "back".into()),
         ],
     }
+}
+
+fn wrap_text(text: &str, max_chars: usize) -> String {
+    if max_chars == 0 {
+        return String::new();
+    }
+    let chars: Vec<char> = text.chars().collect();
+    let len = chars.len();
+    if len <= max_chars {
+        return text.to_string();
+    }
+    let mut result = String::new();
+    let mut line_start = 0;
+    while line_start < len {
+        let line_end = (line_start + max_chars).min(len);
+        if line_end == len {
+            let s: String = chars[line_start..line_end].iter().collect();
+            result.push_str(&s);
+            break;
+        }
+        let segment = &chars[line_start..line_end];
+        if let Some(space_pos) = segment.iter().rposition(|&c| c == ' ') {
+            let split_at = line_start + space_pos;
+            let s: String = chars[line_start..split_at].iter().collect();
+            result.push_str(&s);
+            result.push('\n');
+            line_start = split_at + 1;
+        } else {
+            let s: String = segment.iter().collect();
+            result.push_str(&s);
+            result.push('\n');
+            line_start = line_end;
+        }
+    }
+    result
 }
 
 fn truncate(value: &str, max_chars: usize) -> String {
