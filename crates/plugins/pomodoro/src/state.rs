@@ -10,7 +10,7 @@ pub enum Phase {
 impl Phase {
     pub fn label(&self) -> &str {
         match self {
-            Phase::Work => "FOCUS",
+            Phase::Work => "WORK",
             Phase::ShortBreak => "SHORT BREAK",
             Phase::LongBreak => "LONG BREAK",
         }
@@ -441,7 +441,7 @@ mod tests {
 
     #[test]
     fn phase_label_returns_correct_labels() {
-        assert_eq!(Phase::Work.label(), "FOCUS");
+        assert_eq!(Phase::Work.label(), "WORK");
         assert_eq!(Phase::ShortBreak.label(), "SHORT BREAK");
         assert_eq!(Phase::LongBreak.label(), "LONG BREAK");
     }

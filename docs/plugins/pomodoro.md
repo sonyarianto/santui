@@ -58,14 +58,17 @@ App
 - Corrupt or missing JSON falls back to defaults without panicking
 
 ## Features
-- Full-window panel with title (same visual language as other stable plugins)
+- Full-window panel with title (same visual language as other stable plugins); content block vertically centered for any window height
 - Phase display with semantic colors: Work = `theme.accent`, Short Break = `theme.success`, Long Break = `theme.highlight`
-- Progress bar + countdown (MM:SS), session counter, and today's stats (sessions, focus time, break time)
+- Countdown (MM:SS) with a progress bar and a percentage column aligned right after the bar
+- Work-cycle session dots (`●` completed / `○` upcoming, one per work session in the cycle) — falls back to `n / N sessions` text when the cycle exceeds 12 dots
+- Today's stats line: sessions, focus time, and break time (break time was previously collected but never displayed)
+- Phase durations summary (`25m work · 5m break · 15m long`) at the bottom-left of the panel
 - `space` — start / pause / resume; on a Finished timer, advance to the next phase
 - `s` — skip the current phase (advances the timer)
 - `r` — reset the current session back to Idle at full duration
 - `,` — open settings dialog (dimmed overlay + border)
-- Settings dialog (6 rows, `↑↓`/`jk` navigate, `←→` adjust, `esc` close & save):
+- Settings dialog (6 rows, `↑↓`/`jk` navigate, `←→` adjust, `esc` close & save) with a muted description of the selected row at the bottom:
   1. Work duration (minutes, floor 1)
   2. Short break duration (minutes, floor 1)
   3. Long break duration (minutes, floor 1)

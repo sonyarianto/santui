@@ -217,8 +217,14 @@ impl App {
             ]
         } else {
             match &self.state.timer_state {
-                TimerState::Idle | TimerState::Paused => vec![
+                TimerState::Idle => vec![
                     ("space".into(), "start".into()),
+                    ("s".into(), "skip".into()),
+                    ("r".into(), "reset".into()),
+                    (",".into(), "settings".into()),
+                ],
+                TimerState::Paused => vec![
+                    ("space".into(), "resume".into()),
                     ("s".into(), "skip".into()),
                     ("r".into(), "reset".into()),
                     (",".into(), "settings".into()),
@@ -229,9 +235,11 @@ impl App {
                     ("r".into(), "reset".into()),
                     (",".into(), "settings".into()),
                 ],
-                TimerState::Finished => {
-                    vec![("space".into(), "next".into()), ("s".into(), "skip".into())]
-                }
+                TimerState::Finished => vec![
+                    ("space".into(), "next".into()),
+                    ("r".into(), "restart".into()),
+                    (",".into(), "settings".into()),
+                ],
             }
         }
     }

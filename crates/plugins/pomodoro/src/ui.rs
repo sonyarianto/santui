@@ -45,26 +45,18 @@ fn render_main(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         border_type: None,
     });
 
-    let session_text = format!(
-        "Session {} of {}",
-        state.sessions_done + 1,
-        state.data.config.long_break_after
-    );
-    cmds.push(RenderCmd::Text {
-        x: w.saturating_sub(session_text.len() as u16 + 3),
-        y: h - 3,
-        text: session_text,
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
+    let content_h: u16 = 9;
+    let top = if h >= content_h + 6 {
+        ((h - content_h) / 2).max(2)
+    } else {
+        2
+    };
 
     let phase_label = state.phase.label();
     let phase_x = (w / 2).saturating_sub(phase_label.len() as u16 / 2);
     cmds.push(RenderCmd::Text {
         x: phase_x,
-        y: 3,
+        y: top,
         text: phase_label.into(),
         fg: Some(color),
         bg: None,
@@ -90,7 +82,7 @@ fn render_main(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<
     let time_x = (w / 2).saturating_sub(time_text.len() as u16 / 2);
     cmds.push(RenderCmd::Text {
         x: time_x,
-        y: 5,
+        y: top + 2,
         text: time_text,
         fg: time_fg,
         bg: None,
@@ -98,13 +90,13 @@ fn render_main(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         modifiers: 0,
     });
 
-    let bar_w = w.saturating_sub(8);
+    let bar_w = w.saturating_sub(12).max(8);
     let bar_x = 4;
-    let bar_y = 7;
+    let bar_y = top + 4;
     let pct = state.progress_pct() as usize;
     let filled = (bar_w as f32 * (pct as f32 / 100.0)) as usize;
     let empty = bar_w as usize - filled;
-    let bar_text = format!("[{}{}]{:>4}%", "█".repeat(filled), "░".repeat(empty), pct);
+    let bar_text = format!("[{}{}]", "█".repeat(filled), "░".repeat(empty));
     cmds.push(RenderCmd::Text {
         x: bar_x,
         y: bar_y,
@@ -114,46 +106,124 @@ fn render_main(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         bold: false,
         modifiers: 0,
     });
+    let pct_text = format!("{:>3}%", pct);
+    if bar_x + bar_w + 2 + pct_text.len() as u16 <= w {
+        cmds.push(RenderCmd::Text {
+            x: bar_x + bar_w + 2,
+            y: bar_y,
+            text: pct_text,
+            fg: Some(theme.text_muted),
+            bg: None,
+            bold: false,
+            modifiers: 0,
+        });
+    }
 
-    let sessions_text = format!("{} sessions today", state.data.stats.sessions_completed);
-    let sessions_x = (w / 2).saturating_sub(sessions_text.len() as u16 / 2);
-    cmds.push(RenderCmd::Text {
-        x: sessions_x,
-        y: 9,
-        text: sessions_text,
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
+    let dots_y = top + 6;
+    if dots_y + 2 < h {
+        let total = state.data.config.long_break_after;
+        let done = state.sessions_done.min(total);
+        if total > 12 {
+            let dots_text = format!("{done} / {total} sessions");
+            let dots_x = (w / 2).saturating_sub(dots_text.len() as u16 / 2);
+            cmds.push(RenderCmd::Text {
+                x: dots_x,
+                y: dots_y,
+                text: dots_text,
+                fg: Some(theme.text_muted),
+                bg: None,
+                bold: false,
+                modifiers: 0,
+            });
+        } else {
+            let filled_dots = "● ".repeat(done as usize);
+            let hollow_dots = "○ ".repeat((total - done) as usize);
+            let dots_len = filled_dots.trim_end().chars().count() as u16
+                + if total - done > 0 { 1 } else { 0 }
+                + hollow_dots.trim_end().chars().count() as u16;
+            let dots_x = (w / 2).saturating_sub(dots_len / 2);
+            if done > 0 {
+                cmds.push(RenderCmd::Text {
+                    x: dots_x,
+                    y: dots_y,
+                    text: filled_dots.trim_end().to_string(),
+                    fg: Some(color),
+                    bg: None,
+                    bold: false,
+                    modifiers: 0,
+                });
+            }
+            if total - done > 0 {
+                cmds.push(RenderCmd::Text {
+                    x: dots_x + filled_dots.chars().count() as u16,
+                    y: dots_y,
+                    text: hollow_dots.trim_end().to_string(),
+                    fg: Some(theme.border),
+                    bg: None,
+                    bold: false,
+                    modifiers: 0,
+                });
+            }
+        }
+    }
 
-    let focus_min = state.data.stats.total_focus_secs / 60;
-    let focus_h = focus_min / 60;
-    let focus_m = focus_min % 60;
-    let focus_text = if focus_h > 0 {
-        format!("{}h {:02}m focused", focus_h, focus_m)
-    } else {
-        format!("{}m focused", focus_m)
-    };
-    let focus_x = (w / 2).saturating_sub(focus_text.len() as u16 / 2);
-    cmds.push(RenderCmd::Text {
-        x: focus_x,
-        y: 10,
-        text: focus_text,
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
+    let stats_y = top + 8;
+    if stats_y + 1 < h {
+        let stats_text = format!(
+            "Today: {} sessions · {} focused · {} break",
+            state.data.stats.sessions_completed,
+            fmt_minutes(state.data.stats.total_focus_secs),
+            fmt_minutes(state.data.stats.total_break_secs)
+        );
+        let stats_x = (w / 2).saturating_sub(stats_text.len() as u16 / 2);
+        cmds.push(RenderCmd::Text {
+            x: stats_x,
+            y: stats_y,
+            text: stats_text,
+            fg: Some(theme.text_muted),
+            bg: None,
+            bold: false,
+            modifiers: 0,
+        });
+    }
+
+    if h >= 14 {
+        let cfg_text = format!(
+            "{}m work · {}m break · {}m long",
+            state.data.config.work_secs / 60,
+            state.data.config.short_break_secs / 60,
+            state.data.config.long_break_secs / 60
+        );
+        cmds.push(RenderCmd::Text {
+            x: 2,
+            y: h - 3,
+            text: cfg_text,
+            fg: Some(theme.text_muted),
+            bg: None,
+            bold: false,
+            modifiers: 0,
+        });
+    }
 
     cmds
+}
+
+fn fmt_minutes(secs: u64) -> String {
+    let total_min = secs / 60;
+    let hours = total_min / 60;
+    let mins = total_min % 60;
+    if hours > 0 {
+        format!("{hours}h {mins:02}m")
+    } else {
+        format!("{mins}m")
+    }
 }
 
 fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<RenderCmd> {
     let mut cmds = Vec::new();
 
     let popup_w = 46;
-    let popup_h = 11;
+    let popup_h = 12;
     let popup_x = (w.saturating_sub(popup_w)) / 2;
     let popup_y = (h.saturating_sub(popup_h)) / 2;
 
@@ -173,26 +243,22 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
         border_type: None,
     });
 
-    let fields: [(&str, String, bool); 6] = [
+    let fields: [(&str, String); 6] = [
         (
             "Work duration",
             format!("{} min", state.data.config.work_secs / 60),
-            true,
         ),
         (
             "Short break",
             format!("{} min", state.data.config.short_break_secs / 60),
-            true,
         ),
         (
             "Long break",
             format!("{} min", state.data.config.long_break_secs / 60),
-            true,
         ),
         (
             "Long break after",
             format!("{} sessions", state.data.config.long_break_after),
-            true,
         ),
         (
             "Auto-start breaks",
@@ -201,7 +267,6 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
             } else {
                 "No".into()
             },
-            false,
         ),
         (
             "Auto-start work",
@@ -210,11 +275,19 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
             } else {
                 "No".into()
             },
-            false,
         ),
     ];
 
-    for (i, (label, value, _is_numeric)) in fields.iter().enumerate() {
+    let descs: [&str; 6] = [
+        "Focus session length",
+        "Rest between focus sessions",
+        "Longer rest after every cycle",
+        "Sessions before the long break",
+        "Start breaks when work ends",
+        "Start work when a break ends",
+    ];
+
+    for (i, (label, value)) in fields.iter().enumerate() {
         let y = popup_y + 1 + i as u16;
         let is_selected = i == state.settings_cursor;
 
@@ -262,6 +335,17 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
         });
     }
 
+    let desc = descs[state.settings_cursor.min(5)];
+    cmds.push(RenderCmd::Text {
+        x: popup_x + 2,
+        y: popup_y + 8,
+        text: desc.to_string(),
+        fg: Some(theme.text_muted),
+        bg: None,
+        bold: false,
+        modifiers: 0,
+    });
+
     cmds
 }
 
@@ -303,7 +387,7 @@ mod tests {
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_label = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("FOCUS")));
+            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("WORK")));
         assert!(has_label);
     }
 
@@ -318,24 +402,58 @@ mod tests {
     }
 
     #[test]
-    fn renders_progress_bar() {
+    fn renders_progress_bar_and_percentage() {
         let state = test_state();
         let cmds = render_ui(&state, &test_theme(), 80, 24);
-        let has_bar = cmds.iter().any(|c| {
-            matches!(c, RenderCmd::Text { ref text, .. } if text.contains("%")
-                && text.contains("█"))
-        });
+        let has_bar = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("█")));
+        let has_pct = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("%")));
         assert!(has_bar);
+        assert!(has_pct);
     }
 
     #[test]
     fn renders_session_count() {
         let state = test_state();
         let cmds = render_ui(&state, &test_theme(), 80, 24);
-        let has_count = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("3 sessions today")),
-        );
+        let has_count = cmds.iter().any(|c| {
+            matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Today:")
+                && text.contains("3 sessions"))
+        });
         assert!(has_count);
+    }
+
+    #[test]
+    fn renders_break_time() {
+        let state = test_state();
+        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let has_break = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("30m break")));
+        assert!(has_break);
+    }
+
+    #[test]
+    fn renders_config_summary() {
+        let state = test_state();
+        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let has_cfg = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("25m work")));
+        assert!(has_cfg);
+    }
+
+    #[test]
+    fn renders_session_dots() {
+        let state = test_state();
+        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let has_dots = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("●")));
+        assert!(has_dots);
     }
 
     #[test]
