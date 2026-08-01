@@ -222,47 +222,27 @@ fn fmt_minutes(secs: u64) -> String {
 fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<RenderCmd> {
     let mut cmds = Vec::new();
 
-    let popup_w = 46;
-    let popup_h = 12;
-    let popup_x = (w.saturating_sub(popup_w)) / 2;
-    let popup_y = (h.saturating_sub(popup_h)) / 2;
+    let r = santui_ipc::ui::palette_rect(w, h, 9);
 
-    santui_ipc::ui::popup_backdrop(&mut cmds, theme, popup_x, popup_y, popup_w, popup_h);
+    santui_ipc::ui::palette_bg(&mut cmds, theme, &r);
+    santui_ipc::ui::palette_title(&mut cmds, theme, &r, 0, "Settings");
 
-    cmds.push(RenderCmd::Border {
-        x: popup_x,
-        y: popup_y,
-        w: popup_w,
-        h: popup_h,
-        fg: theme.border,
-        bg: None,
-        borders: BORDER_ALL,
-        title: Some("Settings".into()),
-        title_fg: Some(theme.border),
-        title_dash_fg: Some(theme.border),
-        border_type: None,
-    });
-
-    let fields: [(&str, String, Option<bool>); 6] = [
+    let fields: [(&str, String); 6] = [
         (
             "Work duration",
             format!("{} min", state.data.config.work_secs / 60),
-            None,
         ),
         (
             "Short break",
             format!("{} min", state.data.config.short_break_secs / 60),
-            None,
         ),
         (
             "Long break",
             format!("{} min", state.data.config.long_break_secs / 60),
-            None,
         ),
         (
             "Long break after",
             format!("{} sessions", state.data.config.long_break_after),
-            None,
         ),
         (
             "Auto-start breaks",
@@ -271,7 +251,6 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
             } else {
                 "No".into()
             },
-            Some(state.data.config.auto_start_breaks),
         ),
         (
             "Auto-start work",
@@ -280,7 +259,6 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
             } else {
                 "No".into()
             },
-            Some(state.data.config.auto_start_work),
         ),
     ];
 
@@ -293,66 +271,36 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
         "Start work when a break ends",
     ];
 
-    let marker_x = popup_x + 2;
-    let label_x = popup_x + 4;
-    let value_x = popup_x + 24;
-
-    for (i, (label, value, is_on)) in fields.iter().enumerate() {
-        let y = popup_y + 1 + i as u16;
+    for (i, (label, value)) in fields.iter().enumerate() {
+        let row = format!("{:<20}{value}", format!("{label}:"));
+        let row = format!("{:<iw$}", row, iw = r.iw as usize);
         let is_selected = i == state.settings_cursor;
-
         cmds.push(RenderCmd::Text {
-            x: marker_x,
-            y,
-            text: if is_selected {
-                "▶".into()
-            } else {
-                " ".into()
-            },
-            fg: Some(theme.accent),
-            bg: None,
-            bold: is_selected,
-            modifiers: 0,
-        });
-
-        cmds.push(RenderCmd::Text {
-            x: label_x,
-            y,
-            text: format!("{label}:"),
+            x: r.ix,
+            y: r.y + 1 + i as u16,
+            text: row,
             fg: Some(if is_selected {
-                theme.text
+                theme.inverted_text
             } else {
-                theme.text_muted
+                theme.text
             }),
-            bg: None,
+            bg: Some(if is_selected {
+                theme.highlight
+            } else {
+                theme.background_panel
+            }),
             bold: is_selected,
-            modifiers: 0,
-        });
-
-        let value_fg = match is_on {
-            Some(true) => theme.success,
-            Some(false) => theme.text_muted,
-            None if is_selected => theme.accent,
-            None => theme.text,
-        };
-        cmds.push(RenderCmd::Text {
-            x: value_x,
-            y,
-            text: value.clone(),
-            fg: Some(value_fg),
-            bg: None,
-            bold: is_selected && is_on.is_none(),
             modifiers: 0,
         });
     }
 
     let desc = descs[state.settings_cursor.min(5)];
     cmds.push(RenderCmd::Text {
-        x: popup_x + 2,
-        y: popup_y + 8,
-        text: desc.to_string(),
+        x: r.ix,
+        y: r.y + 8,
+        text: format!("{:<iw$}", desc, iw = r.iw as usize),
         fg: Some(theme.text_muted),
-        bg: None,
+        bg: Some(theme.background_panel),
         bold: false,
         modifiers: 0,
     });
@@ -494,9 +442,9 @@ mod tests {
         let mut state = test_state();
         state.show_settings = true;
         let cmds = render_ui(&state, &test_theme(), 80, 24);
-        let has_overlay = cmds.iter().any(|c| {
-            matches!(c, RenderCmd::Border { ref title, .. } if title.as_deref() == Some("Settings"))
-        });
+        let has_overlay = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Settings")));
         assert!(has_overlay);
     }
 
