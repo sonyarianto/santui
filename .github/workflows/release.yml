@@ -78,9 +78,10 @@ jobs:
         shell: bash
         run: |
           STABLE=""
-          for id in $(jq -r '.[] | select(.status == "stable") | .id' plugins-manifest.json); do
-            STABLE="$STABLE -p santui-$id"
-          done
+          while IFS= read -r id; do
+            id="${id//$'\r'/}"
+            [ -n "$id" ] && STABLE="$STABLE -p santui-$id"
+          done < <(jq -r '.[] | select(.status == "stable") | .id' plugins-manifest.json)
           PKGS="-p santui -p santui-dev-setup -p santui-registry-plugin -p santui-log-viewer $STABLE"
           if [ "${{ matrix.cross_compile }}" = "true" ]; then
             cargo build --release --target ${{ matrix.target }} $PKGS
@@ -260,7 +261,11 @@ jobs:
           echo "=== Checking for empty files ==="
           has_empty=0
           # Generate glob patterns from plugins-manifest.json (source of truth for all plugin IDs)
-          plugin_ids=$(jq -r '.[] | "\(.id)-*"' ../../plugins-manifest.json | tr '\n' ' ')
+          plugin_ids=""
+          while IFS= read -r id; do
+            id="${id//$'\r'/}"
+            [ -n "$id" ] && plugin_ids="$plugin_ids $id-*"
+          done < <(jq -r '.[] | .id' ../../plugins-manifest.json)
           for f in santui-* plugins-*.json $plugin_ids; do
             if [ -f "$f" ]; then
               size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null)
