@@ -17,6 +17,32 @@ pub enum Screen {
     Rename(usize),
 }
 
+/// Date style shown on clock cards.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum DateFormat {
+    /// `Sat, 1 Aug 2026`
+    DayFirst,
+    /// `Sat, Aug 1 2026`
+    #[default]
+    MonthFirst,
+}
+
+impl DateFormat {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            DateFormat::DayFirst => "day",
+            DateFormat::MonthFirst => "month",
+        }
+    }
+
+    pub fn from_str(s: &str) -> DateFormat {
+        match s {
+            "day" => DateFormat::DayFirst,
+            _ => DateFormat::MonthFirst,
+        }
+    }
+}
+
 pub struct WorldTimeState {
     pub clocks: Vec<ClockEntry>,
     pub selected: usize,
@@ -28,6 +54,7 @@ pub struct WorldTimeState {
     pub tick_counter: u64,
     pub rename_buf: String,
     pub last_second: u32,
+    pub date_format: DateFormat,
 }
 
 impl Default for WorldTimeState {
@@ -43,6 +70,7 @@ impl Default for WorldTimeState {
             tick_counter: 0,
             rename_buf: String::new(),
             last_second: 61,
+            date_format: DateFormat::default(),
         }
     }
 }
@@ -71,6 +99,13 @@ impl WorldTimeState {
         } else {
             self.selected = 0;
         }
+    }
+
+    pub fn toggle_date_format(&mut self) {
+        self.date_format = match self.date_format {
+            DateFormat::DayFirst => DateFormat::MonthFirst,
+            DateFormat::MonthFirst => DateFormat::DayFirst,
+        };
     }
 
     pub fn serialize_clocks(&self) -> String {
@@ -171,5 +206,30 @@ mod tests {
         let clocks = WorldTimeState::default_clocks();
         assert!(!clocks.is_empty());
         assert_eq!(clocks[0].tz, chrono_tz::Tz::UTC);
+    }
+
+    #[test]
+    fn default_date_format_is_month_first() {
+        let s = WorldTimeState::default();
+        assert_eq!(s.date_format, DateFormat::MonthFirst);
+        assert_eq!(DateFormat::MonthFirst.as_str(), "month");
+    }
+
+    #[test]
+    fn toggle_date_format_switches_both_ways() {
+        let mut s = WorldTimeState::default();
+        s.toggle_date_format();
+        assert_eq!(s.date_format, DateFormat::DayFirst);
+        assert_eq!(DateFormat::DayFirst.as_str(), "day");
+        s.toggle_date_format();
+        assert_eq!(s.date_format, DateFormat::MonthFirst);
+    }
+
+    #[test]
+    fn date_format_from_str_falls_back_to_default() {
+        assert_eq!(DateFormat::from_str("day"), DateFormat::DayFirst);
+        assert_eq!(DateFormat::from_str("month"), DateFormat::MonthFirst);
+        assert_eq!(DateFormat::from_str("garbage"), DateFormat::MonthFirst);
+        assert_eq!(DateFormat::from_str(""), DateFormat::MonthFirst);
     }
 }

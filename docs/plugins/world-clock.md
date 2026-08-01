@@ -29,14 +29,15 @@ ui.rs        → rendering (grid cards, search palette, rename popup)
 App
 ├── state: WorldTimeState
 │   ├── clocks: Vec<ClockEntry>      — tz + label (persisted)
+│   ├── date_format: DateFormat      — DayFirst / MonthFirst (persisted)
 │   ├── selected: usize              — grid cursor
 │   ├── screen: Screen               — Grid / Search / Rename(idx)
 │   ├── search_query / search_results / search_cursor / search_scroll
-│   ├── search_cursor_visible        — blink state
+│   ├── tick_counter                 — blink state (search + rename cursors)
 │   ├── rename_buf
 │   └── last_second                  — tick guard for 1s re-render
 ├── theme / area / dirty / cached_commands
-└── pending_request                  — PluginRequest (DbGet/DbSet "clocks")
+└── pending_request                  — PluginRequest (DbGet/DbSet "clocks" / "date_format")
 ```
 
 ### Thread Model
@@ -47,10 +48,12 @@ App
 - Search cursor blink uses shared `ui::blink_cursor(tick_counter)`; re-rendered every 3rd tick while in Search or Rename screen (both have a blinking cursor)
 
 ### Preferences Persistence
-- Key: `clocks`
-- Loaded on init via `PluginRequest::DbGet { key: "clocks" }`
-- Stored via `PluginRequest::DbSet` on add/delete/rename
+- Key: `clocks` — tz + label list
+- Key: `date_format` — `"day"` (Sat, 1 Aug 2026) or `"month"` (Sat, Aug 1 2026, default)
+- Loaded on init via `PluginRequest::DbGet { key: "clocks" }`, then chained `DbGet "date_format"` after clocks arrive (one request in flight at a time)
+- Stored via `PluginRequest::DbSet` on add/delete/rename (clocks) and on `t` (date format)
 - First run (`None` response) → default clocks (UTC + first zone matching the local offset), then saved
+- Invalid/missing `date_format` value falls back to month-first without panicking
 
 ## Features
 - Full-window panel with title (same visual language as other stable plugins), cards inside at `x + 2, y + 1`
@@ -59,6 +62,7 @@ App
 - Search timezones (`a` key) — multi-token matching over city name + IANA name, case-insensitive, 60 curated zones
 - Rename clocks (`r` key) — trimmed input, empty input cancels; `Ctrl+R` restores the default city name of the timezone
 - Delete clocks (`d` key) — selection clamps after removal
+- Toggle card date format (`t` key) — day-first ↔ month-first, persisted per user
 - Duplicate timezone protection on add
 - Preferences persisted across sessions via central DB
 

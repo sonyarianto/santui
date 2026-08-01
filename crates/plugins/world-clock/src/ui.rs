@@ -3,7 +3,7 @@ use chrono_tz::{OffsetComponents, Tz};
 use santui_ipc::protocol::{RenderCmd, ThemeData, BORDER_ALL};
 use santui_ipc::ui;
 
-use crate::state::{Screen, WorldTimeState};
+use crate::state::{DateFormat, Screen, WorldTimeState};
 
 fn fmt_offset(tz: Tz) -> String {
     let dt = chrono::Utc::now().with_timezone(&tz);
@@ -120,7 +120,10 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
         let time_str = format!("{:02}:{:02}:{:02}", dt.hour(), dt.minute(), dt.second());
         ui::push_text(&mut cmds, cx + 2, cy + 3, time_str, theme.accent, true);
 
-        let date_str = dt.format("%a, %b %-d %Y").to_string();
+        let date_str = match state.date_format {
+            DateFormat::MonthFirst => dt.format("%a, %b %-d %Y").to_string(),
+            DateFormat::DayFirst => dt.format("%a, %-d %b %Y").to_string(),
+        };
         ui::push_text(&mut cmds, cx + 2, cy + 5, date_str, theme.text_muted, false);
         if dst_active {
             ui::push_text(
@@ -259,7 +262,7 @@ use crate::timezones;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::{Screen, WorldTimeState};
+    use crate::state::{DateFormat, Screen, WorldTimeState};
 
     fn test_theme() -> ThemeData {
         ThemeData {
@@ -378,6 +381,33 @@ mod tests {
                 assert_eq!(title.as_deref(), None);
             }
         }
+    }
+
+    #[test]
+    fn grid_date_uses_month_first_by_default() {
+        let s = state_with_clocks();
+        let cmds = render_ui(&s, &test_theme(), 120, 30);
+        let now = chrono::Utc::now().with_timezone(&s.clocks[0].tz);
+        let expect = now.format("%a, %b %-d %Y").to_string();
+        assert!(
+            cmds.iter()
+                .any(|c| matches!(c, RenderCmd::Text { text, .. } if text == &expect)),
+            "expected month-first date {expect:?}"
+        );
+    }
+
+    #[test]
+    fn grid_date_uses_day_first_when_toggled() {
+        let mut s = state_with_clocks();
+        s.date_format = DateFormat::DayFirst;
+        let cmds = render_ui(&s, &test_theme(), 120, 30);
+        let now = chrono::Utc::now().with_timezone(&s.clocks[0].tz);
+        let expect = now.format("%a, %-d %b %Y").to_string();
+        assert!(
+            cmds.iter()
+                .any(|c| matches!(c, RenderCmd::Text { text, .. } if text == &expect)),
+            "expected day-first date {expect:?}"
+        );
     }
 
     #[test]

@@ -8,7 +8,7 @@ use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, IpcKeyModifiers, PluginRequest, RenderCmd, ThemeData,
 };
 
-use state::{Screen, WorldTimeState};
+use state::{DateFormat, Screen, WorldTimeState};
 use ui::render_ui;
 
 struct App {
@@ -114,6 +114,12 @@ impl App {
                 self.state.screen = Screen::Search;
                 self.state.search_query.clear();
                 self.state.apply_search();
+                self.dirty = true;
+                true
+            }
+            IpcKey::Char('t') if !modifiers.ctrl => {
+                self.state.toggle_date_format();
+                self.save_date_format();
                 self.dirty = true;
                 true
             }
@@ -280,16 +286,27 @@ impl App {
     }
 
     fn handle_db_value(&mut self, key: &str, value: Option<String>) {
-        if key == "clocks" {
-            match value {
-                Some(json) => self.state.load_clocks(&json),
+        match key {
+            "clocks" => match value {
+                Some(json) => {
+                    self.state.load_clocks(&json);
+                    self.pending_request = Some(PluginRequest::DbGet {
+                        key: "date_format".into(),
+                    });
+                }
                 None => {
                     self.state.clocks = WorldTimeState::default_clocks();
                     self.save();
                 }
+            },
+            "date_format" => {
+                if let Some(v) = value {
+                    self.state.date_format = DateFormat::from_str(&v);
+                }
             }
-            self.dirty = true;
+            _ => {}
         }
+        self.dirty = true;
     }
 
     fn save(&mut self) {
@@ -300,12 +317,20 @@ impl App {
         });
     }
 
+    fn save_date_format(&mut self) {
+        self.pending_request = Some(PluginRequest::DbSet {
+            key: "date_format".into(),
+            value: self.state.date_format.as_str().into(),
+        });
+    }
+
     fn status_hints(&self) -> Vec<(String, String)> {
         match &self.state.screen {
             Screen::Grid => {
                 let mut hints = vec![
                     ("↑↓←→".into(), "navigate".into()),
                     ("a".into(), "add".into()),
+                    ("t".into(), "date format".into()),
                 ];
                 if !self.state.clocks.is_empty() {
                     hints.push(("d".into(), "delete".into()));
@@ -427,7 +452,7 @@ fn main() {
 mod tests {
     use super::*;
     use chrono_tz::Tz;
-    use state::Screen;
+    use state::{DateFormat, Screen};
 
     fn base_app() -> App {
         App::default()
@@ -493,6 +518,43 @@ mod tests {
         let mut app = empty_app();
         assert!(app.handle_key(IpcKey::Char('d'), IpcKeyModifiers::default()));
         assert!(app.state.clocks.is_empty());
+    }
+
+    #[test]
+    fn handle_key_t_toggles_date_format_and_saves() {
+        let mut app = base_app();
+        assert_eq!(app.state.date_format, DateFormat::MonthFirst);
+        assert!(app.handle_key(IpcKey::Char('t'), IpcKeyModifiers::default()));
+        assert_eq!(app.state.date_format, DateFormat::DayFirst);
+        assert!(matches!(
+            &app.pending_request,
+            Some(PluginRequest::DbSet { key, value })
+                if key == "date_format" && value == "day"
+        ));
+        assert!(app.handle_key(IpcKey::Char('t'), IpcKeyModifiers::default()));
+        assert_eq!(app.state.date_format, DateFormat::MonthFirst);
+    }
+
+    #[test]
+    fn handle_db_value_clocks_requests_date_format_next() {
+        let mut app = base_app();
+        let json = r#"[{"tz":"Europe/London","label":"London"}]"#;
+        app.handle_db_value("clocks", Some(json.into()));
+        assert!(matches!(
+            &app.pending_request,
+            Some(PluginRequest::DbGet { key }) if key == "date_format"
+        ));
+    }
+
+    #[test]
+    fn handle_db_value_date_format_loads_value() {
+        let mut app = base_app();
+        app.handle_db_value("date_format", Some("day".into()));
+        assert_eq!(app.state.date_format, DateFormat::DayFirst);
+        app.handle_db_value("date_format", Some("bogus".into()));
+        assert_eq!(app.state.date_format, DateFormat::MonthFirst);
+        app.handle_db_value("date_format", None);
+        assert_eq!(app.state.date_format, DateFormat::MonthFirst);
     }
 
     #[test]
