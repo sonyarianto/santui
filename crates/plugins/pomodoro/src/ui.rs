@@ -222,7 +222,7 @@ fn fmt_minutes(secs: u64) -> String {
 fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<RenderCmd> {
     let mut cmds = Vec::new();
 
-    const TITLE_H: u16 = 5;
+    const TITLE_H: u16 = 3;
     const FIELD_COUNT: u16 = 6;
     let popup_h = (TITLE_H + FIELD_COUNT + 4).min(h);
     let r = santui_ipc::ui::palette_rect(w, h, popup_h);
