@@ -183,15 +183,6 @@ pub fn render_ui(
             modifiers: 0,
         });
     } else {
-        cmds.push(RenderCmd::Text {
-            x: 2,
-            y: 1,
-            text: "Search: ".into(),
-            fg: Some(theme.text_muted),
-            bg: None,
-            bold: false,
-            modifiers: 0,
-        });
         let fav_count = state.favorites_count();
         let top_text = if state.show_favorites_only {
             format!("♥ {} favorites", state.filtered.len())
