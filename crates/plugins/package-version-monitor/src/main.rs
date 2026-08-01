@@ -681,13 +681,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         Screen::AddProject { field } => render_add(app, &mut cmds, &theme, h, *field),
         Screen::ConfirmRemove(_) => {
             render_list(app, &mut cmds, &theme, w, h);
-            cmds.push(RenderCmd::Dim {
-                x: 0,
-                y: 0,
-                w,
-                h,
-                bg: theme.background_overlay,
-            });
+            santui_ipc::ui::dim_overlay(&mut cmds, &theme);
             push_text(
                 &mut cmds,
                 w / 2 - 20,

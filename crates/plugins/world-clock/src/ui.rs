@@ -30,7 +30,7 @@ pub fn render_ui(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> V
     match &state.screen {
         Screen::Grid => render_grid(state, theme, w, h),
         Screen::Search => render_search(state, theme, w, h),
-        Screen::Rename(idx) => render_rename(state, theme, w, h, *idx),
+        Screen::Rename(idx) => render_rename(state, theme, w, *idx),
     }
 }
 
@@ -222,13 +222,7 @@ fn render_search(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> V
     cmds
 }
 
-fn render_rename(
-    state: &WorldTimeState,
-    theme: &ThemeData,
-    w: u16,
-    h: u16,
-    idx: usize,
-) -> Vec<RenderCmd> {
+fn render_rename(state: &WorldTimeState, theme: &ThemeData, w: u16, idx: usize) -> Vec<RenderCmd> {
     let mut cmds = Vec::new();
 
     let popup_w = 30u16;
@@ -242,13 +236,7 @@ fn render_rename(
     let popup_x = card_x.min(w.saturating_sub(popup_w));
     let popup_y = card_y;
 
-    cmds.push(RenderCmd::Dim {
-        x: 0,
-        y: 0,
-        w,
-        h,
-        bg: theme.background_overlay,
-    });
+    santui_ipc::ui::dim_overlay(&mut cmds, theme);
 
     cmds.push(RenderCmd::Border {
         x: popup_x,

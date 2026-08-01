@@ -157,13 +157,7 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
     let popup_x = (w.saturating_sub(popup_w)) / 2;
     let popup_y = (h.saturating_sub(popup_h)) / 2;
 
-    cmds.push(RenderCmd::Dim {
-        x: 0,
-        y: 0,
-        w: 4096,
-        h: 4096,
-        bg: theme.background_overlay,
-    });
+    santui_ipc::ui::dim_overlay(&mut cmds, theme);
 
     cmds.push(RenderCmd::Border {
         x: popup_x,

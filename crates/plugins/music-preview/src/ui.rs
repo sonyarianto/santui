@@ -1,4 +1,5 @@
 use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData, BORDER_ALL};
+use santui_ipc::ui;
 
 use crate::state::{FetchState, MusicState};
 
@@ -24,11 +25,7 @@ pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
         border_type: None,
     });
 
-    let cursor = if state.tick_counter % 6 < 3 {
-        '█'
-    } else {
-        ' '
-    };
+    let cursor = ui::blink_cursor(state.tick_counter);
     let inner_w = w.saturating_sub(4) as usize;
 
     let count_label = if state.results.is_empty() {
@@ -57,7 +54,7 @@ pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
             modifiers: 0,
         });
         if !count_label.is_empty() {
-            let right_x = w.saturating_sub(2u16.saturating_add(count_label.len() as u16));
+            let right_x = ui::right_align_x(w, &count_label);
             cmds.push(RenderCmd::Text {
                 x: right_x,
                 y: 1,
@@ -86,7 +83,7 @@ pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
             modifiers: 0,
         });
         if !count_label.is_empty() {
-            let right_x = w.saturating_sub(2u16.saturating_add(count_label.len() as u16));
+            let right_x = ui::right_align_x(w, &count_label);
             cmds.push(RenderCmd::Text {
                 x: right_x,
                 y: 1,
@@ -197,19 +194,15 @@ fn render_table(state: &MusicState, theme: &ThemeData, w: u16, h: u16, cmds: &mu
                 .unwrap_or_else(|| "--:--".into())
         };
         rows.push(vec![
-            santui_ipc::ui::truncate(&track.track_name, title_w),
-            santui_ipc::ui::truncate(&track.artist_name, artist_w),
-            santui_ipc::ui::truncate(&track.collection_name, album_w),
-            santui_ipc::ui::truncate(&track.primary_genre_name, genre_w),
+            ui::truncate(&track.track_name, title_w),
+            ui::truncate(&track.artist_name, artist_w),
+            ui::truncate(&track.collection_name, album_w),
+            ui::truncate(&track.primary_genre_name, genre_w),
             duration,
         ]);
     }
 
-    let vis_selected = if state.selected >= scroll && state.selected < scroll + visible_count {
-        Some(state.selected - scroll)
-    } else {
-        None
-    };
+    let vis_selected = ui::vis_selected(state.selected, scroll, visible_count);
 
     let vis_now_playing = state.now_playing.and_then(|np| {
         if np >= scroll && np < scroll + visible_count {
@@ -219,6 +212,7 @@ fn render_table(state: &MusicState, theme: &ThemeData, w: u16, h: u16, cmds: &mu
         }
     });
 
+    let ts = ui::table_styles(theme);
     cmds.push(RenderCmd::Table {
         x: 2,
         y: table_top,
@@ -231,12 +225,7 @@ fn render_table(state: &MusicState, theme: &ThemeData, w: u16, h: u16, cmds: &mu
             "Genre".into(),
             "Duration".into(),
         ],
-        header_style: TextStyle {
-            fg: Some(theme.text_muted),
-            bg: None,
-            bold: true,
-            modifiers: 0,
-        },
+        header_style: ts.header,
         rows,
         column_widths: vec![
             title_w as u16,
@@ -246,18 +235,8 @@ fn render_table(state: &MusicState, theme: &ThemeData, w: u16, h: u16, cmds: &mu
             dur_w as u16,
         ],
         selected: vis_selected,
-        style: TextStyle {
-            fg: Some(theme.text),
-            bg: None,
-            bold: false,
-            modifiers: 0,
-        },
-        highlight_style: TextStyle {
-            fg: Some(theme.inverted_text),
-            bg: Some(theme.highlight),
-            bold: true,
-            modifiers: 0,
-        },
+        style: ts.body,
+        highlight_style: ts.highlight,
         current_row: vis_now_playing,
         current_style: Some(TextStyle {
             fg: Some(theme.accent),

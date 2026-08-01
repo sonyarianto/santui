@@ -552,13 +552,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         Screen::Edit { field, .. } => render_edit(app, &mut cmds, &theme, w, h, *field),
         Screen::ConfirmDelete(_) => {
             render_list(app, &mut cmds, &theme, w, h);
-            cmds.push(RenderCmd::Dim {
-                x: 0,
-                y: 0,
-                w,
-                h,
-                bg: theme.background_overlay,
-            });
+            santui_ipc::ui::dim_overlay(&mut cmds, &theme);
             cmds.push(RenderCmd::Border {
                 x: w / 2 - 24,
                 y: h / 2 - 2,

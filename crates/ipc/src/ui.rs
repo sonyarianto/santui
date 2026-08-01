@@ -1,4 +1,4 @@
-use crate::protocol::{RenderCmd, ThemeData, BORDER_ALL};
+use crate::protocol::{RenderCmd, TextStyle, ThemeData, BORDER_ALL};
 
 // ── Palette component (Ctrl+P style overlay) ──
 
@@ -36,20 +36,7 @@ pub fn palette_rect(area_w: u16, area_h: u16, content_rows: u16) -> PaletteRect 
 
 /// Draw the palette backdrop (full overlay) and background rect.
 pub fn palette_bg(cmds: &mut Vec<RenderCmd>, theme: &ThemeData, r: &PaletteRect) {
-    cmds.push(RenderCmd::Dim {
-        x: 0,
-        y: 0,
-        w: 4096,
-        h: 4096,
-        bg: theme.background_overlay,
-    });
-    cmds.push(RenderCmd::Rect {
-        x: r.x,
-        y: r.y,
-        w: r.w,
-        h: r.h,
-        bg: theme.background_panel,
-    });
+    popup_backdrop(cmds, theme, r.x, r.y, r.w, r.h);
 }
 
 /// Draw the palette title bar: bold title on the left, dimmed "esc" on the right.
@@ -289,4 +276,140 @@ pub fn text_at(
         bold: false,
         modifiers: 0,
     });
+}
+
+// ── Shared UI primitives ──
+
+/// Blinking cursor character (█ toggling on a 6-tick cycle) for text inputs.
+pub fn blink_cursor(tick_counter: u64) -> char {
+    if tick_counter % 6 < 3 {
+        '█'
+    } else {
+        ' '
+    }
+}
+
+/// X coordinate to right-align `text` within an area of width `area_w`
+/// (one cell margin from the right edge).
+pub fn right_align_x(area_w: u16, text: &str) -> u16 {
+    area_w.saturating_sub(2u16.saturating_add(text.chars().count() as u16))
+}
+
+/// Scroll percentage (0-100) for a scrollable list; 0 when not scrolled.
+pub fn scroll_pct(scroll: usize, len: usize, visible: usize) -> u8 {
+    if len > visible.max(1) && scroll > 0 {
+        let max_scroll = len.saturating_sub(visible.max(1));
+        (scroll * 100).checked_div(max_scroll).unwrap_or(0).min(100) as u8
+    } else {
+        0
+    }
+}
+
+/// Index of `selected` relative to the visible window, or None when scrolled out.
+pub fn vis_selected(selected: usize, scroll: usize, visible_count: usize) -> Option<usize> {
+    if selected >= scroll && selected < scroll + visible_count {
+        Some(selected - scroll)
+    } else {
+        None
+    }
+}
+
+/// "♥ " prefix for favorited rows, two spaces otherwise (keeps columns aligned).
+pub fn fav_prefix(favorite: bool) -> &'static str {
+    if favorite {
+        "♥ "
+    } else {
+        "  "
+    }
+}
+
+/// Table text styles: muted bold header, plain body, inverted highlight.
+#[derive(Clone, Copy)]
+pub struct TableStyles {
+    pub header: TextStyle,
+    pub body: TextStyle,
+    pub highlight: TextStyle,
+}
+
+/// Standard table text styles derived from the theme.
+pub fn table_styles(theme: &ThemeData) -> TableStyles {
+    TableStyles {
+        header: TextStyle {
+            fg: Some(theme.text_muted),
+            bg: None,
+            bold: true,
+            modifiers: 0,
+        },
+        body: TextStyle {
+            fg: Some(theme.text),
+            bg: None,
+            bold: false,
+            modifiers: 0,
+        },
+        highlight: TextStyle {
+            fg: Some(theme.inverted_text),
+            bg: Some(theme.highlight),
+            bold: true,
+            modifiers: 0,
+        },
+    }
+}
+
+/// Dim the whole screen as a popup backdrop.
+pub fn dim_overlay(cmds: &mut Vec<RenderCmd>, theme: &ThemeData) {
+    cmds.push(RenderCmd::Dim {
+        x: 0,
+        y: 0,
+        w: 4096,
+        h: 4096,
+        bg: theme.background_overlay,
+    });
+}
+
+/// Popup backdrop: dim the whole screen and draw a background rect.
+pub fn popup_backdrop(
+    cmds: &mut Vec<RenderCmd>,
+    theme: &ThemeData,
+    x: u16,
+    y: u16,
+    w: u16,
+    h: u16,
+) {
+    dim_overlay(cmds, theme);
+    cmds.push(RenderCmd::Rect {
+        x,
+        y,
+        w,
+        h,
+        bg: theme.background_panel,
+    });
+}
+
+/// Red heart marker at the start of each row that is a favorite.
+pub fn heart_overlay(
+    cmds: &mut Vec<RenderCmd>,
+    theme: &ThemeData,
+    table_top: u16,
+    vis_selected: Option<usize>,
+    count: usize,
+    is_favorite: impl Fn(usize) -> bool,
+) {
+    for i in 0..count {
+        if is_favorite(i) {
+            let bg = if vis_selected == Some(i) {
+                Some(theme.highlight)
+            } else {
+                None
+            };
+            cmds.push(RenderCmd::Text {
+                x: 2,
+                y: table_top + 1 + i as u16,
+                text: "♥".into(),
+                fg: Some([255, 60, 60]),
+                bg,
+                bold: false,
+                modifiers: 0,
+            });
+        }
+    }
 }

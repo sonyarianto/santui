@@ -106,7 +106,7 @@ fn render_channel_list(
         } else {
             msg.clone()
         };
-        let top_x = area_w.saturating_sub(2u16.saturating_add(top_text.chars().count() as u16));
+        let top_x = ui::right_align_x(area_w, &top_text);
         cmds.push(RenderCmd::Text {
             x: top_x,
             y: 1,
@@ -128,7 +128,7 @@ fn render_channel_list(
             None,
             inner_w.saturating_sub(right_text.len() + 1) as u16,
         );
-        let right_x = area_w.saturating_sub(2u16.saturating_add(right_text.len() as u16));
+        let right_x = ui::right_align_x(area_w, &right_text);
         cmds.push(RenderCmd::Text {
             x: right_x,
             y: 1,
@@ -150,7 +150,7 @@ fn render_channel_list(
             None,
             inner_w.saturating_sub(right_text.len() + 1) as u16,
         );
-        let right_x = area_w.saturating_sub(2u16.saturating_add(right_text.len() as u16));
+        let right_x = ui::right_align_x(area_w, &right_text);
         cmds.push(RenderCmd::Text {
             x: right_x,
             y: 1,
@@ -173,7 +173,7 @@ fn render_channel_list(
         } else {
             format!("Total channels: {}", state.channels.len())
         };
-        let top_x = area_w.saturating_sub(2u16.saturating_add(top_text.chars().count() as u16));
+        let top_x = ui::right_align_x(area_w, &top_text);
         cmds.push(RenderCmd::Text {
             x: top_x,
             y: 1,
@@ -214,11 +214,7 @@ fn render_channel_list(
         ]);
     }
 
-    let vis_selected = if state.selected >= scroll && state.selected < scroll + visible_count {
-        Some(state.selected - scroll)
-    } else {
-        None
-    };
+    let vis_selected = ui::vis_selected(state.selected, scroll, visible_count);
 
     let current_row = match &state.play_state {
         PlaybackState::Playing { channel_index }
@@ -232,33 +228,19 @@ fn render_channel_list(
         _ => None,
     };
 
+    let ts = ui::table_styles(theme);
     cmds.push(RenderCmd::Table {
         x: 2,
         y: table_top,
         w: inner_w as u16,
         h: (visible_count + 1).max(1) as u16,
         header: vec!["Name".into(), "Group".into(), "Country".into()],
-        header_style: TextStyle {
-            fg: Some(theme.text_muted),
-            bg: None,
-            bold: true,
-            modifiers: 0,
-        },
+        header_style: ts.header,
         rows,
         column_widths: vec![name_w as u16, group_w as u16, country_w as u16],
         selected: vis_selected,
-        style: TextStyle {
-            fg: Some(theme.text),
-            bg: None,
-            bold: false,
-            modifiers: 0,
-        },
-        highlight_style: TextStyle {
-            fg: Some(theme.inverted_text),
-            bg: Some(theme.highlight),
-            bold: true,
-            modifiers: 0,
-        },
+        style: ts.body,
+        highlight_style: ts.highlight,
         current_row,
         current_style: Some(TextStyle {
             fg: Some(theme.success),
@@ -270,26 +252,10 @@ fn render_channel_list(
     });
 
     // Heart overlay for favorites
-    let heart_red = [255, 60, 60];
-    for i in 0..visible_count {
+    ui::heart_overlay(cmds, theme, table_top, vis_selected, visible_count, |i| {
         let ch_idx = state.filtered[scroll + i];
-        if state.is_favorite(&state.channels[ch_idx].url) {
-            let bg = if vis_selected == Some(i) {
-                Some(theme.highlight)
-            } else {
-                None
-            };
-            cmds.push(RenderCmd::Text {
-                x: 2,
-                y: table_top + 1 + i as u16,
-                text: "\u{2665}".into(),
-                fg: Some(heart_red),
-                bg,
-                bold: false,
-                modifiers: 0,
-            });
-        }
-    }
+        state.is_favorite(&state.channels[ch_idx].url)
+    });
 
     // Now Playing panel (bottom)
     let np_y = channels_h + GAP;
@@ -437,11 +403,7 @@ fn render_search(
         h: area_h,
     });
 
-    let cursor = if state.tick_counter % 6 < 3 {
-        '\u{2588}'
-    } else {
-        ' '
-    };
+    let cursor = ui::blink_cursor(state.tick_counter);
     let search_text = format!("Search: {}{cursor}", state.query);
     let count_text = format!("{}/{}", state.filtered.len(), state.channels.len());
 
@@ -454,7 +416,7 @@ fn render_search(
         bold: false,
         modifiers: 0,
     });
-    let right_x = area_w.saturating_sub(2u16.saturating_add(count_text.len() as u16));
+    let right_x = ui::right_align_x(area_w, &count_text);
     cmds.push(RenderCmd::Text {
         x: right_x,
         y: 1,
@@ -576,11 +538,7 @@ fn render_url_editor(
         modifiers: 0,
     });
 
-    let cursor = if state.tick_counter % 6 < 3 {
-        '\u{2588}'
-    } else {
-        ' '
-    };
+    let cursor = ui::blink_cursor(state.tick_counter);
     let before: String = state.url_edit.chars().take(state.url_edit_cursor).collect();
     let after: String = state.url_edit.chars().skip(state.url_edit_cursor).collect();
     let display = format!("{before}{cursor}{after}");

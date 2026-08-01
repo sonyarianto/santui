@@ -1,4 +1,5 @@
-use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData, BORDER_ALL};
+use santui_ipc::protocol::{RenderCmd, ThemeData, BORDER_ALL};
+use santui_ipc::ui;
 
 use crate::state::{FetchState, LyricsState};
 
@@ -131,11 +132,7 @@ fn render_lyrics_view(
 
     let total = lines.len();
     if total > max_lines {
-        let max_scroll = total.saturating_sub(max_lines);
-        let pct = (scroll * 100)
-            .checked_div(max_scroll)
-            .map(|v| v.min(100))
-            .unwrap_or(0);
+        let pct = ui::scroll_pct(scroll, total, max_lines);
         let scroll_text = format!("{pct}%");
         let sx = (2 + line_w).saturating_sub(scroll_text.len() + 1) as u16;
         cmds.push(RenderCmd::Text {
@@ -159,11 +156,7 @@ fn render_search_view(
 ) {
     let inner_w = w.saturating_sub(4) as usize;
 
-    let cursor = if state.tick_counter % 6 < 3 {
-        '\u{2588}'
-    } else {
-        ' '
-    };
+    let cursor = ui::blink_cursor(state.tick_counter);
 
     let count_label = if state.results.is_empty() {
         String::new()
@@ -191,7 +184,7 @@ fn render_search_view(
             modifiers: 0,
         });
         if !count_label.is_empty() {
-            let right_x = w.saturating_sub(2u16.saturating_add(count_label.len() as u16));
+            let right_x = ui::right_align_x(w, &count_label);
             cmds.push(RenderCmd::Text {
                 x: right_x,
                 y: 1,
@@ -220,7 +213,7 @@ fn render_search_view(
             modifiers: 0,
         });
         if !count_label.is_empty() {
-            let right_x = w.saturating_sub(2u16.saturating_add(count_label.len() as u16));
+            let right_x = ui::right_align_x(w, &count_label);
             cmds.push(RenderCmd::Text {
                 x: right_x,
                 y: 1,
@@ -311,45 +304,27 @@ fn render_table(state: &LyricsState, theme: &ThemeData, w: u16, h: u16, cmds: &m
     for i in 0..visible_count {
         let track = &state.results[scroll + i];
         rows.push(vec![
-            santui_ipc::ui::truncate(&track.track_name, title_w),
-            santui_ipc::ui::truncate(&track.artist_name, artist_w),
-            santui_ipc::ui::truncate(&track.album_name, album_w),
+            ui::truncate(&track.track_name, title_w),
+            ui::truncate(&track.artist_name, artist_w),
+            ui::truncate(&track.album_name, album_w),
         ]);
     }
 
-    let vis_selected = if state.selected >= scroll && state.selected < scroll + visible_count {
-        Some(state.selected - scroll)
-    } else {
-        None
-    };
+    let vis_selected = ui::vis_selected(state.selected, scroll, visible_count);
 
+    let ts = ui::table_styles(theme);
     cmds.push(RenderCmd::Table {
         x: 2,
         y: table_top,
         w: inner_w as u16,
         h: (visible_count + 1) as u16,
         header: vec!["Title".into(), "Artist".into(), "Album".into()],
-        header_style: TextStyle {
-            fg: Some(theme.text_muted),
-            bg: None,
-            bold: true,
-            modifiers: 0,
-        },
+        header_style: ts.header,
         rows,
         column_widths: vec![title_w as u16, artist_w as u16, album_w as u16],
         selected: vis_selected,
-        style: TextStyle {
-            fg: Some(theme.text),
-            bg: None,
-            bold: false,
-            modifiers: 0,
-        },
-        highlight_style: TextStyle {
-            fg: Some(theme.inverted_text),
-            bg: Some(theme.highlight),
-            bold: true,
-            modifiers: 0,
-        },
+        style: ts.body,
+        highlight_style: ts.highlight,
         current_row: None,
         current_style: None,
         cell_styles: None,

@@ -257,13 +257,7 @@ fn render_browse(state: &CurrencyState, theme: &ThemeData, w: u16, h: u16) -> Ve
     let mut cmds = Vec::new();
 
     // Dim background
-    cmds.push(RenderCmd::Dim {
-        x: 0,
-        y: 0,
-        w,
-        h,
-        bg: theme.background_overlay,
-    });
+    santui_ipc::ui::dim_overlay(&mut cmds, theme);
 
     let popup_w = 40u16;
     let popup_x = (w.saturating_sub(popup_w)) / 2;
@@ -334,13 +328,7 @@ fn render_browse(state: &CurrencyState, theme: &ThemeData, w: u16, h: u16) -> Ve
 fn render_favorites(state: &CurrencyState, theme: &ThemeData, w: u16, h: u16) -> Vec<RenderCmd> {
     let mut cmds = Vec::new();
 
-    cmds.push(RenderCmd::Dim {
-        x: 0,
-        y: 0,
-        w,
-        h,
-        bg: theme.background_overlay,
-    });
+    santui_ipc::ui::dim_overlay(&mut cmds, theme);
 
     let popup_w = 50u16;
     let popup_x = (w.saturating_sub(popup_w)) / 2;

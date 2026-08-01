@@ -607,13 +607,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         Screen::ConfirmDelete(_) => {
             render_list(app, &mut cmds, &theme, w, h);
             let msg = "Delete selected task? y confirm · n/Esc cancel";
-            cmds.push(RenderCmd::Dim {
-                x: 0,
-                y: 0,
-                w,
-                h,
-                bg: theme.background_overlay,
-            });
+            santui_ipc::ui::dim_overlay(&mut cmds, &theme);
             cmds.push(RenderCmd::Border {
                 x: w / 2 - 22,
                 y: h / 2 - 2,

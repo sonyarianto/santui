@@ -1,4 +1,4 @@
-use santui_ipc::protocol::{RenderCmd, TextStyle};
+use santui_ipc::protocol::RenderCmd;
 use santui_ipc::ui;
 use unicode_width::UnicodeWidthStr;
 
@@ -74,7 +74,7 @@ impl App {
         ui::draw_panel(cmds, t, 0, 0, aw, ah, "Plugins", ui::PanelOpts::default());
 
         if self.search_mode {
-            let cursor = if self.tick % 6 < 3 { '█' } else { ' ' };
+            let cursor = ui::blink_cursor(self.tick);
             let search_text = format!("Search: {}{cursor}", self.query);
             cmds.push(RenderCmd::Text {
                 x: 2,
@@ -246,16 +246,9 @@ impl App {
                 ]);
             }
 
-            let vis_selected = {
-                let cursor = self.cursor;
-                let scroll = self.scroll as usize;
-                if cursor >= scroll && cursor < scroll + visible_count {
-                    Some(cursor - scroll)
-                } else {
-                    None
-                }
-            };
+            let vis_selected = ui::vis_selected(self.cursor, self.scroll as usize, visible_count);
 
+            let ts = ui::table_styles(t);
             cmds.push(RenderCmd::Table {
                 x: 2,
                 y: list_top,
@@ -269,12 +262,7 @@ impl App {
                     "Installed".into(),
                     "Status".into(),
                 ],
-                header_style: TextStyle {
-                    fg: Some(t.text_muted),
-                    bg: None,
-                    bold: true,
-                    modifiers: 0,
-                },
+                header_style: ts.header,
                 rows,
                 column_widths: vec![
                     name_w as u16,
@@ -285,47 +273,21 @@ impl App {
                     status_w as u16,
                 ],
                 selected: vis_selected,
-                style: TextStyle {
-                    fg: Some(t.text),
-                    bg: None,
-                    bold: false,
-                    modifiers: 0,
-                },
-                highlight_style: TextStyle {
-                    fg: Some(t.inverted_text),
-                    bg: Some(t.highlight),
-                    bold: true,
-                    modifiers: 0,
-                },
+                style: ts.body,
+                highlight_style: ts.highlight,
                 current_row: None,
                 current_style: None,
                 cell_styles: None,
             });
 
-            let heart_red = [255, 60, 60];
-            for i in 0..visible_count {
+            ui::heart_overlay(cmds, t, list_top, vis_selected, visible_count, |i| {
                 let row_idx = self.scroll as usize + i;
                 if row_idx >= self.filtered.len() {
-                    break;
+                    return false;
                 }
                 let plugin = &reg.available[self.filtered[row_idx]];
-                if self.is_favorite(&plugin.id) {
-                    let bg = if vis_selected == Some(i) {
-                        Some(t.highlight)
-                    } else {
-                        None
-                    };
-                    cmds.push(RenderCmd::Text {
-                        x: 2,
-                        y: list_top + 1 + i as u16,
-                        text: "♥".into(),
-                        fg: Some(heart_red),
-                        bg,
-                        bold: false,
-                        modifiers: 0,
-                    });
-                }
-            }
+                self.is_favorite(&plugin.id)
+            });
         }
     }
 

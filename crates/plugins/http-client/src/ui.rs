@@ -481,13 +481,7 @@ fn render_method_picker(state: &ClientState, theme: &ThemeData, w: u16, h: u16) 
     let popup_x: u16 = (w - popup_w) / 2;
     let popup_y: u16 = (h - popup_h) / 2;
 
-    cmds.push(RenderCmd::Dim {
-        x: 0,
-        y: 0,
-        w: 4096,
-        h: 4096,
-        bg: theme.background_overlay,
-    });
+    santui_ipc::ui::dim_overlay(&mut cmds, theme);
 
     cmds.push(RenderCmd::Border {
         x: popup_x,

@@ -349,13 +349,7 @@ fn render_add_feed(cmds: &mut Vec<RenderCmd>, state: &RssState, theme: &ThemeDat
     let popup_x = (w - popup_w) / 2;
     let popup_y = (h - popup_h) / 2;
 
-    cmds.push(RenderCmd::Dim {
-        x: 0,
-        y: 0,
-        w: 4096,
-        h: 4096,
-        bg: theme.background_overlay,
-    });
+    santui_ipc::ui::dim_overlay(cmds, theme);
     cmds.push(RenderCmd::Border {
         x: popup_x,
         y: popup_y,
@@ -408,13 +402,7 @@ fn render_confirm_remove(
     let popup_x = (w - popup_w) / 2;
     let popup_y = (h - popup_h) / 2;
 
-    cmds.push(RenderCmd::Dim {
-        x: 0,
-        y: 0,
-        w: 4096,
-        h: 4096,
-        bg: theme.background_overlay,
-    });
+    santui_ipc::ui::dim_overlay(cmds, theme);
     cmds.push(RenderCmd::Border {
         x: popup_x,
         y: popup_y,

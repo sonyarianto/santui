@@ -87,23 +87,16 @@ pub fn render_ui(
     // ---- Top line: search bar, scan message, filter indicator, or total station count ----
     let table_avail = stations_h.saturating_sub(TABLE_TOP + HEADER_H + 1 + stations_footer_rows);
     let max_visible = table_avail as usize;
-    let scroll_pct = if state.filtered.len() > max_visible.max(1) && state.scroll > 0 {
-        let visible = max_visible.min(state.filtered.len().saturating_sub(state.scroll));
-        let max_scroll = state.filtered.len().saturating_sub(visible.max(1));
-        let pct = (state.scroll * 100)
-            .checked_div(max_scroll)
-            .unwrap_or(0)
-            .min(100);
-        Some(pct)
-    } else {
-        None
+    let scroll_pct = {
+        let pct = ui::scroll_pct(state.scroll, state.filtered.len(), max_visible);
+        if pct > 0 {
+            Some(pct)
+        } else {
+            None
+        }
     };
     if state.search_mode {
-        let cursor = if state.tick_counter % 6 < 3 {
-            '█'
-        } else {
-            ' '
-        };
+        let cursor = ui::blink_cursor(state.tick_counter);
         let left_text = format!("Search: {}{cursor}", state.query);
         let right_text = if let Some(pct) = scroll_pct {
             format!(
@@ -118,7 +111,7 @@ pub fn render_ui(
         let right_len = right_text.len();
         let max_left = inner_w.saturating_sub(right_len + 1);
         let display_left: String = left_text.chars().take(max_left).collect();
-        let right_x = left_w.saturating_sub(2u16.saturating_add(right_text.len() as u16));
+        let right_x = ui::right_align_x(left_w, &right_text);
         cmds.push(RenderCmd::Text {
             x: 2,
             y: 1,
@@ -145,7 +138,7 @@ pub fn render_ui(
         } else {
             msg.clone()
         };
-        let top_x = left_w.saturating_sub(2u16.saturating_add(top_text.chars().count() as u16));
+        let top_x = ui::right_align_x(left_w, &top_text);
         cmds.push(RenderCmd::Text {
             x: top_x,
             y: 1,
@@ -170,7 +163,7 @@ pub fn render_ui(
         let right_len = right_text.len();
         let max_left = inner_w.saturating_sub(right_len + 1);
         let display_left: String = left_text.chars().take(max_left).collect();
-        let right_x = left_w.saturating_sub(2u16.saturating_add(right_text.len() as u16));
+        let right_x = ui::right_align_x(left_w, &right_text);
         cmds.push(RenderCmd::Text {
             x: 2,
             y: 1,
@@ -212,7 +205,7 @@ pub fn render_ui(
         } else {
             top_text
         };
-        let top_x = left_w.saturating_sub(2u16.saturating_add(top_text.chars().count() as u16));
+        let top_x = ui::right_align_x(left_w, &top_text);
         cmds.push(RenderCmd::Text {
             x: top_x,
             y: 1,
@@ -264,11 +257,7 @@ pub fn render_ui(
     for i in 0..visible_count {
         let station_idx = state.filtered[scroll + i];
         let station = &state.stations[station_idx];
-        let fav = if state.is_favorite(&station.url) {
-            "♥ "
-        } else {
-            "  "
-        };
+        let fav = ui::fav_prefix(state.is_favorite(&station.url));
         rows.push(vec![
             ui::truncate(&format!("{fav}{}", station.name), name_w),
             ui::truncate(&station.genre, genre_w),
@@ -276,11 +265,7 @@ pub fn render_ui(
         ]);
     }
 
-    let vis_selected = if state.selected >= scroll && state.selected < scroll + visible_count {
-        Some(state.selected - scroll)
-    } else {
-        None
-    };
+    let vis_selected = ui::vis_selected(state.selected, scroll, visible_count);
 
     let current_row = state.current_station.and_then(|cur| {
         state.filtered[scroll..scroll + visible_count]
@@ -288,37 +273,28 @@ pub fn render_ui(
             .position(|&idx| idx == cur)
     });
 
+    let ts = ui::table_styles(theme);
     cmds.push(RenderCmd::Table {
         x: 2,
         y: table_top,
         w: inner_w as u16,
         h: (visible_count + 1).max(1) as u16,
         header: vec!["Name".into(), "Genre".into(), "Country".into()],
-        header_style: TextStyle {
-            fg: Some(theme.text_muted),
-            bg: None,
-            bold: true,
-            modifiers: 0,
-        },
+        header_style: ts.header,
         rows,
         column_widths: vec![name_w as u16, genre_w as u16, country_w as u16],
         selected: vis_selected,
-        style: TextStyle {
-            fg: Some(if stations_focused {
-                theme.text
-            } else {
-                theme.text_muted
-            }),
-            bg: None,
-            bold: false,
-            modifiers: 0,
+        style: if stations_focused {
+            ts.body
+        } else {
+            TextStyle {
+                fg: Some(theme.text_muted),
+                bg: None,
+                bold: false,
+                modifiers: 0,
+            }
         },
-        highlight_style: TextStyle {
-            fg: Some(theme.inverted_text),
-            bg: Some(theme.highlight),
-            bold: true,
-            modifiers: 0,
-        },
+        highlight_style: ts.highlight,
         current_row,
         current_style: Some(TextStyle {
             fg: Some(theme.success),
@@ -330,26 +306,17 @@ pub fn render_ui(
     });
 
     // Red heart overlay for favorite stations (table already renders "♥ " in the name cell)
-    let heart_red = [255, 60, 60];
-    for i in 0..visible_count {
-        let station_idx = state.filtered[scroll + i];
-        if state.is_favorite(&state.stations[station_idx].url) {
-            let bg = if vis_selected == Some(i) {
-                Some(theme.highlight)
-            } else {
-                None
-            };
-            cmds.push(RenderCmd::Text {
-                x: 2,
-                y: table_top + 1 + i as u16,
-                text: "♥".into(),
-                fg: Some(heart_red),
-                bg,
-                bold: false,
-                modifiers: 0,
-            });
-        }
-    }
+    ui::heart_overlay(
+        &mut cmds,
+        theme,
+        table_top,
+        vis_selected,
+        visible_count,
+        |i| {
+            let station_idx = state.filtered[scroll + i];
+            state.is_favorite(&state.stations[station_idx].url)
+        },
+    );
 
     // ---- Now Playing panel (bottom-left) ----
     const NP_TITLE: &str = "Now Playing";
@@ -513,21 +480,7 @@ pub fn render_ui(
         if popup_x < 4 || area_h < 10 {
             // too small for a useful popup
         } else {
-            cmds.push(RenderCmd::Dim {
-                x: 0,
-                y: 0,
-                w: 4096,
-                h: 4096,
-                bg: theme.background_overlay,
-            });
-
-            cmds.push(RenderCmd::Rect {
-                x: popup_x,
-                y: popup_y,
-                w: popup_w,
-                h: popup_h,
-                bg: theme.background_panel,
-            });
+            ui::popup_backdrop(&mut cmds, theme, popup_x, popup_y, popup_w, popup_h);
 
             ui::draw_panel(
                 &mut cmds,
@@ -660,11 +613,7 @@ pub fn render_ui(
                     });
                 }
                 if total_visual > ly_h {
-                    let max_scroll = total_visual.saturating_sub(ly_h);
-                    let pct = (scroll * 100)
-                        .checked_div(max_scroll)
-                        .map(|v| v.min(100))
-                        .unwrap_or(0);
+                    let pct = ui::scroll_pct(scroll, total_visual, ly_h);
                     let scroll_text = format!("{pct}%");
                     let indicator_y = content_top + ly_h as u16 - 1;
                     let sx = popup_x + popup_w.saturating_sub(scroll_text.len() as u16 + 2);
