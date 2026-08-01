@@ -100,7 +100,7 @@ git add -A && git commit -m "chore: bump version to x.y.z"
 git cliff -o CHANGELOG.md   # auto-generate changelog from conventional commits
 git add -A && git commit -m "chore: bump version to x.y.z"
 git tag vx.y.z && git push origin main vx.y.z
-# CI builds binaries and publishes to npm and crates.io.
+# CI builds binaries and publishes to npm.
 # Then create the GitHub Release with only the new section from CHANGELOG.md:
 git cliff -o CHANGELOG.md   # regenerate (now tag exists → [unreleased] becomes vx.y.z)
 git add -A && git commit -m "chore: update changelog for vx.y.z" && git push
@@ -112,7 +112,6 @@ awk 'BEGIN{f=0} /^## \['"$VERSION"'\]/{f=1; next} /^## \[/{if(f) exit} f' CHANGE
 
 Prerequisites:
 - `NPM_TOKEN` secret set in GitHub repo Settings → Secrets → Actions
-- `CARGO_REGISTRY_TOKEN` secret set in GitHub repo Settings → Secrets → Actions
 
 ## Docs Index
 

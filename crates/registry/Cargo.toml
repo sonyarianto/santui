@@ -4,6 +4,7 @@ version = "0.2.36"
 edition = "2021"
 description = "Santui plugin registry — manifest fetch, install, config management"
 license = "MIT"
+publish = false
 repository = "https://github.com/sonyarianto/santui"
 
 [dependencies]

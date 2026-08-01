@@ -4,6 +4,7 @@ version = "0.2.36"
 edition = "2021"
 description = "Santui IPC protocol — typed messages and host plugin runner over JSON lines"
 license = "MIT"
+publish = false
 repository = "https://github.com/sonyarianto/santui"
 
 [features]
