@@ -177,8 +177,6 @@ impl App {
                 }
                 IpcKey::Char('c') => {
                     if !self.state.results.is_empty() {
-                        self.stop_playback();
-                        self.init_error = None;
                         self.state.results.clear();
                         self.state.fetch_state = FetchState::Idle;
                         self.state.query.clear();
