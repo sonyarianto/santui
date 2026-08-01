@@ -227,7 +227,7 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
     let popup_x = (w.saturating_sub(popup_w)) / 2;
     let popup_y = (h.saturating_sub(popup_h)) / 2;
 
-    santui_ipc::ui::dim_overlay(&mut cmds, theme);
+    santui_ipc::ui::popup_backdrop(&mut cmds, theme, popup_x, popup_y, popup_w, popup_h);
 
     cmds.push(RenderCmd::Border {
         x: popup_x,
@@ -235,7 +235,7 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
         w: popup_w,
         h: popup_h,
         fg: theme.border,
-        bg: Some(theme.background_overlay),
+        bg: None,
         borders: BORDER_ALL,
         title: Some("Settings".into()),
         title_fg: Some(theme.border),
@@ -243,22 +243,26 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
         border_type: None,
     });
 
-    let fields: [(&str, String); 6] = [
+    let fields: [(&str, String, Option<bool>); 6] = [
         (
             "Work duration",
             format!("{} min", state.data.config.work_secs / 60),
+            None,
         ),
         (
             "Short break",
             format!("{} min", state.data.config.short_break_secs / 60),
+            None,
         ),
         (
             "Long break",
             format!("{} min", state.data.config.long_break_secs / 60),
+            None,
         ),
         (
             "Long break after",
             format!("{} sessions", state.data.config.long_break_after),
+            None,
         ),
         (
             "Auto-start breaks",
@@ -267,6 +271,7 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
             } else {
                 "No".into()
             },
+            Some(state.data.config.auto_start_breaks),
         ),
         (
             "Auto-start work",
@@ -275,6 +280,7 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
             } else {
                 "No".into()
             },
+            Some(state.data.config.auto_start_work),
         ),
     ];
 
@@ -287,50 +293,55 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
         "Start work when a break ends",
     ];
 
-    for (i, (label, value)) in fields.iter().enumerate() {
+    let marker_x = popup_x + 2;
+    let label_x = popup_x + 4;
+    let value_x = popup_x + 24;
+
+    for (i, (label, value, is_on)) in fields.iter().enumerate() {
         let y = popup_y + 1 + i as u16;
         let is_selected = i == state.settings_cursor;
 
-        let label_fg = if is_selected {
-            theme.inverted_text
-        } else {
-            theme.text
-        };
-        let label_bg = if is_selected {
-            Some(theme.accent)
-        } else {
-            None
-        };
-        let value_fg = if is_selected {
-            theme.inverted_text
-        } else {
-            theme.accent
-        };
-        let value_bg = if is_selected {
-            Some(theme.accent)
-        } else {
-            None
-        };
-        let bold = is_selected;
-
         cmds.push(RenderCmd::Text {
-            x: popup_x + 2,
+            x: marker_x,
             y,
-            text: label.to_string(),
-            fg: Some(label_fg),
-            bg: label_bg,
-            bold,
+            text: if is_selected {
+                "▶".into()
+            } else {
+                " ".into()
+            },
+            fg: Some(theme.accent),
+            bg: None,
+            bold: is_selected,
             modifiers: 0,
         });
 
-        let value_x = popup_x + popup_w - 2 - value.len() as u16;
+        cmds.push(RenderCmd::Text {
+            x: label_x,
+            y,
+            text: format!("{label}:"),
+            fg: Some(if is_selected {
+                theme.text
+            } else {
+                theme.text_muted
+            }),
+            bg: None,
+            bold: is_selected,
+            modifiers: 0,
+        });
+
+        let value_fg = match is_on {
+            Some(true) => theme.success,
+            Some(false) => theme.text_muted,
+            None if is_selected => theme.accent,
+            None => theme.text,
+        };
         cmds.push(RenderCmd::Text {
             x: value_x,
             y,
             text: value.clone(),
             fg: Some(value_fg),
-            bg: value_bg,
-            bold,
+            bg: None,
+            bold: is_selected && is_on.is_none(),
             modifiers: 0,
         });
     }

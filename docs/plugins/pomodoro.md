@@ -67,7 +67,7 @@ App
 - `space` — start / pause / resume; on a Finished timer, advance to the next phase
 - `s` — skip the current phase (advances the timer)
 - `r` — reset the current session back to Idle at full duration
-- `,` — open settings dialog (dimmed overlay + border)
+- `,` — open settings dialog (dimmed backdrop + panel, `▶` marks the selected row)
 - Settings dialog (6 rows, `↑↓`/`jk` navigate, `←→` adjust, `esc` close & save) with a muted description of the selected row at the bottom:
   1. Work duration (minutes, floor 1)
   2. Short break duration (minutes, floor 1)
