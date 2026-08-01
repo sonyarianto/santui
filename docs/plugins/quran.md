@@ -20,7 +20,9 @@ Standard IPC plugin — spawned as child process, communicates via stdin/stdout 
 ```
 App
 ├── prefs: Preferences         — translation, reciter, display_mode, last position
-├── screen: Screen             — SurahList / Reader / TranslationPicker / ReciterPicker
+├── screen: Screen             — SurahList / Reader
+├── picker: Option<Picker>     — Translation/Reciter overlay panel (right-snapped)
+├── translations / reciters    — editions fetched from API (alquran.cloud /edition)
 ├── surahs: Vec<SurahSummary>  — cached surah list
 ├── content_cache: BTreeMap    — cached surah content by surah number
 ├── selected_surah / selected_ayah / scroll
@@ -32,7 +34,7 @@ App
 
 ### Thread Model
 - **Main thread**: event loop, UI rendering, key handling
-- **Mpv thread**: `wait_event_raw` loop with 0.1s timeout, processes `MpvCmd` (Load, TogglePause, Stop, Quit), emits `MpvMsg` (Started, EndFile, Error)
+- **Mpv thread**: `wait_event_raw` loop with 0.1s timeout, processes `MpvCmd` (Load, TogglePause, Stop, Quit), emits `MpvMsg` (Started, AyahStarted, EndFile, Error)
 - **Worker threads**: spawned per-fetch (surah list + per-surah content with 3 parallel API calls)
 
 ### Mpv Integration
@@ -61,13 +63,12 @@ open_selected_surah()
 ## Features
 - Browse 114 surahs with search by name/number
 - Read ayah-by-ayah with Arabic, translation, or both display modes
-- Play ayah recitation via mpv (space = toggle, x = stop)
+- Play ayah recitation via mpv (p = play/pause, s = stop)
 - Play entire surah sequentially (`a` key)
-- Repeat single ayah (`r` key toggle)
-- Select from 3 translations (Sahih, Asad, Indonesian)
-- Select from 4 reciters (Alafasy, Abdul Basit, Husary, Minshawi)
+- Repeat single ayah (`r` key toggle in reader)
+- Select translation/reciter from the full API edition list via right-snapped overlay pickers (`e`/`r` keys in surah list, `e` in reader)
 - Position memory (resume last surah + ayah on next open)
-- Content caching (fetched surah stays cached until translation/reciter change)
+- Content caching (fetched surah stays cached; changing edition keeps the current surah and refetches it)
 
 ## Constraints & Rules
 - `consumed` must be `false` on Esc when search is empty (pass through to host)

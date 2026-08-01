@@ -37,7 +37,7 @@ Update `version` in **all** `Cargo.toml` files + npm + website. They must all ma
 - `crates/plugins/package-version-monitor/Cargo.toml`
 - `crates/plugins/dictionary-thesaurus/Cargo.toml`
 - `crates/plugins/git-repository-dashboard/Cargo.toml`
-- `crates/plugins/quran-reader/Cargo.toml`
+- `crates/plugins/quran/Cargo.toml`
 - `crates/plugins/iptv-player/Cargo.toml`
 
 **NPM:**

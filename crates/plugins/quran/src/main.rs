@@ -943,7 +943,7 @@ fn main() {
                 | HostMsg::LogEntries { .. },
             ) => false,
             Err(e) => {
-                log::error!("[quran-reader] parse error: {e}: {trimmed}");
+                log::error!("[quran] parse error: {e}: {trimmed}");
                 false
             }
         };
