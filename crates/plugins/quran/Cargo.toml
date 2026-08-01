@@ -14,3 +14,4 @@ serde_json = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
 ureq = "3"
+unicode-width = "0.1"

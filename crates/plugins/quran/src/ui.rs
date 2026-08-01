@@ -1,6 +1,7 @@
 use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData, BORDER_ALL};
 use santui_ipc::ui;
 use santui_ipc::ui::push_text;
+use unicode_width::UnicodeWidthStr;
 
 use crate::types::{self, Ayah, DisplayMode, Edition, Picker, Screen};
 use crate::App;
@@ -180,7 +181,7 @@ fn push_segments(
         }
         let t = ui::truncate(text, (max_x - cx) as usize);
         if !t.is_empty() {
-            let n = t.chars().count() as u16;
+            let n = UnicodeWidthStr::width(t.as_str()) as u16;
             push_text(cmds, cx, y, t, *fg, *bold);
             cx += n;
         }
@@ -540,5 +541,47 @@ mod tests {
             .collect();
         assert_eq!(rendered, "Surahs: 0123456...");
         assert_eq!(end_x, 20);
+    }
+
+    #[test]
+    fn push_segments_counts_arabic_diacritics_as_zero_width() {
+        let theme = ThemeData {
+            text: [255; 3],
+            text_muted: [128; 3],
+            accent: [255; 3],
+            highlight: [255; 3],
+            logo: [255; 3],
+            background: [255; 3],
+            background_panel: [255; 3],
+            background_overlay: [255; 3],
+            border: [255; 3],
+            success: [255; 3],
+            error: [255; 3],
+            inverted_text: [255; 3],
+        };
+        let mut cmds = Vec::new();
+        let end_x = push_segments(
+            &mut cmds,
+            2,
+            1,
+            60,
+            &[
+                ("Aal-i-Imraan (".to_string(), theme.text, true),
+                ("سُورَةُ آلِ عِمۡرَانَ".to_string(), theme.text, true),
+                (") - The Family of Imraan".to_string(), theme.text, true),
+            ],
+        );
+        let rendered: String = cmds
+            .iter()
+            .map(|c| match c {
+                RenderCmd::Text { text, .. } => text.clone(),
+                _ => String::new(),
+            })
+            .collect();
+        assert_eq!(
+            rendered,
+            "Aal-i-Imraan (سُورَةُ آلِ عِمۡرَانَ) - The Family of Imraan"
+        );
+        assert_eq!(end_x, 2 + UnicodeWidthStr::width(rendered.as_str()) as u16);
     }
 }
