@@ -3,7 +3,7 @@ name = "santui-registry"
 version = "0.2.36"
 edition = "2021"
 description = "Santui plugin registry — manifest fetch, install, config management"
-license = "MIT"
+license = "AGPL-3.0-only"
 publish = false
 repository = "https://github.com/sonyarianto/santui"
 

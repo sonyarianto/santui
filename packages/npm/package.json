@@ -3,7 +3,7 @@
   "version": "0.2.36",
   "description": "Your terminal home base — a modern TUI launcher for plugins",
   "homepage": "https://github.com/sonyarianto/santui",
-  "license": "MIT",
+  "license": "AGPL-3.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sonyarianto/santui.git"

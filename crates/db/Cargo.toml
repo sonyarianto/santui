@@ -3,7 +3,7 @@ name = "santui-db"
 version = "0.2.36"
 edition = "2021"
 description = "Santui central SQLite database — per-user state for plugins"
-license = "MIT"
+license = "AGPL-3.0-only"
 publish = false
 repository = "https://github.com/sonyarianto/santui"
 

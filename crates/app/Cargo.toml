@@ -3,7 +3,7 @@ name = "santui"
 version = "0.2.36"
 edition = "2021"
 description = "Santui — keyboard-driven TUI plugin launcher with OAuth sign-in"
-license = "MIT"
+license = "AGPL-3.0-only"
 publish = false
 repository = "https://github.com/sonyarianto/santui"
 

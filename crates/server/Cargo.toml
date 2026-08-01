@@ -3,7 +3,7 @@ name = "santui-server"
 version = "0.2.36"
 edition = "2021"
 description = "Santui backend server — sync, auth, and web UI"
-license = "MIT"
+license = "AGPL-3.0-only"
 repository = "https://github.com/sonyarianto/santui"
 
 [dependencies]

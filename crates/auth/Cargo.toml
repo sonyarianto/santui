@@ -3,7 +3,7 @@ name = "santui-auth"
 version = "0.2.36"
 edition = "2021"
 description = "Santui authentication — GitHub OAuth client with device flow support"
-license = "MIT"
+license = "AGPL-3.0-only"
 publish = false
 repository = "https://github.com/sonyarianto/santui"
 
