@@ -307,7 +307,7 @@ fn render_surah_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w:
         current_style: None,
         cell_styles: None,
     });
-    if !app.status.is_empty() {
+    if !app.fetching && !app.status.is_empty() {
         push_text(
             cmds,
             2,
@@ -391,9 +391,6 @@ fn status_line(app: &App) -> String {
     }
     if app.repeat_ayah {
         parts.push("repeat on");
-    }
-    if app.fetching {
-        parts.push("fetching");
     }
     parts.join(" · ")
 }
