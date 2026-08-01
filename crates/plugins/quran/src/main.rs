@@ -25,6 +25,10 @@ struct App {
     screen: Screen,
     surahs: Vec<SurahSummary>,
     content_cache: BTreeMap<u16, SurahContent>,
+    translations: Vec<Edition>,
+    reciters: Vec<Edition>,
+    editions_loading: bool,
+    picker: Option<Picker>,
     selected_surah: usize,
     selected_ayah: usize,
     scroll: usize,
@@ -34,6 +38,7 @@ struct App {
     fetching: bool,
     status: String,
     rx_fetch: Option<mpsc::Receiver<FetchMsg>>,
+    rx_editions: Option<mpsc::Receiver<FetchMsg>>,
     tx_mpv: Option<mpsc::Sender<MpvCmd>>,
     rx_mpv: Option<mpsc::Receiver<MpvMsg>>,
     mpv_thread: Option<thread::JoinHandle<()>>,
@@ -59,6 +64,10 @@ impl Default for App {
             screen: Screen::SurahList,
             surahs: Vec::new(),
             content_cache: BTreeMap::new(),
+            translations: Vec::new(),
+            reciters: Vec::new(),
+            editions_loading: false,
+            picker: None,
             selected_surah: 0,
             selected_ayah: 0,
             scroll: 0,
@@ -68,6 +77,7 @@ impl Default for App {
             fetching: false,
             status: String::new(),
             rx_fetch: None,
+            rx_editions: None,
             tx_mpv: None,
             rx_mpv: None,
             mpv_thread: None,
@@ -99,6 +109,7 @@ impl App {
         self.theme = theme;
         self.area = area;
         self.start_fetch_surahs();
+        self.start_fetch_editions();
         self.init_audio();
         self.dirty = true;
     }
@@ -119,12 +130,108 @@ impl App {
 
     fn handle_key(&mut self, key: IpcKey) -> bool {
         self.dirty = true;
+        if let Some(picker) = self.picker {
+            return self.handle_picker_key(key, picker);
+        }
         match self.screen {
             Screen::SurahList => self.handle_list_key(key),
             Screen::Reader => self.handle_reader_key(key),
-            Screen::TranslationPicker => self.handle_translation_key(key),
-            Screen::ReciterPicker => self.handle_reciter_key(key),
         }
+    }
+
+    fn handle_picker_key(&mut self, key: IpcKey, picker: Picker) -> bool {
+        match key {
+            IpcKey::Up | IpcKey::Char('k') => {
+                self.picker_cursor = self.picker_cursor.saturating_sub(1);
+                true
+            }
+            IpcKey::Down | IpcKey::Char('j') => {
+                let max = self.picker_options(picker).len().saturating_sub(1);
+                self.picker_cursor = self.picker_cursor.min(max).saturating_add(1).min(max);
+                true
+            }
+            IpcKey::Enter => {
+                self.apply_picker_selection(picker);
+                true
+            }
+            IpcKey::Esc => {
+                self.picker = None;
+                true
+            }
+            _ => false,
+        }
+    }
+
+    fn picker_options(&self, picker: Picker) -> &[Edition] {
+        match picker {
+            Picker::Translation => &self.translations,
+            Picker::Reciter => &self.reciters,
+        }
+    }
+
+    fn open_picker(&mut self, picker: Picker) {
+        let current = match picker {
+            Picker::Translation => self.prefs.translation_edition.clone(),
+            Picker::Reciter => self.prefs.reciter.clone(),
+        };
+        let cursor = self
+            .picker_options(picker)
+            .iter()
+            .position(|e| e.identifier == current)
+            .unwrap_or(0);
+        self.picker_cursor = cursor;
+        if self.picker_options(picker).is_empty() && !self.editions_loading {
+            self.start_fetch_editions();
+        }
+        self.picker = Some(picker);
+    }
+
+    fn apply_picker_selection(&mut self, picker: Picker) {
+        let Some(edition) = self.picker_options(picker).get(self.picker_cursor).cloned() else {
+            return;
+        };
+        match picker {
+            Picker::Translation => self.prefs.translation_edition = edition.identifier.clone(),
+            Picker::Reciter => self.prefs.reciter = edition.identifier.clone(),
+        }
+        self.save_prefs();
+        self.stop_audio();
+        self.status = format!("{}: {}", picker_label(picker), edition.display_name());
+        let staying_in_reader = self.screen == Screen::Reader;
+        if staying_in_reader {
+            let current = self.current_surah_number();
+            self.content_cache.retain(|&k, _| Some(k) == current);
+            self.picker = None;
+            self.refetch_current_surah();
+        } else {
+            self.content_cache.clear();
+            self.picker = None;
+        }
+    }
+
+    fn refetch_current_surah(&mut self) {
+        let Some(number) = self.current_surah_number() else {
+            return;
+        };
+        let Some(summary) = self.content_cache.get(&number).map(|c| c.summary.clone()) else {
+            return;
+        };
+        if self.fetching {
+            return;
+        }
+        let translation = self.prefs.translation_edition.clone();
+        let reciter = self.prefs.reciter.clone();
+        let (tx, rx) = mpsc::channel();
+        self.rx_fetch = Some(rx);
+        self.fetching = true;
+        self.status = format!("Fetching Surah {}...", summary.english_name);
+        thread::spawn(move || {
+            let _ = tx.send(FetchMsg::Surah(fetch_surah_content(
+                summary,
+                &translation,
+                &reciter,
+            )));
+        });
     }
 
     fn handle_list_key(&mut self, key: IpcKey) -> bool {
@@ -164,19 +271,11 @@ impl App {
                 true
             }
             IpcKey::Char('e') => {
-                self.screen = Screen::TranslationPicker;
-                self.picker_cursor = translation_options()
-                    .iter()
-                    .position(|e| *e == self.prefs.translation_edition)
-                    .unwrap_or(0);
+                self.open_picker(Picker::Translation);
                 true
             }
             IpcKey::Char('r') => {
-                self.screen = Screen::ReciterPicker;
-                self.picker_cursor = reciter_options()
-                    .iter()
-                    .position(|e| *e == self.prefs.reciter)
-                    .unwrap_or(0);
+                self.open_picker(Picker::Reciter);
                 true
             }
             IpcKey::Char('p') => {
@@ -314,58 +413,8 @@ impl App {
                 self.toggle_play_pause();
                 true
             }
-            IpcKey::Esc => {
-                self.screen = Screen::SurahList;
-                true
-            }
-            _ => false,
-        }
-    }
-
-    fn handle_translation_key(&mut self, key: IpcKey) -> bool {
-        let options = translation_options();
-        match key {
-            IpcKey::Up | IpcKey::Char('k') => {
-                self.picker_cursor = self.picker_cursor.saturating_sub(1);
-                true
-            }
-            IpcKey::Down | IpcKey::Char('j') => {
-                let max = options.len().saturating_sub(1);
-                self.picker_cursor = self.picker_cursor.min(max).saturating_add(1).min(max);
-                true
-            }
-            IpcKey::Enter => {
-                self.prefs.translation_edition = options[self.picker_cursor].into();
-                self.content_cache.clear();
-                self.screen = Screen::SurahList;
-                self.save_prefs();
-                true
-            }
-            IpcKey::Esc => {
-                self.screen = Screen::SurahList;
-                true
-            }
-            _ => false,
-        }
-    }
-
-    fn handle_reciter_key(&mut self, key: IpcKey) -> bool {
-        let options = reciter_options();
-        match key {
-            IpcKey::Up | IpcKey::Char('k') => {
-                self.picker_cursor = self.picker_cursor.saturating_sub(1);
-                true
-            }
-            IpcKey::Down | IpcKey::Char('j') => {
-                let max = options.len().saturating_sub(1);
-                self.picker_cursor = self.picker_cursor.min(max).saturating_add(1).min(max);
-                true
-            }
-            IpcKey::Enter => {
-                self.prefs.reciter = options[self.picker_cursor].into();
-                self.content_cache.clear();
-                self.screen = Screen::SurahList;
-                self.save_prefs();
+            IpcKey::Char('e') => {
+                self.open_picker(Picker::Translation);
                 true
             }
             IpcKey::Esc => {
@@ -394,12 +443,21 @@ impl App {
                     self.handle_surah_content(result);
                     self.dirty = true;
                 }
+                Ok(FetchMsg::Editions(result)) => self.handle_editions_result(result),
                 Err(mpsc::TryRecvError::Empty) => self.rx_fetch = Some(rx),
                 Err(mpsc::TryRecvError::Disconnected) => {
                     self.fetching = false;
                     self.status = "Fetch worker stopped".into();
                     self.dirty = true;
                 }
+            }
+        }
+        if let Some(rx) = self.rx_editions.take() {
+            match rx.try_recv() {
+                Ok(FetchMsg::Editions(result)) => self.handle_editions_result(result),
+                Ok(_) => self.rx_editions = Some(rx),
+                Err(mpsc::TryRecvError::Empty) => self.rx_editions = Some(rx),
+                Err(mpsc::TryRecvError::Disconnected) => self.editions_loading = false,
             }
         }
         if let Some(rx) = self.rx_mpv.take() {
@@ -497,6 +555,28 @@ impl App {
         thread::spawn(move || {
             let _ = tx.send(FetchMsg::SurahList(fetch_surah_list()));
         });
+    }
+
+    fn start_fetch_editions(&mut self) {
+        let (tx, rx) = mpsc::channel();
+        self.rx_editions = Some(rx);
+        self.editions_loading = true;
+        thread::spawn(move || {
+            let _ = tx.send(FetchMsg::Editions(fetch_editions()));
+        });
+    }
+
+    fn handle_editions_result(&mut self, result: Result<Vec<Edition>, String>) {
+        self.editions_loading = false;
+        match result {
+            Ok(list) => {
+                self.translations = translation_editions(&list);
+                self.reciters = reciter_editions(&list);
+                self.status.clear();
+            }
+            Err(e) => self.status = format!("Editions error: {e}"),
+        }
+        self.dirty = true;
     }
 
     fn open_selected_surah(&mut self) {
@@ -706,15 +786,17 @@ impl App {
     }
 }
 
+fn picker_label(picker: Picker) -> &'static str {
+    match picker {
+        Picker::Translation => "Translation",
+        Picker::Reciter => "Reciter",
+    }
+}
+
 fn respond(app: &mut App, consumed: bool) {
     santui_ipc::protocol::send_plugin_msg(
         app.render().to_vec(),
-        hints(
-            app.screen,
-            app.search_mode,
-            !app.surahs.is_empty(),
-            app.fetching,
-        ),
+        hints(app.screen, app.picker, !app.surahs.is_empty()),
         vec![],
         app.pending_request.take(),
         None,
@@ -919,5 +1001,185 @@ mod tests {
         assert_eq!(*decoded.per_surah_ayah.get(&2).unwrap(), 3);
         assert_eq!(*decoded.per_surah_ayah.get(&36).unwrap(), 5);
         assert_eq!(decoded.display_mode, DisplayMode::Both);
+    }
+
+    fn edition(id: &str, name: &str) -> Edition {
+        Edition {
+            identifier: id.into(),
+            name: name.into(),
+            english_name: name.into(),
+            language: "en".into(),
+            format: "text".into(),
+            kind: "translation".into(),
+        }
+    }
+
+    fn test_content() -> SurahContent {
+        SurahContent {
+            summary: SurahSummary {
+                number: 1,
+                name: "الفاتحة".into(),
+                english_name: "Al-Faatiha".into(),
+                english_translation: "The Opening".into(),
+                ayah_count: 7,
+            },
+            ayahs: vec![],
+            translation_edition: "en.sahih".into(),
+            reciter: "ar.alafasy".into(),
+        }
+    }
+
+    #[test]
+    fn picker_opens_at_current_pref() {
+        let mut app = App::default();
+        app.translations = vec![
+            edition("en.sahih", "Saheeh International"),
+            edition("id.indonesian", "Bahasa Indonesia"),
+        ];
+        app.prefs.translation_edition = "id.indonesian".into();
+        app.handle_key(IpcKey::Char('e'));
+        assert_eq!(app.picker, Some(Picker::Translation));
+        assert_eq!(app.picker_cursor, 1);
+        app.handle_key(IpcKey::Esc);
+        assert_eq!(app.picker, None);
+        app.handle_key(IpcKey::Char('r'));
+        assert_eq!(app.picker, Some(Picker::Reciter));
+    }
+
+    #[test]
+    fn picker_navigates_and_clamps() {
+        let mut app = App::default();
+        app.translations = vec![
+            edition("en.sahih", "Saheeh International"),
+            edition("id.indonesian", "Bahasa Indonesia"),
+        ];
+        app.picker = Some(Picker::Translation);
+        app.handle_key(IpcKey::Down);
+        assert_eq!(app.picker_cursor, 1);
+        app.handle_key(IpcKey::Down);
+        assert_eq!(app.picker_cursor, 1);
+        app.handle_key(IpcKey::Up);
+        assert_eq!(app.picker_cursor, 0);
+        app.handle_key(IpcKey::Up);
+        assert_eq!(app.picker_cursor, 0);
+    }
+
+    #[test]
+    fn picker_enter_selects_translation_in_list_mode() {
+        let mut app = App::default();
+        app.translations = vec![
+            edition("en.sahih", "Saheeh International"),
+            edition("id.indonesian", "Bahasa Indonesia"),
+        ];
+        app.content_cache.insert(1, test_content());
+        app.picker_cursor = 1;
+        app.picker = Some(Picker::Translation);
+        app.handle_key(IpcKey::Enter);
+        assert_eq!(app.prefs.translation_edition, "id.indonesian");
+        assert_eq!(app.picker, None);
+        assert!(app.content_cache.is_empty());
+    }
+
+    #[test]
+    fn picker_enter_selects_reciter() {
+        let mut app = App::default();
+        app.reciters = vec![
+            edition("ar.alafasy", "Alafasy"),
+            edition("ar.husary", "Husary"),
+        ];
+        app.picker_cursor = 1;
+        app.picker = Some(Picker::Reciter);
+        app.handle_key(IpcKey::Enter);
+        assert_eq!(app.prefs.reciter, "ar.husary");
+        assert_eq!(app.picker, None);
+    }
+
+    #[test]
+    fn picker_blocks_other_keys() {
+        let mut app = App::default();
+        app.picker = Some(Picker::Translation);
+        assert!(!app.handle_key(IpcKey::Char('p')));
+        assert!(!app.handle_key(IpcKey::Char('/')));
+        assert_eq!(app.picker, Some(Picker::Translation));
+    }
+
+    #[test]
+    fn reader_e_opens_translation_picker() {
+        let mut app = App::default();
+        app.screen = Screen::Reader;
+        app.handle_key(IpcKey::Char('e'));
+        assert_eq!(app.picker, Some(Picker::Translation));
+    }
+
+    #[test]
+    fn reader_picker_enter_keeps_reader_and_refetches() {
+        let mut app = App::default();
+        app.screen = Screen::Reader;
+        app.prefs.last_surah = Some(1);
+        app.content_cache.insert(1, test_content());
+        app.content_cache.insert(2, test_content());
+        app.translations = vec![
+            edition("en.sahih", "Saheeh International"),
+            edition("id.indonesian", "Bahasa Indonesia"),
+        ];
+        app.picker_cursor = 1;
+        app.picker = Some(Picker::Translation);
+        app.handle_key(IpcKey::Enter);
+        assert_eq!(app.prefs.translation_edition, "id.indonesian");
+        assert_eq!(app.picker, None);
+        assert_eq!(app.screen, Screen::Reader);
+        assert_eq!(app.content_cache.len(), 1);
+        assert!(app.content_cache.contains_key(&1));
+        assert!(app.fetching);
+        assert!(app.rx_fetch.is_some());
+    }
+
+    #[test]
+    fn picker_open_refetches_editions_when_empty() {
+        let mut app = App::default();
+        app.handle_key(IpcKey::Char('e'));
+        assert_eq!(app.picker, Some(Picker::Translation));
+        assert!(app.editions_loading);
+    }
+
+    #[test]
+    fn editions_fetch_populates_lists() {
+        let mut app = App::default();
+        let (tx, rx) = mpsc::channel();
+        app.rx_editions = Some(rx);
+        app.editions_loading = true;
+        let json = r#"{"data":[
+            {"identifier":"en.sahih","language":"en","name":"Saheeh International","englishName":"Saheeh International","format":"text","type":"translation","direction":"ltr"},
+            {"identifier":"id.indonesian","language":"id","name":"Bahasa Indonesia","englishName":"Unknown","format":"text","type":"translation","direction":"ltr"},
+            {"identifier":"ar.alafasy","language":"ar","name":"مشاري العفاسي","englishName":"Alafasy","format":"audio","type":"versebyverse","direction":null},
+            {"identifier":"ar.alafasy-2","language":"ar","name":"مشاري العفاسي","englishName":"Alafasy","format":"audio","type":"versebyverse","direction":null},
+            {"identifier":"en.walk","language":"en","name":"Ibrahim Walk","englishName":"Ibrahim Walk","format":"audio","type":"versebyverse","direction":null}
+        ]}"#;
+        let list = parse_editions_value(&serde_json::from_str(json).unwrap()).unwrap();
+        let _ = tx.send(FetchMsg::Editions(Ok(list)));
+        app.handle_tick();
+        assert!(!app.editions_loading);
+        assert_eq!(app.translations.len(), 2);
+        assert_eq!(app.reciters.len(), 1);
+        assert_eq!(app.reciters[0].identifier, "ar.alafasy");
+    }
+
+    #[test]
+    fn hints_picker_mode() {
+        let h = hints(Screen::SurahList, Some(Picker::Translation), false);
+        assert_eq!(
+            h,
+            vec![
+                ("\u{2191}\u{2193}".into(), "navigate".into()),
+                ("\u{21B5}".into(), "select".into()),
+                ("esc".into(), "close".into()),
+            ]
+        );
+    }
+
+    #[test]
+    fn hints_reader_includes_translation_key() {
+        let h = hints(Screen::Reader, None, true);
+        assert!(h.iter().any(|(k, _)| k == "e"));
     }
 }

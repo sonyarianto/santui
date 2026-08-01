@@ -1,7 +1,8 @@
 use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData, BORDER_ALL};
+use santui_ipc::ui;
 use santui_ipc::ui::push_text;
 
-use crate::types::{self, Ayah, DisplayMode, Screen};
+use crate::types::{self, Ayah, DisplayMode, Picker, Screen};
 use crate::App;
 
 pub fn render_ui(app: &App) -> Vec<RenderCmd> {
@@ -32,26 +33,118 @@ pub fn render_ui(app: &App) -> Vec<RenderCmd> {
     match app.screen {
         Screen::SurahList => render_surah_list(app, &mut cmds, &theme, w, h),
         Screen::Reader => render_reader(app, &mut cmds, &theme, w, h),
-        Screen::TranslationPicker => render_picker(
-            app,
-            &mut cmds,
-            &theme,
-            w,
-            h,
-            "Translation",
-            &types::translation_options(),
-        ),
-        Screen::ReciterPicker => render_picker(
-            app,
-            &mut cmds,
-            &theme,
-            w,
-            h,
-            "Reciter",
-            &types::reciter_options(),
-        ),
+    }
+    if let Some(picker) = app.picker {
+        render_picker_panel(app, picker, &mut cmds, &theme, w, h);
     }
     cmds
+}
+
+fn render_picker_panel(
+    app: &App,
+    picker: Picker,
+    cmds: &mut Vec<RenderCmd>,
+    theme: &ThemeData,
+    w: u16,
+    h: u16,
+) {
+    let popup_w = (w * 2 / 5).max(20);
+    let popup_x = w.saturating_sub(popup_w);
+    if popup_x < 4 || h < 10 {
+        return;
+    }
+
+    ui::popup_backdrop(cmds, theme, popup_x, 0, popup_w, h);
+
+    let footer: &[(&str, &str)] = &[
+        ("\u{2191}\u{2193}", "navigate"),
+        ("\u{21B5}", "select"),
+        ("esc", "close"),
+    ];
+    ui::draw_panel(
+        cmds,
+        theme,
+        popup_x,
+        0,
+        popup_w,
+        h,
+        picker_label(picker),
+        ui::PanelOpts {
+            focused: true,
+            footer: Some(footer),
+            dim_unfocused: false,
+        },
+    );
+
+    let inner_w = popup_w.saturating_sub(4) as usize;
+    let options = app.picker_options(picker);
+
+    if app.editions_loading {
+        push_text(
+            cmds,
+            popup_x + 2,
+            2,
+            santui_ipc::ui::truncate("Loading editions...", inner_w),
+            theme.text_muted,
+            false,
+        );
+        return;
+    }
+    if options.is_empty() {
+        push_text(
+            cmds,
+            popup_x + 2,
+            2,
+            santui_ipc::ui::truncate("Editions unavailable", inner_w),
+            theme.text_muted,
+            false,
+        );
+        return;
+    }
+
+    let current = match picker {
+        Picker::Translation => &app.prefs.translation_edition,
+        Picker::Reciter => &app.prefs.reciter,
+    };
+    let items: Vec<String> = options
+        .iter()
+        .map(|e| {
+            let name = e.display_name();
+            if &e.identifier == current {
+                format!("\u{25CF} {}", santui_ipc::ui::truncate(&name, inner_w - 2))
+            } else {
+                format!("  {}", santui_ipc::ui::truncate(&name, inner_w - 2))
+            }
+        })
+        .collect();
+    let list_h = h.saturating_sub(4).max(4);
+    cmds.push(RenderCmd::List {
+        x: popup_x + 2,
+        y: 2,
+        w: inner_w as u16,
+        h: list_h,
+        items,
+        selected: Some(app.picker_cursor.min(options.len().saturating_sub(1))),
+        style: TextStyle {
+            fg: Some(theme.text),
+            bg: None,
+            bold: false,
+            modifiers: 0,
+        },
+        highlight_style: TextStyle {
+            fg: Some(theme.inverted_text),
+            bg: Some(theme.highlight),
+            bold: true,
+            modifiers: 0,
+        },
+    });
+}
+
+fn picker_label(picker: Picker) -> &'static str {
+    match picker {
+        Picker::Translation => "Translation",
+        Picker::Reciter => "Reciter",
+    }
 }
 
 fn render_surah_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, h: u16) {
@@ -180,6 +273,16 @@ fn render_surah_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w:
         current_style: None,
         cell_styles: None,
     });
+    if !app.status.is_empty() {
+        push_text(
+            cmds,
+            2,
+            h.saturating_sub(1),
+            santui_ipc::ui::truncate(&status_line(app), inner_w),
+            theme.text_muted,
+            false,
+        );
+    }
 }
 
 fn render_reader(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, h: u16) {
@@ -233,54 +336,6 @@ fn render_reader(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16
     });
 }
 
-fn render_picker(
-    app: &App,
-    cmds: &mut Vec<RenderCmd>,
-    theme: &ThemeData,
-    w: u16,
-    h: u16,
-    title: &str,
-    options: &[&str],
-) {
-    push_text(
-        cmds,
-        2,
-        1,
-        santui_ipc::ui::truncate(title, w as usize - 4),
-        theme.text_muted,
-        false,
-    );
-    let items: Vec<String> = options.iter().map(|s| (*s).to_string()).collect();
-    cmds.push(RenderCmd::List {
-        x: 2,
-        y: 3,
-        w: w.saturating_sub(4),
-        h: h.saturating_sub(5),
-        items,
-        selected: Some(app.picker_cursor.min(options.len().saturating_sub(1))),
-        style: TextStyle {
-            fg: Some(theme.text),
-            bg: None,
-            bold: false,
-            modifiers: 0,
-        },
-        highlight_style: TextStyle {
-            fg: Some(theme.inverted_text),
-            bg: Some(theme.highlight),
-            bold: true,
-            modifiers: 0,
-        },
-    });
-    push_text(
-        cmds,
-        2,
-        h.saturating_sub(1),
-        status_line(app),
-        theme.text_muted,
-        false,
-    );
-}
-
 fn ayah_row(ayah: &Ayah, mode: DisplayMode, width: usize) -> String {
     let text = match mode {
         DisplayMode::Arabic => ayah.arabic.clone(),
@@ -304,12 +359,14 @@ fn status_line(app: &App) -> String {
     parts.join(" · ")
 }
 
-pub fn hints(
-    screen: Screen,
-    _search_mode: bool,
-    surahs_loaded: bool,
-    _fetching: bool,
-) -> Vec<(String, String)> {
+pub fn hints(screen: Screen, picker: Option<Picker>, surahs_loaded: bool) -> Vec<(String, String)> {
+    if picker.is_some() {
+        return vec![
+            ("\u{2191}\u{2193}".into(), "navigate".into()),
+            ("\u{21B5}".into(), "select".into()),
+            ("esc".into(), "close".into()),
+        ];
+    }
     match screen {
         Screen::SurahList => {
             let mut v = vec![
@@ -332,13 +389,9 @@ pub fn hints(
             ("a".into(), "play all".into()),
             ("s".into(), "stop".into()),
             ("t".into(), "mode".into()),
+            ("e".into(), "translation".into()),
             ("r".into(), "repeat".into()),
             ("esc".into(), "list".into()),
-        ],
-        Screen::TranslationPicker | Screen::ReciterPicker => vec![
-            ("\u{2191}\u{2193}".into(), "navigate".into()),
-            ("\u{21B5}".into(), "select".into()),
-            ("esc".into(), "back".into()),
         ],
     }
 }

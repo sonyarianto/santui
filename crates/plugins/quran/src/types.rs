@@ -81,8 +81,32 @@ impl Default for Preferences {
 pub enum Screen {
     SurahList,
     Reader,
-    TranslationPicker,
-    ReciterPicker,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Picker {
+    Translation,
+    Reciter,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Edition {
+    pub identifier: String,
+    pub name: String,
+    pub english_name: String,
+    pub language: String,
+    pub format: String,
+    pub kind: String,
+}
+
+impl Edition {
+    pub fn display_name(&self) -> String {
+        if self.english_name == "Unknown" {
+            self.name.clone()
+        } else {
+            self.english_name.clone()
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -111,6 +135,7 @@ impl AudioState {
 pub enum FetchMsg {
     SurahList(Result<Vec<SurahSummary>, String>),
     Surah(Result<SurahContent, String>),
+    Editions(Result<Vec<Edition>, String>),
 }
 
 pub enum MpvCmd {
@@ -126,17 +151,4 @@ pub enum MpvMsg {
     EndFile,
     Error(String),
     AyahStarted { index: usize },
-}
-
-pub fn translation_options() -> Vec<&'static str> {
-    vec!["en.sahih", "en.asad", "id.indonesian"]
-}
-
-pub fn reciter_options() -> Vec<&'static str> {
-    vec![
-        "ar.alafasy",
-        "ar.abdulbasitmurattal",
-        "ar.husary",
-        "ar.minshawi",
-    ]
 }
