@@ -4,13 +4,100 @@
 
 - Remove radio.log from gitignore - it was a one-off
 - Use cargo install --locked for cargo-audit, binstall failed in CI
+- Remove broken time-pos/duration polling, revert to END_FILE-driven advancement
 
 ### ⚙️ Miscellaneous
 
 - Use cargo-binstall for faster audit install
 - Build only stable plugins in release, not full workspace
 - Remove radio.log from tracking, add to gitignore
-\nFull Changelog: [v0.2.35...](https://github.com/sonyarianto/santui/compare/v0.2.35...)
+- Update changelog for v0.2.35
+- Isolate release assets in _assets/ to avoid uploading repo files
+
+### 🎨 Refactor
+
+- Extract player/api/types/ui modules, mark stable
+- Rename santui-quran-reader to santui-quran
+- Remove redundant 'Loaded N surahs' status
+- Remove blank line between border and header
+- Overlay lyrics panel on dimmed background
+- Centralize draw_panel in santui-ipc with PanelOpts, remove per-plugin duplicates
+- Centralize UI primitives in santui-ipc (blink cursor, right-align, scroll pct, table styles, heart overlay, dim overlay)
+- Drop per-plugin truncate clones, use shared ui::truncate; unify ellipsis style to '...'
+- Centralize clipboard into santui-ipc, drop 31 identical per-plugin clones
+- Centralize url_encode, strip_timestamps, to_rc, max_visible_tracks into santui-ipc
+- Centralize libmpv wrapper into santui-ipc::mpv, drop 4 per-plugin copies; fix wrong mpv event constants
+- Centralize shared utils into santui-ipc (theme, time, platform, ui, text, protocol helpers)
+- Centralize search-mode key handling into santui-ipc::search
+- Remove vestigial lyrics focus switching, drop Tab hints
+- Remove vestigial details focus switching, drop Tab hints
+- Lyrics as overlay panel snapped right instead of full-screen view
+
+### 🎨 Styling
+
+- Reader header with '-' separators and dimmed mode/audio keys
+
+### 🐛 Bug Fixes
+
+- Literal \n in cliff.toml changelog template
+- Log-viewer UI standards and quran surah list active ayah column
+- Reorder hints, add p key for play
+- Reorder station panel hints, / search before ↵ play
+- Remove p alias, ↵ play only
+- Stations panel uses bright colors under dim overlay
+- Artist text always muted in lyrics overlay
+- Remove v prefix from last active ayah number
+- Update audio_state on mpv ayah advance so last-active tracks live
+- Track playing surah independently of prefs for live ayah updates
+- Track ayah progression via FILE_LOADED instead of END_FILE
+- Correct mpv event ID constants for mpv 0.40.0
+- Advance ayah counter by actual audio playback position, not mpv decoder EOF
+- Ignore late END_FILE events from replaced playlist to prevent counter from jumping ahead
+- Use START_FILE (not END_FILE) to advance ayah counter during gapless playback
+- Stop END_FILE handler from clearing active playlist
+- Poll playlist-pos instead of mpv events to advance ayah counter
+- Per-file track playlist with START_FILE and self-managed EndFile
+- Restore END_FILE cleanup for single-ayah playback
+- Move volume indicator from Now Playing title into panel content, right-aligned
+- 'c' clears results without stopping playback, matching radio
+- Show edition display names in surah list header
+- Add blank row between edition list and panel footer
+- Hide bottom status line while fetching, keep top-right Loading indicator
+- Position header segments by display width, not char count
+- Move playing indicator to top-right corner, drop stale status text
+
+### 💼 Other
+
+- Track Details panel for music-preview (feature branch)
+
+### 📚 Documentation
+
+- Add lyrics overlay section
+- Fix stale bincode doc comment on read_plugin_msg
+
+### 🚀 Features
+
+- Playlist-based playback, search mode, table view, UI polish
+- Cursor follows auto-advance via timer-based approach
+- Cursor follows auto-advance via AyahStarted mpv events
+- Add Arabic and Last Active columns to surah list
+- Track last active ayah per surah
+- Word-wrap ayah text instead of truncating
+- Add 'p' key alias to play selected station
+- Hide search bar placeholder until '/' is pressed
+- Hide search bar placeholder until '/' is pressed; add 'p' play alias to music-preview
+- Clarify 'r' hint to 'reload stations'
+- Add Track Details side panel (d key) with full iTunes track info
+- Format details panel as Key: Value; human-readable release date
+- Dimmed keys with normal text values in Track Details panel
+- Human-friendly explicitness labels in Track Details
+- Dynamic status bar hints with 'd' details; '↵' as play hint, 'p' hidden alias; dash in Position
+- Fetch editions from API; translation/reciter pickers as overlay panels
+- Dim header keys, color values in surah list header
+- Support page up/down in edition picker panels
+- Distribute surah table columns to fill available width
+
+Full Changelog: [v0.2.35...](https://github.com/sonyarianto/santui/compare/v0.2.35...)
 ## [0.2.35] - 2026-07-25
 
 ### ⚙️ Miscellaneous
@@ -63,7 +150,8 @@
 - Live countdown on now-playing Duration cell
 - Auto-sync dev plugin binaries on startup
 - New plugin to search lyrics from LRCLib
-\nFull Changelog: [v0.2.34...v0.2.35](https://github.com/sonyarianto/santui/compare/v0.2.34...v0.2.35)
+
+Full Changelog: [v0.2.34...v0.2.35](https://github.com/sonyarianto/santui/compare/v0.2.34...v0.2.35)
 ## [0.2.34] - 2026-07-25
 
 ### 📚 Documentation
@@ -73,7 +161,8 @@
 ### 🚀 Features
 
 - Add status field to manifest, only package stable plugins in release
-\nFull Changelog: [v0.2.33...v0.2.34](https://github.com/sonyarianto/santui/compare/v0.2.33...v0.2.34)
+
+Full Changelog: [v0.2.33...v0.2.34](https://github.com/sonyarianto/santui/compare/v0.2.33...v0.2.34)
 ## [0.2.33] - 2026-07-24
 
 ### ⚙️ Miscellaneous
@@ -84,7 +173,8 @@
 
 - Drain high-priority messages before exiting writer loop on low channel disconnect
 - Upload plugin binaries sequentially to avoid GitHub secondary rate limit
-\nFull Changelog: [v0.2.32...v0.2.33](https://github.com/sonyarianto/santui/compare/v0.2.32...v0.2.33)
+
+Full Changelog: [v0.2.32...v0.2.33](https://github.com/sonyarianto/santui/compare/v0.2.32...v0.2.33)
 ## [0.2.32] - 2026-07-24
 
 ### 🐛 Bug Fixes
@@ -94,7 +184,8 @@
 ### 🚀 Features
 
 - Add filter indicator, pgup/pgdn, remove # column
-\nFull Changelog: [v0.2.31...v0.2.32](https://github.com/sonyarianto/santui/compare/v0.2.31...v0.2.32)
+
+Full Changelog: [v0.2.31...v0.2.32](https://github.com/sonyarianto/santui/compare/v0.2.31...v0.2.32)
 ## [0.2.31] - 2026-07-18
 
 ### ⚙️ Miscellaneous
@@ -114,7 +205,8 @@
 ### 🚀 Features
 
 - Add mpv playback, search mode, and dimmed search hint
-\nFull Changelog: [v0.2.30...v0.2.31](https://github.com/sonyarianto/santui/compare/v0.2.30...v0.2.31)
+
+Full Changelog: [v0.2.30...v0.2.31](https://github.com/sonyarianto/santui/compare/v0.2.30...v0.2.31)
 ## [0.2.30] - 2026-07-18
 
 ### ⚙️ Miscellaneous
@@ -162,7 +254,8 @@
 - Mouse capture toggle (Alt+M), --no-mouse flag, config option
 - Binary bincode format for PluginMsg (plugin→host)
 - Add plugin favorites (bookmark with ♥, filter with f)
-\nFull Changelog: [v0.2.29...v0.2.30](https://github.com/sonyarianto/santui/compare/v0.2.29...v0.2.30)
+
+Full Changelog: [v0.2.29...v0.2.30](https://github.com/sonyarianto/santui/compare/v0.2.29...v0.2.30)
 ## [0.2.29] - 2026-07-11
 
 ### ⚙️ Miscellaneous
@@ -200,7 +293,8 @@
 - Add optional self-hosted sync server (santui-server) and sync client
 - Add exponential backoff retry for stream connection failures
 - Persist volume across restarts; remove dead palette_command handler
-\nFull Changelog: [v0.2.28...v0.2.29](https://github.com/sonyarianto/santui/compare/v0.2.28...v0.2.29)
+
+Full Changelog: [v0.2.28...v0.2.29](https://github.com/sonyarianto/santui/compare/v0.2.28...v0.2.29)
 ## [0.2.28] - 2026-07-06
 
 ### ◀️ Revert
@@ -253,7 +347,8 @@
 - Show scroll position percentage on stations list
 - Show lyrics source attribution in lyrics panel footer
 - Render logo character-by-character so starfield shows through gaps
-\nFull Changelog: [v0.2.27...v0.2.28](https://github.com/sonyarianto/santui/compare/v0.2.27...v0.2.28)
+
+Full Changelog: [v0.2.27...v0.2.28](https://github.com/sonyarianto/santui/compare/v0.2.27...v0.2.28)
 ## [0.2.27] - 2026-07-04
 
 ### ⚙️ Miscellaneous
@@ -307,7 +402,8 @@
 - Add 8 new plugins + LaunchPlugin IPC support
 - Add Quran reader plugin
 - Add IPTV Player plugin with M3U parser and mpv video playback
-\nFull Changelog: [v0.2.26...v0.2.27](https://github.com/sonyarianto/santui/compare/v0.2.26...v0.2.27)
+
+Full Changelog: [v0.2.26...v0.2.27](https://github.com/sonyarianto/santui/compare/v0.2.26...v0.2.27)
 ## [0.2.26] - 2026-07-01
 
 ### 🎨 Refactor
@@ -329,13 +425,15 @@
 
 - Add santui reset command
 - Add --help flag
-\nFull Changelog: [v0.2.25...v0.2.26](https://github.com/sonyarianto/santui/compare/v0.2.25...v0.2.26)
+
+Full Changelog: [v0.2.25...v0.2.26](https://github.com/sonyarianto/santui/compare/v0.2.25...v0.2.26)
 ## [0.2.25] - 2026-07-01
 
 ### 🚀 Features
 
 - Add filter indicator and 'c' to clear search in radio plugin
-\nFull Changelog: [v0.2.24...v0.2.25](https://github.com/sonyarianto/santui/compare/v0.2.24...v0.2.25)
+
+Full Changelog: [v0.2.24...v0.2.25](https://github.com/sonyarianto/santui/compare/v0.2.24...v0.2.25)
 ## [0.2.24] - 2026-06-30
 
 ### 🚀 Features
@@ -343,7 +441,8 @@
 - Replace mtime polling with filesystem notification (notify)
 - Add favorites to radio stream player with DB persistence
 - Add favorites to radio stream player with DB persistence
-\nFull Changelog: [v0.2.23...v0.2.24](https://github.com/sonyarianto/santui/compare/v0.2.23...v0.2.24)
+
+Full Changelog: [v0.2.23...v0.2.24](https://github.com/sonyarianto/santui/compare/v0.2.23...v0.2.24)
 ## [0.2.23] - 2026-06-30
 
 ### ⚙️ Miscellaneous
@@ -354,14 +453,16 @@
 
 - Clarify plugins.json is gitignored, should not be committed
 - Align docs, website, and templates with recent code changes
-\nFull Changelog: [v0.2.22...v0.2.23](https://github.com/sonyarianto/santui/compare/v0.2.22...v0.2.23)
+
+Full Changelog: [v0.2.22...v0.2.23](https://github.com/sonyarianto/santui/compare/v0.2.22...v0.2.23)
 ## [0.2.22] - 2026-06-29
 
 ### 🐛 Bug Fixes
 
 - Eliminate layout shift during plugin install
 - Prevent progress bar from overflowing right panel border
-\nFull Changelog: [v0.2.21...v0.2.22](https://github.com/sonyarianto/santui/compare/v0.2.21...v0.2.22)
+
+Full Changelog: [v0.2.21...v0.2.22](https://github.com/sonyarianto/santui/compare/v0.2.21...v0.2.22)
 ## [0.2.21] - 2026-06-29
 
 ### ⚙️ Miscellaneous
@@ -391,7 +492,8 @@
 ### 🚀 Features
 
 - Add title/artist header to lyrics panel from iTunes or station metadata
-\nFull Changelog: [v0.2.20...v0.2.21](https://github.com/sonyarianto/santui/compare/v0.2.20...v0.2.21)
+
+Full Changelog: [v0.2.20...v0.2.21](https://github.com/sonyarianto/santui/compare/v0.2.20...v0.2.21)
 ## [0.2.20] - 2026-06-29
 
 ### ⚙️ Miscellaneous
@@ -401,7 +503,8 @@
 ### 📚 Documentation
 
 - Add note to sync plugins.json version on release
-\nFull Changelog: [v0.2.19...v0.2.20](https://github.com/sonyarianto/santui/compare/v0.2.19...v0.2.20)
+
+Full Changelog: [v0.2.19...v0.2.20](https://github.com/sonyarianto/santui/compare/v0.2.19...v0.2.20)
 ## [0.2.19] - 2026-06-29
 
 ### ⚙️ Miscellaneous
@@ -455,7 +558,8 @@
 - Add tests for lrclib, stations, database, and EventBus
 - Add ConfigManager and Config unit tests
 - Add 27 render_ui unit tests
-\nFull Changelog: [v0.2.17...v0.2.19](https://github.com/sonyarianto/santui/compare/v0.2.17...v0.2.19)
+
+Full Changelog: [v0.2.17...v0.2.19](https://github.com/sonyarianto/santui/compare/v0.2.17...v0.2.19)
 ## [0.2.17] - 2026-06-28
 
 ### 🐛 Bug Fixes
@@ -469,14 +573,16 @@
 - Show volume percentage in Now Playing title
 - Background playback support for radio plugin
 - Declare capabilities in plugin manifests instead of hardcoded id check
-\nFull Changelog: [v0.2.16...v0.2.17](https://github.com/sonyarianto/santui/compare/v0.2.16...v0.2.17)
+
+Full Changelog: [v0.2.16...v0.2.17](https://github.com/sonyarianto/santui/compare/v0.2.16...v0.2.17)
 ## [0.2.16] - 2026-06-28
 
 ### 🐛 Bug Fixes
 
 - Eliminate expect() panics, extract duplicated constants
 - Add shell: bash to Set binary directory and Build steps for Windows compat
-\nFull Changelog: [v0.2.15...v0.2.16](https://github.com/sonyarianto/santui/compare/v0.2.15...v0.2.16)
+
+Full Changelog: [v0.2.15...v0.2.16](https://github.com/sonyarianto/santui/compare/v0.2.15...v0.2.16)
 ## [0.2.15] - 2026-06-27
 
 ### ⚙️ Miscellaneous
@@ -547,7 +653,8 @@
 - UI polish, dynamic Now Playing height, current-station highlight
 - Total stations count at top right, auto-dismiss scan message
 - Move search bar to top line, no table row loss, Enter plays
-\nFull Changelog: [v0.2.14...v0.2.15](https://github.com/sonyarianto/santui/compare/v0.2.14...v0.2.15)
+
+Full Changelog: [v0.2.14...v0.2.15](https://github.com/sonyarianto/santui/compare/v0.2.14...v0.2.15)
 ## [0.2.14] - 2026-06-25
 
 ### ⚙️ Miscellaneous
@@ -613,20 +720,23 @@
 ### 🧪 Testing
 
 - Add comprehensive unit tests
-\nFull Changelog: [v0.2.13...v0.2.14](https://github.com/sonyarianto/santui/compare/v0.2.13...v0.2.14)
+
+Full Changelog: [v0.2.13...v0.2.14](https://github.com/sonyarianto/santui/compare/v0.2.13...v0.2.14)
 ## [0.2.11] - 2026-06-21
 
 ### 🚀 Features
 
 - Plugin registry refactor + IPC protocol updates
 - Home screen plugin carousel with left/right navigation
-\nFull Changelog: [v0.2.10...v0.2.11](https://github.com/sonyarianto/santui/compare/v0.2.10...v0.2.11)
+
+Full Changelog: [v0.2.10...v0.2.11](https://github.com/sonyarianto/santui/compare/v0.2.10...v0.2.11)
 ## [0.2.10] - 2026-06-21
 
 ### ⚙️ Miscellaneous
 
 - Add ideas doc
-\nFull Changelog: [v0.2.9...v0.2.10](https://github.com/sonyarianto/santui/compare/v0.2.9...v0.2.10)
+
+Full Changelog: [v0.2.9...v0.2.10](https://github.com/sonyarianto/santui/compare/v0.2.9...v0.2.10)
 ## [0.2.8] - 2026-06-21
 
 ### ⚙️ Miscellaneous
@@ -681,7 +791,8 @@
 - Adaptive star count based on terminal dimensions
 - EventBus multi-consumer via subscribe() observer pattern
 - User-defined themes from ~/.santui/themes/*.toml
-\nFull Changelog: [v0.2.7...v0.2.8](https://github.com/sonyarianto/santui/compare/v0.2.7...v0.2.8)
+
+Full Changelog: [v0.2.7...v0.2.8](https://github.com/sonyarianto/santui/compare/v0.2.7...v0.2.8)
 ## [0.2.7] - 2026-06-21
 
 ### ◀️ Revert
