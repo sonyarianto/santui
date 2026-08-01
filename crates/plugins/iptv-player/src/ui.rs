@@ -1,116 +1,12 @@
 use crate::state::{IptvState, PlaybackState, Screen};
-use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData, BORDER_ALL};
+use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData};
 use santui_ipc::ui;
+use santui_ipc::ui::PanelOpts;
 
 pub const TABLE_TOP: u16 = 3;
 pub const HEADER_H: u16 = 1;
 
 const GAP: u16 = 1;
-
-#[allow(clippy::too_many_arguments)]
-fn draw_panel(
-    cmds: &mut Vec<RenderCmd>,
-    theme: &ThemeData,
-    x: u16,
-    y: u16,
-    w: u16,
-    h: u16,
-    title: &str,
-    focused: bool,
-    footer: Option<&[(&str, &str)]>,
-) {
-    if w < 3 || h < 2 {
-        return;
-    }
-    let t = if focused {
-        format!("{} \u{25cf}", title.trim())
-    } else {
-        title.trim().to_string()
-    };
-    cmds.push(RenderCmd::Border {
-        x,
-        y,
-        w,
-        h,
-        fg: theme.border,
-        bg: None,
-        borders: BORDER_ALL,
-        title: Some(t),
-        title_fg: Some(theme.border),
-        title_dash_fg: Some(theme.border),
-        border_type: None,
-    });
-
-    if let Some(hints) = footer {
-        let max_chars = w.saturating_sub(3) as usize;
-        let mut cx = x + 2;
-        let footer_y = y + h - 2;
-        let mut remaining = max_chars;
-        for (i, (key, desc)) in hints.iter().enumerate() {
-            if remaining == 0 {
-                break;
-            }
-            if i > 0 {
-                const SEP: &str = " \u{2022} ";
-                let sep_w = SEP.chars().count();
-                if sep_w <= remaining {
-                    cmds.push(RenderCmd::Text {
-                        x: cx,
-                        y: footer_y,
-                        text: SEP.into(),
-                        fg: Some(theme.text_muted),
-                        bg: None,
-                        bold: false,
-                        modifiers: 0,
-                    });
-                    cx += sep_w as u16;
-                    remaining -= sep_w;
-                }
-            }
-            if remaining == 0 {
-                break;
-            }
-            let k: String = key.chars().take(remaining).collect();
-            if !k.is_empty() {
-                let kw = k.chars().count();
-                cmds.push(RenderCmd::Text {
-                    x: cx,
-                    y: footer_y,
-                    text: k,
-                    fg: Some(theme.text),
-                    bg: None,
-                    bold: false,
-                    modifiers: 0,
-                });
-                cx += kw as u16;
-                remaining -= kw;
-            }
-            if remaining == 0 {
-                break;
-            }
-            if !desc.is_empty() {
-                let desc_w = desc.chars().count();
-                let space_needed = 1 + desc_w;
-                if space_needed <= remaining {
-                    let d: String = desc.chars().take(remaining - 1).collect();
-                    let dw = d.chars().count();
-                    let display = format!(" {d}");
-                    cmds.push(RenderCmd::Text {
-                        x: cx,
-                        y: footer_y,
-                        text: display,
-                        fg: Some(theme.text_muted),
-                        bg: None,
-                        bold: false,
-                        modifiers: 0,
-                    });
-                    cx += (1 + dw) as u16;
-                    remaining -= 1 + dw;
-                }
-            }
-        }
-    }
-}
 
 pub fn render_ui(state: &IptvState, theme: &ThemeData, area_w: u16, area_h: u16) -> Vec<RenderCmd> {
     let mut cmds = Vec::new();
@@ -184,7 +80,7 @@ fn render_channel_list(
     };
     let stations_footer_rows: u16 = if stations_footer.is_empty() { 0 } else { 2 };
 
-    draw_panel(
+    ui::draw_panel(
         cmds,
         theme,
         0,
@@ -192,8 +88,11 @@ fn render_channel_list(
         area_w,
         channels_h,
         "Channels",
-        matches!(state.screen, Screen::GroupFilter),
-        Some(stations_footer),
+        PanelOpts {
+            focused: matches!(state.screen, Screen::GroupFilter),
+            footer: Some(stations_footer),
+            ..Default::default()
+        },
     );
 
     let inner_w = area_w.saturating_sub(4) as usize;
@@ -394,8 +293,18 @@ fn render_channel_list(
 
     // Now Playing panel (bottom)
     let np_y = channels_h + GAP;
-    draw_panel(
-        cmds, theme, 0, np_y, area_w, info_h, "Playback", false, None,
+    ui::draw_panel(
+        cmds,
+        theme,
+        0,
+        np_y,
+        area_w,
+        info_h,
+        "Playback",
+        PanelOpts {
+            focused: false,
+            ..Default::default()
+        },
     );
     let vol_text = format!(" Vol: {}% ", state.volume);
     cmds.push(RenderCmd::Text {
@@ -646,7 +555,7 @@ fn render_url_editor(
 
     let inner_w = area_w.saturating_sub(4);
 
-    draw_panel(
+    ui::draw_panel(
         cmds,
         theme,
         0,
@@ -654,8 +563,7 @@ fn render_url_editor(
         area_w,
         area_h.saturating_sub(2),
         "Playlist URL",
-        true,
-        None,
+        PanelOpts::default(),
     );
 
     cmds.push(RenderCmd::Text {

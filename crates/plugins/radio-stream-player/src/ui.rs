@@ -1,123 +1,11 @@
 use crate::lrclib;
 use crate::state::{wrap_text, PlayState, RadioState};
-use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData, BORDER_ALL};
+use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData};
 use santui_ipc::ui;
+use santui_ipc::ui::PanelOpts;
 
 pub const TABLE_TOP: u16 = 3;
 pub const HEADER_H: u16 = 1;
-
-#[allow(clippy::too_many_arguments)]
-fn draw_panel(
-    cmds: &mut Vec<RenderCmd>,
-    theme: &ThemeData,
-    x: u16,
-    y: u16,
-    w: u16,
-    h: u16,
-    title: &str,
-    focused: bool,
-    footer: Option<&[(&str, &str)]>,
-    dim_unfocused: bool,
-) {
-    if w < 3 || h < 2 {
-        return;
-    }
-    let t = title.trim().to_string();
-    let bright = focused || !dim_unfocused;
-    let border_fg = if bright {
-        theme.border
-    } else {
-        theme.text_muted
-    };
-    let text_fg = if bright {
-        theme.border
-    } else {
-        theme.text_muted
-    };
-    cmds.push(RenderCmd::Border {
-        x,
-        y,
-        w,
-        h,
-        fg: border_fg,
-        bg: None,
-        borders: BORDER_ALL,
-        title: Some(t),
-        title_fg: Some(text_fg),
-        title_dash_fg: Some(border_fg),
-        border_type: None,
-    });
-
-    if let Some(hints) = footer {
-        let max_chars = w.saturating_sub(3) as usize;
-        let mut cx = x + 2;
-        let footer_y = y + h - 2;
-        let mut remaining = max_chars;
-        for (i, (key, desc)) in hints.iter().enumerate() {
-            if remaining == 0 {
-                break;
-            }
-            if i > 0 {
-                const SEP: &str = " • ";
-                let sep_w = SEP.chars().count();
-                if sep_w <= remaining {
-                    cmds.push(RenderCmd::Text {
-                        x: cx,
-                        y: footer_y,
-                        text: SEP.into(),
-                        fg: Some(theme.text_muted),
-                        bg: None,
-                        bold: false,
-                        modifiers: 0,
-                    });
-                    cx += sep_w as u16;
-                    remaining -= sep_w;
-                }
-            }
-            if remaining == 0 {
-                break;
-            }
-            let k: String = key.chars().take(remaining).collect();
-            if !k.is_empty() {
-                let kw = k.chars().count();
-                cmds.push(RenderCmd::Text {
-                    x: cx,
-                    y: footer_y,
-                    text: k,
-                    fg: Some(theme.text),
-                    bg: None,
-                    bold: false,
-                    modifiers: 0,
-                });
-                cx += kw as u16;
-                remaining -= kw;
-            }
-            if remaining == 0 {
-                break;
-            }
-            if !desc.is_empty() {
-                let desc_w = desc.chars().count();
-                let space_needed = 1 + desc_w;
-                if space_needed <= remaining {
-                    let d: String = desc.chars().take(remaining - 1).collect();
-                    let dw = d.chars().count();
-                    let display = format!(" {d}");
-                    cmds.push(RenderCmd::Text {
-                        x: cx,
-                        y: footer_y,
-                        text: display,
-                        fg: Some(theme.text_muted),
-                        bg: None,
-                        bold: false,
-                        modifiers: 0,
-                    });
-                    cx += (1 + dw) as u16;
-                    remaining -= 1 + dw;
-                }
-            }
-        }
-    }
-}
 
 pub fn render_ui(
     state: &RadioState,
@@ -179,7 +67,7 @@ pub fn render_ui(
 
     // ---- Stations panel (top-left) ----
     let stations_focused = true;
-    draw_panel(
+    ui::draw_panel(
         &mut cmds,
         theme,
         0,
@@ -187,9 +75,11 @@ pub fn render_ui(
         left_w,
         stations_h,
         "Stations",
-        stations_focused,
-        stations_footer,
-        true,
+        PanelOpts {
+            focused: stations_focused,
+            footer: stations_footer,
+            dim_unfocused: true,
+        },
     );
 
     let inner_w = left_w.saturating_sub(4) as usize;
@@ -464,8 +354,15 @@ pub fn render_ui(
     // ---- Now Playing panel (bottom-left) ----
     const NP_TITLE: &str = "Now Playing";
     let np_y = stations_h + GAP;
-    draw_panel(
-        &mut cmds, theme, 0, np_y, left_w, info_h, NP_TITLE, false, None, false,
+    ui::draw_panel(
+        &mut cmds,
+        theme,
+        0,
+        np_y,
+        left_w,
+        info_h,
+        NP_TITLE,
+        PanelOpts::default(),
     );
     // Volume right-aligned on the last content row (space is reserved in
     // r_inner_w so left-aligned text never overlaps it)
@@ -632,7 +529,7 @@ pub fn render_ui(
                 bg: theme.background_panel,
             });
 
-            draw_panel(
+            ui::draw_panel(
                 &mut cmds,
                 theme,
                 popup_x,
@@ -640,9 +537,11 @@ pub fn render_ui(
                 popup_w,
                 popup_h,
                 "Lyrics",
-                state.lyrics_focused,
-                lyrics_footer,
-                true,
+                PanelOpts {
+                    focused: state.lyrics_focused,
+                    footer: lyrics_footer,
+                    dim_unfocused: true,
+                },
             );
 
             let ly_inner_w = popup_w.saturating_sub(4);

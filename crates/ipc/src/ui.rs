@@ -131,8 +131,30 @@ pub fn palette_item(
 
 // ── Panel component ──
 
+/// Options controlling how a panel is drawn.
+#[derive(Clone, Copy, Debug)]
+pub struct PanelOpts<'a> {
+    /// Whether the panel has input focus (bright border).
+    pub focused: bool,
+    /// Dim the border while unfocused (`focused` wins when both are set).
+    pub dim_unfocused: bool,
+    /// Keyboard hints rendered in the bottom border area.
+    pub footer: Option<&'a [(&'a str, &'a str)]>,
+}
+
+impl Default for PanelOpts<'_> {
+    fn default() -> Self {
+        Self {
+            focused: true,
+            dim_unfocused: false,
+            footer: None,
+        }
+    }
+}
+
 /// Draw a full-box panel with title integrated into the top border (native ratatui style).
 /// Content should be placed at `x + 2, y + 1` (inside the border).
+#[allow(clippy::too_many_arguments)]
 pub fn draw_panel(
     cmds: &mut Vec<RenderCmd>,
     theme: &ThemeData,
@@ -141,23 +163,100 @@ pub fn draw_panel(
     w: u16,
     h: u16,
     title: &str,
+    opts: PanelOpts<'_>,
 ) {
     if w < 3 || h < 2 {
         return;
     }
+    let bright = opts.focused || !opts.dim_unfocused;
+    let border_fg = if bright {
+        theme.border
+    } else {
+        theme.text_muted
+    };
     cmds.push(RenderCmd::Border {
         x,
         y,
         w,
         h,
-        fg: theme.border,
+        fg: border_fg,
         bg: None,
         borders: BORDER_ALL,
-        title: Some(title.trim().into()),
-        title_fg: Some(theme.border),
-        title_dash_fg: Some(theme.border),
+        title: Some(title.trim().to_string()),
+        title_fg: Some(border_fg),
+        title_dash_fg: Some(border_fg),
         border_type: None,
     });
+
+    if let Some(hints) = opts.footer {
+        let max_chars = w.saturating_sub(3) as usize;
+        let mut cx = x + 2;
+        let footer_y = y + h - 2;
+        let mut remaining = max_chars;
+        for (i, (key, desc)) in hints.iter().enumerate() {
+            if remaining == 0 {
+                break;
+            }
+            if i > 0 {
+                const SEP: &str = " \u{2022} ";
+                let sep_w = SEP.chars().count();
+                if sep_w <= remaining {
+                    cmds.push(RenderCmd::Text {
+                        x: cx,
+                        y: footer_y,
+                        text: SEP.into(),
+                        fg: Some(theme.text_muted),
+                        bg: None,
+                        bold: false,
+                        modifiers: 0,
+                    });
+                    cx += sep_w as u16;
+                    remaining -= sep_w;
+                }
+            }
+            if remaining == 0 {
+                break;
+            }
+            let k: String = key.chars().take(remaining).collect();
+            if !k.is_empty() {
+                let kw = k.chars().count();
+                cmds.push(RenderCmd::Text {
+                    x: cx,
+                    y: footer_y,
+                    text: k,
+                    fg: Some(theme.text),
+                    bg: None,
+                    bold: false,
+                    modifiers: 0,
+                });
+                cx += kw as u16;
+                remaining -= kw;
+            }
+            if remaining == 0 {
+                break;
+            }
+            if !desc.is_empty() {
+                let desc_w = desc.chars().count();
+                let space_needed = 1 + desc_w;
+                if space_needed <= remaining {
+                    let d: String = desc.chars().take(remaining - 1).collect();
+                    let dw = d.chars().count();
+                    let display = format!(" {d}");
+                    cmds.push(RenderCmd::Text {
+                        x: cx,
+                        y: footer_y,
+                        text: display,
+                        fg: Some(theme.text_muted),
+                        bg: None,
+                        bold: false,
+                        modifiers: 0,
+                    });
+                    cx += (1 + dw) as u16;
+                    remaining -= 1 + dw;
+                }
+            }
+        }
+    }
 }
 
 /// Truncate a string to fit within `max_len` characters, appending "…" if truncated.
