@@ -196,7 +196,7 @@ impl App {
             let installed_w: usize = 9;
             let status_w: usize = 9;
             let ver_w: usize = 8;
-            let rem = inner_w.saturating_sub(publisher_w + installed_w + status_w + ver_w);
+            let rem = inner_w.saturating_sub(publisher_w + installed_w + status_w + ver_w + 5);
             let name_w = (rem * 4 / 10).max(5);
             let desc_w = rem.saturating_sub(name_w).max(5);
 

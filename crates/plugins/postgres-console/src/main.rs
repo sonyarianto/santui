@@ -186,7 +186,9 @@ impl App {
         let result_y = 3u16;
         if self.has_result && !self.header.is_empty() {
             let table_h = h.saturating_sub(result_y + 3) as usize;
-            let col_w = (w.saturating_sub(4) / self.header.len().max(1) as u16).max(10);
+            let col_w = (w.saturating_sub(4 + self.header.len().saturating_sub(1) as u16)
+                / self.header.len().max(1) as u16)
+                .max(10);
             let col_widths: Vec<u16> = self.header.iter().map(|_| col_w).collect();
 
             let rows_str: Vec<Vec<String>> = self

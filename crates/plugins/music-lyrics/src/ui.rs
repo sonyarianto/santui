@@ -315,7 +315,7 @@ fn render_table(state: &LyricsState, theme: &ThemeData, w: u16, h: u16, cmds: &m
     let inner_w = w.saturating_sub(4) as usize;
     let table_top = 3u16;
 
-    let remaining = inner_w;
+    let remaining = inner_w.saturating_sub(2);
     let title_w = remaining * 40 / 100;
     let artist_w = remaining * 35 / 100;
     let album_w = remaining.saturating_sub(title_w + artist_w);
@@ -435,6 +435,30 @@ mod tests {
             matches!(c, RenderCmd::Table { ref rows, .. } if rows.iter().any(|r| r.iter().any(|cell| cell.contains("Lose Yourself"))))
         });
         assert!(has_track);
+    }
+
+    #[test]
+    fn long_title_keeps_ellipsis_after_truncation() {
+        let state = LyricsState {
+            query: "x".into(),
+            results: vec![make_track(1, &"X".repeat(100))],
+            selected: 0,
+            scroll: 0,
+            fetch_state: FetchState::Done,
+            ..LyricsState::default()
+        };
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
+        let title_cell = cmds.iter().find_map(|c| match c {
+            RenderCmd::Table { ref rows, .. } => rows.first().map(|r| r[0].clone()),
+            _ => None,
+        });
+        let title_cell = title_cell.expect("expected a title cell");
+        assert!(title_cell.ends_with("..."), "got: {title_cell:?}");
+        assert_eq!(
+            title_cell.chars().count(),
+            29,
+            "title cell must fit the rendered column width"
+        );
     }
 
     #[test]

@@ -448,7 +448,10 @@ impl App {
                 let table = &self.tables[self.selected_table];
                 if !table.columns.is_empty() {
                     let table_h = h.saturating_sub(result_y + 3) as usize;
-                    let col_w = (w.saturating_sub(4) / table.columns.len().max(1) as u16).max(10);
+                    let col_w = (w
+                        .saturating_sub(4 + table.columns.len().saturating_sub(1) as u16)
+                        / table.columns.len().max(1) as u16)
+                        .max(10);
                     let col_widths: Vec<u16> = table.columns.iter().map(|_| col_w).collect();
                     let rows_str: Vec<Vec<String>> = table
                         .rows

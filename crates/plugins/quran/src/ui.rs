@@ -221,7 +221,7 @@ fn render_surah_list_header(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeD
 }
 
 fn surah_col_widths(inner_w: usize) -> [usize; 6] {
-    let fixed = 4 + 23 + 4 + 11;
+    let fixed = 4 + 23 + 4 + 11 + 5;
     let rem = inner_w.saturating_sub(fixed);
     let name_w = ((rem * 2 / 5).max(12)).min(rem);
     [
@@ -562,7 +562,11 @@ mod tests {
     fn surah_col_widths_fill_inner_w() {
         for inner_w in [72, 76, 100, 116, 150, 200] {
             let widths = surah_col_widths(inner_w);
-            assert_eq!(widths.iter().sum::<usize>(), inner_w, "inner_w={inner_w}");
+            assert_eq!(
+                widths.iter().sum::<usize>() + widths.len() - 1,
+                inner_w,
+                "inner_w={inner_w}"
+            );
             assert!(widths[2] >= 12, "name column too small at {inner_w}");
             assert!(widths[3] >= 12, "translation column too small at {inner_w}");
         }

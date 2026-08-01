@@ -571,6 +571,12 @@ fn render_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, 
     );
     let list_h = h.saturating_sub(8).max(4);
     let detail_x = (w * 64 / 100).max(54);
+    let avail = detail_x.saturating_sub(8);
+    let repo_w = avail * 20 / 54;
+    let branch_w = avail * 18 / 54;
+    let dirty_w = avail * 8 / 54;
+    let ahead_w = avail * 4 / 54;
+    let behind_w = avail.saturating_sub(repo_w + branch_w + dirty_w + ahead_w);
     let rows: Vec<Vec<String>> = app
         .filtered
         .iter()
@@ -595,7 +601,7 @@ fn render_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, 
             modifiers: 0,
         },
         rows,
-        column_widths: vec![20, 18, 8, 4, 4],
+        column_widths: vec![repo_w, branch_w, dirty_w, ahead_w, behind_w],
         selected: Some(app.cursor.min(app.filtered.len().saturating_sub(1))),
         style: TextStyle {
             fg: Some(theme.text),

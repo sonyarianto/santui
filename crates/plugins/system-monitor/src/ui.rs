@@ -759,7 +759,7 @@ fn disk_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec
         "Total".into(),
         "Usage".into(),
     ];
-    let col_w = w.saturating_sub(2) / 6;
+    let col_w = w.saturating_sub(2 + 5) / 6;
 
     let rows: Vec<Vec<String>> = state
         .snapshot
@@ -841,7 +841,7 @@ fn net_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         "Total ↓".into(),
         "Total ↑".into(),
     ];
-    let col_w = w.saturating_sub(2) / 5;
+    let col_w = w.saturating_sub(2 + 4) / 5;
 
     let rows: Vec<Vec<String>> = state
         .snapshot
@@ -920,7 +920,7 @@ fn process_list_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Ve
 
     let core_count = state.snapshot.cpu.core_count.max(1) as f32;
     let header = vec!["PID".into(), "Name".into(), "CPU %".into(), "Memory".into()];
-    let col_w = w.saturating_sub(2) / 4;
+    let col_w = w.saturating_sub(2 + 3) / 4;
 
     let rows: Vec<Vec<String>> = state
         .snapshot
