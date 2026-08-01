@@ -246,7 +246,8 @@ fn render_table(state: &MusicState, theme: &ThemeData, w: u16, h: u16, cmds: &mu
     let table_top = 3u16;
 
     let dur_w = 9usize;
-    let remaining = inner_w.saturating_sub(dur_w);
+    let spacing = 4usize;
+    let remaining = inner_w.saturating_sub(dur_w).saturating_sub(spacing);
     let title_w = remaining * 40 / 100;
     let artist_w = remaining * 25 / 100;
     let album_w = remaining * 25 / 100;
@@ -438,6 +439,31 @@ mod tests {
             matches!(c, RenderCmd::Table { ref rows, .. } if rows[0].last().map(|s| s.as_str()) == Some("0:12"))
         });
         assert!(has_countdown, "expected countdown in now-playing row");
+    }
+
+    #[test]
+    fn long_title_keeps_ellipsis_after_truncation() {
+        let track = make_track(1, &"X".repeat(100), "");
+        let state = MusicState {
+            query: "x".into(),
+            results: vec![track],
+            selected: 0,
+            scroll: 0,
+            fetch_state: FetchState::Done,
+            ..MusicState::default()
+        };
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
+        let title_cell = cmds.iter().find_map(|c| match c {
+            RenderCmd::Table { ref rows, .. } => rows.first().map(|r| r[0].clone()),
+            _ => None,
+        });
+        let title_cell = title_cell.expect("expected a title cell");
+        assert!(title_cell.ends_with("..."), "got: {title_cell:?}");
+        assert_eq!(
+            title_cell.chars().count(),
+            25,
+            "title cell must fit the rendered column width"
+        );
     }
 
     #[test]
