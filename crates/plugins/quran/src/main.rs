@@ -290,7 +290,6 @@ impl App {
                 true
             }
             IpcKey::Char('p') => {
-                self.status = "Playing surah...".into();
                 self.play_selected_surah();
                 true
             }

@@ -233,18 +233,25 @@ fn surah_col_widths(inner_w: usize) -> [usize; 6] {
     ]
 }
 
+/// Right-aligned top-right indicator for the surah list: loading or playback.
+fn top_right_label(app: &App) -> Option<String> {
+    if app.fetching {
+        return Some("Loading...".into());
+    }
+    match &app.audio_state {
+        types::AudioState::Playing { surah, ayah } => Some(format!("Playing {surah}:{ayah}")),
+        types::AudioState::Buffering { .. } => Some("Buffering...".into()),
+        types::AudioState::Paused { .. } => Some("Paused".into()),
+        _ => None,
+    }
+}
+
 fn render_surah_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, h: u16) {
     let list = app.filtered_surahs();
     render_surah_list_header(app, cmds, theme, w);
-    if app.fetching {
-        push_text(
-            cmds,
-            w.saturating_sub(12),
-            1,
-            "Loading...",
-            theme.text_muted,
-            false,
-        );
+    if let Some(label) = top_right_label(app) {
+        let x = w.saturating_sub(label.chars().count() as u16 + 2);
+        push_text(cmds, x, 1, label, theme.text_muted, false);
     }
     let inner_w = w.saturating_sub(4) as usize;
     let playing = match &app.audio_state {
@@ -558,6 +565,23 @@ mod tests {
             assert!(widths[2] >= 12, "name column too small at {inner_w}");
             assert!(widths[3] >= 12, "translation column too small at {inner_w}");
         }
+    }
+
+    #[test]
+    fn top_right_label_follows_state() {
+        let mut app = App::default();
+        assert_eq!(top_right_label(&app), None);
+        app.fetching = true;
+        assert_eq!(top_right_label(&app), Some("Loading...".into()));
+        app.fetching = false;
+        app.audio_state = types::AudioState::Playing { surah: 2, ayah: 23 };
+        assert_eq!(top_right_label(&app), Some("Playing 2:23".into()));
+        app.audio_state = types::AudioState::Buffering { surah: 2, ayah: 23 };
+        assert_eq!(top_right_label(&app), Some("Buffering...".into()));
+        app.audio_state = types::AudioState::Paused { surah: 2, ayah: 23 };
+        assert_eq!(top_right_label(&app), Some("Paused".into()));
+        app.audio_state = types::AudioState::Stopped;
+        assert_eq!(top_right_label(&app), None);
     }
 
     #[test]
