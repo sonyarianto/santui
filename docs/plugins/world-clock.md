@@ -59,7 +59,7 @@ App
 
 ## Features
 - Full-window panel with title (same visual language as other stable plugins), cards inside at `x + 2, y + 1`
-- Grid of clock cards: label, UTC offset, HH:MM:SS time, date, DST indicator (`D` badge)
+- Grid of clock cards: label, UTC offset, HH:MM:SS time, date, DST indicator (`DST` badge)
 - Navigate grid with arrows/hjkl (wrap-around, column-aware)
 - Search timezones (`a` key) — multi-token matching over city name + IANA name, case-insensitive, 60 curated zones
 - Rename clocks (`r` key) — trimmed input, empty input cancels; `Ctrl+R` restores the default city name of the timezone
