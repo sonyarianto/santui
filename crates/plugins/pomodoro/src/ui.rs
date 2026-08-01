@@ -318,7 +318,7 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
             theme,
             r.ix,
             hint_y,
-            &[("↑↓", "navigate"), ("←→", "adjust"), ("esc", "close")],
+            &[("↑↓", "navigate"), ("←→", "adjust")],
             r.iw as usize,
         );
     }
