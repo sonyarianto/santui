@@ -94,38 +94,23 @@ The `can_background()` method on the `Plugin` trait defaults to `false`. `IpcPlu
 - Accent: `Color::Rgb(157, 124, 216)` (#9d7cd8 purple)
 - Highlight bar: `Color::Rgb(250, 178, 131)` (#fab283 — OpenCode's primary; Santui default is #ffb900 gold)
 
-## Architecture Roadmap Status
-
-Most phases from the roadmap are already implemented. The current architecture
-largely reflects the target:
+### Host Subsystems
 
 ```
 santui.exe (host)
-  ├── PluginManager          ← plugin lifecycle, IPC, event bus (Phase 2.1 ✅)
+  ├── PluginManager          ← plugin lifecycle, IPC, event bus
   │    ├── Vec<Box<dyn Plugin>>
   │    ├── IpcPluginHost
   │    ├── db: Box<dyn DbAccess>  ← per-user key-value store
-  │    └── EventBus           ← plugin-to-plugin messaging (Phase 2.2 ✅)
-  ├── PaletteController       ← dynamic command registry (Phase 1.1 ✅)
-  ├── StatusBar               ← own module (Phase 1.3 ✅)
-  ├── ThemeManager            ← theme selection, preview, picker UI (Phase 4.1 ✅)
-  ├── ConfigManager           ← hot-reload TOML config (Phase 5.1-5.3 ✅)
-  ├── RegistryScreen          ← plugin registry UI (Phase 4.3 ✅)
+  │    └── EventBus           ← plugin-to-plugin messaging
+  ├── PaletteController       ← dynamic command registry
+  ├── StatusBar               ← own module
+  ├── ThemeManager            ← theme selection, preview, picker UI
+  ├── ConfigManager           ← hot-reload TOML config
+  ├── RegistryScreen          ← plugin registry UI
   ├── About screen
   └── Event loop              ← delegates to subsystems
 ```
-
-| Component | Status | Phase |
-|---|---|---|
-| **Command Palette** | Dynamic registry — `AppState.builtin_items` + plugin `PluginCmdItem` entries | 1.1 ✅ |
-| **Plugin trait** | Default implementations — only `id`+`name`+`init` required | 1.2 ✅ |
-| **Status bar** | Extracted to `status_bar.rs` | 1.3 ✅ |
-| **Plugin lifecycle** | `PluginManager` struct | 2.1 ✅ |
-| **Plugin comms** | `EventBus` with `emit`/`drain` | 2.2 ✅ |
-| **App state** | Centralized in `AppState` struct (`crates/core/src/app/app_state.rs`) | 2.3 ✅ |
-| **IPC** | Async background reader thread, non-blocking `tick()` | 3.1 ✅ |
-| **Plugin reload** | Binary mtime polling + re-spawn via factory | 3.2 ✅ |
-| **Plugin SDK** | `cargo generate` template in `templates/plugin/` | 3.3 ✅ |
 
 ## Server Architecture (`santui-server`)
 

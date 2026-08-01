@@ -4,41 +4,7 @@
 
 Update `version` in **all** `Cargo.toml` files + npm + website. They must all match — CI verifies against `crates/core/Cargo.toml`:
 
-**Crates (all `Cargo.toml` files):**
-- `crates/core/Cargo.toml`
-- `crates/ipc/Cargo.toml`
-- `crates/auth/Cargo.toml`
-- `crates/registry/Cargo.toml`
-- `crates/db/Cargo.toml`
-- `crates/app/Cargo.toml`
-- `crates/plugins/radio-stream-player/Cargo.toml`
-- `crates/plugins/radio-stream-player/scraper/Cargo.toml`
-- `crates/plugins/registry/Cargo.toml`
-- `crates/plugins/rss-reader/Cargo.toml`
-- `crates/plugins/clipboard-history/Cargo.toml`
-- `crates/plugins/system-monitor/Cargo.toml`
-- `crates/plugins/world-clock/Cargo.toml`
-- `crates/plugins/weather/Cargo.toml`
-- `crates/plugins/currency-converter/Cargo.toml`
-- `crates/plugins/habit-tracker/Cargo.toml`
-- `crates/plugins/hacker-news-reader/Cargo.toml`
-- `crates/plugins/http-client/Cargo.toml`
-- `crates/plugins/music-preview/Cargo.toml`
-- `crates/plugins/pomodoro-timer/Cargo.toml`
-- `crates/plugins/quick-notes/Cargo.toml`
-- `crates/plugins/ssh-manager/Cargo.toml`
-- `crates/plugins/unit-converter/Cargo.toml`
-- `crates/plugins/regex-tester/Cargo.toml`
-- `crates/plugins/json-yaml-formatter/Cargo.toml`
-- `crates/plugins/todo-task-manager/Cargo.toml`
-- `crates/plugins/bookmark-launcher/Cargo.toml`
-- `crates/plugins/cron-expression-helper/Cargo.toml`
-- `crates/plugins/calendar-agenda/Cargo.toml`
-- `crates/plugins/package-version-monitor/Cargo.toml`
-- `crates/plugins/dictionary-thesaurus/Cargo.toml`
-- `crates/plugins/git-repository-dashboard/Cargo.toml`
-- `crates/plugins/quran/Cargo.toml`
-- `crates/plugins/iptv-player/Cargo.toml`
+**Crates (every `Cargo.toml` under `crates/` that has a `version` field — enumerate with `rg -l '^version = ' crates --glob 'Cargo.toml'`):**
 
 **NPM:**
 - `packages/npm/package.json`

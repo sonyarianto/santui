@@ -36,7 +36,6 @@ App
 - Minimal mpv wrapper — no property observation, no event waiting
 - Uses `MpvWakeup` to wake mpv thread when new URL is queued
 - No `MPV_EVENT_END_FILE` handling — auto-advance is purely timer-based (30 sec)
-- Sets `stream-lavf-o=icy=1` for streaming metadata
 
 ### Auto-Advance Logic
 ```

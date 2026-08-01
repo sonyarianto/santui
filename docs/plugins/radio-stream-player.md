@@ -37,7 +37,7 @@ App
 ### Mpv Integration
 - Observes properties: `metadata`, `media-title`, `volume`
 - Uses `MpvWakeup` for prompt command delivery
-- Retry logic on failed `load_url` (3 attempts with backoff)
+- Retry logic on failed `load_url` (stop + one retry)
 - Pre-drains stale events before loading a new URL
 - Heartbeat monitoring detects and resets stuck mpv thread
 
@@ -63,8 +63,6 @@ Press `l` to toggle lyrics overlay. The lyrics panel snaps to the right (40% wid
 - All station actions (search, play, stop, favorites, reload) are blocked
 - The stations panel underneath renders at full brightness (the `RenderCmd::Dim` handles visual dimming, not panel colour changes)
 - Artist text always uses muted styling
-
-## Key Bindings
 
 ## Constraints & Rules
 - `consumed` flag must be `true` on Esc to prevent host from closing the plugin (can_background)

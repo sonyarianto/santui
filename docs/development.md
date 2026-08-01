@@ -52,12 +52,14 @@ santui/
 │   ├── auth/           — GitHub OAuth client
 │   ├── registry/       — plugin registry: manifest fetch, install, config
 │   ├── db/             — central SQLite database for per-user plugin data
-│   ├── plugins/           — 110+ first-party plugins
+│   ├── server/         — optional self-hosted sync server (axum)
+│   ├── dev-setup/      — dev setup helper (lists stable plugins for dev-setup.sh)
+│   ├── plugins/        — first-party plugins (see plugins-manifest.json for the list)
 │   │   ├── radio-stream-player/   — radio player plugin
 │   │   │   └── scraper/              — radio station scraper
-│   │   ├── registry/                 — plugin registry UI plugin
-│   │   └── ... (108 more)
+│   │   └── registry/                 — plugin registry UI plugin
 │   └── app/            — binary entry point (main.rs)
+├── templates/          — cargo-generate plugin SDK template
 ├── website/            — VitePress docs site
 ├── docs/               — architecture & dev docs
 ├── scripts/            — dev setup & release packaging
@@ -72,7 +74,7 @@ Each plugin entry in `plugins-manifest.json` can include an optional `"status"` 
 - **`"stable"`** — plugin is ready for release. Included in release archives and visible in the Plugin Registry in release mode. Built automatically by `dev-setup.sh`.
 - **omitted** (defaults to `"experimental"`) — plugin is in development. Excluded from release packaging and release registry JSON, but still available in dev mode (`SANTUI_DEV=1`).
 
-Currently 3 plugins are marked stable: `radio-stream-player`, `music-preview`, `music-lyrics`. The Plugin Registry UI plugin (`santui-registry-plugin`) and Log Viewer (`santui-log-viewer`) are builtins — always bundled, not listed in the manifest.
+The set of stable plugins is maintained solely in `plugins-manifest.json` — see the `"status": "stable"` entries there for the current list. The Plugin Registry UI plugin (`santui-registry-plugin`) and Log Viewer (`santui-log-viewer`) are builtins — always bundled, not listed in the manifest.
 
 ## CLI flags
 
