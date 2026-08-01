@@ -367,7 +367,6 @@ impl App {
             if is_enabled { Some(t.success) } else { None },
         ));
 
-        let label_w = fields.iter().map(|(l, _, _)| l.len()).max().unwrap_or(0);
         let footer_h = 3u16;
         let content_h = 2u16                                       // top padding + title
             + 1                                                     // blank after title
@@ -379,17 +378,25 @@ impl App {
         ui::palette_bg(cmds, t, &pr);
         ui::palette_title(cmds, t, &pr, 1, "Plugin Actions");
 
-        let field_fg = Some(t.text_muted);
         let ix = pr.ix;
         let bg = Some(t.background_panel);
 
         for (i, (label, value, fg_override)) in fields.iter().enumerate() {
-            let fg = fg_override.or(field_fg);
+            let y = pr.y + 3 + i as u16;
             cmds.push(RenderCmd::Text {
                 x: ix,
-                y: pr.y + 3 + i as u16,
-                text: format!("{label:<label_w$}  {value}"),
-                fg,
+                y,
+                text: format!("{label} "),
+                fg: Some(t.text_muted),
+                bg,
+                bold: false,
+                modifiers: 0,
+            });
+            cmds.push(RenderCmd::Text {
+                x: ix + label.len() as u16 + 1,
+                y,
+                text: value.clone(),
+                fg: fg_override.or(Some(t.text)),
                 bg,
                 bold: false,
                 modifiers: 0,
