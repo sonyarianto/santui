@@ -416,15 +416,24 @@ impl App {
             bold: false,
             modifiers: 0,
         });
-        cmds.push(RenderCmd::Text {
-            x: ix,
-            y: footer_y + 1,
-            text: "↑↓ navigate • ↵ select".into(),
-            fg: dim_fg,
-            bg,
-            bold: false,
-            modifiers: 0,
-        });
+        let key_fg = Some(t.text);
+        let footer_parts: [(&str, u16, Option<[u8; 3]>); 4] = [
+            ("↑↓", ix, key_fg),
+            (" navigate • ", ix + 2, dim_fg),
+            ("↵", ix + 14, key_fg),
+            (" select", ix + 15, dim_fg),
+        ];
+        for (text, x, fg) in footer_parts {
+            cmds.push(RenderCmd::Text {
+                x,
+                y: footer_y + 1,
+                text: text.into(),
+                fg,
+                bg,
+                bold: false,
+                modifiers: 0,
+            });
+        }
         cmds.push(RenderCmd::Text {
             x: ix,
             y: footer_y + 2,
@@ -498,6 +507,59 @@ mod tests {
         assert_eq!(hints[0], ("↑↓".into(), "navigate".into()));
         assert_eq!(hints[1], ("↵".into(), "select".into()));
         assert_eq!(hints[2], ("esc".into(), "back".into()));
+    }
+
+    #[test]
+    fn test_plugin_actions_footer_splits_keys_and_desc() {
+        use santui_registry::{PluginManifest, Registry};
+
+        let dir = std::env::temp_dir().join("santui-reg-render-test");
+        let _ = std::fs::remove_dir_all(&dir);
+        let _ = std::fs::create_dir_all(&dir);
+        let mut registry = Registry::new(dir.clone());
+        registry.available.push(PluginManifest {
+            id: "p0".into(),
+            name: "Plugin 0".into(),
+            description: "Description 0".into(),
+            version: "1.0".into(),
+            download_url: "http://example.com/pkg".into(),
+            sha256: "abc".into(),
+            size: 100,
+            publisher: "Publisher".into(),
+            capabilities: vec![],
+        });
+        let mut app = App::new();
+        app.registry = Some(registry);
+        app.detail_idx = Some(0);
+        let cmds = app.render_commands();
+        let find = |text: &str| -> (u16, u16, Option<[u8; 3]>) {
+            cmds.iter()
+                .find_map(|c| match c {
+                    RenderCmd::Text {
+                        text: txt,
+                        x,
+                        y,
+                        fg,
+                        ..
+                    } if txt == text => Some((*x, *y, *fg)),
+                    _ => None,
+                })
+                .unwrap_or_else(|| panic!("footer part {text:?} not found"))
+        };
+        let up = find("↑↓");
+        let sep = find(" navigate • ");
+        let enter = find("↵");
+        let rest = find(" select");
+        assert_eq!(up.1, sep.1);
+        assert_eq!(sep.1, enter.1);
+        assert_eq!(enter.1, rest.1);
+        assert_eq!(up.0 + 2, sep.0);
+        assert_eq!(sep.0 + 12, enter.0);
+        assert_eq!(enter.0 + 1, rest.0);
+        assert_eq!(up.2, Some(app.theme.text));
+        assert_eq!(enter.2, Some(app.theme.text));
+        assert_eq!(sep.2, Some(app.theme.text_muted));
+        assert_eq!(rest.2, Some(app.theme.text_muted));
     }
 
     #[test]
