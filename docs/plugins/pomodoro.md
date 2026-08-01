@@ -60,7 +60,7 @@ App
 ## Features
 - Full-window panel with title (same visual language as other stable plugins); content block vertically centered for any window height
 - Phase display with semantic colors: Work = `theme.accent`, Short Break = `theme.success`, Long Break = `theme.highlight`
-- Countdown (MM:SS) with a progress bar and a percentage column aligned right after the bar
+- Countdown (MM:SS) with a centered progress bar and the percentage centered below it
 - Work-cycle session dots (`●` completed / `○` upcoming, one per work session in the cycle) — falls back to `n / N sessions` text when the cycle exceeds 12 dots
 - Today's stats line: sessions, focus time, and break time (break time was previously collected but never displayed)
 - Phase durations summary (`25m work · 5m break · 15m long`) at the bottom-left of the panel

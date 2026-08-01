@@ -45,7 +45,7 @@ fn render_main(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         border_type: None,
     });
 
-    let content_h: u16 = 9;
+    let content_h: u16 = 10;
     let top = if h >= content_h + 6 {
         ((h - content_h) / 2).max(2)
     } else {
@@ -90,13 +90,13 @@ fn render_main(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         modifiers: 0,
     });
 
-    let bar_w = w.saturating_sub(12).max(8);
-    let bar_x = 4;
+    let bar_w = w.saturating_sub(8);
+    let bar_x = (w / 2).saturating_sub(bar_w / 2);
     let bar_y = top + 4;
     let pct = state.progress_pct() as usize;
     let filled = (bar_w as f32 * (pct as f32 / 100.0)) as usize;
     let empty = bar_w as usize - filled;
-    let bar_text = format!("[{}{}]", "█".repeat(filled), "░".repeat(empty));
+    let bar_text = format!("{}{}", "█".repeat(filled), "░".repeat(empty));
     cmds.push(RenderCmd::Text {
         x: bar_x,
         y: bar_y,
@@ -106,20 +106,19 @@ fn render_main(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         bold: false,
         modifiers: 0,
     });
-    let pct_text = format!("{:>3}%", pct);
-    if bar_x + bar_w + 2 + pct_text.len() as u16 <= w {
-        cmds.push(RenderCmd::Text {
-            x: bar_x + bar_w + 2,
-            y: bar_y,
-            text: pct_text,
-            fg: Some(theme.text_muted),
-            bg: None,
-            bold: false,
-            modifiers: 0,
-        });
-    }
+    let pct_text = format!("{pct}%");
+    let pct_x = (w / 2).saturating_sub(pct_text.len() as u16 / 2);
+    cmds.push(RenderCmd::Text {
+        x: pct_x,
+        y: bar_y + 1,
+        text: pct_text,
+        fg: Some(theme.text_muted),
+        bg: None,
+        bold: false,
+        modifiers: 0,
+    });
 
-    let dots_y = top + 6;
+    let dots_y = top + 7;
     if dots_y + 2 < h {
         let total = state.data.config.long_break_after;
         let done = state.sessions_done.min(total);
@@ -167,8 +166,8 @@ fn render_main(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         }
     }
 
-    let stats_y = top + 8;
-    if stats_y + 1 < h {
+    let stats_y = top + 9;
+    if stats_y + 2 < h {
         let stats_text = format!(
             "Today: {} sessions · {} focused · {} break",
             state.data.stats.sessions_completed,
