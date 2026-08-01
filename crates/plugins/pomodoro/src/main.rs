@@ -190,6 +190,15 @@ impl App {
         }
         self.state.last_second = now_secs;
 
+        let today = today_date_string();
+        if self.state.data.stats.date != today {
+            self.state.data.stats = state::DailyStats {
+                date: today,
+                ..Default::default()
+            };
+            self.schedule_db_save();
+        }
+
         let just_finished = self.state.tick_second();
         self.dirty = true;
 
@@ -235,28 +244,6 @@ impl App {
             key: "pomodoro".into(),
             value,
         });
-    }
-
-    fn handle_palette_command(&mut self, index: u32) {
-        match index {
-            0 => {
-                self.state.phase = Phase::Work;
-                self.state.timer_state = TimerState::Idle;
-                self.state.remaining_secs = self.state.data.config.work_secs;
-                self.state.sessions_done = 0;
-                self.dirty = true;
-            }
-            1 => {
-                self.state.phase = Phase::ShortBreak;
-                self.state.timer_state = TimerState::Idle;
-                self.state.remaining_secs = self.state.data.config.short_break_secs;
-                self.dirty = true;
-            }
-            2 => {
-                self.dirty = true;
-            }
-            _ => {}
-        }
     }
 
     fn status_hints(&self) -> Vec<(String, String)> {
@@ -380,8 +367,7 @@ fn main() {
                         app.dirty = true;
                         respond(&mut app, false);
                     }
-                    HostMsg::PaletteCommand { index } => {
-                        app.handle_palette_command(index);
+                    HostMsg::PaletteCommand { .. } => {
                         respond(&mut app, false);
                     }
                     HostMsg::PluginMessage { .. } => {
@@ -683,34 +669,6 @@ mod tests {
         assert!(!app.handle_key(IpcKey::Right));
         assert!(!app.handle_key(IpcKey::F(1)));
         assert!(!app.handle_key(IpcKey::Enter));
-    }
-
-    #[test]
-    fn palette_command_0_starts_work_session() {
-        let mut app = base_app();
-        app.state.phase = Phase::ShortBreak;
-        app.handle_palette_command(0);
-        assert_eq!(app.state.phase, Phase::Work);
-        assert_eq!(app.state.timer_state, TimerState::Idle);
-        assert!(app.dirty);
-    }
-
-    #[test]
-    fn palette_command_1_starts_break() {
-        let mut app = base_app();
-        app.state.phase = Phase::Work;
-        app.handle_palette_command(1);
-        assert_eq!(app.state.phase, Phase::ShortBreak);
-        assert_eq!(app.state.timer_state, TimerState::Idle);
-        assert!(app.dirty);
-    }
-
-    #[test]
-    fn palette_command_2_just_sets_dirty() {
-        let mut app = base_app();
-        app.dirty = false;
-        app.handle_palette_command(2);
-        assert!(app.dirty);
     }
 
     #[test]

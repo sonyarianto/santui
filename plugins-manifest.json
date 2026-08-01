@@ -158,7 +158,8 @@
     "id": "pomodoro",
     "name": "Pomodoro",
     "description": "Focus timer with work and break sessions",
-    "capabilities": []
+    "capabilities": [],
+    "status": "stable"
   },
   {
     "id": "quick-notes",

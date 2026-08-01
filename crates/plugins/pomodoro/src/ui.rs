@@ -39,7 +39,7 @@ fn render_main(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         fg: theme.border,
         bg: None,
         borders: BORDER_ALL,
-        title: Some("Pomodoro Timer".into()),
+        title: Some("Pomodoro".into()),
         title_fg: Some(theme.border),
         title_dash_fg: Some(theme.border),
         border_type: None,
