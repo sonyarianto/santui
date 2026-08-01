@@ -3,9 +3,7 @@ mod ui;
 
 use std::io::{BufRead, BufReader};
 
-use santui_ipc::protocol::{
-    Area, HostMsg, IpcKey, PluginMessage, PluginRequest, RenderCmd, ThemeData,
-};
+use santui_ipc::protocol::{Area, HostMsg, IpcKey, PluginRequest, RenderCmd, ThemeData};
 use state::{Phase, PomodoroData, PomodoroState, TimerState};
 use ui::render_ui;
 
@@ -16,7 +14,6 @@ struct App {
     dirty: bool,
     cached_commands: Vec<RenderCmd>,
     pending_request: Option<PluginRequest>,
-    pending_plugin_msg: Option<PluginMessage>,
 }
 
 impl Default for App {
@@ -43,7 +40,6 @@ impl Default for App {
             pending_request: Some(PluginRequest::DbGet {
                 key: "pomodoro".into(),
             }),
-            pending_plugin_msg: None,
         }
     }
 }
@@ -65,40 +61,13 @@ impl App {
     fn handle_main_key(&mut self, key: IpcKey) -> bool {
         match key {
             IpcKey::Char(' ') => {
-                let was_work_phase = self.state.phase == Phase::Work;
-                let was_running = self.state.timer_state == TimerState::Running;
-                let was_idle_or_paused = matches!(
-                    self.state.timer_state,
-                    TimerState::Idle | TimerState::Paused
-                );
                 self.state.toggle_pause();
                 self.dirty = true;
-                if was_work_phase && was_idle_or_paused {
-                    self.pending_plugin_msg = Some(PluginMessage {
-                        to: "radio-stream-player".into(),
-                        action: "pause".into(),
-                        data: serde_json::Value::Null,
-                    });
-                } else if was_work_phase && was_running {
-                    self.pending_plugin_msg = Some(PluginMessage {
-                        to: "radio-stream-player".into(),
-                        action: "resume".into(),
-                        data: serde_json::Value::Null,
-                    });
-                }
                 true
             }
             IpcKey::Char('s') => {
-                let was_work = self.state.phase == Phase::Work;
                 self.state.skip();
                 self.dirty = true;
-                if was_work {
-                    self.pending_plugin_msg = Some(PluginMessage {
-                        to: "radio-stream-player".into(),
-                        action: "resume".into(),
-                        data: serde_json::Value::Null,
-                    });
-                }
                 self.schedule_db_save();
                 true
             }
@@ -203,13 +172,6 @@ impl App {
         self.dirty = true;
 
         if just_finished {
-            if self.state.phase == Phase::Work {
-                self.pending_plugin_msg = Some(PluginMessage {
-                    to: "radio-stream-player".into(),
-                    action: "resume".into(),
-                    data: serde_json::Value::Null,
-                });
-            }
             let should_auto_start = (self.state.phase == Phase::Work
                 && self.state.data.config.auto_start_breaks)
                 || (self.state.phase != Phase::Work && self.state.data.config.auto_start_work);
@@ -309,7 +271,7 @@ fn respond(app: &mut App, consumed: bool) {
         app.status_hints(),
         vec![],
         app.pending_request.take(),
-        app.pending_plugin_msg.take(),
+        None,
         consumed,
     );
 }
@@ -438,28 +400,6 @@ mod tests {
     }
 
     #[test]
-    fn handle_key_space_sets_radio_pause_on_work_start() {
-        let mut app = base_app();
-        app.state.phase = Phase::Work;
-        app.state.timer_state = TimerState::Idle;
-        app.handle_key(IpcKey::Char(' '));
-        let msg = app.pending_plugin_msg.as_ref().unwrap();
-        assert_eq!(msg.to, "radio-stream-player");
-        assert_eq!(msg.action, "pause");
-    }
-
-    #[test]
-    fn handle_key_space_sets_radio_resume_on_work_pause() {
-        let mut app = base_app();
-        app.state.phase = Phase::Work;
-        app.state.start();
-        app.handle_key(IpcKey::Char(' '));
-        let msg = app.pending_plugin_msg.as_ref().unwrap();
-        assert_eq!(msg.to, "radio-stream-player");
-        assert_eq!(msg.action, "resume");
-    }
-
-    #[test]
     fn handle_key_s_skips_session() {
         let mut app = base_app();
         app.state.phase = Phase::Work;
@@ -467,16 +407,6 @@ mod tests {
         assert!(app.handle_key(IpcKey::Char('s')));
         assert_ne!(app.state.phase, Phase::Work);
         assert_eq!(app.state.sessions_done, initial_sessions + 1);
-    }
-
-    #[test]
-    fn handle_key_s_sends_resume_on_work_skip() {
-        let mut app = base_app();
-        app.state.phase = Phase::Work;
-        app.handle_key(IpcKey::Char('s'));
-        let msg = app.pending_plugin_msg.as_ref().unwrap();
-        assert_eq!(msg.to, "radio-stream-player");
-        assert_eq!(msg.action, "resume");
     }
 
     #[test]
@@ -574,19 +504,6 @@ mod tests {
     }
 
     #[test]
-    fn handle_tick_sets_radio_resume_on_work_finish() {
-        let mut app = base_app();
-        app.state.phase = Phase::Work;
-        app.state.timer_state = TimerState::Running;
-        app.state.remaining_secs = 1;
-        app.state.last_second = 0;
-        app.handle_tick();
-        let msg = app.pending_plugin_msg.as_ref().unwrap();
-        assert_eq!(msg.to, "radio-stream-player");
-        assert_eq!(msg.action, "resume");
-    }
-
-    #[test]
     fn handle_tick_auto_advances_when_configured() {
         let mut app = base_app();
         app.state.data.config.auto_start_breaks = true;
@@ -669,33 +586,6 @@ mod tests {
         assert!(!app.handle_key(IpcKey::Right));
         assert!(!app.handle_key(IpcKey::F(1)));
         assert!(!app.handle_key(IpcKey::Enter));
-    }
-
-    #[test]
-    fn respond_includes_plugin_message() {
-        let mut app = base_app();
-        app.pending_plugin_msg = Some(PluginMessage {
-            to: "radio-stream-player".into(),
-            action: "pause".into(),
-            data: serde_json::Value::Null,
-        });
-        let hints = app.status_hints();
-        let palette: Vec<(String, String)> = vec![];
-        let request = app.pending_request.take();
-        let plugin_message = app.pending_plugin_msg.take();
-        let json = serde_json::json!({
-            "commands": serde_json::to_value(app.render()).unwrap(),
-            "hints": hints,
-            "palette_commands": palette,
-            "request": request,
-            "plugin_message": plugin_message,
-            "consumed": false,
-        });
-        let json_str = serde_json::to_string(&json).unwrap();
-        let parsed: serde_json::Value = serde_json::from_str(&json_str).unwrap();
-        let pm = parsed["plugin_message"].as_object().unwrap();
-        assert_eq!(pm["to"], "radio-stream-player");
-        assert_eq!(pm["action"], "pause");
     }
 
     #[test]

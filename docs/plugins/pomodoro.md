@@ -16,7 +16,7 @@ Standard IPC plugin — spawned as child process, communicates via stdin/stdout 
 
 ### Module Structure
 ```
-main.rs  → App, event loop, key handling, radio integration
+main.rs  → App, event loop, key handling
 state.rs → Phase, TimerState, PomodoroConfig, DailyStats, PomodoroState
 ui.rs    → rendering (session screen, settings dialog)
 ```
@@ -37,8 +37,7 @@ App
 │   ├── show_settings / settings_cursor
 │   └── last_second                  — tick guard for 1s re-render
 ├── theme / area / dirty / cached_commands
-├── pending_request                  — PluginRequest (DbGet/DbSet "pomodoro")
-└── pending_plugin_msg               — PluginMessage to radio-stream-player
+└── pending_request                  — PluginRequest (DbGet/DbSet "pomodoro")
 ```
 
 ### Thread Model
@@ -58,18 +57,12 @@ App
 - First run (`None` response) → defaults (25/5/15 min, long break after 4 sessions, auto-start off)
 - Corrupt or missing JSON falls back to defaults without panicking
 
-### Radio Integration
-- The radio plugin (if loaded) is controlled via `PluginMessage` to `radio-stream-player` so focus sessions run in silence:
-  - Starting a Work session → `pause` (silence while focusing)
-  - Pausing, skipping, or finishing a Work session → `resume`
-- Messages are only sent while the phase is Work; break phases never touch the radio
-
 ## Features
 - Full-window panel with title (same visual language as other stable plugins)
 - Phase display with semantic colors: Work = `theme.accent`, Short Break = `theme.success`, Long Break = `theme.highlight`
 - Progress bar + countdown (MM:SS), session counter, and today's stats (sessions, focus time, break time)
 - `space` — start / pause / resume; on a Finished timer, advance to the next phase
-- `s` — skip the current phase (advances; work → break resumes radio)
+- `s` — skip the current phase (advances the timer)
 - `r` — reset the current session back to Idle at full duration
 - `,` — open settings dialog (dimmed overlay + border)
 - Settings dialog (6 rows, `↑↓`/`jk` navigate, `←→` adjust, `esc` close & save):
@@ -87,5 +80,4 @@ App
 - Esc inside the settings dialog is consumed internally (closes dialog + saves)
 - All other keys inside the settings dialog are consumed (modal)
 - Durations are clamped to a 1-minute floor; no negative values possible
-- Radio messages fire only for Work-phase transitions; never during breaks
 - Stats roll over to a new day on the first tick after midnight, not only on restart
