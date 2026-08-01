@@ -150,6 +150,17 @@ impl App {
                 self.picker_cursor = self.picker_cursor.min(max).saturating_add(1).min(max);
                 true
             }
+            IpcKey::PageUp => {
+                let page = (self.area.h.saturating_sub(6).max(4) as usize).saturating_sub(1);
+                self.picker_cursor = self.picker_cursor.saturating_sub(page);
+                true
+            }
+            IpcKey::PageDown => {
+                let max = self.picker_options(picker).len().saturating_sub(1);
+                let page = (self.area.h.saturating_sub(6).max(4) as usize).saturating_sub(1);
+                self.picker_cursor = (self.picker_cursor + page).min(max);
+                true
+            }
             IpcKey::Enter => {
                 self.apply_picker_selection(picker);
                 true
@@ -1061,6 +1072,24 @@ mod tests {
         app.handle_key(IpcKey::Up);
         assert_eq!(app.picker_cursor, 0);
         app.handle_key(IpcKey::Up);
+        assert_eq!(app.picker_cursor, 0);
+    }
+
+    #[test]
+    fn picker_page_keys_jump_by_page_and_clamp() {
+        let mut app = App::default();
+        app.area.h = 30;
+        app.translations = (0..25)
+            .map(|i| edition(&format!("en.e{i:02}"), &format!("Edition {i}")))
+            .collect();
+        app.picker = Some(Picker::Translation);
+        app.handle_key(IpcKey::PageDown);
+        assert_eq!(app.picker_cursor, 23);
+        app.handle_key(IpcKey::PageDown);
+        assert_eq!(app.picker_cursor, 24);
+        app.handle_key(IpcKey::PageUp);
+        assert_eq!(app.picker_cursor, 1);
+        app.handle_key(IpcKey::PageUp);
         assert_eq!(app.picker_cursor, 0);
     }
 
