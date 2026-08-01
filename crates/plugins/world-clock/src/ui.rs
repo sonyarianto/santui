@@ -1,6 +1,6 @@
 use chrono::{Offset, Timelike};
 use chrono_tz::{OffsetComponents, Tz};
-use santui_ipc::protocol::{RenderCmd, ThemeData};
+use santui_ipc::protocol::{RenderCmd, ThemeData, BORDER_ALL};
 use santui_ipc::ui;
 
 use crate::state::{Screen, WorldTimeState};
@@ -23,7 +23,7 @@ fn card_h() -> u16 {
 }
 
 pub(crate) fn grid_cols(area_w: u16) -> u16 {
-    ((area_w.saturating_sub(2)) / (card_w() + 1)).max(1)
+    ((area_w.saturating_sub(4)) / (card_w() + 1)).max(1)
 }
 
 pub fn render_ui(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec<RenderCmd> {
@@ -38,16 +38,37 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
     let mut cmds = Vec::new();
     let cols = grid_cols(w);
     let gap: u16 = 1;
-    let mx: u16 = 1;
+    let mx: u16 = 2;
+    let my: u16 = 1;
     let cw = card_w();
     let ch = card_h();
 
+    cmds.push(RenderCmd::Clear {
+        x: 0,
+        y: 0,
+        w: 4096,
+        h: 4096,
+    });
+    cmds.push(RenderCmd::Border {
+        x: 0,
+        y: 0,
+        w,
+        h,
+        fg: theme.border,
+        bg: None,
+        borders: BORDER_ALL,
+        title: Some("World Clock".into()),
+        title_fg: Some(theme.border),
+        title_dash_fg: Some(theme.border),
+        border_type: None,
+    });
+
     if state.clocks.is_empty() {
         let text = "Add a timezone (press 'a')";
-        let x = (w.saturating_sub(text.len() as u16)) / 2;
+        let x = mx + (w.saturating_sub(4).saturating_sub(text.len() as u16)) / 2;
         cmds.push(RenderCmd::Text {
             x,
-            y: h / 2,
+            y: my + h / 2,
             text: text.into(),
             fg: Some(theme.text_muted),
             bg: None,
@@ -61,7 +82,7 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
         let col = i as u16 % cols;
         let row = i as u16 / cols;
         let cx = mx + col * (cw + gap);
-        let cy = row * ch;
+        let cy = my + row * ch;
 
         let is_selected = i == state.selected;
 
@@ -226,8 +247,8 @@ fn render_rename(state: &WorldTimeState, theme: &ThemeData, w: u16, idx: usize) 
     let cols = grid_cols(w);
     let col = idx as u16 % cols;
     let row = idx as u16 / cols;
-    let card_x = 1 + col * (card_w() + 1);
-    let card_y = row * card_h();
+    let card_x = 2 + col * (card_w() + 1);
+    let card_y = 1 + row * card_h();
     let popup_x = card_x.min(w.saturating_sub(popup_w));
     let popup_y = card_y;
 
@@ -324,6 +345,22 @@ mod tests {
     }
 
     #[test]
+    fn renders_full_window_panel_with_title() {
+        let s = state_with_clocks();
+        let cmds = render_ui(&s, &test_theme(), 120, 30);
+        let panel = cmds.iter().find_map(|c| match c {
+            RenderCmd::Border {
+                title: Some(t),
+                x: 0,
+                y: 0,
+                ..
+            } => Some(t.clone()),
+            _ => None,
+        });
+        assert_eq!(panel.as_deref(), Some("World Clock"));
+    }
+
+    #[test]
     fn selected_card_gets_highlight_border() {
         let s = state_with_clocks();
         let cmds = render_ui(&s, &test_theme(), 120, 30);
@@ -331,10 +368,10 @@ mod tests {
             .iter()
             .filter(|c| matches!(c, RenderCmd::Border { .. }))
             .collect();
-        assert_eq!(borders.len(), 2);
-        if let RenderCmd::Border { fg, x, .. } = borders[0] {
+        assert_eq!(borders.len(), 3, "panel + 2 cards");
+        if let RenderCmd::Border { fg, x, .. } = borders[1] {
             assert_eq!(*fg, test_theme().highlight);
-            assert_eq!(*x, 1);
+            assert_eq!(*x, 2);
         } else {
             panic!("expected border");
         }
@@ -348,27 +385,37 @@ mod tests {
             .iter()
             .filter(|c| matches!(c, RenderCmd::Border { .. }))
             .collect();
-        if let RenderCmd::Border { fg, y, .. } = borders[1] {
+        if let RenderCmd::Border { fg, y, .. } = borders[2] {
             assert_eq!(*fg, test_theme().text_muted);
-            assert_eq!(*y, 0);
+            assert_eq!(*y, 1);
         } else {
             panic!("expected border");
         }
     }
 
     #[test]
-    fn selected_card_has_no_title_marker() {
+    fn cards_have_no_title_marker() {
         let s = state_with_clocks();
         let cmds = render_ui(&s, &test_theme(), 120, 30);
         let borders: Vec<&RenderCmd> = cmds
             .iter()
             .filter(|c| matches!(c, RenderCmd::Border { .. }))
             .collect();
-        for b in borders {
+        for b in borders.iter().skip(1) {
             if let RenderCmd::Border { title, .. } = b {
                 assert_eq!(title.as_deref(), None);
             }
         }
+    }
+
+    #[test]
+    fn empty_state_prompt_centered_inside_panel() {
+        let s = WorldTimeState::default();
+        let cmds = render_ui(&s, &test_theme(), 120, 30);
+        let prompt = cmds.iter().find(|c| {
+            matches!(c, RenderCmd::Text { ref text, .. } if text == "Add a timezone (press 'a')")
+        });
+        assert!(prompt.is_some());
     }
 
     #[test]

@@ -53,6 +53,7 @@ App
 - First run (`None` response) → default clocks (UTC + first zone matching the local offset), then saved
 
 ## Features
+- Full-window panel with title (same visual language as other stable plugins), cards inside at `x + 2, y + 1`
 - Grid of clock cards: label, UTC offset, HH:MM:SS time, date, DST indicator (`D` badge)
 - Navigate grid with arrows/hjkl (wrap-around, column-aware)
 - Search timezones (`a` key) — multi-token matching over city name + IANA name, case-insensitive, 60 curated zones
