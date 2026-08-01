@@ -57,11 +57,12 @@ fn render_lyrics_panel(
         0,
         popup_w,
         h,
-        "Lyrics",
+        Some("Lyrics"),
         ui::PanelOpts {
             focused: true,
             footer: Some(footer),
             dim_unfocused: false,
+            ..Default::default()
         },
     );
 

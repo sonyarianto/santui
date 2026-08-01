@@ -166,11 +166,12 @@ pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
                     0,
                     popup_w,
                     popup_h,
-                    "Track Details",
+                    Some("Track Details"),
                     ui::PanelOpts {
                         focused: true,
                         footer: Some(&[("↑↓", "scroll"), ("d", "hide details")]),
                         dim_unfocused: false,
+                        ..Default::default()
                     },
                 );
 

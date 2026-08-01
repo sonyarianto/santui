@@ -69,11 +69,12 @@ fn render_picker_panel(
         0,
         popup_w,
         h,
-        picker_label(picker),
+        Some(picker_label(picker)),
         ui::PanelOpts {
             focused: true,
             footer: Some(footer),
             dim_unfocused: false,
+            ..Default::default()
         },
     );
 

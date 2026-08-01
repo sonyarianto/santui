@@ -87,7 +87,7 @@ fn render_channel_list(
         0,
         area_w,
         channels_h,
-        "Channels",
+        Some("Channels"),
         PanelOpts {
             focused: matches!(state.screen, Screen::GroupFilter),
             footer: Some(stations_footer),
@@ -266,7 +266,7 @@ fn render_channel_list(
         np_y,
         area_w,
         info_h,
-        "Playback",
+        Some("Playback"),
         PanelOpts {
             focused: false,
             ..Default::default()
@@ -524,7 +524,7 @@ fn render_url_editor(
         0,
         area_w,
         area_h.saturating_sub(2),
-        "Playlist URL",
+        Some("Playlist URL"),
         PanelOpts::default(),
     );
 

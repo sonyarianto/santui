@@ -71,7 +71,16 @@ impl App {
         }
         let inner_w = (aw.saturating_sub(4)) as usize;
 
-        ui::draw_panel(cmds, t, 0, 0, aw, ah, "Plugins", ui::PanelOpts::default());
+        ui::draw_panel(
+            cmds,
+            t,
+            0,
+            0,
+            aw,
+            ah,
+            Some("Plugins"),
+            ui::PanelOpts::default(),
+        );
 
         if self.search_mode {
             let cursor = ui::blink_cursor(self.tick);

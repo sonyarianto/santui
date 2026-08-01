@@ -127,6 +127,11 @@ pub struct PanelOpts<'a> {
     pub dim_unfocused: bool,
     /// Keyboard hints rendered in the bottom border area.
     pub footer: Option<&'a [(&'a str, &'a str)]>,
+    /// Border drawn in `theme.highlight` to mark the active selection
+    /// (wins over `focused` / `dim_unfocused`).
+    pub selected: bool,
+    /// Optional background fill for the panel.
+    pub bg: Option<[u8; 3]>,
 }
 
 impl Default for PanelOpts<'_> {
@@ -135,11 +140,14 @@ impl Default for PanelOpts<'_> {
             focused: true,
             dim_unfocused: false,
             footer: None,
+            selected: false,
+            bg: None,
         }
     }
 }
 
-/// Draw a full-box panel with title integrated into the top border (native ratatui style).
+/// Draw a full-box panel with optional title integrated into the top border
+/// (native ratatui style). `title: None` draws a clean border box.
 /// Content should be placed at `x + 2, y + 1` (inside the border).
 #[allow(clippy::too_many_arguments)]
 pub fn draw_panel(
@@ -149,14 +157,15 @@ pub fn draw_panel(
     y: u16,
     w: u16,
     h: u16,
-    title: &str,
+    title: Option<&str>,
     opts: PanelOpts<'_>,
 ) {
     if w < 3 || h < 2 {
         return;
     }
-    let bright = opts.focused || !opts.dim_unfocused;
-    let border_fg = if bright {
+    let border_fg = if opts.selected {
+        theme.highlight
+    } else if opts.focused || !opts.dim_unfocused {
         theme.border
     } else {
         theme.text_muted
@@ -167,9 +176,9 @@ pub fn draw_panel(
         w,
         h,
         fg: border_fg,
-        bg: None,
+        bg: opts.bg,
         borders: BORDER_ALL,
-        title: Some(title.trim().to_string()),
+        title: title.map(|t| t.trim().to_string()),
         title_fg: Some(border_fg),
         title_dash_fg: Some(border_fg),
         border_type: None,
@@ -475,12 +484,117 @@ pub fn scroll_down(scroll: &mut usize, selected: usize, area_h: u16) {
 
 #[cfg(test)]
 mod tests {
-    use super::max_visible_tracks;
+    use super::{draw_panel, max_visible_tracks, PanelOpts};
+    use crate::protocol::RenderCmd;
+    use crate::test::theme;
 
     #[test]
     fn max_visible_tracks_calculation() {
         assert_eq!(max_visible_tracks(24), 19);
         assert_eq!(max_visible_tracks(10), 5);
         assert_eq!(max_visible_tracks(5), 0);
+    }
+
+    #[test]
+    fn draw_panel_title_none_draws_clean_border() {
+        let mut cmds = Vec::new();
+        draw_panel(&mut cmds, &theme(), 0, 0, 26, 7, None, PanelOpts::default());
+        let borders: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Border { .. }))
+            .collect();
+        assert_eq!(borders.len(), 1);
+        if let RenderCmd::Border {
+            title,
+            title_fg,
+            bg,
+            ..
+        } = borders[0]
+        {
+            assert_eq!(title.as_deref(), None);
+            assert_eq!(*title_fg, Some(theme().border));
+            assert_eq!(*bg, None);
+        } else {
+            panic!("expected border");
+        }
+    }
+
+    #[test]
+    fn draw_panel_selected_uses_highlight_border() {
+        let mut cmds = Vec::new();
+        draw_panel(
+            &mut cmds,
+            &theme(),
+            0,
+            0,
+            26,
+            7,
+            None,
+            PanelOpts {
+                selected: true,
+                ..PanelOpts::default()
+            },
+        );
+        if let RenderCmd::Border { fg, .. } = &cmds[0] {
+            assert_eq!(*fg, theme().highlight);
+        } else {
+            panic!("expected border");
+        }
+    }
+
+    #[test]
+    fn draw_panel_unfocused_dimmed_uses_muted_border() {
+        let mut cmds = Vec::new();
+        draw_panel(
+            &mut cmds,
+            &theme(),
+            0,
+            0,
+            26,
+            7,
+            None,
+            PanelOpts {
+                focused: false,
+                dim_unfocused: true,
+                ..PanelOpts::default()
+            },
+        );
+        if let RenderCmd::Border { fg, .. } = &cmds[0] {
+            assert_eq!(*fg, theme().text_muted);
+        } else {
+            panic!("expected border");
+        }
+    }
+
+    #[test]
+    fn draw_panel_bg_fills_panel() {
+        let mut cmds = Vec::new();
+        let bg = [9, 9, 9];
+        draw_panel(
+            &mut cmds,
+            &theme(),
+            0,
+            0,
+            30,
+            4,
+            Some("Rename"),
+            PanelOpts {
+                bg: Some(bg),
+                ..PanelOpts::default()
+            },
+        );
+        if let RenderCmd::Border { bg: got, title, .. } = &cmds[0] {
+            assert_eq!(*got, Some(bg));
+            assert_eq!(title.as_deref(), Some("Rename"));
+        } else {
+            panic!("expected border");
+        }
+    }
+
+    #[test]
+    fn draw_panel_too_small_draws_nothing() {
+        let mut cmds = Vec::new();
+        draw_panel(&mut cmds, &theme(), 0, 0, 2, 2, None, PanelOpts::default());
+        assert!(cmds.is_empty());
     }
 }

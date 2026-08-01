@@ -74,11 +74,12 @@ pub fn render_ui(
         0,
         left_w,
         stations_h,
-        "Stations",
+        Some("Stations"),
         PanelOpts {
             focused: stations_focused,
             footer: stations_footer,
             dim_unfocused: true,
+            ..Default::default()
         },
     );
 
@@ -319,7 +320,7 @@ pub fn render_ui(
         np_y,
         left_w,
         info_h,
-        NP_TITLE,
+        Some(NP_TITLE),
         PanelOpts::default(),
     );
     // Volume right-aligned on the last content row (space is reserved in
@@ -480,11 +481,12 @@ pub fn render_ui(
                 popup_y,
                 popup_w,
                 popup_h,
-                "Lyrics",
+                Some("Lyrics"),
                 PanelOpts {
                     focused: true,
                     footer: lyrics_footer,
                     dim_unfocused: false,
+                    ..Default::default()
                 },
             );
 

@@ -1,6 +1,6 @@
 use chrono::{Offset, Timelike};
 use chrono_tz::{OffsetComponents, Tz};
-use santui_ipc::protocol::{RenderCmd, ThemeData, BORDER_ALL};
+use santui_ipc::protocol::{RenderCmd, ThemeData};
 use santui_ipc::ui;
 
 use crate::state::{Screen, WorldTimeState};
@@ -65,23 +65,22 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
 
         let is_selected = i == state.selected;
 
-        cmds.push(RenderCmd::Border {
-            x: cx,
-            y: cy,
-            w: cw,
-            h: ch,
-            fg: if is_selected {
-                theme.highlight
-            } else {
-                theme.text_muted
+        ui::draw_panel(
+            &mut cmds,
+            theme,
+            cx,
+            cy,
+            cw,
+            ch,
+            None,
+            ui::PanelOpts {
+                focused: false,
+                dim_unfocused: true,
+                footer: None,
+                selected: is_selected,
+                bg: None,
             },
-            bg: None,
-            borders: BORDER_ALL,
-            title: None,
-            title_fg: None,
-            title_dash_fg: None,
-            border_type: None,
-        });
+        );
 
         let dt = chrono::Utc::now().with_timezone(&clock.tz);
         let offset_str = fmt_offset(clock.tz);
@@ -234,19 +233,19 @@ fn render_rename(state: &WorldTimeState, theme: &ThemeData, w: u16, idx: usize) 
 
     santui_ipc::ui::dim_overlay(&mut cmds, theme);
 
-    cmds.push(RenderCmd::Border {
-        x: popup_x,
-        y: popup_y,
-        w: popup_w,
-        h: popup_h,
-        fg: theme.border,
-        bg: Some(theme.background_overlay),
-        borders: BORDER_ALL,
-        title: Some("Rename".into()),
-        title_fg: Some(theme.border),
-        title_dash_fg: Some(theme.border),
-        border_type: None,
-    });
+    ui::draw_panel(
+        &mut cmds,
+        theme,
+        popup_x,
+        popup_y,
+        popup_w,
+        popup_h,
+        Some("Rename"),
+        ui::PanelOpts {
+            bg: Some(theme.background_overlay),
+            ..ui::PanelOpts::default()
+        },
+    );
 
     let input_text = format!("> {}", state.rename_buf);
     cmds.push(RenderCmd::Text {
