@@ -148,6 +148,16 @@ fn fmt_release_date(iso: &str) -> String {
     date.to_string()
 }
 
+/// Map iTunes explicitness codes to human-friendly labels.
+fn fmt_explicitness(code: &str) -> String {
+    match code {
+        "notExplicit" => "Not Explicit".to_string(),
+        "explicit" => "Explicit".to_string(),
+        "cleaned" => "Cleaned".to_string(),
+        other => other.to_string(),
+    }
+}
+
 pub fn fmt_duration(secs: u64) -> String {
     let m = secs / 60;
     let s = secs % 60;
@@ -223,7 +233,10 @@ pub fn detail_lines(track: &ItunesTrack, elapsed: Option<u64>, inner_w: usize) -
         out.push(line);
     }
     if !track.track_explicitness.is_empty() {
-        out.push(format!("Explicitness: {}", track.track_explicitness));
+        out.push(format!(
+            "Explicitness: {}",
+            fmt_explicitness(&track.track_explicitness)
+        ));
     }
 
     let mut wrapped: Vec<String> = Vec::new();
@@ -330,7 +343,7 @@ mod tests {
         assert_eq!(lines[6], "Duration: 5:26");
         assert_eq!(lines[7], "Country: USA");
         assert_eq!(lines[8], "Price: $1.29 (album: $9.99)");
-        assert_eq!(lines[9], "Explicitness: notExplicit");
+        assert_eq!(lines[9], "Explicitness: Not Explicit");
     }
 
     #[test]
@@ -409,6 +422,14 @@ mod tests {
         assert_eq!(fmt_release_date("2002-10-29T08:00:00Z"), "October 29, 2002");
         assert_eq!(fmt_release_date("2020-01-05"), "January 5, 2020");
         assert_eq!(fmt_release_date("2020-12-31"), "December 31, 2020");
+    }
+
+    #[test]
+    fn fmt_explicitness_human_friendly() {
+        assert_eq!(fmt_explicitness("notExplicit"), "Not Explicit");
+        assert_eq!(fmt_explicitness("explicit"), "Explicit");
+        assert_eq!(fmt_explicitness("cleaned"), "Cleaned");
+        assert_eq!(fmt_explicitness("weird"), "weird");
     }
 
     #[test]
