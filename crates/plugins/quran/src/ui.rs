@@ -117,7 +117,7 @@ fn render_picker_panel(
             }
         })
         .collect();
-    let list_h = h.saturating_sub(4).max(4);
+    let list_h = h.saturating_sub(5).max(4);
     cmds.push(RenderCmd::List {
         x: popup_x + 2,
         y: 2,
