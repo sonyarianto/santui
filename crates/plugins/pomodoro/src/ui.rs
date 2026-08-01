@@ -169,7 +169,7 @@ fn render_main(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<
     let stats_y = top + 9;
     if stats_y + 2 < h {
         let stats_text = format!(
-            "Today: {} sessions · {} focused · {} break",
+            "Today: {} sessions • {} focused • {} break",
             state.data.stats.sessions_completed,
             fmt_minutes(state.data.stats.total_focus_secs),
             fmt_minutes(state.data.stats.total_break_secs)
@@ -188,7 +188,7 @@ fn render_main(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<
 
     if h >= 14 {
         let cfg_text = format!(
-            "{}m work · {}m break · {}m long",
+            "{}m work • {}m break • {}m long",
             state.data.config.work_secs / 60,
             state.data.config.short_break_secs / 60,
             state.data.config.long_break_secs / 60

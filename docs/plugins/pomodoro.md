@@ -63,7 +63,7 @@ App
 - Countdown (MM:SS) with a centered progress bar and the percentage centered below it
 - Work-cycle session dots (`●` completed / `○` upcoming, one per work session in the cycle) — falls back to `n / N sessions` text when the cycle exceeds 12 dots
 - Today's stats line: sessions, focus time, and break time (break time was previously collected but never displayed)
-- Phase durations summary (`25m work · 5m break · 15m long`) at the bottom-left of the panel
+- Phase durations summary (`25m work • 5m break • 15m long`) at the bottom of the panel
 - `space` — start / pause / resume; on a Finished timer, advance to the next phase
 - `s` — skip the current phase (advances the timer)
 - `r` — reset the current session back to Idle at full duration
