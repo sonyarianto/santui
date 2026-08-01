@@ -43,6 +43,32 @@ impl DateFormat {
     }
 }
 
+/// Clock style shown on cards.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum HourFormat {
+    /// `14:05:09`
+    #[default]
+    TwentyFour,
+    /// `2:05:09 PM`
+    Twelve,
+}
+
+impl HourFormat {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            HourFormat::TwentyFour => "24",
+            HourFormat::Twelve => "12",
+        }
+    }
+
+    pub fn from_str(s: &str) -> HourFormat {
+        match s {
+            "12" => HourFormat::Twelve,
+            _ => HourFormat::TwentyFour,
+        }
+    }
+}
+
 pub struct WorldTimeState {
     pub clocks: Vec<ClockEntry>,
     pub selected: usize,
@@ -55,6 +81,7 @@ pub struct WorldTimeState {
     pub rename_buf: String,
     pub last_second: u32,
     pub date_format: DateFormat,
+    pub hour_format: HourFormat,
 }
 
 impl Default for WorldTimeState {
@@ -71,6 +98,7 @@ impl Default for WorldTimeState {
             rename_buf: String::new(),
             last_second: 61,
             date_format: DateFormat::default(),
+            hour_format: HourFormat::default(),
         }
     }
 }
@@ -105,6 +133,13 @@ impl WorldTimeState {
         self.date_format = match self.date_format {
             DateFormat::DayFirst => DateFormat::MonthFirst,
             DateFormat::MonthFirst => DateFormat::DayFirst,
+        };
+    }
+
+    pub fn toggle_hour_format(&mut self) {
+        self.hour_format = match self.hour_format {
+            HourFormat::Twelve => HourFormat::TwentyFour,
+            HourFormat::TwentyFour => HourFormat::Twelve,
         };
     }
 
@@ -231,5 +266,30 @@ mod tests {
         assert_eq!(DateFormat::from_str("month"), DateFormat::MonthFirst);
         assert_eq!(DateFormat::from_str("garbage"), DateFormat::MonthFirst);
         assert_eq!(DateFormat::from_str(""), DateFormat::MonthFirst);
+    }
+
+    #[test]
+    fn default_hour_format_is_twenty_four() {
+        let s = WorldTimeState::default();
+        assert_eq!(s.hour_format, HourFormat::TwentyFour);
+        assert_eq!(HourFormat::TwentyFour.as_str(), "24");
+    }
+
+    #[test]
+    fn toggle_hour_format_switches_both_ways() {
+        let mut s = WorldTimeState::default();
+        s.toggle_hour_format();
+        assert_eq!(s.hour_format, HourFormat::Twelve);
+        assert_eq!(HourFormat::Twelve.as_str(), "12");
+        s.toggle_hour_format();
+        assert_eq!(s.hour_format, HourFormat::TwentyFour);
+    }
+
+    #[test]
+    fn hour_format_from_str_falls_back_to_default() {
+        assert_eq!(HourFormat::from_str("12"), HourFormat::Twelve);
+        assert_eq!(HourFormat::from_str("24"), HourFormat::TwentyFour);
+        assert_eq!(HourFormat::from_str("garbage"), HourFormat::TwentyFour);
+        assert_eq!(HourFormat::from_str(""), HourFormat::TwentyFour);
     }
 }

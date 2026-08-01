@@ -8,7 +8,7 @@ use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, IpcKeyModifiers, PluginRequest, RenderCmd, ThemeData,
 };
 
-use state::{DateFormat, Screen, WorldTimeState};
+use state::{DateFormat, HourFormat, Screen, WorldTimeState};
 use ui::render_ui;
 
 struct App {
@@ -120,6 +120,12 @@ impl App {
             IpcKey::Char('t') if !modifiers.ctrl => {
                 self.state.toggle_date_format();
                 self.save_date_format();
+                self.dirty = true;
+                true
+            }
+            IpcKey::Char('f') if !modifiers.ctrl => {
+                self.state.toggle_hour_format();
+                self.save_hour_format();
                 self.dirty = true;
                 true
             }
@@ -303,6 +309,14 @@ impl App {
                 if let Some(v) = value {
                     self.state.date_format = DateFormat::from_str(&v);
                 }
+                self.pending_request = Some(PluginRequest::DbGet {
+                    key: "hour_format".into(),
+                });
+            }
+            "hour_format" => {
+                if let Some(v) = value {
+                    self.state.hour_format = HourFormat::from_str(&v);
+                }
             }
             _ => {}
         }
@@ -324,6 +338,13 @@ impl App {
         });
     }
 
+    fn save_hour_format(&mut self) {
+        self.pending_request = Some(PluginRequest::DbSet {
+            key: "hour_format".into(),
+            value: self.state.hour_format.as_str().into(),
+        });
+    }
+
     fn status_hints(&self) -> Vec<(String, String)> {
         match &self.state.screen {
             Screen::Grid => {
@@ -331,6 +352,7 @@ impl App {
                     ("↑↓←→".into(), "navigate".into()),
                     ("a".into(), "add".into()),
                     ("t".into(), "date format".into()),
+                    ("f".into(), "time format".into()),
                 ];
                 if !self.state.clocks.is_empty() {
                     hints.push(("d".into(), "delete".into()));
@@ -533,6 +555,42 @@ mod tests {
         ));
         assert!(app.handle_key(IpcKey::Char('t'), IpcKeyModifiers::default()));
         assert_eq!(app.state.date_format, DateFormat::MonthFirst);
+    }
+
+    #[test]
+    fn handle_key_f_toggles_hour_format_and_saves() {
+        let mut app = base_app();
+        assert_eq!(app.state.hour_format, HourFormat::TwentyFour);
+        assert!(app.handle_key(IpcKey::Char('f'), IpcKeyModifiers::default()));
+        assert_eq!(app.state.hour_format, HourFormat::Twelve);
+        assert!(matches!(
+            &app.pending_request,
+            Some(PluginRequest::DbSet { key, value })
+                if key == "hour_format" && value == "12"
+        ));
+        assert!(app.handle_key(IpcKey::Char('f'), IpcKeyModifiers::default()));
+        assert_eq!(app.state.hour_format, HourFormat::TwentyFour);
+    }
+
+    #[test]
+    fn handle_db_value_date_format_requests_hour_format_next() {
+        let mut app = base_app();
+        app.handle_db_value("date_format", Some("month".into()));
+        assert!(matches!(
+            &app.pending_request,
+            Some(PluginRequest::DbGet { key }) if key == "hour_format"
+        ));
+    }
+
+    #[test]
+    fn handle_db_value_hour_format_loads_value() {
+        let mut app = base_app();
+        app.handle_db_value("hour_format", Some("12".into()));
+        assert_eq!(app.state.hour_format, HourFormat::Twelve);
+        app.handle_db_value("hour_format", Some("bogus".into()));
+        assert_eq!(app.state.hour_format, HourFormat::TwentyFour);
+        app.handle_db_value("hour_format", None);
+        assert_eq!(app.state.hour_format, HourFormat::TwentyFour);
     }
 
     #[test]

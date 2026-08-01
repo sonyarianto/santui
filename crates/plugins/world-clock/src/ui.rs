@@ -1,9 +1,9 @@
-use chrono::{Offset, Timelike};
+use chrono::Offset;
 use chrono_tz::{OffsetComponents, Tz};
 use santui_ipc::protocol::{RenderCmd, ThemeData, BORDER_ALL};
 use santui_ipc::ui;
 
-use crate::state::{DateFormat, Screen, WorldTimeState};
+use crate::state::{DateFormat, HourFormat, Screen, WorldTimeState};
 
 fn fmt_offset(tz: Tz) -> String {
     let dt = chrono::Utc::now().with_timezone(&tz);
@@ -117,7 +117,10 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
             false,
         );
 
-        let time_str = format!("{:02}:{:02}:{:02}", dt.hour(), dt.minute(), dt.second());
+        let time_str = match state.hour_format {
+            HourFormat::TwentyFour => dt.format("%H:%M:%S").to_string(),
+            HourFormat::Twelve => dt.format("%-I:%M:%S %p").to_string(),
+        };
         ui::push_text(&mut cmds, cx + 2, cy + 3, time_str, theme.accent, true);
 
         let date_str = match state.date_format {
@@ -262,7 +265,7 @@ use crate::timezones;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::{DateFormat, Screen, WorldTimeState};
+    use crate::state::{DateFormat, HourFormat, Screen, WorldTimeState};
 
     fn test_theme() -> ThemeData {
         ThemeData {
@@ -407,6 +410,33 @@ mod tests {
             cmds.iter()
                 .any(|c| matches!(c, RenderCmd::Text { text, .. } if text == &expect)),
             "expected day-first date {expect:?}"
+        );
+    }
+
+    #[test]
+    fn grid_time_uses_twenty_four_hour_by_default() {
+        let s = state_with_clocks();
+        let cmds = render_ui(&s, &test_theme(), 120, 30);
+        let now = chrono::Utc::now().with_timezone(&s.clocks[0].tz);
+        let expect = now.format("%H:%M:%S").to_string();
+        assert!(
+            cmds.iter()
+                .any(|c| matches!(c, RenderCmd::Text { text, .. } if text == &expect)),
+            "expected 24h time {expect:?}"
+        );
+    }
+
+    #[test]
+    fn grid_time_uses_twelve_hour_when_toggled() {
+        let mut s = state_with_clocks();
+        s.hour_format = HourFormat::Twelve;
+        let cmds = render_ui(&s, &test_theme(), 120, 30);
+        let now = chrono::Utc::now().with_timezone(&s.clocks[0].tz);
+        let expect = now.format("%-I:%M:%S %p").to_string();
+        assert!(
+            cmds.iter()
+                .any(|c| matches!(c, RenderCmd::Text { text, .. } if text == &expect)),
+            "expected 12h time {expect:?}"
         );
     }
 

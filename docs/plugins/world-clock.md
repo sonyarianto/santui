@@ -30,6 +30,7 @@ App
 ├── state: WorldTimeState
 │   ├── clocks: Vec<ClockEntry>      — tz + label (persisted)
 │   ├── date_format: DateFormat      — DayFirst / MonthFirst (persisted)
+│   ├── hour_format: HourFormat      — Twelve / TwentyFour (persisted)
 │   ├── selected: usize              — grid cursor
 │   ├── screen: Screen               — Grid / Search / Rename(idx)
 │   ├── search_query / search_results / search_cursor / search_scroll
@@ -37,7 +38,7 @@ App
 │   ├── rename_buf
 │   └── last_second                  — tick guard for 1s re-render
 ├── theme / area / dirty / cached_commands
-└── pending_request                  — PluginRequest (DbGet/DbSet "clocks" / "date_format")
+└── pending_request                  — PluginRequest (DbGet/DbSet "clocks" / "date_format" / "hour_format")
 ```
 
 ### Thread Model
@@ -50,10 +51,11 @@ App
 ### Preferences Persistence
 - Key: `clocks` — tz + label list
 - Key: `date_format` — `"day"` (Sat, 1 Aug 2026) or `"month"` (Sat, Aug 1 2026, default)
-- Loaded on init via `PluginRequest::DbGet { key: "clocks" }`, then chained `DbGet "date_format"` after clocks arrive (one request in flight at a time)
-- Stored via `PluginRequest::DbSet` on add/delete/rename (clocks) and on `t` (date format)
+- Key: `hour_format` — `"12"` (2:05:09 PM) or `"24"` (14:05:09, default)
+- Loaded on init via `PluginRequest::DbGet { key: "clocks" }`, then chained `DbGet "date_format"` → `DbGet "hour_format"` after each value arrives (one request in flight at a time)
+- Stored via `PluginRequest::DbSet` on add/delete/rename (clocks), on `t` (date format), and on `f` (time format)
 - First run (`None` response) → default clocks (UTC + first zone matching the local offset), then saved
-- Invalid/missing `date_format` value falls back to month-first without panicking
+- Invalid/missing `date_format` / `hour_format` values fall back to defaults without panicking
 
 ## Features
 - Full-window panel with title (same visual language as other stable plugins), cards inside at `x + 2, y + 1`
@@ -63,6 +65,7 @@ App
 - Rename clocks (`r` key) — trimmed input, empty input cancels; `Ctrl+R` restores the default city name of the timezone
 - Delete clocks (`d` key) — selection clamps after removal
 - Toggle card date format (`t` key) — day-first ↔ month-first, persisted per user
+- Toggle card time format (`f` key) — 24-hour ↔ 12-hour (AM/PM), persisted per user
 - Duplicate timezone protection on add
 - Preferences persisted across sessions via central DB
 
