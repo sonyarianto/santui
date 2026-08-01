@@ -255,7 +255,8 @@ impl App {
 
     fn handle_tick(&mut self) {
         self.state.tick_counter = self.state.tick_counter.wrapping_add(1);
-        if matches!(self.state.screen, Screen::Search) && self.state.tick_counter.is_multiple_of(3)
+        if matches!(self.state.screen, Screen::Search | Screen::Rename(_))
+            && self.state.tick_counter.is_multiple_of(3)
         {
             self.dirty = true;
         }
@@ -612,6 +613,21 @@ mod tests {
         app.state.last_second = now;
         app.handle_tick();
         assert!(!app.dirty);
+    }
+
+    #[test]
+    fn handle_tick_blinks_cursor_on_rename_screen() {
+        let mut app = base_app();
+        app.state.screen = Screen::Rename(0);
+        app.state.tick_counter = 2;
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs() as u32;
+        app.state.last_second = now;
+        app.dirty = false;
+        app.handle_tick();
+        assert!(app.dirty);
     }
 
     #[test]
