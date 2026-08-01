@@ -30,7 +30,7 @@ pub fn render_ui(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> V
     match &state.screen {
         Screen::Grid => render_grid(state, theme, w, h),
         Screen::Search => render_search(state, theme, w, h),
-        Screen::Rename(idx) => render_rename(state, theme, w, *idx),
+        Screen::Rename(_) => render_rename(state, theme, w, h),
     }
 }
 
@@ -211,45 +211,46 @@ fn render_search(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> V
     cmds
 }
 
-fn render_rename(state: &WorldTimeState, theme: &ThemeData, w: u16, idx: usize) -> Vec<RenderCmd> {
+fn render_rename(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec<RenderCmd> {
     let mut cmds = Vec::new();
 
-    let popup_w = 30u16;
-    let popup_h = 4u16;
+    const TITLE_H: u16 = 5;
+    let popup_h = TITLE_H + 2;
+    let r = ui::palette_rect(w, h, popup_h);
+    ui::palette_bg(&mut cmds, theme, &r);
 
-    let cols = grid_cols(w);
-    let col = idx as u16 % cols;
-    let row = idx as u16 / cols;
-    let card_x = 2 + col * (card_w() + 1);
-    let card_y = 1 + row * card_h();
-    let popup_x = card_x.min(w.saturating_sub(popup_w));
-    let popup_y = card_y;
+    ui::palette_title(&mut cmds, theme, &r, 1, "Rename Clock");
 
-    santui_ipc::ui::dim_overlay(&mut cmds, theme);
-
-    ui::draw_panel(
-        &mut cmds,
-        theme,
-        popup_x,
-        popup_y,
-        popup_w,
-        popup_h,
-        Some("Rename"),
-        ui::PanelOpts {
-            bg: Some(theme.background_overlay),
-            ..ui::PanelOpts::default()
-        },
-    );
-
-    let input_text = format!("> {}", state.rename_buf);
+    let input_y = r.y + 3;
     ui::text_at(
         &mut cmds,
-        popup_x + 2,
-        popup_y + 1,
-        &input_text,
+        r.ix,
+        input_y,
+        &state.rename_buf,
         theme.text,
-        None,
-        popup_w.saturating_sub(4),
+        Some(theme.background_panel),
+        r.iw,
+    );
+    let cursor = ui::blink_cursor(state.tick_counter);
+    cmds.push(RenderCmd::Text {
+        x: (r.ix + state.rename_buf.len() as u16).min(r.ix + r.iw.saturating_sub(1)),
+        y: input_y,
+        text: cursor.to_string(),
+        fg: Some(theme.inverted_text),
+        bg: Some(theme.highlight),
+        bold: false,
+        modifiers: 0,
+    });
+
+    let hint_y = r.y + TITLE_H;
+    ui::text_at(
+        &mut cmds,
+        r.ix,
+        hint_y,
+        "↵ save  esc cancel",
+        theme.text_muted,
+        Some(theme.background_panel),
+        r.iw,
     );
 
     cmds
@@ -396,5 +397,30 @@ mod tests {
         let s = WorldTimeState::default();
         let cmds = render_ui(&s, &test_theme(), 120, 30);
         let _ = cmds;
+    }
+
+    #[test]
+    fn rename_popup_matches_palette_layout() {
+        let mut s = state_with_clocks();
+        s.screen = Screen::Rename(0);
+        s.rename_buf = "My City".into();
+        let cmds = render_ui(&s, &test_theme(), 120, 30);
+        let title = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("Rename Clock")));
+        assert!(title);
+        let has_buf = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("My City")));
+        assert!(has_buf);
+        let has_hint = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("save")));
+        assert!(has_hint);
+        let has_cursor = cmds.iter().any(|c| {
+            matches!(c, RenderCmd::Text { fg, bg, .. }
+                if *fg == Some(test_theme().inverted_text) && *bg == Some(test_theme().highlight))
+        });
+        assert!(has_cursor);
     }
 }
