@@ -82,14 +82,26 @@ cd website && npm run build # static build
 ## Release
 
 ```bash
+./scripts/release.sh x.y.z
+```
+
+Automates the whole flow: pre-flight check (every version-bearing file must be at the
+current version), bump of all `Cargo.toml` + `packages/npm/package.json` +
+website version strings + `plugins.json` (dev-mode only, never committed), leftover
+verification, `cargo check` sanity, `git cliff` changelog (pre- and post-tag),
+commit, tag, push, and `gh release create`. CI builds binaries and publishes to npm.
+
+Manual fallback (if you prefer to do it by hand — everything the script does):
+
+```bash
 # Update version in all Cargo.toml files + packages/npm/package.json
-# They must all match (CI verifies against crates/core/Cargo.toml)
+# They must all match (script verifies; CI only checks tag vs crates/core/Cargo.toml)
 #
 # IMPORTANT: Every inter-crate path dependency must also have a version
 # field matching the new version, e.g.:
 #   santui-core = { path = "../core", version = "x.y.z" }
 #
-# Also update website version strings (grep for the old version):
+# Also update website version strings (grep for the old version — mind hidden dirs):
 #   website/.vitepress/config.ts      — nav link + footer
 #   website/public/install.ps1        — banner text
 #   website/index.md                  — tagline (if changed)
