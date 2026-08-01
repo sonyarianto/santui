@@ -300,7 +300,7 @@ jobs:
               santui-*|plugins-*.json) continue ;;
             esac
             [ -f "$f" ] || continue
-            echo "Uploading $f …"
+            echo "Uploading $f ..."
             gh release upload "${{ github.ref_name }}" "$f" --clobber
             sleep 1
           done
@@ -354,9 +354,9 @@ jobs:
         run: |
           # core → ipc → auth → db → registry → app (santui-app is just "santui")
           for crate in core ipc auth db registry; do
-            echo "» Publishing santui-$crate …"
+            echo "» Publishing santui-$crate ..."
             cargo publish -p "santui-$crate"
             sleep 60
           done
-          echo "» Publishing santui …"
+          echo "» Publishing santui ..."
           cargo publish -p santui

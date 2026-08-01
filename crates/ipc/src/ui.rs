@@ -246,11 +246,13 @@ pub fn draw_panel(
     }
 }
 
-/// Truncate a string to fit within `max_len` characters, appending "…" if truncated.
+/// Truncate a string to fit within `max_len` characters, appending "..." if truncated.
 pub fn truncate(text: &str, max_len: usize) -> String {
-    if text.len() > max_len && max_len > 1 {
-        let t: String = text.chars().take(max_len.saturating_sub(1)).collect();
-        format!("{t}…")
+    if text.chars().count() > max_len && max_len > 3 {
+        let t: String = text.chars().take(max_len.saturating_sub(3)).collect();
+        format!("{t}...")
+    } else if text.chars().count() > max_len {
+        text.chars().take(max_len).collect()
     } else {
         text.to_string()
     }

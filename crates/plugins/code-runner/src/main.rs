@@ -241,7 +241,7 @@ fn render_ui(app: &App) -> Vec<Value> {
 
     let label = match app.mode {
         Mode::Editing => " Editor ",
-        Mode::Running => " Running… ",
+        Mode::Running => " Running... ",
         Mode::Output => " Output ",
     };
 

@@ -63,7 +63,7 @@ fn render_surah_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w:
             app.prefs.reciter,
             app.search,
         );
-        let truncated = truncate(&header, w as usize - 4);
+        let truncated = santui_ipc::ui::truncate(&header, w as usize - 4);
         push_text(cmds, 2, 1, &truncated, theme.text_muted, false);
         if app.cursor_visible {
             let cx = 2u16 + truncated.chars().count() as u16;
@@ -88,7 +88,7 @@ fn render_surah_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w:
             cmds,
             2,
             1,
-            truncate(&header, w as usize - 4),
+            santui_ipc::ui::truncate(&header, w as usize - 4),
             theme.text_muted,
             false,
         );
@@ -140,9 +140,9 @@ fn render_surah_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w:
             };
             vec![
                 format!("{}", s.number),
-                truncate(&s.name, col_w[1]),
-                truncate(&s.english_name, col_w[2]),
-                truncate(&s.english_translation, col_w[3]),
+                santui_ipc::ui::truncate(&s.name, col_w[1]),
+                santui_ipc::ui::truncate(&s.english_name, col_w[2]),
+                santui_ipc::ui::truncate(&s.english_translation, col_w[3]),
                 format!("{}", s.ayah_count),
                 active,
             ]
@@ -198,7 +198,7 @@ fn render_reader(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16
         cmds,
         2,
         1,
-        truncate(&header, w as usize - 4),
+        santui_ipc::ui::truncate(&header, w as usize - 4),
         theme.text,
         true,
     );
@@ -245,7 +245,7 @@ fn render_picker(
         cmds,
         2,
         1,
-        truncate(title, w as usize - 4),
+        santui_ipc::ui::truncate(title, w as usize - 4),
         theme.text_muted,
         false,
     );
@@ -375,18 +375,6 @@ fn wrap_text(text: &str, max_chars: usize) -> String {
         }
     }
     result
-}
-
-fn truncate(value: &str, max_chars: usize) -> String {
-    let mut out = String::new();
-    for (idx, ch) in value.chars().enumerate() {
-        if idx >= max_chars.saturating_sub(1) {
-            out.push('…');
-            return out;
-        }
-        out.push(ch);
-    }
-    out
 }
 
 fn push_text(

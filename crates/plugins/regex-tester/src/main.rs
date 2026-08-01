@@ -520,7 +520,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
             &mut cmds,
             2,
             detail_y,
-            truncate(
+            santui_ipc::ui::truncate(
                 &format!("Selected: bytes {}..{} {:?}", mat.start, mat.end, mat.text),
                 w as usize - 4,
             ),
@@ -531,7 +531,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
             &mut cmds,
             2,
             detail_y + 1,
-            truncate(&captures, w as usize - 4),
+            santui_ipc::ui::truncate(&captures, w as usize - 4),
             theme.text_muted,
             false,
         );
@@ -550,7 +550,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
             &mut cmds,
             2,
             detail_y + 2,
-            truncate(
+            santui_ipc::ui::truncate(
                 &format!("Replacement: {}", visible_one_line(preview)),
                 w as usize - 4,
             ),
@@ -566,7 +566,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         &mut cmds,
         2,
         h.saturating_sub(1),
-        truncate(&status, w as usize - 4),
+        santui_ipc::ui::truncate(&status, w as usize - 4),
         theme.text_muted,
         false,
     );
@@ -610,18 +610,6 @@ fn focus_line(active: Focus, field: Focus, label: &str, value: &str) -> String {
 
 fn visible_one_line(value: &str) -> String {
     value.replace('\n', "⏎")
-}
-
-fn truncate(value: &str, max_chars: usize) -> String {
-    let mut out = String::new();
-    for (idx, ch) in value.chars().enumerate() {
-        if idx >= max_chars.saturating_sub(1) {
-            out.push('…');
-            return out;
-        }
-        out.push(ch);
-    }
-    out
 }
 
 fn push_text(

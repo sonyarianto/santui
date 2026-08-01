@@ -207,8 +207,8 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
 
 fn cell(s: &str, w: usize) -> String {
     if s.chars().count() > w.saturating_sub(2) {
-        let trunc: String = s.chars().take(w.saturating_sub(3)).collect();
-        format!(" {trunc}\u{2026} ")
+        let trunc: String = s.chars().take(w.saturating_sub(5)).collect();
+        format!(" {trunc}... ")
     } else {
         format!(" {s:<width$} ", width = w.saturating_sub(2))
     }

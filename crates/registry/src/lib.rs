@@ -342,7 +342,7 @@ fn parse_manifest(text: &str) -> Result<Vec<PluginManifest>, String> {
         plugins: Vec<PluginManifest>,
     }
     let w: Wrapper = serde_json::from_str(text)
-        .map_err(|e| format!("expected array, object, or {{plugins: […]}}: {e}"))?;
+        .map_err(|e| format!("expected array, object, or {{plugins: [...]}}: {e}"))?;
     Ok(w.plugins)
 }
 

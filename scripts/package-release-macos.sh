@@ -16,7 +16,7 @@ case "$ARCH" in
 esac
 
 # ── build ──
-echo "» Building release binaries …"
+echo "» Building release binaries ..."
 cargo build --release --workspace
 echo ""
 
@@ -33,7 +33,7 @@ for plugin in "$TARGET"/santui-*; do
     cp "$plugin" "$STAGE/"
 done
 
-echo "  Bundling libmpv and transitive dylib deps …"
+echo "  Bundling libmpv and transitive dylib deps ..."
 
 NATIVE="$STAGE/native"
 
@@ -54,7 +54,7 @@ fi
 # @loader_path-relative, making the bundle relocatable.
 cp "$LIBMPV_SRC" "$NATIVE/"
 if ! command -v dylibbundler &>/dev/null; then
-  echo "  Installing dylibbundler …"
+  echo "  Installing dylibbundler ..."
   brew install dylibbundler
 fi
 dylibbundler -of -b -x "$NATIVE/libmpv.2.dylib" -d "$NATIVE" -p "@loader_path/"
@@ -68,18 +68,18 @@ ARCHIVE_PATH="$OUTDIR/$ARCHIVE_NAME"
 mkdir -p "$OUTDIR"
 rm -f "$ARCHIVE_PATH"
 
-echo "  Packing $ARCHIVE_NAME …"
+echo "  Packing $ARCHIVE_NAME ..."
 tar czf "$ARCHIVE_PATH" -C "$STAGE" .
 echo ""
 
 # ── verify ──
 echo "  Archive contents:"
 tar tzf "$ARCHIVE_PATH" | head -20
-echo "  … $(tar tzf "$ARCHIVE_PATH" | wc -l | tr -d ' ') files total"
+echo "  ... $(tar tzf "$ARCHIVE_PATH" | wc -l | tr -d ' ') files total"
 echo ""
 
 # ── clean stage ──
-echo "  Cleaning up …"
+echo "  Cleaning up ..."
 rm -rf "$(dirname "$STAGE")"
 
 # ── done ──

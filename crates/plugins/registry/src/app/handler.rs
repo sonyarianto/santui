@@ -25,7 +25,7 @@ impl App {
                 self.plugins_dir = data.join("plugins");
                 let reg = santui_registry::Registry::new(data);
                 self.registry = Some(reg);
-                self.set_status("Fetching plugins…".to_string());
+                self.set_status("Fetching plugins...".to_string());
 
                 let dev = std::env::var("SANTUI_DEV").as_deref() == Ok("1");
                 if dev {
@@ -610,7 +610,7 @@ impl App {
 
     fn spawn_install(&mut self, plugin: &PluginManifest) {
         if self.download_rx.is_some() {
-            self.set_status("Already downloading…".to_string());
+            self.set_status("Already downloading...".to_string());
             return;
         }
 
@@ -629,7 +629,7 @@ impl App {
         self.pending_install_version = Some(version.clone());
         self.pending_install_capabilities = plugin.capabilities.clone();
         self.download_progress = Some((0, 0));
-        self.set_status(format!("Downloading {name}…"));
+        self.set_status(format!("Downloading {name}..."));
 
         std::thread::spawn(move || {
             if let Some(parent) = dest.parent() {

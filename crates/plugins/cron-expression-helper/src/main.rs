@@ -510,7 +510,7 @@ fn render_success(
         cmds,
         2,
         5,
-        truncate(&explain_schedule(schedule), w as usize - 4),
+        santui_ipc::ui::truncate(&explain_schedule(schedule), w as usize - 4),
         theme.success,
         false,
     );
@@ -631,7 +631,7 @@ fn render_success(
 
 fn range_preview(field: &CronField) -> String {
     let values: Vec<String> = field.allowed.iter().take(12).map(u32::to_string).collect();
-    let suffix = if field.allowed.len() > 12 { "…" } else { "" };
+    let suffix = if field.allowed.len() > 12 { "..." } else { "" };
     format!("{}{suffix}", values.join(","))
 }
 fn focus_line(active: Focus, field: Focus, label: &str, value: &str) -> String {
@@ -639,17 +639,6 @@ fn focus_line(active: Focus, field: Focus, label: &str, value: &str) -> String {
         "{} {label}: {value}",
         if active == field { ">" } else { " " }
     )
-}
-fn truncate(value: &str, max_chars: usize) -> String {
-    let mut out = String::new();
-    for (idx, ch) in value.chars().enumerate() {
-        if idx >= max_chars.saturating_sub(1) {
-            out.push('…');
-            return out;
-        }
-        out.push(ch);
-    }
-    out
 }
 fn push_text(
     cmds: &mut Vec<RenderCmd>,

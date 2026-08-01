@@ -197,7 +197,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
                 .iter()
                 .map(|h| {
                     let s = if h.len() > col_w.saturating_sub(2) {
-                        format!("{}{}", &h[..col_w.saturating_sub(3)], "\u{2026}")
+                        format!("{}...", &h[..col_w.saturating_sub(5)])
                     } else {
                         format!("{:width$}", h, width = col_w.saturating_sub(1))
                     };
@@ -239,7 +239,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
                         .iter()
                         .map(|cell| {
                             if cell.len() > col_w.saturating_sub(2) {
-                                format!("{}{}", &cell[..col_w.saturating_sub(3)], "\u{2026}")
+                                format!("{}...", &cell[..col_w.saturating_sub(5)])
                             } else {
                                 format!("{:width$}", cell, width = col_w.saturating_sub(1))
                             }

@@ -217,7 +217,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         let display = if uuid_text.len() <= text_w {
             uuid_text.clone()
         } else {
-            format!("{}{}", &uuid_text[..text_w.saturating_sub(1)], "\u{2026}")
+            format!("{}...", &uuid_text[..text_w.saturating_sub(3)])
         };
         let text_x = 2 + (uuid_box_w.saturating_sub(display.len() as u16)) / 2;
         let text_y = uuid_box_y + uuid_box_h / 2;

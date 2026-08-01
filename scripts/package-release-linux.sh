@@ -15,7 +15,7 @@ case "$ARCH" in
 esac
 
 # ── build ──
-echo "» Building release binaries …"
+echo "» Building release binaries ..."
 cargo build --release --workspace
 echo ""
 
@@ -38,14 +38,14 @@ ARCHIVE_PATH="$OUTDIR/$ARCHIVE_NAME"
 mkdir -p "$OUTDIR"
 rm -f "$ARCHIVE_PATH"
 
-echo "  Packing $ARCHIVE_NAME …"
+echo "  Packing $ARCHIVE_NAME ..."
 tar czf "$ARCHIVE_PATH" -C "$STAGE" .
 echo ""
 
 # ── verify ──
 echo "  Archive contents:"
 tar tzf "$ARCHIVE_PATH" | head -10
-echo "  … $(tar tzf "$ARCHIVE_PATH" | wc -l | tr -d ' ') files total"
+echo "  ... $(tar tzf "$ARCHIVE_PATH" | wc -l | tr -d ' ') files total"
 echo ""
 
 # ── clean stage ──

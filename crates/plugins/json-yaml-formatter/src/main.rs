@@ -325,7 +325,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         &mut cmds,
         2,
         2,
-        truncate(&header, w as usize - 4),
+        santui_ipc::ui::truncate(&header, w as usize - 4),
         theme.text,
         true,
     );
@@ -428,7 +428,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         &mut cmds,
         2,
         h.saturating_sub(2),
-        truncate(&status, w as usize - 4),
+        santui_ipc::ui::truncate(&status, w as usize - 4),
         if result.ok {
             theme.success
         } else {
@@ -489,18 +489,6 @@ fn action_label(action: Action) -> &'static str {
         Action::Format => "Format",
         Action::MinifyJson => "Minify JSON",
     }
-}
-
-fn truncate(value: &str, max_chars: usize) -> String {
-    let mut out = String::new();
-    for (idx, ch) in value.chars().enumerate() {
-        if idx >= max_chars.saturating_sub(1) {
-            out.push('…');
-            return out;
-        }
-        out.push(ch);
-    }
-    out
 }
 
 fn push_text(

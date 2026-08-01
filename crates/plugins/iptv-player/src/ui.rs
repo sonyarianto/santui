@@ -101,8 +101,8 @@ fn render_channel_list(
     if let Some(ref msg) = state.scan_msg {
         let max_w = area_w.saturating_sub(4) as usize;
         let top_text = if msg.chars().count() > max_w {
-            let truncated: String = msg.chars().take(max_w.saturating_sub(1)).collect();
-            format!("{}\u{2026}", truncated)
+            let truncated: String = msg.chars().take(max_w.saturating_sub(3)).collect();
+            format!("{}...", truncated)
         } else {
             msg.clone()
         };

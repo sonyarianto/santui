@@ -321,7 +321,7 @@ impl AuthClient {
             }
         };
         let auth_url = format!("{vercel}/api/auth/google?port={port}");
-        ctx.set_msg("Google: waiting for browser…");
+        ctx.set_msg("Google: waiting for browser...");
         open_browser(&auth_url);
 
         let params = match handle_redirect(listener) {

@@ -319,7 +319,7 @@ impl App {
                 };
                 let max_w = msg_w;
                 let display = if line.len() > max_w as usize {
-                    format!("{}…", &line[..max_w.saturating_sub(1) as usize])
+                    format!("{}...", &line[..max_w.saturating_sub(3) as usize])
                 } else {
                     line
                 };
@@ -349,7 +349,7 @@ impl App {
         };
         let max_input = w.saturating_sub(4 + prompt.len() as u16) as usize;
         let input_trunc = if input_display.len() > max_input {
-            format!("{}…", &input_display[..max_input.saturating_sub(1)])
+            format!("{}...", &input_display[..max_input.saturating_sub(3)])
         } else {
             input_display
         };

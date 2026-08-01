@@ -283,7 +283,7 @@ fn render_ui(app: &App) -> Vec<Value> {
                 let is_sel = i == app.selected;
                 let prefix = if is_sel { "▸" } else { " " };
                 let state_icon = if item.state == "open" { "#" } else { "✓" };
-                let line = truncate(
+                let line = santui_ipc::ui::truncate(
                     &format!("{prefix} {state_icon}{} {}", item.number, item.title),
                     w as usize - 4,
                 );
@@ -308,7 +308,10 @@ fn render_ui(app: &App) -> Vec<Value> {
         }
         Mode::Detail => {
             if let Some(item) = app.items.get(app.selected) {
-                let title = truncate(&format!("#{}  {}", item.number, item.title), w as usize - 4);
+                let title = santui_ipc::ui::truncate(
+                    &format!("#{}  {}", item.number, item.title),
+                    w as usize - 4,
+                );
                 cmds.push(json!({
                     String::from("type"): String::from("Text"),
                     String::from("x"): 2, String::from("y"): 2,
@@ -332,7 +335,7 @@ fn render_ui(app: &App) -> Vec<Value> {
                     if y >= h.saturating_sub(3) {
                         break;
                     }
-                    let text = truncate(line, w as usize - 4);
+                    let text = santui_ipc::ui::truncate(line, w as usize - 4);
                     cmds.push(json!({
                         String::from("type"): String::from("Text"),
                         String::from("x"): 2, String::from("y"): y,
@@ -357,16 +360,6 @@ fn render_ui(app: &App) -> Vec<Value> {
     }));
 
     cmds
-}
-
-fn truncate(s: &str, max: usize) -> String {
-    if s.len() > max && max > 3 {
-        format!("{}...", &s[..max - 3])
-    } else if s.len() > max {
-        s.chars().take(max).collect()
-    } else {
-        s.to_string()
-    }
 }
 
 fn default_theme() -> ThemeData {

@@ -574,7 +574,7 @@ fn render_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, 
         cmds,
         2,
         2,
-        truncate(&header, w as usize - 4),
+        santui_ipc::ui::truncate(&header, w as usize - 4),
         theme.text,
         true,
     );
@@ -767,18 +767,6 @@ fn repo_detail(repo: &TrackedRepo) -> String {
         status.latest_commit,
         status.commits.join("\n")
     )
-}
-
-fn truncate(value: &str, max_chars: usize) -> String {
-    let mut out = String::new();
-    for (idx, ch) in value.chars().enumerate() {
-        if idx >= max_chars.saturating_sub(1) {
-            out.push('…');
-            return out;
-        }
-        out.push(ch);
-    }
-    out
 }
 
 fn push_text(

@@ -299,7 +299,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
             pw.to_string()
         } else {
             let max = (out_box_w.saturating_sub(5)) as usize;
-            format!("{}{}", &pw[..max], "\u{2026}")
+            format!("{}...", &pw[..max.saturating_sub(3)])
         };
         let text_x = 2 + (out_box_w.saturating_sub(display.len() as u16)) / 2;
         cmds.push(RenderCmd::Text {

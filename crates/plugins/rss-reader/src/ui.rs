@@ -207,10 +207,10 @@ fn render_item_list(
                 .item
                 .title
                 .chars()
-                .take(title_w.saturating_sub(1))
+                .take(title_w.saturating_sub(3))
                 .collect();
             if title_w <= item.item.title.chars().count() {
-                format!("{t}…")
+                format!("{t}...")
             } else {
                 t
             }
@@ -258,10 +258,10 @@ fn render_item_view(
             .item
             .title
             .chars()
-            .take(max.saturating_sub(1))
+            .take(max.saturating_sub(3))
             .collect();
         if max <= item.item.title.chars().count() {
-            format!("{t}…")
+            format!("{t}...")
         } else {
             t
         }
@@ -288,9 +288,9 @@ fn render_item_view(
     if let Some(ref url) = item.item.url {
         let url_w = (w.saturating_sub(4)) as usize;
         let display_url: String = if url_w > 1 {
-            let t: String = url.chars().take(url_w.saturating_sub(1)).collect();
+            let t: String = url.chars().take(url_w.saturating_sub(3)).collect();
             if url_w <= url.chars().count() {
-                format!("{t}…")
+                format!("{t}...")
             } else {
                 url.clone()
             }

@@ -179,7 +179,7 @@ impl App {
                 true
             }
             IpcKey::Char('p') => {
-                self.status = "Playing surah…".into();
+                self.status = "Playing surah...".into();
                 self.play_selected_surah();
                 true
             }
@@ -515,7 +515,7 @@ impl App {
         let (tx, rx) = mpsc::channel();
         self.rx_fetch = Some(rx);
         self.fetching = true;
-        self.status = format!("Fetching Surah {}…", summary.english_name);
+        self.status = format!("Fetching Surah {}...", summary.english_name);
         thread::spawn(move || {
             let _ = tx.send(FetchMsg::Surah(fetch_surah_content(
                 summary,
@@ -544,7 +544,7 @@ impl App {
         let (tx, rx) = mpsc::channel();
         self.rx_fetch = Some(rx);
         self.fetching = true;
-        self.status = format!("Fetching Surah {}…", summary.english_name);
+        self.status = format!("Fetching Surah {}...", summary.english_name);
         thread::spawn(move || {
             let _ = tx.send(FetchMsg::Surah(fetch_surah_content(
                 summary,

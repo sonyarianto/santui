@@ -133,8 +133,8 @@ pub fn render_ui(
     } else if let Some(ref msg) = state.scan_msg {
         let max_w = left_w.saturating_sub(4) as usize;
         let top_text = if msg.chars().count() > max_w {
-            let truncated: String = msg.chars().take(max_w.saturating_sub(1)).collect();
-            format!("{}…", truncated)
+            let truncated: String = msg.chars().take(max_w.saturating_sub(3)).collect();
+            format!("{}...", truncated)
         } else {
             msg.clone()
         };
@@ -778,7 +778,7 @@ mod tests {
                 false
             }
         });
-        assert!(has_filter, "should show \"Filter: …\" indicator");
+        assert!(has_filter, "should show \"Filter: ...\" indicator");
         let has_count = texts.iter().any(|t| {
             if let RenderCmd::Text { text, .. } = t {
                 text == "3/5"

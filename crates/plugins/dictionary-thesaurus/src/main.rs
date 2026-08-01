@@ -591,7 +591,7 @@ fn render_results(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u1
             cmds,
             2,
             h.saturating_sub(3),
-            truncate(
+            santui_ipc::ui::truncate(
                 &format!(
                     "{} {} · source: {}",
                     result.word, result.phonetic, result.source_url
@@ -629,17 +629,6 @@ fn focus_line(active: Focus, field: Focus, label: &str, value: &str) -> String {
         "{} {label}: {value}",
         if active == field { ">" } else { " " }
     )
-}
-fn truncate(value: &str, max_chars: usize) -> String {
-    let mut out = String::new();
-    for (idx, ch) in value.chars().enumerate() {
-        if idx >= max_chars.saturating_sub(1) {
-            out.push('…');
-            return out;
-        }
-        out.push(ch);
-    }
-    out
 }
 fn push_text(
     cmds: &mut Vec<RenderCmd>,
