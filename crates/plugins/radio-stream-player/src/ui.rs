@@ -43,7 +43,7 @@ pub fn render_ui(
             ("space", "toggle fav"),
             ("c", "clear"),
             ("f", "toggle fav list"),
-            ("r", "reload"),
+            ("r", "reload stations"),
         ])
     } else if state.lyrics_focused {
         Some(&[("tab", "stations"), ("l", "hide lyrics")])
@@ -55,7 +55,7 @@ pub fn render_ui(
             ("s", "stop"),
             ("space", "toggle fav"),
             ("f", "toggle fav list"),
-            ("r", "reload"),
+            ("r", "reload stations"),
         ])
     };
     let lyrics_footer: Option<&[(&str, &str)]> = if state.show_lyrics {
