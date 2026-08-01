@@ -131,9 +131,9 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
         if dst_active {
             ui::push_text(
                 &mut cmds,
-                cx + ui::right_align_x(cw, "D"),
+                cx + ui::right_align_x(cw, "DST"),
                 cy + 5,
-                "D",
+                "DST",
                 theme.highlight,
                 true,
             );
