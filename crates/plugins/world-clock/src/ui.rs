@@ -247,7 +247,7 @@ fn render_rename(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> V
         &mut cmds,
         r.ix,
         hint_y,
-        "↵ save  R default  esc cancel",
+        "^r default  ↵ save  esc cancel",
         theme.text_muted,
         Some(theme.background_panel),
         r.iw,

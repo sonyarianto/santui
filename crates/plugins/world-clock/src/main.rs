@@ -4,7 +4,9 @@ mod ui;
 
 use std::io::{BufRead, BufReader};
 
-use santui_ipc::protocol::{Area, HostMsg, IpcKey, PluginRequest, RenderCmd, ThemeData};
+use santui_ipc::protocol::{
+    Area, HostMsg, IpcKey, IpcKeyModifiers, PluginRequest, RenderCmd, ThemeData,
+};
 
 use state::{Screen, WorldTimeState};
 use ui::render_ui;
@@ -53,17 +55,17 @@ impl App {
         self.dirty = true;
     }
 
-    fn handle_key(&mut self, key: IpcKey) -> bool {
+    fn handle_key(&mut self, key: IpcKey, modifiers: IpcKeyModifiers) -> bool {
         match &self.state.screen {
-            Screen::Search => self.handle_search_key(key),
-            Screen::Rename(_) => self.handle_rename_key(key),
-            Screen::Grid => self.handle_grid_key(key),
+            Screen::Search => self.handle_search_key(key, modifiers),
+            Screen::Rename(_) => self.handle_rename_key(key, modifiers),
+            Screen::Grid => self.handle_grid_key(key, modifiers),
         }
     }
 
-    fn handle_grid_key(&mut self, key: IpcKey) -> bool {
+    fn handle_grid_key(&mut self, key: IpcKey, modifiers: IpcKeyModifiers) -> bool {
         match key {
-            IpcKey::Right | IpcKey::Char('l') => {
+            IpcKey::Right | IpcKey::Char('l') if !modifiers.ctrl => {
                 if !self.state.clocks.is_empty() {
                     if self.state.selected + 1 < self.state.clocks.len() {
                         self.state.selected += 1;
@@ -74,7 +76,7 @@ impl App {
                 }
                 true
             }
-            IpcKey::Left | IpcKey::Char('h') => {
+            IpcKey::Left | IpcKey::Char('h') if !modifiers.ctrl => {
                 if !self.state.clocks.is_empty() {
                     if self.state.selected > 0 {
                         self.state.selected -= 1;
@@ -85,7 +87,7 @@ impl App {
                 }
                 true
             }
-            IpcKey::Down | IpcKey::Char('j') => {
+            IpcKey::Down | IpcKey::Char('j') if !modifiers.ctrl => {
                 if !self.state.clocks.is_empty() {
                     let cols = ui::grid_cols(self.area.w) as usize;
                     self.state.selected =
@@ -94,7 +96,7 @@ impl App {
                 }
                 true
             }
-            IpcKey::Up | IpcKey::Char('k') => {
+            IpcKey::Up | IpcKey::Char('k') if !modifiers.ctrl => {
                 if !self.state.clocks.is_empty() {
                     let cols = ui::grid_cols(self.area.w) as usize;
                     self.state.selected = self.state.selected.saturating_sub(cols);
@@ -108,14 +110,14 @@ impl App {
                 }
                 true
             }
-            IpcKey::Char('a') => {
+            IpcKey::Char('a') if !modifiers.ctrl => {
                 self.state.screen = Screen::Search;
                 self.state.search_query.clear();
                 self.state.apply_search();
                 self.dirty = true;
                 true
             }
-            IpcKey::Char('d') => {
+            IpcKey::Char('d') if !modifiers.ctrl => {
                 if !self.state.clocks.is_empty() {
                     self.state.remove_selected();
                     self.save();
@@ -123,7 +125,7 @@ impl App {
                 }
                 true
             }
-            IpcKey::Char('r') => {
+            IpcKey::Char('r') if !modifiers.ctrl => {
                 if !self.state.clocks.is_empty() {
                     let idx = self.state.selected;
                     self.state.rename_buf = self.state.clocks[idx].label.clone();
@@ -137,7 +139,7 @@ impl App {
         }
     }
 
-    fn handle_search_key(&mut self, key: IpcKey) -> bool {
+    fn handle_search_key(&mut self, key: IpcKey, modifiers: IpcKeyModifiers) -> bool {
         match key {
             IpcKey::Esc => {
                 self.state.screen = Screen::Grid;
@@ -208,7 +210,7 @@ impl App {
                 self.dirty = true;
                 true
             }
-            IpcKey::Char(c) if !c.is_control() => {
+            IpcKey::Char(c) if !c.is_control() && !modifiers.ctrl => {
                 self.state.search_query.push(c);
                 self.state.apply_search();
                 self.dirty = true;
@@ -218,7 +220,7 @@ impl App {
         }
     }
 
-    fn handle_rename_key(&mut self, key: IpcKey) -> bool {
+    fn handle_rename_key(&mut self, key: IpcKey, modifiers: IpcKeyModifiers) -> bool {
         match key {
             IpcKey::Esc => {
                 self.state.screen = Screen::Grid;
@@ -239,7 +241,7 @@ impl App {
                 self.dirty = true;
                 true
             }
-            IpcKey::Char('R') => {
+            IpcKey::Char(c) if modifiers.ctrl && (c == '\u{12}' || c == 'r' || c == 'R') => {
                 if let Screen::Rename(idx) = self.state.screen {
                     self.state.rename_buf = timezones::city_name(self.state.clocks[idx].tz);
                     self.dirty = true;
@@ -251,7 +253,7 @@ impl App {
                 self.dirty = true;
                 true
             }
-            IpcKey::Char(c) if !c.is_control() => {
+            IpcKey::Char(c) if !c.is_control() && !modifiers.ctrl => {
                 self.state.rename_buf.push(c);
                 self.dirty = true;
                 true
@@ -374,8 +376,8 @@ fn main() {
                         app.handle_init(theme, area);
                         respond(&mut app, false);
                     }
-                    HostMsg::Key { key, .. } => {
-                        let consumed = app.handle_key(key);
+                    HostMsg::Key { key, modifiers } => {
+                        let consumed = app.handle_key(key, modifiers);
                         respond(&mut app, consumed);
                     }
                     HostMsg::Tick => {
@@ -450,7 +452,7 @@ mod tests {
     #[test]
     fn handle_key_a_opens_search() {
         let mut app = base_app();
-        assert!(app.handle_key(IpcKey::Char('a')));
+        assert!(app.handle_key(IpcKey::Char('a'), IpcKeyModifiers::default()));
         assert_eq!(app.state.screen, Screen::Search);
     }
 
@@ -458,14 +460,14 @@ mod tests {
     fn handle_key_esc_on_search_returns_to_grid() {
         let mut app = base_app();
         app.state.screen = Screen::Search;
-        assert!(app.handle_key(IpcKey::Esc));
+        assert!(app.handle_key(IpcKey::Esc, IpcKeyModifiers::default()));
         assert_eq!(app.state.screen, Screen::Grid);
     }
 
     #[test]
     fn handle_key_esc_on_grid_returns_false() {
         let mut app = base_app();
-        assert!(!app.handle_key(IpcKey::Esc));
+        assert!(!app.handle_key(IpcKey::Esc, IpcKeyModifiers::default()));
     }
 
     #[test]
@@ -473,7 +475,7 @@ mod tests {
         let mut app = base_app();
         app.state.clocks = state::WorldTimeState::default_clocks();
         app.state.selected = 0;
-        assert!(app.handle_key(IpcKey::Enter));
+        assert!(app.handle_key(IpcKey::Enter, IpcKeyModifiers::default()));
         assert_eq!(app.state.screen, Screen::Grid);
     }
 
@@ -482,14 +484,14 @@ mod tests {
         let mut app = base_app();
         app.state.clocks = state::WorldTimeState::default_clocks();
         let len = app.state.clocks.len();
-        assert!(app.handle_key(IpcKey::Char('d')));
+        assert!(app.handle_key(IpcKey::Char('d'), IpcKeyModifiers::default()));
         assert_eq!(app.state.clocks.len(), len - 1);
     }
 
     #[test]
     fn handle_key_d_with_empty_clocks_does_nothing() {
         let mut app = empty_app();
-        assert!(app.handle_key(IpcKey::Char('d')));
+        assert!(app.handle_key(IpcKey::Char('d'), IpcKeyModifiers::default()));
         assert!(app.state.clocks.is_empty());
     }
 
@@ -497,7 +499,7 @@ mod tests {
     fn handle_key_r_opens_rename() {
         let mut app = base_app();
         app.state.clocks = state::WorldTimeState::default_clocks();
-        assert!(app.handle_key(IpcKey::Char('r')));
+        assert!(app.handle_key(IpcKey::Char('r'), IpcKeyModifiers::default()));
         assert_eq!(app.state.screen, Screen::Rename(0));
     }
 
@@ -505,7 +507,7 @@ mod tests {
     fn handle_key_esc_on_rename_returns_to_grid() {
         let mut app = base_app();
         app.state.screen = Screen::Rename(0);
-        assert!(app.handle_key(IpcKey::Esc));
+        assert!(app.handle_key(IpcKey::Esc, IpcKeyModifiers::default()));
         assert_eq!(app.state.screen, Screen::Grid);
     }
 
@@ -515,7 +517,7 @@ mod tests {
         app.state.clocks = state::WorldTimeState::default_clocks();
         app.state.screen = Screen::Rename(0);
         app.state.rename_buf = "My City".into();
-        assert!(app.handle_key(IpcKey::Enter));
+        assert!(app.handle_key(IpcKey::Enter, IpcKeyModifiers::default()));
         assert_eq!(app.state.clocks[0].label, "My City");
         assert_eq!(app.state.screen, Screen::Grid);
     }
@@ -526,17 +528,21 @@ mod tests {
         app.state.clocks = state::WorldTimeState::default_clocks();
         app.state.screen = Screen::Rename(0);
         app.state.rename_buf = "  ".into();
-        assert!(app.handle_key(IpcKey::Enter));
+        assert!(app.handle_key(IpcKey::Enter, IpcKeyModifiers::default()));
         assert_eq!(app.state.screen, Screen::Grid);
     }
 
     #[test]
-    fn rename_shift_r_restores_default_label() {
+    fn rename_ctrl_r_restores_default_label() {
         let mut app = base_app();
         app.state.clocks = state::WorldTimeState::default_clocks();
         app.state.screen = Screen::Rename(0);
         app.state.rename_buf = "Custom".into();
-        assert!(app.handle_key(IpcKey::Char('R')));
+        let ctrl_r = IpcKeyModifiers {
+            ctrl: true,
+            ..IpcKeyModifiers::default()
+        };
+        assert!(app.handle_key(IpcKey::Char('\u{12}'), ctrl_r));
         assert_eq!(
             app.state.rename_buf,
             timezones::city_name(app.state.clocks[0].tz)
@@ -549,7 +555,7 @@ mod tests {
         let mut app = base_app();
         app.state.screen = Screen::Search;
         app.state.search_query = "abc".into();
-        assert!(app.handle_key(IpcKey::Backspace));
+        assert!(app.handle_key(IpcKey::Backspace, IpcKeyModifiers::default()));
         assert_eq!(app.state.search_query, "ab");
     }
 
@@ -557,7 +563,7 @@ mod tests {
     fn search_backspace_empty_does_not_panic() {
         let mut app = base_app();
         app.state.screen = Screen::Search;
-        assert!(app.handle_key(IpcKey::Backspace));
+        assert!(app.handle_key(IpcKey::Backspace, IpcKeyModifiers::default()));
         assert!(app.state.search_query.is_empty());
     }
 
@@ -565,7 +571,7 @@ mod tests {
     fn search_char_adds_to_query() {
         let mut app = base_app();
         app.state.screen = Screen::Search;
-        assert!(app.handle_key(IpcKey::Char('L')));
+        assert!(app.handle_key(IpcKey::Char('L'), IpcKeyModifiers::default()));
         assert_eq!(app.state.search_query, "L");
     }
 
@@ -575,7 +581,7 @@ mod tests {
         app.state.screen = Screen::Search;
         app.state.search_results = timezones::ALL.iter().map(|&(_, tz)| tz).collect();
         app.state.search_cursor = 2;
-        assert!(app.handle_key(IpcKey::Up));
+        assert!(app.handle_key(IpcKey::Up, IpcKeyModifiers::default()));
         assert_eq!(app.state.search_cursor, 1);
     }
 
@@ -584,7 +590,7 @@ mod tests {
         let mut app = base_app();
         app.state.screen = Screen::Search;
         app.state.search_results = timezones::ALL.iter().map(|&(_, tz)| tz).collect();
-        assert!(app.handle_key(IpcKey::Down));
+        assert!(app.handle_key(IpcKey::Down, IpcKeyModifiers::default()));
         assert_eq!(app.state.search_cursor, 1);
     }
 
@@ -594,7 +600,7 @@ mod tests {
         app.state.screen = Screen::Search;
         app.state.search_results = vec![Tz::Europe__London];
         app.state.search_cursor = 0;
-        assert!(app.handle_key(IpcKey::Enter));
+        assert!(app.handle_key(IpcKey::Enter, IpcKeyModifiers::default()));
         assert_eq!(app.state.screen, Screen::Grid);
         assert_eq!(app.state.clocks.len(), 1);
         assert_eq!(app.state.clocks[0].tz, Tz::Europe__London);
@@ -610,7 +616,7 @@ mod tests {
         });
         app.state.search_results = vec![Tz::Europe__London];
         app.state.search_cursor = 0;
-        assert!(app.handle_key(IpcKey::Enter));
+        assert!(app.handle_key(IpcKey::Enter, IpcKeyModifiers::default()));
         assert_eq!(app.state.clocks.len(), 1);
     }
 
@@ -677,10 +683,10 @@ mod tests {
     #[test]
     fn unhandled_key_returns_false() {
         let mut app = base_app();
-        assert!(!app.handle_key(IpcKey::F(1)));
-        assert!(!app.handle_key(IpcKey::F(2)));
-        assert!(!app.handle_key(IpcKey::Home));
-        assert!(!app.handle_key(IpcKey::End));
+        assert!(!app.handle_key(IpcKey::F(1), IpcKeyModifiers::default()));
+        assert!(!app.handle_key(IpcKey::F(2), IpcKeyModifiers::default()));
+        assert!(!app.handle_key(IpcKey::Home, IpcKeyModifiers::default()));
+        assert!(!app.handle_key(IpcKey::End, IpcKeyModifiers::default()));
     }
 
     #[test]
@@ -690,20 +696,20 @@ mod tests {
         let len = app.state.clocks.len();
 
         app.state.selected = 0;
-        assert!(app.handle_key(IpcKey::Right));
+        assert!(app.handle_key(IpcKey::Right, IpcKeyModifiers::default()));
         assert_eq!(app.state.selected, 1.min(len - 1));
 
         app.state.selected = 0;
-        assert!(app.handle_key(IpcKey::Left));
+        assert!(app.handle_key(IpcKey::Left, IpcKeyModifiers::default()));
         assert_eq!(app.state.selected, len - 1);
 
         app.state.selected = 0;
-        assert!(app.handle_key(IpcKey::Down));
+        assert!(app.handle_key(IpcKey::Down, IpcKeyModifiers::default()));
         let cols = ui::grid_cols(app.area.w) as usize;
         assert_eq!(app.state.selected, cols.min(len - 1));
 
         app.state.selected = cols;
-        assert!(app.handle_key(IpcKey::Up));
+        assert!(app.handle_key(IpcKey::Up, IpcKeyModifiers::default()));
         assert_eq!(app.state.selected, 0);
     }
 }

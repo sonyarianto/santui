@@ -57,7 +57,7 @@ App
 - Grid of clock cards: label, UTC offset, HH:MM:SS time, date, DST indicator (`D` badge)
 - Navigate grid with arrows/hjkl (wrap-around, column-aware)
 - Search timezones (`a` key) — multi-token matching over city name + IANA name, case-insensitive, 60 curated zones
-- Rename clocks (`r` key) — trimmed input, empty input cancels; `R` (shift+r) restores the default city name of the timezone
+- Rename clocks (`r` key) — trimmed input, empty input cancels; `Ctrl+R` restores the default city name of the timezone
 - Delete clocks (`d` key) — selection clamps after removal
 - Duplicate timezone protection on add
 - Preferences persisted across sessions via central DB
