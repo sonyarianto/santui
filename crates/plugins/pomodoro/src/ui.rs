@@ -222,10 +222,13 @@ fn fmt_minutes(secs: u64) -> String {
 fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<RenderCmd> {
     let mut cmds = Vec::new();
 
-    let r = santui_ipc::ui::palette_rect(w, h, 9);
+    const TITLE_H: u16 = 5;
+    const FIELD_COUNT: u16 = 6;
+    let popup_h = (TITLE_H + FIELD_COUNT + 4).min(h);
+    let r = santui_ipc::ui::palette_rect(w, h, popup_h);
 
     santui_ipc::ui::palette_bg(&mut cmds, theme, &r);
-    santui_ipc::ui::palette_title(&mut cmds, theme, &r, 0, "Settings");
+    santui_ipc::ui::palette_title(&mut cmds, theme, &r, 1, "Settings");
 
     let fields: [(&str, String); 6] = [
         (
@@ -277,7 +280,7 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
         let is_selected = i == state.settings_cursor;
         cmds.push(RenderCmd::Text {
             x: r.ix,
-            y: r.y + 1 + i as u16,
+            y: r.y + TITLE_H + i as u16,
             text: row,
             fg: Some(if is_selected {
                 theme.inverted_text
@@ -294,16 +297,31 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
         });
     }
 
-    let desc = descs[state.settings_cursor.min(5)];
-    cmds.push(RenderCmd::Text {
-        x: r.ix,
-        y: r.y + 8,
-        text: format!("{:<iw$}", desc, iw = r.iw as usize),
-        fg: Some(theme.text_muted),
-        bg: Some(theme.background_panel),
-        bold: false,
-        modifiers: 0,
-    });
+    let desc_y = r.y + TITLE_H + FIELD_COUNT + 1;
+    if desc_y + 1 < h {
+        let desc = descs[state.settings_cursor.min(5)];
+        santui_ipc::ui::text_at(
+            &mut cmds,
+            r.ix,
+            desc_y,
+            desc,
+            theme.text_muted,
+            Some(theme.background_panel),
+            r.iw,
+        );
+    }
+
+    let hint_y = r.y + TITLE_H + FIELD_COUNT + 2;
+    if hint_y + 1 < h {
+        santui_ipc::ui::hints_row(
+            &mut cmds,
+            theme,
+            r.ix,
+            hint_y,
+            &[("↑↓", "navigate"), ("←→", "adjust"), ("esc", "close")],
+            r.iw as usize,
+        );
+    }
 
     cmds
 }
