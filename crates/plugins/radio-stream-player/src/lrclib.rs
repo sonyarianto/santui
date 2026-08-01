@@ -1,3 +1,4 @@
+use santui_ipc::text::{strip_timestamps, url_encode};
 use serde::Deserialize;
 
 #[derive(Debug, Clone)]
@@ -15,22 +16,6 @@ struct LRCLibItem {
     synced_lyrics: Option<String>,
     #[serde(default)]
     instrumental: Option<bool>,
-}
-
-fn url_encode(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for byte in s.bytes() {
-        match byte {
-            b' ' => out.push('+'),
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
-                out.push(byte as char);
-            }
-            _ => {
-                out.push_str(&format!("%{:02X}", byte));
-            }
-        }
-    }
-    out
 }
 
 /// Split a stream title like "Artist - Song" into (artist, title).
@@ -93,32 +78,6 @@ pub fn fetch(title: &str, artist: Option<&str>) -> Result<Option<LyricsData>, St
     }
 
     Ok(None)
-}
-
-fn strip_timestamps(lyrics: &str) -> String {
-    lyrics
-        .lines()
-        .filter_map(|line| {
-            let mut s = line;
-            loop {
-                let trimmed = s.trim_start();
-                if trimmed.starts_with('[') {
-                    if let Some(end) = trimmed.find(']') {
-                        s = trimmed[end + 1..].trim_start();
-                        continue;
-                    }
-                }
-                break;
-            }
-            let result = s.trim();
-            if result.is_empty() {
-                None
-            } else {
-                Some(result.to_string())
-            }
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
 }
 
 #[cfg(test)]

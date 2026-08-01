@@ -331,10 +331,6 @@ fn render_table(state: &LyricsState, theme: &ThemeData, w: u16, h: u16, cmds: &m
     });
 }
 
-pub fn max_visible_tracks(h: u16) -> usize {
-    h.saturating_sub(5) as usize
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -527,13 +523,6 @@ mod tests {
             |c| matches!(c, RenderCmd::Text { ref text, .. } if text == "Searching lyrics..."),
         );
         assert!(has_msg);
-    }
-
-    #[test]
-    fn max_visible_tracks_calculation() {
-        assert_eq!(max_visible_tracks(24), 19);
-        assert_eq!(max_visible_tracks(10), 5);
-        assert_eq!(max_visible_tracks(5), 0);
     }
 
     #[test]

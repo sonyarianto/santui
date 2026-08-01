@@ -9,8 +9,9 @@ use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, PluginMessage, PluginRequest, RenderCmd, ThemeData,
 };
 
+use santui_ipc::ui::max_visible_tracks;
 use state::{FetchState, LyricsState};
-use ui::{max_visible_tracks, render_ui};
+use ui::render_ui;
 
 enum FetchMsg {
     SearchDone(String, Vec<lrclib::LRCLibTrack>),

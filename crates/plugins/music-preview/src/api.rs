@@ -1,3 +1,4 @@
+use santui_ipc::text::url_encode;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,16 +43,6 @@ pub fn search(query: &str) -> Result<Vec<ItunesTrack>, String> {
 
     let data: ItunesResponse = serde_json::from_str(&body).map_err(|e| e.to_string())?;
     Ok(data.results)
-}
-
-fn url_encode(s: &str) -> String {
-    s.chars()
-        .map(|c| match c {
-            'A'..='Z' | 'a'..='z' | '0'..='9' | '-' | '_' | '.' | '~' => c.to_string(),
-            ' ' => "+".to_string(),
-            _ => format!("%{:02X}", c as u8),
-        })
-        .collect()
 }
 
 #[cfg(test)]

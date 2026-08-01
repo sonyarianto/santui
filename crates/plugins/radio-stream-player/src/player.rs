@@ -1,4 +1,5 @@
 use libloading::Library;
+use santui_ipc::mpv::to_rc;
 use std::ffi::CString;
 use std::sync::Arc;
 
@@ -90,14 +91,6 @@ impl MpvWakeup {
 // accessed from a single thread.
 unsafe impl Send for Mpv {}
 unsafe impl Send for MpvWakeup {}
-
-fn to_rc(rc: i32, ctx: &str) -> Result<(), Box<dyn std::error::Error>> {
-    if rc >= 0 {
-        Ok(())
-    } else {
-        Err(format!("mpv {ctx} failed: {rc}").into())
-    }
-}
 
 impl Mpv {
     pub fn new() -> Result<(Self, Vec<String>), Box<dyn std::error::Error>> {

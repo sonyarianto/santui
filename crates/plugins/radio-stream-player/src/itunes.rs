@@ -1,3 +1,4 @@
+use santui_ipc::text::url_encode;
 use serde::Deserialize;
 
 #[derive(Debug, Clone)]
@@ -22,22 +23,6 @@ struct ITunesTrack {
     #[allow(dead_code)]
     #[serde(rename = "collectionName")]
     collection_name: Option<String>,
-}
-
-fn url_encode(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for byte in s.bytes() {
-        match byte {
-            b' ' => out.push('+'),
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
-                out.push(byte as char);
-            }
-            _ => {
-                out.push_str(&format!("%{:02X}", byte));
-            }
-        }
-    }
-    out
 }
 
 pub fn lookup(title: &str) -> Result<Option<TrackInfo>, String> {

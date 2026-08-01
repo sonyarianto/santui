@@ -12,8 +12,9 @@ use santui_ipc::protocol::{
 };
 
 use player::{Mpv, MpvWakeup};
+use santui_ipc::ui::max_visible_tracks;
 use state::{FetchState, MusicState};
-use ui::{max_visible_tracks, render_ui};
+use ui::render_ui;
 
 const PREVIEW_DURATION: Duration = Duration::from_secs(30);
 

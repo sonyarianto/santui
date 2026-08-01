@@ -248,10 +248,6 @@ fn render_table(state: &MusicState, theme: &ThemeData, w: u16, h: u16, cmds: &mu
     });
 }
 
-pub fn max_visible_tracks(h: u16) -> usize {
-    h.saturating_sub(5) as usize
-}
-
 fn format_duration(millis: u32) -> String {
     let total_secs = millis / 1000;
     let mins = total_secs / 60;
@@ -422,12 +418,5 @@ mod tests {
         assert_eq!(format_duration(125000), "2:05");
         assert_eq!(format_duration(0), "0:00");
         assert_eq!(format_duration(3599000), "59:59");
-    }
-
-    #[test]
-    fn max_visible_tracks_calculation() {
-        assert_eq!(max_visible_tracks(24), 19);
-        assert_eq!(max_visible_tracks(10), 5);
-        assert_eq!(max_visible_tracks(5), 0);
     }
 }

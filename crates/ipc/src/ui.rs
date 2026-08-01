@@ -415,3 +415,20 @@ pub fn heart_overlay(
         }
     }
 }
+
+/// Number of rows that fit in a results table given the total area height.
+pub fn max_visible_tracks(h: u16) -> usize {
+    h.saturating_sub(5) as usize
+}
+
+#[cfg(test)]
+mod tests {
+    use super::max_visible_tracks;
+
+    #[test]
+    fn max_visible_tracks_calculation() {
+        assert_eq!(max_visible_tracks(24), 19);
+        assert_eq!(max_visible_tracks(10), 5);
+        assert_eq!(max_visible_tracks(5), 0);
+    }
+}

@@ -1,4 +1,6 @@
+pub mod mpv;
 pub mod protocol;
+pub mod text;
 pub mod ui;
 
 #[cfg(feature = "clipboard")]
