@@ -239,6 +239,13 @@ impl App {
                 self.dirty = true;
                 true
             }
+            IpcKey::Char('R') => {
+                if let Screen::Rename(idx) = self.state.screen {
+                    self.state.rename_buf = timezones::city_name(self.state.clocks[idx].tz);
+                    self.dirty = true;
+                }
+                true
+            }
             IpcKey::Backspace => {
                 self.state.rename_buf.pop();
                 self.dirty = true;
@@ -521,6 +528,20 @@ mod tests {
         app.state.rename_buf = "  ".into();
         assert!(app.handle_key(IpcKey::Enter));
         assert_eq!(app.state.screen, Screen::Grid);
+    }
+
+    #[test]
+    fn rename_shift_r_restores_default_label() {
+        let mut app = base_app();
+        app.state.clocks = state::WorldTimeState::default_clocks();
+        app.state.screen = Screen::Rename(0);
+        app.state.rename_buf = "Custom".into();
+        assert!(app.handle_key(IpcKey::Char('R')));
+        assert_eq!(
+            app.state.rename_buf,
+            timezones::city_name(app.state.clocks[0].tz)
+        );
+        assert_eq!(app.state.screen, Screen::Rename(0));
     }
 
     #[test]

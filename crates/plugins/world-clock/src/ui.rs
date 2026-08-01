@@ -247,7 +247,7 @@ fn render_rename(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> V
         &mut cmds,
         r.ix,
         hint_y,
-        "↵ save  esc cancel",
+        "↵ save  R default  esc cancel",
         theme.text_muted,
         Some(theme.background_panel),
         r.iw,
@@ -415,7 +415,7 @@ mod tests {
         assert!(has_buf);
         let has_hint = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("save")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("default")));
         assert!(has_hint);
         let has_cursor = cmds.iter().any(|c| {
             matches!(c, RenderCmd::Text { fg, bg, .. }
