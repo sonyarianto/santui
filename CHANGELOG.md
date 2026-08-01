@@ -1,4 +1,4 @@
-## [unreleased]
+## [0.2.36] - 2026-08-01
 
 ### ◀️ Revert
 
@@ -13,6 +13,7 @@
 - Remove radio.log from tracking, add to gitignore
 - Update changelog for v0.2.35
 - Isolate release assets in _assets/ to avoid uploading repo files
+- Update changelog for v0.2.36
 
 ### 🎨 Refactor
 
@@ -65,6 +66,7 @@
 - Hide bottom status line while fetching, keep top-right Loading indicator
 - Position header segments by display width, not char count
 - Move playing indicator to top-right corner, drop stale status text
+- Robust stable-plugin id parsing on Windows git bash
 
 ### 💼 Other
 
@@ -74,6 +76,7 @@
 
 - Add lyrics overlay section
 - Fix stale bincode doc comment on read_plugin_msg
+- Fix stale quran references (plugin rename, picker overlay, edition lists)
 
 ### 🚀 Features
 
@@ -97,7 +100,7 @@
 - Support page up/down in edition picker panels
 - Distribute surah table columns to fill available width
 
-Full Changelog: [v0.2.35...](https://github.com/sonyarianto/santui/compare/v0.2.35...)
+Full Changelog: [v0.2.35...v0.2.36](https://github.com/sonyarianto/santui/compare/v0.2.35...v0.2.36)
 ## [0.2.35] - 2026-07-25
 
 ### ⚙️ Miscellaneous
