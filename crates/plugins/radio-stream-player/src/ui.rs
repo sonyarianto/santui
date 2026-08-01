@@ -45,8 +45,8 @@ pub fn render_ui(
             ("f", "toggle fav list"),
             ("r", "reload stations"),
         ])
-    } else if state.lyrics_focused {
-        Some(&[("tab", "stations"), ("l", "hide lyrics")])
+    } else if state.show_lyrics {
+        Some(&[("l", "hide lyrics")])
     } else {
         Some(&[
             ("↑↓", "navigate"),
@@ -482,9 +482,9 @@ pub fn render_ui(
                 popup_h,
                 "Lyrics",
                 PanelOpts {
-                    focused: state.lyrics_focused,
+                    focused: true,
                     footer: lyrics_footer,
-                    dim_unfocused: true,
+                    dim_unfocused: false,
                 },
             );
 
@@ -549,12 +549,7 @@ pub fn render_ui(
                     ly_inner_w,
                 );
             } else {
-                let focused = state.lyrics_focused;
-                let title_fg = if focused {
-                    theme.accent
-                } else {
-                    theme.text_muted
-                };
+                let title_fg = theme.accent;
                 let artist_fg = theme.text_muted;
                 if let Some(ref title) = header_title {
                     cmds.push(RenderCmd::Text {
@@ -588,11 +583,7 @@ pub fn render_ui(
                     if line_idx >= total_visual {
                         break;
                     }
-                    let lyrics_body_fg = if focused {
-                        theme.text
-                    } else {
-                        theme.text_muted
-                    };
+                    let lyrics_body_fg = theme.text;
                     cmds.push(RenderCmd::Text {
                         x: popup_x + 2,
                         y: content_top + i as u16,
@@ -1265,10 +1256,9 @@ mod tests {
     }
 
     #[test]
-    fn stations_panel_focused_when_lyrics_shown_and_not_lyrics_focused() {
+    fn stations_panel_stays_bright_when_lyrics_shown() {
         let mut st = state_with(5);
         st.show_lyrics = true;
-        st.lyrics_focused = false;
         let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let borders: Vec<&RenderCmd> = cmds
             .iter()
@@ -1285,10 +1275,9 @@ mod tests {
     }
 
     #[test]
-    fn lyrics_panel_focused_when_lyrics_focused() {
+    fn lyrics_panel_stays_bright_when_shown() {
         let mut st = state_with(5);
         st.show_lyrics = true;
-        st.lyrics_focused = true;
         let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let borders: Vec<&RenderCmd> = cmds
             .iter()

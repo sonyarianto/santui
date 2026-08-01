@@ -408,17 +408,9 @@ impl App {
         }
 
         match key {
-            IpcKey::Tab => {
-                if self.state.show_lyrics {
-                    self.state.lyrics_focused = !self.state.lyrics_focused;
-                }
-                true
-            }
             IpcKey::Up => {
                 if self.state.show_lyrics {
-                    if self.state.lyrics_focused {
-                        self.state.lyrics_scroll_up();
-                    }
+                    self.state.lyrics_scroll_up();
                 } else {
                     self.state.select_prev();
                     let info_h = self.state.info_h();
@@ -429,11 +421,9 @@ impl App {
             }
             IpcKey::Down => {
                 if self.state.show_lyrics {
-                    if self.state.lyrics_focused {
-                        let panel_h = self.state.lyrics_content_height(self.area.h);
-                        let inner_w = self.state.lyrics_inner_w(self.area.w);
-                        self.state.lyrics_scroll_down(panel_h, inner_w);
-                    }
+                    let panel_h = self.state.lyrics_content_height(self.area.h);
+                    let inner_w = self.state.lyrics_inner_w(self.area.w);
+                    self.state.lyrics_scroll_down(panel_h, inner_w);
                 } else {
                     self.state.select_next();
                     let info_h = self.state.info_h();
@@ -444,10 +434,8 @@ impl App {
             }
             IpcKey::PageUp => {
                 if self.state.show_lyrics {
-                    if self.state.lyrics_focused {
-                        let panel_h = self.state.lyrics_content_height(self.area.h);
-                        self.state.lyrics_page_up(panel_h.max(1));
-                    }
+                    let panel_h = self.state.lyrics_content_height(self.area.h);
+                    self.state.lyrics_page_up(panel_h.max(1));
                 } else {
                     let info_h = self.state.info_h();
                     let page = self.area.h.saturating_sub(info_h + LIST_OVERHEAD) as usize;
@@ -458,11 +446,9 @@ impl App {
             }
             IpcKey::PageDown => {
                 if self.state.show_lyrics {
-                    if self.state.lyrics_focused {
-                        let panel_h = self.state.lyrics_content_height(self.area.h);
-                        let inner_w = self.state.lyrics_inner_w(self.area.w);
-                        self.state.lyrics_page_down(panel_h.max(1), inner_w);
-                    }
+                    let panel_h = self.state.lyrics_content_height(self.area.h);
+                    let inner_w = self.state.lyrics_inner_w(self.area.w);
+                    self.state.lyrics_page_down(panel_h.max(1), inner_w);
                 } else {
                     let info_h = self.state.info_h();
                     let page = self.area.h.saturating_sub(info_h + LIST_OVERHEAD) as usize;
@@ -472,7 +458,7 @@ impl App {
                 true
             }
             IpcKey::Char('/') => {
-                if !self.state.show_lyrics && !self.state.lyrics_focused {
+                if !self.state.show_lyrics {
                     self.state.search_mode = true;
                     self.state.query.clear();
                     self.state.apply_filter();
@@ -490,7 +476,7 @@ impl App {
                 true
             }
             IpcKey::Char('r') => {
-                if !self.state.show_lyrics && !self.state.lyrics_focused {
+                if !self.state.show_lyrics {
                     if let Some(ref db) = self.db {
                         let new_stations = crate::stations::reload(db);
                         let count = new_stations.len();
@@ -539,7 +525,6 @@ impl App {
                 if self.state.show_lyrics {
                     self.state.show_lyrics = false;
                     self.state.lyrics_scroll = 0;
-                    self.state.lyrics_focused = false;
                     true
                 } else {
                     false
@@ -548,7 +533,6 @@ impl App {
             IpcKey::Char('l') => {
                 self.state.show_lyrics = !self.state.show_lyrics;
                 self.state.lyrics_scroll = 0;
-                self.state.lyrics_focused = self.state.show_lyrics;
                 true
             }
             IpcKey::Char(' ') => {
@@ -663,7 +647,7 @@ impl App {
                     }
                 }
 
-                // Lyrics side panel — focus on click
+                // Lyrics side panel — consume clicks over the overlay
                 if self.state.show_lyrics {
                     let popup_w = (area_w * 2 / 5).max(20);
                     let popup_x = area_w - popup_w;
@@ -674,7 +658,6 @@ impl App {
                         && y >= popup_y
                         && y < popup_y + popup_h
                     {
-                        self.state.lyrics_focused = true;
                         return true;
                     }
                 }
@@ -687,8 +670,8 @@ impl App {
                     return false;
                 }
 
-                // Scroll lyrics if focused
-                if self.state.show_lyrics && self.state.lyrics_focused {
+                // Scroll lyrics while the overlay is open
+                if self.state.show_lyrics {
                     if is_up {
                         self.state.lyrics_scroll_up();
                     } else {
@@ -1183,11 +1166,8 @@ impl App {
             ];
         }
         let mut hints: Vec<(String, String)> = Vec::new();
-        if self.state.show_lyrics && self.state.lyrics_focused {
-            hints.push(("tab".into(), "stations".into()));
-            hints.push(("l".into(), "hide lyrics".into()));
-        } else if self.state.show_lyrics {
-            hints.push(("tab".into(), "lyrics".into()));
+        if self.state.show_lyrics {
+            hints.push(("↑↓".into(), "scroll".into()));
             hints.push(("l".into(), "hide lyrics".into()));
         } else if !self.state.lyrics_text.is_empty() || self.state.lyrics_loading {
             hints.push(("l".into(), "show lyrics".into()));
@@ -1519,23 +1499,11 @@ mod tests {
     // ── normal mode ────────────────────────────────────────────────────
 
     #[test]
-    fn tab_toggles_lyrics_focus_when_showing() {
+    fn tab_unhandled_even_with_lyrics_shown() {
         let mut app = base_app();
         app.state.show_lyrics = true;
-        app.state.lyrics_focused = false;
-        assert!(app.handle_key(IpcKey::Tab));
-        assert!(app.state.lyrics_focused);
-        assert!(app.handle_key(IpcKey::Tab));
-        assert!(!app.state.lyrics_focused);
-    }
-
-    #[test]
-    fn tab_noop_when_lyrics_hidden() {
-        let mut app = base_app();
-        app.state.show_lyrics = false;
-        app.state.lyrics_focused = false;
-        assert!(app.handle_key(IpcKey::Tab));
-        assert!(!app.state.lyrics_focused);
+        assert!(!app.handle_key(IpcKey::Tab));
+        assert!(app.state.show_lyrics);
     }
 
     #[test]
@@ -1547,10 +1515,9 @@ mod tests {
     }
 
     #[test]
-    fn up_when_lyrics_focused_scrolls_lyrics() {
+    fn up_when_lyrics_shown_scrolls_lyrics() {
         let mut app = base_app();
         app.state.show_lyrics = true;
-        app.state.lyrics_focused = true;
         app.state.lyrics_text = "a\nb\nc".into();
         app.state.lyrics_scroll = 2;
         assert!(app.handle_key(IpcKey::Up));
@@ -1565,10 +1532,9 @@ mod tests {
     }
 
     #[test]
-    fn down_when_lyrics_focused_scrolls_lyrics() {
+    fn down_when_lyrics_shown_scrolls_lyrics() {
         let mut app = base_app();
         app.state.show_lyrics = true;
-        app.state.lyrics_focused = true;
         app.state.lyrics_text = (0..30)
             .map(|i| format!("line {i}"))
             .collect::<Vec<_>>()
@@ -1586,10 +1552,9 @@ mod tests {
     }
 
     #[test]
-    fn pageup_when_lyrics_focused_scrolls_up() {
+    fn pageup_when_lyrics_shown_scrolls_up() {
         let mut app = base_app();
         app.state.show_lyrics = true;
-        app.state.lyrics_focused = true;
         app.state.lyrics_text = "a\nb\nc".into();
         app.state.lyrics_scroll = 2;
         assert!(app.handle_key(IpcKey::PageUp));
@@ -1605,10 +1570,9 @@ mod tests {
     }
 
     #[test]
-    fn pagedown_when_lyrics_focused_scrolls_down() {
+    fn pagedown_when_lyrics_shown_scrolls_down() {
         let mut app = base_app();
         app.state.show_lyrics = true;
-        app.state.lyrics_focused = true;
         app.state.lyrics_text = (0..30)
             .map(|i| format!("line {i}"))
             .collect::<Vec<_>>()
@@ -1637,11 +1601,10 @@ mod tests {
     }
 
     #[test]
-    fn c_noop_when_lyrics_focused() {
+    fn c_noop_when_lyrics_shown() {
         let mut app = base_app();
         app.state.query = "gold".into();
         app.state.show_lyrics = true;
-        app.state.lyrics_focused = true;
         assert!(!app.handle_key(IpcKey::Char('c')));
     }
 
@@ -1653,10 +1616,9 @@ mod tests {
     }
 
     #[test]
-    fn slash_noop_when_lyrics_focused() {
+    fn slash_noop_when_lyrics_shown() {
         let mut app = base_app();
         app.state.show_lyrics = true;
-        app.state.lyrics_focused = true;
         assert!(!app.handle_key(IpcKey::Char('/')));
         assert!(!app.state.search_mode);
     }
@@ -1670,10 +1632,9 @@ mod tests {
     }
 
     #[test]
-    fn enter_noop_when_lyrics_focused() {
+    fn enter_noop_when_lyrics_shown() {
         let mut app = base_app();
         app.state.show_lyrics = true;
-        app.state.lyrics_focused = true;
         assert!(app.handle_key(IpcKey::Enter));
         assert_eq!(app.state.current_station, None);
         assert!(matches!(app.state.play_state, PlayState::Stopped));
@@ -1713,10 +1674,9 @@ mod tests {
     }
 
     #[test]
-    fn r_noop_when_lyrics_focused() {
+    fn r_noop_when_lyrics_shown() {
         let mut app = base_app();
         app.state.show_lyrics = true;
-        app.state.lyrics_focused = true;
         assert!(app.handle_key(IpcKey::Char('r')));
         assert_eq!(app.state.stations.len(), 5);
     }
@@ -1771,7 +1731,6 @@ mod tests {
         assert!(!app.state.show_lyrics);
         assert!(app.handle_key(IpcKey::Char('l')));
         assert!(app.state.show_lyrics);
-        assert!(app.state.lyrics_focused);
         assert_eq!(app.state.lyrics_scroll, 0);
     }
 
