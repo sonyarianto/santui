@@ -391,11 +391,6 @@ use std::io::{self, BufRead, Write};
 
 /// Read a `PluginMsg` from a binary length-prefixed bincode frame.
 ///
-/// Auto-detects JSON Lines format: if the first available byte is `{`, falls
-/// back to reading a line and parsing with `serde_json`. Otherwise reads a
-/// binary frame (`[4-byte LE length][N bytes of bincode]`).
-/// Read a `PluginMsg` from a binary length-prefixed bincode frame.
-///
 /// Format: `[4-byte LE length][N bytes of bincode]`
 pub fn read_plugin_msg<R: BufRead>(r: &mut R) -> io::Result<PluginMsg> {
     let mut len_buf = [0u8; 4];
