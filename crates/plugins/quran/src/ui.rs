@@ -2,7 +2,7 @@ use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData, BORDER_ALL};
 use santui_ipc::ui;
 use santui_ipc::ui::push_text;
 
-use crate::types::{self, Ayah, DisplayMode, Picker, Screen};
+use crate::types::{self, Ayah, DisplayMode, Edition, Picker, Screen};
 use crate::App;
 
 pub fn render_ui(app: &App) -> Vec<RenderCmd> {
@@ -147,14 +147,30 @@ fn picker_label(picker: Picker) -> &'static str {
     }
 }
 
+fn translation_label(app: &App) -> String {
+    app.translations
+        .iter()
+        .find(|e| e.identifier == app.prefs.translation_edition)
+        .map(Edition::display_name)
+        .unwrap_or_else(|| app.prefs.translation_edition.clone())
+}
+
+fn reciter_label(app: &App) -> String {
+    app.reciters
+        .iter()
+        .find(|e| e.identifier == app.prefs.reciter)
+        .map(Edition::display_name)
+        .unwrap_or_else(|| app.prefs.reciter.clone())
+}
+
 fn render_surah_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, h: u16) {
     let list = app.filtered_surahs();
     if app.search_mode {
         let header = format!(
             "Surahs: {} • Translation: {} • Reciter: {} • Search: {}",
             app.surahs.len(),
-            app.prefs.translation_edition,
-            app.prefs.reciter,
+            translation_label(app),
+            reciter_label(app),
             app.search,
         );
         let truncated = santui_ipc::ui::truncate(&header, w as usize - 4);
@@ -175,8 +191,8 @@ fn render_surah_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w:
         let header = format!(
             "Surahs: {} • Translation: {} • Reciter: {}",
             app.surahs.len(),
-            app.prefs.translation_edition,
-            app.prefs.reciter,
+            translation_label(app),
+            reciter_label(app),
         );
         push_text(
             cmds,
@@ -429,4 +445,41 @@ fn wrap_text(text: &str, max_chars: usize) -> String {
         }
     }
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::Edition;
+
+    fn edition(id: &str, name: &str) -> Edition {
+        Edition {
+            identifier: id.into(),
+            name: name.into(),
+            english_name: name.into(),
+            language: "en".into(),
+            format: "text".into(),
+            kind: "translation".into(),
+        }
+    }
+
+    #[test]
+    fn header_labels_use_display_names() {
+        let mut app = App::default();
+        app.translations = vec![edition("en.sahih", "Saheeh International")];
+        app.reciters = vec![edition("ar.alafasy", "Alafasy")];
+        app.prefs.translation_edition = "en.sahih".into();
+        app.prefs.reciter = "ar.alafasy".into();
+        assert_eq!(translation_label(&app), "Saheeh International");
+        assert_eq!(reciter_label(&app), "Alafasy");
+    }
+
+    #[test]
+    fn header_labels_fall_back_to_identifier() {
+        let mut app = App::default();
+        app.prefs.translation_edition = "en.unknown".into();
+        app.prefs.reciter = "ar.unknown".into();
+        assert_eq!(translation_label(&app), "en.unknown");
+        assert_eq!(reciter_label(&app), "ar.unknown");
+    }
 }
