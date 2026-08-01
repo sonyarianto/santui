@@ -426,6 +426,40 @@ impl App {
         }
         &self.cached_commands
     }
+
+    fn status_hints(&self) -> Vec<(String, String)> {
+        if self.state.search_mode {
+            return vec![
+                ("↵".into(), "search".into()),
+                ("↑↓".into(), "navigate".into()),
+                ("⌫".into(), "backspace".into()),
+                ("esc".into(), "back".into()),
+            ];
+        }
+        let mut hints: Vec<(String, String)> = Vec::new();
+        if self.state.show_details {
+            if self.state.details_focused {
+                hints.push(("tab".into(), "results".into()));
+                hints.push(("↑↓".into(), "scroll".into()));
+            } else {
+                hints.push(("tab".into(), "details".into()));
+            }
+            hints.push(("d".into(), "hide details".into()));
+            hints.push(("esc".into(), "close".into()));
+        } else if !self.state.results.is_empty() {
+            hints.push(("↵".into(), "play".into()));
+            hints.push(("d".into(), "details".into()));
+            if self.state.now_playing.is_some() {
+                hints.push(("s".into(), "stop".into()));
+            }
+            if !self.state.query.is_empty() {
+                hints.push(("c".into(), "clear".into()));
+            }
+        } else if matches!(self.state.fetch_state, FetchState::Idle) {
+            hints.push(("/".into(), "search".into()));
+        }
+        hints
+    }
 }
 
 fn render_centered_error(text: &str, theme: &ThemeData, w: u16, h: u16) -> Vec<RenderCmd> {
@@ -447,20 +481,10 @@ fn render_centered_error(text: &str, theme: &ThemeData, w: u16, h: u16) -> Vec<R
     cmds
 }
 
-fn hints() -> Vec<(String, String)> {
-    vec![
-        ("/".into(), "search".into()),
-        ("c".into(), "clear".into()),
-        ("\u{21B5}".into(), "play".into()),
-        ("s".into(), "stop".into()),
-        ("esc".into(), "back".into()),
-    ]
-}
-
 fn respond(app: &mut App, consumed: bool) {
     santui_ipc::protocol::send_plugin_msg(
         app.render().to_vec(),
-        hints(),
+        app.status_hints(),
         vec![],
         app.pending_request.take(),
         app.pending_plugin_message.take(),
@@ -859,5 +883,34 @@ mod tests {
         app.state.show_details = false;
         app.handle_key(IpcKey::Enter);
         assert_eq!(app.state.now_playing, Some(0));
+    }
+
+    #[test]
+    fn status_hints_contextual() {
+        let app = app_with_results();
+        let hints = app.status_hints();
+        assert!(hints.contains(&("d".into(), "details".into())));
+        assert!(hints.contains(&("↵".into(), "play".into())));
+        assert!(!hints.iter().any(|(k, _)| k == "s"));
+
+        let mut playing = app_with_results();
+        playing.state.now_playing = Some(0);
+        let hints = playing.status_hints();
+        assert!(hints.contains(&("s".into(), "stop".into())));
+
+        let mut details = app_with_results();
+        details.state.show_details = true;
+        details.state.details_focused = true;
+        let hints = details.status_hints();
+        assert!(hints.contains(&("d".into(), "hide details".into())));
+        assert!(hints.contains(&("tab".into(), "results".into())));
+
+        let mut search = app_with_results();
+        search.state.search_mode = true;
+        let hints = search.status_hints();
+        assert!(hints.contains(&("↵".into(), "search".into())));
+
+        let idle = App::default();
+        assert_eq!(idle.status_hints(), vec![("/".into(), "search".into())]);
     }
 }

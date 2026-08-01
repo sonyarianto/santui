@@ -207,7 +207,7 @@ pub fn detail_lines(track: &ItunesTrack, elapsed: Option<u64>, inner_w: usize) -
             .track_number
             .map(|n| format!("{n}"))
             .unwrap_or_else(|| "?".into());
-        out.push(format!("Position: Disc {disc} · Track {num}"));
+        out.push(format!("Position: Disc {disc} - Track {num}"));
     }
     if let Some(ms) = track.track_time_millis {
         out.push(format!("Duration: {}", fmt_duration((ms / 1000) as u64)));
@@ -339,7 +339,7 @@ mod tests {
         assert_eq!(lines[2], "Album: 8 Mile Soundtrack");
         assert_eq!(lines[3], "Genre: Hip-Hop/Rap");
         assert_eq!(lines[4], "Released: October 29, 2002");
-        assert_eq!(lines[5], "Position: Disc 1 · Track 1");
+        assert_eq!(lines[5], "Position: Disc 1 - Track 1");
         assert_eq!(lines[6], "Duration: 5:26");
         assert_eq!(lines[7], "Country: USA");
         assert_eq!(lines[8], "Price: $1.29 (album: $9.99)");
