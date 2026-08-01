@@ -76,7 +76,7 @@ impl App {
                 self.dirty = true;
                 true
             }
-            IpcKey::Char(',') => {
+            IpcKey::Char('o') => {
                 self.state.show_settings = true;
                 self.dirty = true;
                 true
@@ -221,24 +221,24 @@ impl App {
                     ("space".into(), "start".into()),
                     ("s".into(), "skip".into()),
                     ("r".into(), "reset".into()),
-                    (",".into(), "settings".into()),
+                    ("o".into(), "options".into()),
                 ],
                 TimerState::Paused => vec![
                     ("space".into(), "resume".into()),
                     ("s".into(), "skip".into()),
                     ("r".into(), "reset".into()),
-                    (",".into(), "settings".into()),
+                    ("o".into(), "options".into()),
                 ],
                 TimerState::Running => vec![
                     ("space".into(), "pause".into()),
                     ("s".into(), "skip".into()),
                     ("r".into(), "reset".into()),
-                    (",".into(), "settings".into()),
+                    ("o".into(), "options".into()),
                 ],
                 TimerState::Finished => vec![
                     ("space".into(), "next".into()),
                     ("r".into(), "restart".into()),
-                    (",".into(), "settings".into()),
+                    ("o".into(), "options".into()),
                 ],
             }
         }
@@ -428,10 +428,10 @@ mod tests {
     }
 
     #[test]
-    fn handle_key_comma_opens_settings() {
+    fn handle_key_o_opens_settings() {
         let mut app = base_app();
         assert!(!app.state.show_settings);
-        assert!(app.handle_key(IpcKey::Char(',')));
+        assert!(app.handle_key(IpcKey::Char('o')));
         assert!(app.state.show_settings);
     }
 
