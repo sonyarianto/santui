@@ -193,8 +193,9 @@ fn render_main(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<
             state.data.config.short_break_secs / 60,
             state.data.config.long_break_secs / 60
         );
+        let cfg_x = (w / 2).saturating_sub(cfg_text.len() as u16 / 2);
         cmds.push(RenderCmd::Text {
-            x: 2,
+            x: cfg_x,
             y: h - 3,
             text: cfg_text,
             fg: Some(theme.text_muted),
