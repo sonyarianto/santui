@@ -120,7 +120,7 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
         let time_str = format!("{:02}:{:02}:{:02}", dt.hour(), dt.minute(), dt.second());
         ui::push_text(&mut cmds, cx + 2, cy + 3, time_str, theme.accent, true);
 
-        let date_str = dt.format("%a, %-d %b %Y").to_string();
+        let date_str = dt.format("%a, %b %-d %Y").to_string();
         ui::push_text(&mut cmds, cx + 2, cy + 5, date_str, theme.text_muted, false);
         if dst_active {
             ui::push_text(
