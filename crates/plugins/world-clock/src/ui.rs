@@ -203,7 +203,7 @@ fn render_search(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> V
         theme,
         r.ix,
         hint_y,
-        &[("↑↓", "navigate"), ("PgUp/Dn", "jump"), ("↵", "add")],
+        &[("↑↓", "navigate"), ("pgup/pgdn", "jump"), ("↵", "add")],
         r.iw as usize,
     );
 
