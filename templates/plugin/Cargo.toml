@@ -2,6 +2,7 @@
 name = "{{project-name}}"
 version = "0.1.0"
 edition = "2021"
+publish = false
 
 [dependencies]
 # Use a path dependency when developing inside the santui workspace, or use a

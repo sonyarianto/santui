@@ -27,7 +27,7 @@ That's it. No bloat. You add what you need.
 
 Plugins are **standalone binaries** distributed through the Plugin Registry. Open `Ctrl+P` → **Plugin registry**, install what you want, enable it, and it appears in your palette — ready to use.
 
-Santui ships with **110+ plugins** covering everything from radio streaming and weather to Git dashboards and Quran reading. Open `Ctrl+P` → **Plugin registry** to browse, install, and manage them all.
+Santui ships with a large first-party plugin catalog — from radio streaming and weather to Git dashboards and Quran reading. Open `Ctrl+P` → **Plugin registry** to browse, install, and manage them all.
 
 *Want to build your own? See [docs/architecture.md](docs/architecture.md).*
 

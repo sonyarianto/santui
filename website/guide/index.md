@@ -109,7 +109,7 @@ Run `santui --help` for a full reference, or use these flags:
 
 Plugins extend Santui with new capabilities. Open `Ctrl+P` → **Plugin registry** to see what's available.
 
-Santui ships with **110+ plugins** covering everything from radio streaming and weather to Git dashboards and Quran reading. All of them are available through the Plugin Registry — open `Ctrl+P` → **Plugin registry** to browse and install.
+Santui ships with a large first-party plugin catalog — from radio streaming and weather to Git dashboards and Quran reading. All of them are available through the Plugin Registry — open `Ctrl+P` → **Plugin registry** to browse and install.
 
 From the registry you can:
 
