@@ -187,27 +187,57 @@ pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
                     (1u16..).zip(lines.iter().enumerate().skip(start).take(panel_h))
                 {
                     let playing = i == 0 && state.now_playing == Some(state.selected);
-                    cmds.push(RenderCmd::Text {
-                        x: popup_x + 2,
-                        y,
-                        text: line.clone(),
-                        fg: Some(if playing {
-                            theme.accent
-                        } else if i == 0 {
-                            theme.text
-                        } else {
-                            theme.text_muted
-                        }),
-                        bg: None,
-                        bold: playing || i == 0,
-                        modifiers: 0,
-                    });
+                    let base_x = popup_x + 2;
+                    let (label, value) = split_key_value(line);
+                    if let Some(label) = label {
+                        cmds.push(RenderCmd::Text {
+                            x: base_x,
+                            y,
+                            text: format!("{label} "),
+                            fg: Some(theme.text_muted),
+                            bg: None,
+                            bold: playing,
+                            modifiers: 0,
+                        });
+                        cmds.push(RenderCmd::Text {
+                            x: base_x + label.len() as u16 + 1,
+                            y,
+                            text: value.to_string(),
+                            fg: Some(if playing { theme.accent } else { theme.text }),
+                            bg: None,
+                            bold: playing,
+                            modifiers: 0,
+                        });
+                    } else {
+                        cmds.push(RenderCmd::Text {
+                            x: base_x,
+                            y,
+                            text: value.to_string(),
+                            fg: Some(if playing {
+                                theme.accent
+                            } else {
+                                theme.text_muted
+                            }),
+                            bg: None,
+                            bold: playing,
+                            modifiers: 0,
+                        });
+                    }
                 }
             }
         }
     }
 
     cmds
+}
+
+/// Split a `Key: Value` detail line into label and value. Returns `(None, line)`
+/// for lines without a label (playing status, wrapped continuation).
+fn split_key_value(line: &str) -> (Option<&str>, &str) {
+    match line.split_once(": ") {
+        Some((k, v)) if !k.contains([' ', '(', '[', '▶']) => (Some(k), v),
+        _ => (None, line),
+    }
 }
 
 fn render_table(state: &MusicState, theme: &ThemeData, w: u16, h: u16, cmds: &mut Vec<RenderCmd>) {
@@ -457,9 +487,9 @@ mod tests {
             .iter()
             .any(|c| matches!(c, RenderCmd::Border { title: Some(t), .. } if t == "Track Details"));
         assert!(has_title);
-        let has_track = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text == "Title: Lose Yourself"),
-        );
+        let has_track = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text == "Lose Yourself"));
         assert!(has_track);
     }
 
@@ -500,7 +530,16 @@ mod tests {
                 _ => None,
             })
             .collect();
-        assert_eq!(texts.len(), 1);
-        assert_eq!(texts[0], "Album: 8 Mile Soundtrack");
+        assert_eq!(texts, vec!["Album "]);
+        let values: Vec<&String> = cmds
+            .iter()
+            .filter_map(|c| match c {
+                RenderCmd::Text {
+                    x: 56, y: 1, text, ..
+                } => Some(text),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(values, vec!["8 Mile Soundtrack"]);
     }
 }
