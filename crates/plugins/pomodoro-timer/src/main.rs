@@ -296,10 +296,6 @@ impl App {
     }
 }
 
-fn palette_commands() -> Vec<(String, String)> {
-    vec![]
-}
-
 fn today_date_string() -> String {
     use std::time::SystemTime;
     let secs = SystemTime::now()
@@ -321,16 +317,14 @@ fn today_date_string() -> String {
 }
 
 fn respond(app: &mut App, consumed: bool) {
-    let msg = santui_ipc::protocol::PluginMsg {
-        commands: app.render().to_vec(),
-        hints: app.status_hints(),
-        palette_commands: palette_commands(),
-        request: app.pending_request.take(),
-        plugin_message: app.pending_plugin_msg.take(),
+    santui_ipc::protocol::send_plugin_msg(
+        app.render().to_vec(),
+        app.status_hints(),
+        vec![],
+        app.pending_request.take(),
+        app.pending_plugin_msg.take(),
         consumed,
-    };
-    let mut out = std::io::stdout().lock();
-    let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
+    );
 }
 
 fn main() {
@@ -728,7 +722,7 @@ mod tests {
             data: serde_json::Value::Null,
         });
         let hints = app.status_hints();
-        let palette = palette_commands();
+        let palette: Vec<(String, String)> = vec![];
         let request = app.pending_request.take();
         let plugin_message = app.pending_plugin_msg.take();
         let json = serde_json::json!({

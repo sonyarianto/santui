@@ -7,7 +7,8 @@ use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, PluginMessage, PluginRequest, RenderCmd, ThemeData,
 };
 
-use state::{generate_id, unix_now, Screen, SshState};
+use santui_ipc::time::unix_now;
+use state::{generate_id, Screen, SshState};
 use ui::render_ui;
 
 // Keep the original key so existing saved SSH hosts survive the plugin rename.
@@ -479,21 +480,15 @@ impl App {
     }
 }
 
-fn palette_commands() -> Vec<(String, String)> {
-    vec![]
-}
-
 fn respond(app: &mut App, consumed: bool) {
-    let msg = santui_ipc::protocol::PluginMsg {
-        commands: app.render().to_vec(),
-        hints: app.status_hints(),
-        palette_commands: palette_commands(),
-        request: app.pending_request.take(),
-        plugin_message: app.pending_plugin_message.take(),
+    santui_ipc::protocol::send_plugin_msg(
+        app.render().to_vec(),
+        app.status_hints(),
+        vec![],
+        app.pending_request.take(),
+        app.pending_plugin_message.take(),
         consumed,
-    };
-    let mut out = std::io::stdout().lock();
-    let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
+    );
 }
 
 fn main() {

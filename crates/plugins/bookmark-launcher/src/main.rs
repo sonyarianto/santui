@@ -1,11 +1,15 @@
 use std::io::{BufRead, BufReader};
 use std::process::Command;
 
-use chrono::Local;
 use santui_ipc::clipboard::copy_to_clipboard;
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, PluginRequest, RenderCmd, TextStyle, ThemeData, BORDER_ALL,
 };
+use santui_ipc::text::parse_tags;
+use santui_ipc::text::single_line;
+use santui_ipc::theme::default_theme;
+use santui_ipc::time::now_string;
+use santui_ipc::ui::push_text;
 use serde::{Deserialize, Serialize};
 
 const DB_KEY: &str = "bookmark-launcher";
@@ -259,7 +263,8 @@ impl App {
                 self.bookmarks.retain(|bookmark| bookmark.id != id);
                 self.screen = Screen::List;
                 self.status = "Bookmark deleted".into();
-                self.schedule_save();
+                let value = self.serialize();
+                santui_ipc::protocol::schedule_db_save(&mut self.pending_request, DB_KEY, value);
                 self.apply_filter();
                 true
             }
@@ -333,7 +338,8 @@ impl App {
             self.status = "Bookmark created".into();
         }
         self.screen = Screen::List;
-        self.schedule_save();
+        let value = self.serialize();
+        santui_ipc::protocol::schedule_db_save(&mut self.pending_request, DB_KEY, value);
         self.apply_filter();
         Ok(())
     }
@@ -441,12 +447,7 @@ impl App {
             self.apply_filter();
         }
     }
-    fn schedule_save(&mut self) {
-        self.pending_request = Some(PluginRequest::DbSet {
-            key: DB_KEY.into(),
-            value: self.serialize(),
-        });
-    }
+
     fn render(&mut self) -> &[RenderCmd] {
         if self.dirty || self.cached_commands.is_empty() {
             self.cached_commands = render_ui(self);
@@ -472,17 +473,7 @@ fn prev_field(field: EditField) -> EditField {
         EditField::Tags => EditField::Description,
     }
 }
-fn parse_tags(input: &str) -> Vec<String> {
-    let mut tags: Vec<String> = input
-        .split(',')
-        .map(str::trim)
-        .filter(|tag| !tag.is_empty())
-        .map(|tag| tag.to_lowercase())
-        .collect();
-    tags.sort();
-    tags.dedup();
-    tags
-}
+
 fn validate_target(kind: BookmarkKind, target: &str) -> Result<(), String> {
     match kind {
         BookmarkKind::Url if !(target.starts_with("http://") || target.starts_with("https://")) => {
@@ -512,9 +503,6 @@ fn open_target(target: &str) -> Result<(), String> {
         c
     };
     cmd.spawn().map(|_| ()).map_err(|e| e.to_string())
-}
-fn now_string() -> String {
-    Local::now().format("%Y-%m-%dT%H:%M:%S%:z").to_string()
 }
 
 fn render_ui(app: &App) -> Vec<RenderCmd> {
@@ -714,7 +702,7 @@ fn render_edit(
             cmds,
             2,
             y,
-            format!("{marker} {label}: {}", visible(value)),
+            format!("{marker} {label}: {}", single_line(value)),
             if field == line_field {
                 theme.highlight
             } else {
@@ -745,57 +733,16 @@ fn bookmark_row(bookmark: &Bookmark) -> String {
         bookmark.tags.join(",")
     )
 }
-fn visible(value: &str) -> String {
-    santui_ipc::ui::truncate(&value.replace('\n', " ⏎ "), 90)
-}
-fn push_text(
-    cmds: &mut Vec<RenderCmd>,
-    x: u16,
-    y: u16,
-    text: impl Into<String>,
-    fg: [u8; 3],
-    bold: bool,
-) {
-    cmds.push(RenderCmd::Text {
-        x,
-        y,
-        text: text.into(),
-        fg: Some(fg),
-        bg: None,
-        bold,
-        modifiers: 0,
-    });
-}
-fn default_theme() -> ThemeData {
-    ThemeData {
-        text: [220; 3],
-        text_muted: [140; 3],
-        accent: [180; 3],
-        highlight: [220; 3],
-        logo: [255; 3],
-        background: [0; 3],
-        background_panel: [20; 3],
-        background_overlay: [10; 3],
-        border: [150; 3],
-        success: [127, 216, 143],
-        error: [224, 108, 117],
-        inverted_text: [20; 3],
-    }
-}
-fn palette_commands() -> Vec<(String, String)> {
-    vec![]
-}
+
 fn respond(app: &mut App, consumed: bool) {
-    let msg = santui_ipc::protocol::PluginMsg {
-        commands: app.render().to_vec(),
-        hints: hints(),
-        palette_commands: palette_commands(),
-        request: app.pending_request.take(),
-        plugin_message: None,
+    santui_ipc::protocol::send_plugin_msg(
+        app.render().to_vec(),
+        hints(),
+        vec![],
+        app.pending_request.take(),
+        None,
         consumed,
-    };
-    let mut out = std::io::stdout().lock();
-    let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
+    );
 }
 fn main() {
     let _ = env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))

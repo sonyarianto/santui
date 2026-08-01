@@ -1,6 +1,6 @@
-use santui_ipc::text::url_encode;
 use serde::{Deserialize, Serialize};
 
+use santui_ipc::text::url_encode;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ItunesResponse {
     #[serde(rename = "resultCount")]

@@ -1,8 +1,8 @@
 use crate::state::{IptvState, PlaybackState, Screen};
 use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData};
 use santui_ipc::ui;
-use santui_ipc::ui::PanelOpts;
 
+use santui_ipc::ui::PanelOpts;
 pub const TABLE_TOP: u16 = 3;
 pub const HEADER_H: u16 = 1;
 

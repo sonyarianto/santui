@@ -1,6 +1,7 @@
 use santui_ipc::protocol::{RenderCmd, ThemeData, BORDER_ALL};
 
-use crate::state::{unix_now, Screen, SshState};
+use crate::state::{Screen, SshState};
+use santui_ipc::time::unix_now;
 
 type FieldAccessor = fn(&crate::state::SshBookmark) -> String;
 

@@ -41,3 +41,44 @@ pub fn strip_timestamps(lyrics: &str) -> String {
         .collect::<Vec<_>>()
         .join("\n")
 }
+
+/// Split text into lines that fit `max_width` (character-based), keeping whole words.
+pub fn word_wrap(text: &str, max_width: usize) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut line = String::new();
+    for word in text.split_whitespace() {
+        if line.len() + word.len() + 1 > max_width && !line.is_empty() {
+            lines.push(line.clone());
+            line.clear();
+        }
+        if !line.is_empty() {
+            line.push(' ');
+        }
+        line.push_str(word);
+    }
+    if !line.is_empty() {
+        lines.push(line);
+    }
+    if lines.is_empty() {
+        lines.push(String::new());
+    }
+    lines
+}
+
+/// Parse a comma-separated tag list into sorted, deduplicated lowercase tags.
+pub fn parse_tags(input: &str) -> Vec<String> {
+    let mut tags: Vec<String> = input
+        .split(',')
+        .map(str::trim)
+        .filter(|tag| !tag.is_empty())
+        .map(|tag| tag.to_lowercase())
+        .collect();
+    tags.sort();
+    tags.dedup();
+    tags
+}
+
+/// Single-line preview of a value: newlines become `⏎`, truncated to 90 chars.
+pub fn single_line(value: &str) -> String {
+    crate::ui::truncate(&value.replace('\n', " ⏎ "), 90)
+}

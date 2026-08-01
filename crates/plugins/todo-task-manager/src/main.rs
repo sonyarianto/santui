@@ -4,6 +4,11 @@ use chrono::{Datelike, Local, NaiveDate};
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, PluginRequest, RenderCmd, TextStyle, ThemeData, BORDER_ALL,
 };
+use santui_ipc::text::parse_tags;
+use santui_ipc::text::single_line;
+use santui_ipc::theme::default_theme;
+use santui_ipc::time::now_string;
+use santui_ipc::ui::push_text;
 use serde::{Deserialize, Serialize};
 
 const DB_KEY: &str = "todo-task-manager";
@@ -165,7 +170,12 @@ impl App {
             IpcKey::Char(' ') => {
                 if let Some(id) = self.selected_id() {
                     self.toggle_done(&id);
-                    self.schedule_save();
+                    let value = self.serialize();
+                    santui_ipc::protocol::schedule_db_save(
+                        &mut self.pending_request,
+                        DB_KEY,
+                        value,
+                    );
                 }
                 true
             }
@@ -198,7 +208,12 @@ impl App {
                         task.priority = priority;
                         task.updated_at = now_string();
                         self.status = format!("Priority set to {}", priority.label());
-                        self.schedule_save();
+                        let value = self.serialize();
+                        santui_ipc::protocol::schedule_db_save(
+                            &mut self.pending_request,
+                            DB_KEY,
+                            value,
+                        );
                         self.apply_filter();
                     }
                 }
@@ -317,7 +332,8 @@ impl App {
                 self.tasks.retain(|task| task.id != id);
                 self.screen = Screen::List;
                 self.status = "Task deleted".into();
-                self.schedule_save();
+                let value = self.serialize();
+                santui_ipc::protocol::schedule_db_save(&mut self.pending_request, DB_KEY, value);
                 self.apply_filter();
                 true
             }
@@ -385,7 +401,8 @@ impl App {
             self.status = "Task created".into();
         }
         self.screen = Screen::List;
-        self.schedule_save();
+        let value = self.serialize();
+        santui_ipc::protocol::schedule_db_save(&mut self.pending_request, DB_KEY, value);
         self.apply_filter();
         Ok(())
     }
@@ -499,13 +516,6 @@ impl App {
         }
     }
 
-    fn schedule_save(&mut self) {
-        self.pending_request = Some(PluginRequest::DbSet {
-            key: DB_KEY.into(),
-            value: self.serialize(),
-        });
-    }
-
     fn render(&mut self) -> &[RenderCmd] {
         if self.dirty || self.cached_commands.is_empty() {
             self.cached_commands = render_ui(self);
@@ -542,18 +552,6 @@ fn parse_optional_date(input: &str) -> Result<Option<String>, String> {
     Ok(Some(trimmed.to_string()))
 }
 
-fn parse_tags(input: &str) -> Vec<String> {
-    let mut tags: Vec<String> = input
-        .split(',')
-        .map(str::trim)
-        .filter(|tag| !tag.is_empty())
-        .map(|tag| tag.to_lowercase())
-        .collect();
-    tags.sort();
-    tags.dedup();
-    tags
-}
-
 fn sort_key(task: &Task) -> (u8, String, String) {
     let priority = match task.priority {
         Priority::High => 0,
@@ -567,9 +565,6 @@ fn sort_key(task: &Task) -> (u8, String, String) {
     )
 }
 
-fn now_string() -> String {
-    Local::now().format("%Y-%m-%dT%H:%M:%S%:z").to_string()
-}
 fn today() -> String {
     let now = Local::now();
     format!("{:04}-{:02}-{:02}", now.year(), now.month(), now.day())
@@ -754,7 +749,7 @@ fn render_edit(
             cmds,
             2,
             y,
-            format!("{marker} {label}: {}", visible(value)),
+            format!("{marker} {label}: {}", single_line(value)),
             if field == line_field {
                 theme.highlight
             } else {
@@ -793,43 +788,6 @@ fn task_row(task: &Task) -> String {
     )
 }
 
-fn visible(value: &str) -> String {
-    santui_ipc::ui::truncate(&value.replace('\n', " ⏎ "), 90)
-}
-fn push_text(
-    cmds: &mut Vec<RenderCmd>,
-    x: u16,
-    y: u16,
-    text: impl Into<String>,
-    fg: [u8; 3],
-    bold: bool,
-) {
-    cmds.push(RenderCmd::Text {
-        x,
-        y,
-        text: text.into(),
-        fg: Some(fg),
-        bg: None,
-        bold,
-        modifiers: 0,
-    });
-}
-fn default_theme() -> ThemeData {
-    ThemeData {
-        text: [220; 3],
-        text_muted: [140; 3],
-        accent: [180; 3],
-        highlight: [220; 3],
-        logo: [255; 3],
-        background: [0; 3],
-        background_panel: [20; 3],
-        background_overlay: [10; 3],
-        border: [150; 3],
-        success: [127, 216, 143],
-        error: [224, 108, 117],
-        inverted_text: [20; 3],
-    }
-}
 fn hints() -> Vec<(String, String)> {
     vec![
         ("a".into(), "active".into()),
@@ -843,21 +801,16 @@ fn hints() -> Vec<(String, String)> {
         ("esc".into(), "back".into()),
     ]
 }
-fn palette_commands() -> Vec<(String, String)> {
-    vec![]
-}
 
 fn respond(app: &mut App, consumed: bool) {
-    let msg = santui_ipc::protocol::PluginMsg {
-        commands: app.render().to_vec(),
-        hints: hints(),
-        palette_commands: palette_commands(),
-        request: app.pending_request.take(),
-        plugin_message: None,
+    santui_ipc::protocol::send_plugin_msg(
+        app.render().to_vec(),
+        hints(),
+        vec![],
+        app.pending_request.take(),
+        None,
         consumed,
-    };
-    let mut out = std::io::stdout().lock();
-    let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
+    );
 }
 
 fn main() {

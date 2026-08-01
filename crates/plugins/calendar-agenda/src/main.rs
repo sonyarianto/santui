@@ -6,6 +6,8 @@ use chrono::{Local, NaiveDate, NaiveDateTime, NaiveTime};
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, PluginRequest, RenderCmd, TextStyle, ThemeData, BORDER_ALL,
 };
+use santui_ipc::theme::default_theme;
+use santui_ipc::ui::push_text;
 use serde::{Deserialize, Serialize};
 
 const DB_KEY: &str = "calendar-agenda";
@@ -210,7 +212,8 @@ impl App {
                 if idx < self.sources.len() {
                     self.sources.remove(idx);
                 }
-                self.schedule_save();
+                let value = self.serialize();
+                santui_ipc::protocol::schedule_db_save(&mut self.pending_request, DB_KEY, value);
                 self.refresh();
                 self.screen = Screen::Agenda;
                 true
@@ -244,7 +247,8 @@ impl App {
         }
         self.sources.push(CalendarSource { name, path });
         self.screen = Screen::Agenda;
-        self.schedule_save();
+        let value = self.serialize();
+        santui_ipc::protocol::schedule_db_save(&mut self.pending_request, DB_KEY, value);
         self.refresh();
         Ok(())
     }
@@ -341,12 +345,7 @@ impl App {
             self.refresh();
         }
     }
-    fn schedule_save(&mut self) {
-        self.pending_request = Some(PluginRequest::DbSet {
-            key: DB_KEY.into(),
-            value: self.serialize(),
-        });
-    }
+
     fn render(&mut self) -> &[RenderCmd] {
         if self.dirty || self.cached_commands.is_empty() {
             self.cached_commands = render_ui(self);
@@ -713,54 +712,16 @@ fn event_row(event: &Event) -> String {
         event.calendar
     )
 }
-fn push_text(
-    cmds: &mut Vec<RenderCmd>,
-    x: u16,
-    y: u16,
-    text: impl Into<String>,
-    fg: [u8; 3],
-    bold: bool,
-) {
-    cmds.push(RenderCmd::Text {
-        x,
-        y,
-        text: text.into(),
-        fg: Some(fg),
-        bg: None,
-        bold,
-        modifiers: 0,
-    });
-}
-fn default_theme() -> ThemeData {
-    ThemeData {
-        text: [220; 3],
-        text_muted: [140; 3],
-        accent: [180; 3],
-        highlight: [220; 3],
-        logo: [255; 3],
-        background: [0; 3],
-        background_panel: [20; 3],
-        background_overlay: [10; 3],
-        border: [150; 3],
-        success: [127, 216, 143],
-        error: [224, 108, 117],
-        inverted_text: [20; 3],
-    }
-}
-fn palette_commands() -> Vec<(String, String)> {
-    vec![]
-}
+
 fn respond(app: &mut App, consumed: bool) {
-    let msg = santui_ipc::protocol::PluginMsg {
-        commands: app.render().to_vec(),
-        hints: hints(),
-        palette_commands: palette_commands(),
-        request: app.pending_request.take(),
-        plugin_message: None,
+    santui_ipc::protocol::send_plugin_msg(
+        app.render().to_vec(),
+        hints(),
+        vec![],
+        app.pending_request.take(),
+        None,
         consumed,
-    };
-    let mut out = std::io::stdout().lock();
-    let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
+    );
 }
 fn main() {
     let _ = env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))

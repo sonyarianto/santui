@@ -11,6 +11,7 @@ default = ["host"]
 host = ["dep:santui-core", "dep:ratatui", "dep:crossterm"]
 clipboard = ["dep:arboard"]
 mpv = ["dep:libloading"]
+time = ["dep:chrono"]
 
 [dependencies]
 santui-core = { path = "../core", version = "0.2.35", optional = true }
@@ -21,6 +22,7 @@ serde_json = { workspace = true }
 bincode = { version = "2", features = ["serde", "std"] }
 arboard = { version = "3", optional = true }
 libloading = { version = "0.9", optional = true }
+chrono = { version = "0.4", optional = true }
 log = { workspace = true }
 
 [dev-dependencies]

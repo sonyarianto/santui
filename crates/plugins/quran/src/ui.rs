@@ -1,4 +1,5 @@
 use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData, BORDER_ALL};
+use santui_ipc::ui::push_text;
 
 use crate::types::{self, Ayah, DisplayMode, Screen};
 use crate::App;
@@ -375,23 +376,4 @@ fn wrap_text(text: &str, max_chars: usize) -> String {
         }
     }
     result
-}
-
-fn push_text(
-    cmds: &mut Vec<RenderCmd>,
-    x: u16,
-    y: u16,
-    text: impl Into<String>,
-    fg: [u8; 3],
-    bold: bool,
-) {
-    cmds.push(RenderCmd::Text {
-        x,
-        y,
-        text: text.into(),
-        fg: Some(fg),
-        bg: None,
-        bold,
-        modifiers: 0,
-    });
 }

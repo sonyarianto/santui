@@ -421,6 +421,43 @@ pub fn max_visible_tracks(h: u16) -> usize {
     h.saturating_sub(5) as usize
 }
 
+/// Push a `Text` render command with explicit bold styling.
+pub fn push_text(
+    cmds: &mut Vec<RenderCmd>,
+    x: u16,
+    y: u16,
+    text: impl Into<String>,
+    fg: [u8; 3],
+    bold: bool,
+) {
+    cmds.push(RenderCmd::Text {
+        x,
+        y,
+        text: text.into(),
+        fg: Some(fg),
+        bg: None,
+        bold,
+        modifiers: 0,
+    });
+}
+
+/// Prefix `" > "` when `active` matches `field`, `"   "` otherwise.
+pub fn focus_line(active: bool, label: &str, value: &str) -> String {
+    format!("{} {label}: {value}", if active { ">" } else { " " })
+}
+
+/// Keep `scroll` clamped around `selected` for a list of height `area_h`,
+/// mirroring the host list behaviour (5 rows reserved for header/footer).
+pub fn update_scroll(scroll: &mut u16, selected: usize, area_h: u16) {
+    let list_h = area_h.saturating_sub(5) as usize;
+    if selected < *scroll as usize {
+        *scroll = selected as u16;
+    }
+    if selected >= *scroll as usize + list_h {
+        *scroll = (selected.saturating_sub(list_h).saturating_add(1)) as u16;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::max_visible_tracks;

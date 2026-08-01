@@ -4,6 +4,7 @@ use std::sync::mpsc;
 use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
 use serde_json::{json, Value};
 
+use santui_ipc::theme::default_theme;
 #[derive(Debug, Clone)]
 struct IssueItem {
     number: u64,
@@ -362,23 +363,6 @@ fn render_ui(app: &App) -> Vec<Value> {
     cmds
 }
 
-fn default_theme() -> ThemeData {
-    ThemeData {
-        text: [220; 3],
-        text_muted: [140; 3],
-        accent: [180; 3],
-        highlight: [220; 3],
-        logo: [255; 3],
-        background: [0; 3],
-        background_panel: [20; 3],
-        background_overlay: [10; 3],
-        border: [150; 3],
-        success: [127, 216, 143],
-        error: [224, 108, 117],
-        inverted_text: [20; 3],
-    }
-}
-
 fn hints() -> Vec<(String, String)> {
     vec![
         ("enter".into(), "confirm/detail".into()),
@@ -387,25 +371,18 @@ fn hints() -> Vec<(String, String)> {
     ]
 }
 
-fn palette_commands() -> Vec<(String, String)> {
-    vec![]
-}
-
 fn respond(app: &mut App, consumed: bool) {
-    let msg = santui_ipc::protocol::PluginMsg {
-        commands: app
-            .render()
+    santui_ipc::protocol::send_plugin_msg(
+        app.render()
             .iter()
             .map(|v| serde_json::from_value(v.clone()).unwrap())
             .collect(),
-        hints: hints(),
-        palette_commands: palette_commands(),
-        request: None,
-        plugin_message: None,
+        hints(),
+        vec![],
+        None,
+        None,
         consumed,
-    };
-    let mut out = std::io::stdout().lock();
-    let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
+    );
 }
 
 fn main() {

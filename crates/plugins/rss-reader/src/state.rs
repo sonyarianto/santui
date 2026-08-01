@@ -1,3 +1,4 @@
+use santui_ipc::time::unix_now as now_secs;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
@@ -64,13 +65,6 @@ pub struct RssState {
     pub search_query: String,
     pub ticks_since_refresh: u32,
     pub dirty: bool,
-}
-
-fn now_secs() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs()
 }
 
 impl Default for RssState {

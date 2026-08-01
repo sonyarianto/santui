@@ -3,6 +3,7 @@ use std::io::{BufRead, BufReader};
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, TextStyle, ThemeData, BORDER_ALL,
 };
+use santui_ipc::theme::default_theme;
 
 #[derive(Debug, Clone)]
 struct MockRow {
@@ -507,27 +508,6 @@ impl App {
     }
 }
 
-fn default_theme() -> ThemeData {
-    ThemeData {
-        text: [220; 3],
-        text_muted: [140; 3],
-        accent: [180; 3],
-        highlight: [220; 3],
-        logo: [255; 3],
-        background: [0; 3],
-        background_panel: [20; 3],
-        background_overlay: [10; 3],
-        border: [150; 3],
-        success: [127, 216, 143],
-        error: [224, 108, 117],
-        inverted_text: [20; 3],
-    }
-}
-
-fn palette_commands() -> Vec<(String, String)> {
-    vec![]
-}
-
 fn key_hints() -> Vec<(String, String)> {
     vec![
         ("tab".to_string(), "switch mode".to_string()),
@@ -537,16 +517,14 @@ fn key_hints() -> Vec<(String, String)> {
 }
 
 fn respond(app: &mut App, consumed: bool) {
-    let msg = santui_ipc::protocol::PluginMsg {
-        commands: app.render().to_vec(),
-        hints: key_hints(),
-        palette_commands: palette_commands(),
-        request: None,
-        plugin_message: None,
+    santui_ipc::protocol::send_plugin_msg(
+        app.render().to_vec(),
+        key_hints(),
+        vec![],
+        None,
+        None,
         consumed,
-    };
-    let mut out = std::io::stdout().lock();
-    let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
+    );
 }
 
 fn main() {

@@ -421,6 +421,36 @@ pub fn write_plugin_msg<W: Write>(w: &mut W, msg: &PluginMsg) -> io::Result<()> 
     w.flush()
 }
 
+/// Build a `PluginMsg` and write it to stdout as a bincode frame — the shared
+/// plugin response path.
+pub fn send_plugin_msg(
+    commands: Vec<RenderCmd>,
+    hints: Vec<(String, String)>,
+    palette_commands: Vec<(String, String)>,
+    request: Option<PluginRequest>,
+    plugin_message: Option<PluginMessage>,
+    consumed: bool,
+) {
+    let msg = PluginMsg {
+        commands,
+        hints,
+        palette_commands,
+        request,
+        plugin_message,
+        consumed,
+    };
+    let mut out = std::io::stdout().lock();
+    let _ = write_plugin_msg(&mut out, &msg);
+}
+
+/// Stage a `DbSet` request into `pending` (shared `schedule_save` body).
+pub fn schedule_db_save(pending: &mut Option<PluginRequest>, key: &str, value: String) {
+    *pending = Some(PluginRequest::DbSet {
+        key: key.into(),
+        value,
+    });
+}
+
 /// Read a `HostMsg` from stdin using JSON Lines format (host → plugin
 /// direction stays JSON for backward compat).
 pub fn read_host_msg_json<R: BufRead>(r: &mut R) -> io::Result<HostMsg> {

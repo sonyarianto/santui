@@ -10,9 +10,9 @@ use std::time::{Duration, Instant};
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, PluginMessage, PluginRequest, RenderCmd, ThemeData,
 };
+use santui_ipc::ui::max_visible_tracks;
 
 use santui_ipc::mpv::{Mpv, MpvWakeup};
-use santui_ipc::ui::max_visible_tracks;
 use state::{FetchState, MusicState};
 use ui::render_ui;
 
@@ -410,21 +410,15 @@ fn hints() -> Vec<(String, String)> {
     ]
 }
 
-fn palette_commands() -> Vec<(String, String)> {
-    vec![]
-}
-
 fn respond(app: &mut App, consumed: bool) {
-    let msg = santui_ipc::protocol::PluginMsg {
-        commands: app.render().to_vec(),
-        hints: hints(),
-        palette_commands: palette_commands(),
-        request: app.pending_request.take(),
-        plugin_message: app.pending_plugin_message.take(),
+    santui_ipc::protocol::send_plugin_msg(
+        app.render().to_vec(),
+        hints(),
+        vec![],
+        app.pending_request.take(),
+        app.pending_plugin_message.take(),
         consumed,
-    };
-    let mut out = std::io::stdout().lock();
-    let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
+    );
 }
 
 fn main() {
@@ -716,12 +710,6 @@ mod tests {
         app.rx_fetch = Some(rx);
         app.handle_tick();
         assert!(matches!(app.state.fetch_state, FetchState::Fetching));
-    }
-
-    #[test]
-    fn palette_commands_is_empty() {
-        let cmds = palette_commands();
-        assert!(cmds.is_empty());
     }
 
     #[test]

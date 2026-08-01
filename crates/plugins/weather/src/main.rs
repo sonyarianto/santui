@@ -387,21 +387,15 @@ impl App {
     }
 }
 
-fn palette_commands() -> Vec<(String, String)> {
-    vec![]
-}
-
 fn respond(app: &mut App, consumed: bool) {
-    let msg = santui_ipc::protocol::PluginMsg {
-        commands: app.render().to_vec(),
-        hints: app.status_hints(),
-        palette_commands: palette_commands(),
-        request: app.pending_request.take(),
-        plugin_message: None,
+    santui_ipc::protocol::send_plugin_msg(
+        app.render().to_vec(),
+        app.status_hints(),
+        vec![],
+        app.pending_request.take(),
+        None,
         consumed,
-    };
-    let mut out = std::io::stdout().lock();
-    let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
+    );
 }
 
 fn main() {

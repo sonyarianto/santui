@@ -1,5 +1,8 @@
+pub mod platform;
 pub mod protocol;
 pub mod text;
+pub mod theme;
+pub mod time;
 pub mod ui;
 
 #[cfg(feature = "clipboard")]

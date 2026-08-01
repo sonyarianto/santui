@@ -4,6 +4,8 @@ use std::process::Command;
 use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
 use serde_json::{json, Value};
 
+use santui_ipc::text::word_wrap;
+use santui_ipc::theme::default_theme;
 #[derive(Debug, Clone)]
 struct Package {
     name: String,
@@ -244,30 +246,20 @@ impl App {
                 IpcKey::Up | IpcKey::Char('k') => {
                     if self.selected > 0 {
                         self.selected -= 1;
-                        self.update_scroll();
+                        santui_ipc::ui::update_scroll(&mut self.scroll, self.selected, self.area.h);
                     }
                     true
                 }
                 IpcKey::Down | IpcKey::Char('j') => {
                     if self.selected + 1 < self.results.len() {
                         self.selected += 1;
-                        self.update_scroll();
+                        santui_ipc::ui::update_scroll(&mut self.scroll, self.selected, self.area.h);
                     }
                     true
                 }
                 IpcKey::Esc => false,
                 _ => true,
             }
-        }
-    }
-
-    fn update_scroll(&mut self) {
-        let list_h = self.area.h.saturating_sub(5) as usize;
-        if self.selected < self.scroll as usize {
-            self.scroll = self.selected as u16;
-        }
-        if self.selected >= self.scroll as usize + list_h {
-            self.scroll = (self.selected.saturating_sub(list_h).saturating_add(1)) as u16;
         }
     }
 
@@ -380,64 +372,18 @@ impl App {
     }
 }
 
-fn word_wrap(text: &str, max_width: usize) -> Vec<String> {
-    let mut lines = Vec::new();
-    let mut line = String::new();
-    for word in text.split_whitespace() {
-        if line.len() + word.len() + 1 > max_width && !line.is_empty() {
-            lines.push(line.clone());
-            line.clear();
-        }
-        if !line.is_empty() {
-            line.push(' ');
-        }
-        line.push_str(word);
-    }
-    if !line.is_empty() {
-        lines.push(line);
-    }
-    if lines.is_empty() {
-        lines.push(String::new());
-    }
-    lines
-}
-
-fn default_theme() -> ThemeData {
-    ThemeData {
-        text: [220; 3],
-        text_muted: [140; 3],
-        accent: [180; 3],
-        highlight: [220; 3],
-        logo: [255; 3],
-        background: [0; 3],
-        background_panel: [20; 3],
-        background_overlay: [10; 3],
-        border: [150; 3],
-        success: [127, 216, 143],
-        error: [224, 108, 117],
-        inverted_text: [20; 3],
-    }
-}
-
-fn palette_commands() -> Vec<(String, String)> {
-    vec![]
-}
-
 fn respond(app: &mut App, consumed: bool) {
-    let msg = santui_ipc::protocol::PluginMsg {
-        commands: app
-            .render()
+    santui_ipc::protocol::send_plugin_msg(
+        app.render()
             .iter()
             .map(|v| serde_json::from_value(v.clone()).unwrap())
             .collect(),
-        hints: vec![],
-        palette_commands: palette_commands(),
-        request: None,
-        plugin_message: None,
+        vec![],
+        vec![],
+        None,
+        None,
         consumed,
-    };
-    let mut out = std::io::stdout().lock();
-    let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
+    );
 }
 
 fn main() {

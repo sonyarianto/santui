@@ -5,6 +5,9 @@ use santui_ipc::clipboard::copy_to_clipboard;
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, PluginRequest, RenderCmd, TextStyle, ThemeData, BORDER_ALL,
 };
+use santui_ipc::theme::default_theme;
+use santui_ipc::ui::focus_line;
+use santui_ipc::ui::push_text;
 use serde::{Deserialize, Serialize};
 
 const MAX_MATCHES: usize = 200;
@@ -378,7 +381,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         &mut cmds,
         2,
         2,
-        focus_line(app.focus, Focus::Pattern, "Pattern", &app.pattern),
+        focus_line(app.focus == Focus::Pattern, "Pattern", &app.pattern),
         theme.text,
         app.focus == Focus::Pattern,
     );
@@ -394,8 +397,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         2,
         4,
         focus_line(
-            app.focus,
-            Focus::Replacement,
+            app.focus == Focus::Replacement,
             "Replace",
             &visible_one_line(&app.replacement),
         ),
@@ -595,68 +597,19 @@ fn mark(enabled: bool) -> &'static str {
     }
 }
 
-fn focus_line(active: Focus, field: Focus, label: &str, value: &str) -> String {
-    format!(
-        "{} {label}: {value}",
-        if active == field { ">" } else { " " }
-    )
-}
-
 fn visible_one_line(value: &str) -> String {
     value.replace('\n', "⏎")
 }
 
-fn push_text(
-    cmds: &mut Vec<RenderCmd>,
-    x: u16,
-    y: u16,
-    text: impl Into<String>,
-    fg: [u8; 3],
-    bold: bool,
-) {
-    cmds.push(RenderCmd::Text {
-        x,
-        y,
-        text: text.into(),
-        fg: Some(fg),
-        bg: None,
-        bold,
-        modifiers: 0,
-    });
-}
-
-fn default_theme() -> ThemeData {
-    ThemeData {
-        text: [220; 3],
-        text_muted: [140; 3],
-        accent: [180; 3],
-        highlight: [220; 3],
-        logo: [255; 3],
-        background: [0; 3],
-        background_panel: [20; 3],
-        background_overlay: [10; 3],
-        border: [150; 3],
-        success: [127, 216, 143],
-        error: [224, 108, 117],
-        inverted_text: [20; 3],
-    }
-}
-
-fn palette_commands() -> Vec<(String, String)> {
-    vec![]
-}
-
 fn respond(app: &mut App, consumed: bool) {
-    let msg = santui_ipc::protocol::PluginMsg {
-        commands: app.render().to_vec(),
-        hints: vec![],
-        palette_commands: palette_commands(),
-        request: app.pending_request.take(),
-        plugin_message: None,
+    santui_ipc::protocol::send_plugin_msg(
+        app.render().to_vec(),
+        vec![],
+        vec![],
+        app.pending_request.take(),
+        None,
         consumed,
-    };
-    let mut out = std::io::stdout().lock();
-    let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
+    );
 }
 
 fn main() {

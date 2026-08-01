@@ -8,9 +8,8 @@ name = "santui-bookmark-launcher"
 path = "src/main.rs"
 
 [dependencies]
-santui-ipc = { path = "../../ipc", version = "0.2.35", default-features = false, features = ["clipboard"] }
+santui-ipc = { path = "../../ipc", version = "0.2.35", default-features = false, features = ["clipboard", "time"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
-chrono = { version = "0.4", features = ["clock", "serde"] }

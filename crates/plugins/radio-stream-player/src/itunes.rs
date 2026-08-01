@@ -1,6 +1,6 @@
-use santui_ipc::text::url_encode;
 use serde::Deserialize;
 
+use santui_ipc::text::url_encode;
 #[derive(Debug, Clone)]
 pub struct TrackInfo {
     pub artist: Option<String>,

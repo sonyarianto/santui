@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use santui_ipc::time::unix_now;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Note {
     pub id: u64,
@@ -42,13 +43,6 @@ impl Default for NotesState {
             scroll_offset: 0,
         }
     }
-}
-
-fn unix_now() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs()
 }
 
 impl NotesState {

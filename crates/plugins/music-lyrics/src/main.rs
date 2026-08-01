@@ -8,8 +8,8 @@ use std::sync::mpsc;
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, PluginMessage, PluginRequest, RenderCmd, ThemeData,
 };
-
 use santui_ipc::ui::max_visible_tracks;
+
 use state::{FetchState, LyricsState};
 use ui::render_ui;
 
@@ -338,21 +338,15 @@ fn hints(state: &LyricsState) -> Vec<(String, String)> {
     }
 }
 
-fn palette_commands() -> Vec<(String, String)> {
-    vec![]
-}
-
 fn respond(app: &mut App, consumed: bool) {
-    let msg = santui_ipc::protocol::PluginMsg {
-        commands: app.render().to_vec(),
-        hints: hints(&app.state),
-        palette_commands: palette_commands(),
-        request: app.pending_request.take(),
-        plugin_message: app.pending_plugin_message.take(),
+    santui_ipc::protocol::send_plugin_msg(
+        app.render().to_vec(),
+        hints(&app.state),
+        vec![],
+        app.pending_request.take(),
+        app.pending_plugin_message.take(),
         consumed,
-    };
-    let mut out = std::io::stdout().lock();
-    let _ = santui_ipc::protocol::write_plugin_msg(&mut out, &msg);
+    );
 }
 
 fn main() {
@@ -741,12 +735,6 @@ mod tests {
         let h = hints(&state);
         assert!(h.iter().any(|(k, _)| k == "\u{2191}\u{2193}"));
         assert!(h.iter().any(|(k, _)| k == "esc"));
-    }
-
-    #[test]
-    fn palette_commands_is_empty() {
-        let cmds = palette_commands();
-        assert!(cmds.is_empty());
     }
 
     #[test]

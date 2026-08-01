@@ -3149,7 +3149,6 @@ dependencies = [
 name = "santui-bookmark-launcher"
 version = "0.2.35"
 dependencies = [
- "chrono",
  "env_logger",
  "log",
  "santui-ipc",
@@ -3598,6 +3597,7 @@ version = "0.2.35"
 dependencies = [
  "arboard",
  "bincode",
+ "chrono",
  "criterion",
  "crossterm",
  "libloading",
