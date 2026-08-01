@@ -300,7 +300,7 @@ fn render_palette_footer(buf: &mut Buffer, area: Rect, theme: &Theme) {
         Line::from(""),
         Line::from(vec![
             Span::styled("↑↓", key),
-            Span::styled(" navigate • ", dim),
+            Span::styled(" navigate ", dim),
             Span::styled("↵", key),
             Span::styled(" select", dim),
         ]),
