@@ -22,7 +22,7 @@ fn card_h() -> u16 {
     7
 }
 
-fn grid_cols(area_w: u16) -> u16 {
+pub(crate) fn grid_cols(area_w: u16) -> u16 {
     ((area_w.saturating_sub(2)) / (card_w() + 1)).max(1)
 }
 

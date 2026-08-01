@@ -41,8 +41,9 @@
   {
     "id": "world-clock",
     "name": "World Clock",
-    "description": "World timezone clock with grid, detail view, search, and custom labels",
-    "capabilities": []
+    "description": "World timezone clock with grid, search, and custom labels",
+    "capabilities": [],
+    "status": "stable"
   },
   {
     "id": "unit-converter",

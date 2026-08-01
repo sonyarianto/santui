@@ -87,7 +87,7 @@ impl App {
             }
             IpcKey::Down | IpcKey::Char('j') => {
                 if !self.state.clocks.is_empty() {
-                    let cols = grid_cols();
+                    let cols = ui::grid_cols(self.area.w) as usize;
                     self.state.selected =
                         (self.state.selected + cols).min(self.state.clocks.len() - 1);
                     self.dirty = true;
@@ -96,7 +96,7 @@ impl App {
             }
             IpcKey::Up | IpcKey::Char('k') => {
                 if !self.state.clocks.is_empty() {
-                    let cols = grid_cols();
+                    let cols = ui::grid_cols(self.area.w) as usize;
                     self.state.selected = self.state.selected.saturating_sub(cols);
                     self.dirty = true;
                 }
@@ -323,10 +323,6 @@ impl App {
         }
         &self.cached_commands
     }
-}
-
-fn grid_cols() -> usize {
-    4
 }
 
 fn respond(app: &mut App, consumed: bool) {
@@ -668,7 +664,7 @@ mod tests {
 
         app.state.selected = 0;
         assert!(app.handle_key(IpcKey::Down));
-        let cols = grid_cols();
+        let cols = ui::grid_cols(app.area.w) as usize;
         assert_eq!(app.state.selected, cols.min(len - 1));
 
         app.state.selected = cols;
