@@ -457,9 +457,9 @@ mod tests {
             .iter()
             .any(|c| matches!(c, RenderCmd::Border { title: Some(t), .. } if t == "Track Details"));
         assert!(has_title);
-        let has_track = cmds
-            .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text == "Lose Yourself"));
+        let has_track = cmds.iter().any(
+            |c| matches!(c, RenderCmd::Text { ref text, .. } if text == "Title: Lose Yourself"),
+        );
         assert!(has_track);
     }
 
@@ -501,6 +501,6 @@ mod tests {
             })
             .collect();
         assert_eq!(texts.len(), 1);
-        assert_eq!(texts[0], "8 Mile Soundtrack");
+        assert_eq!(texts[0], "Album: 8 Mile Soundtrack");
     }
 }

@@ -114,6 +114,40 @@ fn currency_symbol(code: &str) -> Option<&'static str> {
     }
 }
 
+const MONTHS: [&str; 12] = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+];
+
+/// Format an ISO date (e.g. `2002-10-29T08:00:00Z`) as `October 29, 2002`.
+/// Falls back to the raw date part when unparseable.
+fn fmt_release_date(iso: &str) -> String {
+    let date = iso.split('T').next().unwrap_or(iso);
+    let parts: Vec<&str> = date.split('-').collect();
+    if parts.len() == 3 {
+        if let (Ok(y), Ok(m), Ok(d)) = (
+            parts[0].parse::<u32>(),
+            parts[1].parse::<u32>(),
+            parts[2].parse::<u32>(),
+        ) {
+            if (1..=12).contains(&m) && (1..=31).contains(&d) {
+                return format!("{} {}, {}", MONTHS[(m - 1) as usize], d, y);
+            }
+        }
+    }
+    date.to_string()
+}
+
 pub fn fmt_duration(secs: u64) -> String {
     let m = secs / 60;
     let s = secs % 60;
@@ -138,20 +172,20 @@ pub fn detail_lines(track: &ItunesTrack, elapsed: Option<u64>, inner_w: usize) -
         ));
     }
 
-    out.push(track.track_name.clone());
+    out.push(format!("Title: {}", track.track_name));
     if !track.artist_name.is_empty() {
-        out.push(track.artist_name.clone());
+        out.push(format!("Artist: {}", track.artist_name));
     }
     if !track.collection_name.is_empty() {
-        out.push(track.collection_name.clone());
+        out.push(format!("Album: {}", track.collection_name));
     }
     if !track.primary_genre_name.is_empty() {
-        out.push(track.primary_genre_name.clone());
+        out.push(format!("Genre: {}", track.primary_genre_name));
     }
     if !track.release_date.is_empty() {
         out.push(format!(
             "Released: {}",
-            track.release_date.split('T').next().unwrap_or("")
+            fmt_release_date(&track.release_date)
         ));
     }
     if track.disc_number.is_some() || track.track_number.is_some() {
@@ -163,7 +197,7 @@ pub fn detail_lines(track: &ItunesTrack, elapsed: Option<u64>, inner_w: usize) -
             .track_number
             .map(|n| format!("{n}"))
             .unwrap_or_else(|| "?".into());
-        out.push(format!("Disc {disc} · Track {num}"));
+        out.push(format!("Position: Disc {disc} · Track {num}"));
     }
     if let Some(ms) = track.track_time_millis {
         out.push(format!("Duration: {}", fmt_duration((ms / 1000) as u64)));
@@ -287,12 +321,12 @@ mod tests {
     #[test]
     fn detail_lines_include_available_fields() {
         let lines = detail_lines(&rich_track(), None, 60);
-        assert_eq!(lines[0], "Lose Yourself");
-        assert_eq!(lines[1], "Eminem");
-        assert_eq!(lines[2], "8 Mile Soundtrack");
-        assert_eq!(lines[3], "Hip-Hop/Rap");
-        assert_eq!(lines[4], "Released: 2002-10-29");
-        assert_eq!(lines[5], "Disc 1 · Track 1");
+        assert_eq!(lines[0], "Title: Lose Yourself");
+        assert_eq!(lines[1], "Artist: Eminem");
+        assert_eq!(lines[2], "Album: 8 Mile Soundtrack");
+        assert_eq!(lines[3], "Genre: Hip-Hop/Rap");
+        assert_eq!(lines[4], "Released: October 29, 2002");
+        assert_eq!(lines[5], "Position: Disc 1 · Track 1");
         assert_eq!(lines[6], "Duration: 5:26");
         assert_eq!(lines[7], "Country: USA");
         assert_eq!(lines[8], "Price: $1.29 (album: $9.99)");
@@ -303,7 +337,7 @@ mod tests {
     fn detail_lines_playing_prefix_shows_progress() {
         let lines = detail_lines(&rich_track(), Some(65), 60);
         assert_eq!(lines[0], "▶ Playing 1:05 / 5:26");
-        assert_eq!(lines[1], "Lose Yourself");
+        assert_eq!(lines[1], "Title: Lose Yourself");
     }
 
     #[test]
@@ -328,7 +362,7 @@ mod tests {
         };
         let lines = detail_lines(&t, None, 60);
         assert_eq!(lines.len(), 1);
-        assert_eq!(lines[0], "Plain");
+        assert_eq!(lines[0], "Title: Plain");
     }
 
     #[test]
@@ -367,6 +401,21 @@ mod tests {
         assert!(!state.show_details);
         assert!(!state.details_focused);
         assert_eq!(state.details_scroll, 0);
+    }
+
+    #[test]
+    fn fmt_release_date_formats_iso() {
+        assert_eq!(fmt_release_date("1999-09-27"), "September 27, 1999");
+        assert_eq!(fmt_release_date("2002-10-29T08:00:00Z"), "October 29, 2002");
+        assert_eq!(fmt_release_date("2020-01-05"), "January 5, 2020");
+        assert_eq!(fmt_release_date("2020-12-31"), "December 31, 2020");
+    }
+
+    #[test]
+    fn fmt_release_date_falls_back_on_garbage() {
+        assert_eq!(fmt_release_date("unknown"), "unknown");
+        assert_eq!(fmt_release_date("2002-13-40"), "2002-13-40");
+        assert_eq!(fmt_release_date(""), "");
     }
 
     #[test]
