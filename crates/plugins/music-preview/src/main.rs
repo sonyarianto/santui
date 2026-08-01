@@ -120,18 +120,29 @@ impl App {
             consumed
         } else {
             match key {
-                IpcKey::Char('/') => {
-                    self.stop_playback();
-                    self.init_error = None;
-                    santui_ipc::search::enter_search_mode(
-                        &mut self.state.search_mode,
-                        &mut self.state.query,
-                        &mut self.dirty,
-                    );
+                IpcKey::Tab => {
+                    if self.state.show_details {
+                        self.state.details_focused = !self.state.details_focused;
+                    }
                     true
                 }
+                IpcKey::Char('/') => {
+                    if self.state.show_details {
+                        false
+                    } else {
+                        self.stop_playback();
+                        self.init_error = None;
+                        santui_ipc::search::enter_search_mode(
+                            &mut self.state.search_mode,
+                            &mut self.state.query,
+                            &mut self.dirty,
+                        );
+                        true
+                    }
+                }
                 IpcKey::Enter | IpcKey::Char('p') => {
-                    if matches!(self.state.fetch_state, FetchState::Done)
+                    if !self.state.show_details
+                        && matches!(self.state.fetch_state, FetchState::Done)
                         && !self.state.results.is_empty()
                     {
                         self.play_selected();
@@ -140,62 +151,120 @@ impl App {
                     true
                 }
                 IpcKey::Up => {
-                    self.state.selected = self.state.selected.saturating_sub(1);
-                    santui_ipc::ui::scroll_up(&mut self.state.scroll, self.state.selected);
+                    if self.state.show_details {
+                        if self.state.details_focused {
+                            self.state.details_scroll_up();
+                        }
+                    } else {
+                        self.state.selected = self.state.selected.saturating_sub(1);
+                        santui_ipc::ui::scroll_up(&mut self.state.scroll, self.state.selected);
+                    }
                     self.dirty = true;
                     true
                 }
                 IpcKey::Down => {
-                    let max = self.state.results.len().saturating_sub(1);
-                    self.state.selected = self.state.selected.min(max).saturating_add(1).min(max);
-                    santui_ipc::ui::scroll_down(
-                        &mut self.state.scroll,
-                        self.state.selected,
-                        self.area.h,
-                    );
+                    if self.state.show_details {
+                        if self.state.details_focused {
+                            let panel_h = self.details_panel_height();
+                            let inner_w = self.details_panel_inner_w();
+                            self.state.details_scroll_down(panel_h, inner_w);
+                        }
+                    } else {
+                        let max = self.state.results.len().saturating_sub(1);
+                        self.state.selected =
+                            self.state.selected.min(max).saturating_add(1).min(max);
+                        santui_ipc::ui::scroll_down(
+                            &mut self.state.scroll,
+                            self.state.selected,
+                            self.area.h,
+                        );
+                    }
                     self.dirty = true;
                     true
                 }
                 IpcKey::PageUp => {
-                    let page_size = max_visible_tracks(self.area.h).max(1);
-                    self.state.selected = self.state.selected.saturating_sub(page_size);
-                    santui_ipc::ui::scroll_up(&mut self.state.scroll, self.state.selected);
+                    if self.state.show_details {
+                        if self.state.details_focused {
+                            let panel_h = self.details_panel_height();
+                            self.state.details_page_up(panel_h.max(1));
+                        }
+                    } else {
+                        let page_size = max_visible_tracks(self.area.h).max(1);
+                        self.state.selected = self.state.selected.saturating_sub(page_size);
+                        santui_ipc::ui::scroll_up(&mut self.state.scroll, self.state.selected);
+                    }
                     self.dirty = true;
                     true
                 }
                 IpcKey::PageDown => {
-                    let page_size = max_visible_tracks(self.area.h).max(1);
-                    let max = self.state.results.len().saturating_sub(1);
-                    self.state.selected = self.state.selected.saturating_add(page_size).min(max);
-                    santui_ipc::ui::scroll_down(
-                        &mut self.state.scroll,
-                        self.state.selected,
-                        self.area.h,
-                    );
+                    if self.state.show_details {
+                        if self.state.details_focused {
+                            let panel_h = self.details_panel_height();
+                            let inner_w = self.details_panel_inner_w();
+                            self.state.details_page_down(panel_h.max(1), inner_w);
+                        }
+                    } else {
+                        let page_size = max_visible_tracks(self.area.h).max(1);
+                        let max = self.state.results.len().saturating_sub(1);
+                        self.state.selected =
+                            self.state.selected.saturating_add(page_size).min(max);
+                        santui_ipc::ui::scroll_down(
+                            &mut self.state.scroll,
+                            self.state.selected,
+                            self.area.h,
+                        );
+                    }
                     self.dirty = true;
                     true
                 }
+                IpcKey::Char('d') => {
+                    if !self.state.results.is_empty() {
+                        self.state.toggle_details();
+                        self.dirty = true;
+                    }
+                    true
+                }
                 IpcKey::Char('c') => {
+                    if self.state.show_details {
+                        return false;
+                    }
                     if !self.state.results.is_empty() {
                         self.state.results.clear();
                         self.state.fetch_state = FetchState::Idle;
                         self.state.query.clear();
                         self.state.selected = 0;
                         self.state.scroll = 0;
+                        self.state.close_details();
                         self.dirty = true;
                     }
                     true
                 }
                 IpcKey::Char('s') => {
+                    if self.state.show_details {
+                        return false;
+                    }
                     if self.state.now_playing.is_some() {
                         self.stop_playback();
                     }
+                    true
+                }
+                IpcKey::Esc if self.state.show_details => {
+                    self.state.close_details();
+                    self.dirty = true;
                     true
                 }
                 IpcKey::Esc => false,
                 _ => false,
             }
         }
+    }
+
+    fn details_panel_height(&self) -> usize {
+        self.area.h.saturating_sub(2).max(1) as usize
+    }
+
+    fn details_panel_inner_w(&self) -> u16 {
+        (self.area.w * 2 / 5).max(20).saturating_sub(4)
     }
 
     fn ensure_mpv(&mut self) {
@@ -485,20 +554,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::api::ItunesTrack;
-
-    fn make_track(id: u64, name: &str, url: &str) -> ItunesTrack {
-        ItunesTrack {
-            track_id: id,
-            track_name: name.into(),
-            artist_name: "Artist".into(),
-            collection_name: "Album".into(),
-            artwork_url_100: String::new(),
-            preview_url: url.into(),
-            track_time_millis: Some(180000),
-            primary_genre_name: "Rock".into(),
-        }
-    }
+    use crate::state::make_track;
 
     #[test]
     fn handle_key_char_outside_search_ignored() {
@@ -607,7 +663,7 @@ mod tests {
         app.state.results = vec![make_track(1, "A", "http://preview/1")];
         app.state.fetch_state = FetchState::Done;
         app.handle_key(IpcKey::Enter);
-        assert_eq!(app.dirty, true);
+        assert!(app.dirty);
     }
 
     #[test]
@@ -724,5 +780,84 @@ mod tests {
             app.handle_key(IpcKey::Down);
         }
         assert!(app.state.scroll > 0);
+    }
+
+    fn app_with_results() -> App {
+        let mut app = App::default();
+        app.state.results = vec![
+            make_track(1, "Track A", "http://a"),
+            make_track(2, "Track B", "http://b"),
+        ];
+        app.state.fetch_state = FetchState::Done;
+        app
+    }
+
+    #[test]
+    fn handle_key_d_toggles_details() {
+        let mut app = app_with_results();
+        assert!(!app.state.show_details);
+        assert!(app.handle_key(IpcKey::Char('d')));
+        assert!(app.state.show_details);
+        assert!(app.state.details_focused);
+        assert!(app.handle_key(IpcKey::Char('d')));
+        assert!(!app.state.show_details);
+        assert!(!app.state.details_focused);
+    }
+
+    #[test]
+    fn handle_key_d_ignored_without_results() {
+        let mut app = App::default();
+        assert!(app.handle_key(IpcKey::Char('d')));
+        assert!(!app.state.show_details);
+    }
+
+    #[test]
+    fn handle_key_esc_closes_details() {
+        let mut app = app_with_results();
+        app.state.show_details = true;
+        assert!(app.handle_key(IpcKey::Esc));
+        assert!(!app.state.show_details);
+    }
+
+    #[test]
+    fn handle_key_tab_switches_details_focus() {
+        let mut app = app_with_results();
+        app.state.show_details = true;
+        assert!(app.handle_key(IpcKey::Tab));
+        assert!(app.state.details_focused);
+        assert!(app.handle_key(IpcKey::Tab));
+        assert!(!app.state.details_focused);
+    }
+
+    #[test]
+    fn handle_key_navigation_respects_details_focus() {
+        let mut app = app_with_results();
+        app.area.h = 5;
+        app.state.show_details = true;
+        app.state.details_focused = true;
+        let selected_before = app.state.selected;
+        app.handle_key(IpcKey::Down);
+        assert_eq!(app.state.selected, selected_before);
+        assert!(app.state.details_scroll > 0);
+
+        app.handle_key(IpcKey::Tab);
+        app.handle_key(IpcKey::Down);
+        assert_eq!(app.state.selected, selected_before);
+        assert_eq!(app.state.details_scroll, 1);
+
+        app.handle_key(IpcKey::Esc);
+        app.handle_key(IpcKey::Down);
+        assert_eq!(app.state.selected, selected_before + 1);
+    }
+
+    #[test]
+    fn handle_key_play_blocked_when_details_open() {
+        let mut app = app_with_results();
+        app.state.show_details = true;
+        app.handle_key(IpcKey::Enter);
+        assert!(app.state.now_playing.is_none());
+        app.state.show_details = false;
+        app.handle_key(IpcKey::Enter);
+        assert_eq!(app.state.now_playing, Some(0));
     }
 }
