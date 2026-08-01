@@ -467,19 +467,22 @@ pub fn render_ui(
     draw_panel(
         &mut cmds, theme, 0, np_y, left_w, info_h, NP_TITLE, false, None, false,
     );
-    // Volume on the top border line (trailing title dash serves as separator)
+    // Volume right-aligned on the last content row (space is reserved in
+    // r_inner_w so left-aligned text never overlaps it)
     let vol_text = format!(" Vol: {}% ", state.volume);
+    let vol_w = vol_text.chars().count() as u16;
+    let r_inner_w = left_w.saturating_sub(3 + vol_w);
+    let vol_x = left_w.saturating_sub(1 + vol_w);
+    let vol_y = np_y + info_h - 2; // last content row, above bottom border
     cmds.push(RenderCmd::Text {
-        x: 5u16.saturating_add(NP_TITLE.len() as u16),
-        y: np_y,
+        x: vol_x,
+        y: vol_y,
         text: vol_text,
-        fg: Some(theme.border),
+        fg: Some(theme.text_muted),
         bg: None,
         bold: false,
         modifiers: 0,
     });
-
-    let r_inner_w = left_w.saturating_sub(4);
 
     match &state.play_state {
         PlayState::Stopped => {
