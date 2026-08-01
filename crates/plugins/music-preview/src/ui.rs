@@ -1,7 +1,7 @@
 use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData, BORDER_ALL};
 use santui_ipc::ui;
 
-use crate::state::{FetchState, MusicState};
+use crate::state::{detail_lines, FetchState, MusicState};
 
 pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<RenderCmd> {
     let mut cmds = vec![RenderCmd::Clear {
@@ -150,6 +150,63 @@ pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
         }
     }
 
+    // ---- Track Details side panel (snapped right, dim behind) ----
+    if state.show_details {
+        if let Some(track) = state.selected_track() {
+            let popup_w = (w * 2 / 5).max(20);
+            let popup_x = w.saturating_sub(popup_w);
+            let popup_h = h;
+            if popup_x >= 4 && h >= 10 {
+                ui::popup_backdrop(&mut cmds, theme, popup_x, 0, popup_w, popup_h);
+
+                ui::draw_panel(
+                    &mut cmds,
+                    theme,
+                    popup_x,
+                    0,
+                    popup_w,
+                    popup_h,
+                    "Track Details",
+                    ui::PanelOpts {
+                        focused: state.details_focused,
+                        footer: Some(&[("↑↓", "scroll"), ("d", "hide details")]),
+                        dim_unfocused: true,
+                    },
+                );
+
+                let inner_w = popup_w.saturating_sub(4) as usize;
+                let elapsed = if state.now_playing == Some(state.selected) {
+                    state.track_elapsed
+                } else {
+                    None
+                };
+                let lines = detail_lines(track, elapsed, inner_w);
+                let panel_h = popup_h.saturating_sub(4) as usize;
+                let start = state.details_scroll.min(lines.len().saturating_sub(1));
+                for (y, (i, line)) in
+                    (1u16..).zip(lines.iter().enumerate().skip(start).take(panel_h))
+                {
+                    let playing = i == 0 && state.now_playing == Some(state.selected);
+                    cmds.push(RenderCmd::Text {
+                        x: popup_x + 2,
+                        y,
+                        text: line.clone(),
+                        fg: Some(if playing {
+                            theme.accent
+                        } else if i == 0 {
+                            theme.text
+                        } else {
+                            theme.text_muted
+                        }),
+                        bg: None,
+                        bold: playing || i == 0,
+                        modifiers: 0,
+                    });
+                }
+            }
+        }
+    }
+
     cmds
 }
 
@@ -256,20 +313,7 @@ fn format_duration(millis: u32) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::api::ItunesTrack;
-
-    fn make_track(id: u64, name: &str) -> ItunesTrack {
-        ItunesTrack {
-            track_id: id,
-            track_name: name.into(),
-            artist_name: "Artist".into(),
-            collection_name: "Album".into(),
-            artwork_url_100: String::new(),
-            preview_url: String::new(),
-            track_time_millis: Some(180000),
-            primary_genre_name: "Rock".into(),
-        }
-    }
+    use crate::state::make_track;
 
     #[test]
     fn renders_search_bar_in_search_mode() {
@@ -328,7 +372,10 @@ mod tests {
     fn renders_results_table() {
         let state = MusicState {
             query: "eminem".into(),
-            results: vec![make_track(1, "Lose Yourself"), make_track(2, "Stan")],
+            results: vec![
+                make_track(1, "Lose Yourself", ""),
+                make_track(2, "Stan", ""),
+            ],
             selected: 0,
             scroll: 0,
             fetch_state: FetchState::Done,
@@ -347,7 +394,7 @@ mod tests {
     fn shows_countdown_on_now_playing_row() {
         let state = MusicState {
             query: "test".into(),
-            results: vec![make_track(1, "Track A"), make_track(2, "Track B")],
+            results: vec![make_track(1, "Track A", ""), make_track(2, "Track B", "")],
             selected: 0,
             scroll: 0,
             now_playing: Some(0),
@@ -395,5 +442,65 @@ mod tests {
         assert_eq!(format_duration(125000), "2:05");
         assert_eq!(format_duration(0), "0:00");
         assert_eq!(format_duration(3599000), "59:59");
+    }
+
+    #[test]
+    fn details_panel_renders_when_open() {
+        let state = MusicState {
+            results: vec![make_track(1, "Lose Yourself", "http://x")],
+            fetch_state: FetchState::Done,
+            show_details: true,
+            ..MusicState::default()
+        };
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
+        let has_title = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Border { title: Some(t), .. } if t == "Track Details"));
+        assert!(has_title);
+        let has_track = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text == "Lose Yourself"));
+        assert!(has_track);
+    }
+
+    #[test]
+    fn details_panel_not_rendered_when_closed() {
+        let state = MusicState {
+            results: vec![make_track(1, "Lose Yourself", "http://x")],
+            fetch_state: FetchState::Done,
+            ..MusicState::default()
+        };
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
+        let has_title = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Border { title: Some(t), .. } if t == "Track Details"));
+        assert!(!has_title);
+    }
+
+    #[test]
+    fn details_panel_respects_scroll() {
+        let mut track = make_track(1, "Lose Yourself", "http://x");
+        track.artist_name = "Eminem".into();
+        track.collection_name = "8 Mile Soundtrack".into();
+        track.primary_genre_name = "Hip-Hop/Rap".into();
+        let state = MusicState {
+            results: vec![track],
+            fetch_state: FetchState::Done,
+            show_details: true,
+            details_scroll: 2,
+            ..MusicState::default()
+        };
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
+        let texts: Vec<&String> = cmds
+            .iter()
+            .filter_map(|c| match c {
+                RenderCmd::Text {
+                    x: 50, y: 1, text, ..
+                } => Some(text),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(texts.len(), 1);
+        assert_eq!(texts[0], "8 Mile Soundtrack");
     }
 }

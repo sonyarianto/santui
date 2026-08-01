@@ -26,6 +26,22 @@ pub struct ItunesTrack {
     pub track_time_millis: Option<u32>,
     #[serde(rename = "primaryGenreName")]
     pub primary_genre_name: String,
+    #[serde(rename = "releaseDate", default)]
+    pub release_date: String,
+    #[serde(rename = "trackNumber", default)]
+    pub track_number: Option<u32>,
+    #[serde(rename = "discNumber", default)]
+    pub disc_number: Option<u32>,
+    #[serde(rename = "country", default)]
+    pub country: String,
+    #[serde(rename = "currency", default)]
+    pub currency: String,
+    #[serde(rename = "trackPrice", default)]
+    pub track_price: Option<f64>,
+    #[serde(rename = "collectionPrice", default)]
+    pub collection_price: Option<f64>,
+    #[serde(rename = "trackExplicitness", default)]
+    pub track_explicitness: String,
 }
 
 pub fn search(query: &str) -> Result<Vec<ItunesTrack>, String> {
@@ -65,8 +81,14 @@ mod tests {
                     "previewUrl": "https://example.com/preview1.m4a",
                     "trackTimeMillis": 312000,
                     "primaryGenreName": "Hip-Hop/Rap",
+                    "releaseDate": "2002-10-29T08:00:00Z",
                     "trackNumber": 1,
-                    "discNumber": 1
+                    "discNumber": 1,
+                    "country": "USA",
+                    "currency": "USD",
+                    "trackPrice": 1.29,
+                    "collectionPrice": 9.99,
+                    "trackExplicitness": "notExplicit"
                 },
                 {
                     "wrapperType": "track",
@@ -97,11 +119,22 @@ mod tests {
         assert_eq!(t1.preview_url, "https://example.com/preview1.m4a");
         assert_eq!(t1.track_time_millis, Some(312000));
         assert_eq!(t1.primary_genre_name, "Hip-Hop/Rap");
+        assert_eq!(t1.release_date, "2002-10-29T08:00:00Z");
+        assert_eq!(t1.track_number, Some(1));
+        assert_eq!(t1.disc_number, Some(1));
+        assert_eq!(t1.country, "USA");
+        assert_eq!(t1.currency, "USD");
+        assert_eq!(t1.track_price, Some(1.29));
+        assert_eq!(t1.collection_price, Some(9.99));
+        assert_eq!(t1.track_explicitness, "notExplicit");
 
         let t2 = &response.results[1];
         assert_eq!(t2.track_id, 67890);
         assert_eq!(t2.track_name, "One More Time");
         assert_eq!(t2.track_time_millis, None);
+        assert_eq!(t2.track_number, Some(2));
+        assert_eq!(t2.release_date, "");
+        assert_eq!(t2.track_price, None);
     }
 
     #[test]
