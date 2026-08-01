@@ -194,14 +194,14 @@ pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
                         cmds.push(RenderCmd::Text {
                             x: base_x,
                             y,
-                            text: format!("{label} "),
+                            text: format!("{label}: "),
                             fg: Some(theme.text_muted),
                             bg: None,
                             bold: playing,
                             modifiers: 0,
                         });
                         cmds.push(RenderCmd::Text {
-                            x: base_x + label.len() as u16 + 1,
+                            x: base_x + label.len() as u16 + 2,
                             y,
                             text: value.to_string(),
                             fg: Some(if playing { theme.accent } else { theme.text }),
@@ -557,12 +557,12 @@ mod tests {
                 _ => None,
             })
             .collect();
-        assert_eq!(texts, vec!["Album "]);
+        assert_eq!(texts, vec!["Album: "]);
         let values: Vec<&String> = cmds
             .iter()
             .filter_map(|c| match c {
                 RenderCmd::Text {
-                    x: 56, y: 1, text, ..
+                    x: 57, y: 1, text, ..
                 } => Some(text),
                 _ => None,
             })
