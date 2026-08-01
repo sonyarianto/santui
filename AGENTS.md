@@ -3,15 +3,15 @@
 ## Build & Test
 
 ```bash
-cargo build              # build all workspace crates (SLOW + heavy on disk — compiles all 110+ plugin binaries)
+cargo build              # build all workspace crates (SLOW + heavy on disk — compiles every plugin binary)
 cargo check              # fast compile check
 cargo clippy --workspace -- -D warnings  # lint
 cargo fmt --check        # formatting check
 cargo fmt                # auto-format
-cargo test --workspace   # run tests (SLOW — compiles all 110+ plugin binaries)
+cargo test --workspace   # run tests (SLOW — compiles every plugin binary)
 cargo test -p santui-core -p santui-ipc -p santui-registry -p santui-db -p santui-server -p santui-auth  # fast — only crates with tests
 
-When running tests, prefer the short list above over `--workspace` to avoid recompiling all 110+ plugin binaries. Same applies to `cargo build` — prefer `cargo build -p santui` (or add specific -p flags) to save disk space.
+When running tests, prefer the short list above over `--workspace` to avoid recompiling every plugin binary. Same applies to `cargo build` — prefer `cargo build -p santui` (or add specific -p flags) to save disk space.
 ```
 
 lefthook pre-commit runs `cargo fmt --check` + `cargo clippy` automatically. Install hooks: `lefthook install`.
@@ -41,11 +41,11 @@ crates/
 ├── db/            — central SQLite database for per-user plugin data
 ├── registry/      — plugin registry: manifest fetch, install, config
 ├── server/        — optional self-hosted sync server (axum + SQLite + JWT)
-├── plugins/           — 110+ first-party plugins (see plugins-manifest.json for full list)
+├── plugins/           — first-party plugins (see plugins-manifest.json for full list)
 │   ├── radio-stream-player/   — radio plugin
 │   │   └── scraper/           — scrape radio stations into DB (--db-path, --prune, --help)
 │   ├── registry/             — plugin registry UI plugin
-│   └── ... (108 more plugin directories)
+│   └── ... (more plugin directories)
 ├── app/           — binary entry point (main.rs)
 └── website/       — VitePress docs site
 ```
