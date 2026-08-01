@@ -483,7 +483,7 @@ impl App {
                     false
                 }
             }
-            IpcKey::Enter => {
+            IpcKey::Enter | IpcKey::Char('p') => {
                 if !self.state.show_lyrics {
                     self.play_selected_station();
                 }
