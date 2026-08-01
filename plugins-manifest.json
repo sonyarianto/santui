@@ -155,8 +155,8 @@
     "status": "stable"
   },
   {
-    "id": "pomodoro-timer",
-    "name": "Pomodoro Timer",
+    "id": "pomodoro",
+    "name": "Pomodoro",
     "description": "Focus timer with work and break sessions",
     "capabilities": []
   },

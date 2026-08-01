@@ -16,7 +16,7 @@ members = [
     "crates/plugins/quick-notes",
     "crates/plugins/clipboard-history",
     "crates/plugins/hacker-news-reader",
-    "crates/plugins/pomodoro-timer",
+    "crates/plugins/pomodoro",
     "crates/plugins/music-preview",
     "crates/plugins/music-lyrics",
     "crates/plugins/http-client",

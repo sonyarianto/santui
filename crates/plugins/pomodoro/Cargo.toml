@@ -1,10 +1,10 @@
 [package]
-name = "santui-pomodoro-timer"
+name = "santui-pomodoro"
 version = "0.2.37"
 edition = "2021"
 
 [[bin]]
-name = "santui-pomodoro-timer"
+name = "santui-pomodoro"
 path = "src/main.rs"
 
 [dependencies]
