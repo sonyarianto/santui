@@ -3958,6 +3958,7 @@ dependencies = [
  "santui-ipc",
  "serde",
  "serde_json",
+ "unicode-width 0.1.14",
  "ureq",
 ]
 
