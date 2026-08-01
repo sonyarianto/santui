@@ -1,3 +1,62 @@
+## [unreleased]
+
+### ⚙️ Miscellaneous
+
+- Update changelog for v0.2.36
+- Stop publishing to crates.io, guard crates with publish = false
+- Relicense project from MIT to AGPL-3.0
+- Mark as stable plugin
+
+### 🎨 Refactor
+
+- Replace dot marker with semantic border selection
+- Make draw_panel flexible for any panel style
+- Use shared IPC ui helpers for content text
+
+### 🐛 Bug Fixes
+
+- Keep ellipsis on truncated table cells
+- Account for ratatui column spacing in all plugins
+- Blink rename cursor at the same rate as search
+- Label Ctrl+R hint clearly and after save hint
+- Drop redundant esc hint in rename popup
+- Lowercase ctrl+r in rename hint
+- Drop bullet separator from palette and theme picker footers
+- Restore bullet separator in palette and theme picker footers
+- Color plugin actions footer keys like the command palette
+- Draw grid under rename popup so backdrop stays dimmed
+- Clear frame each render so dialog backdrop stays dimmed
+- Lowercase pgup/pgdn in add timezone footer hint
+- Use month-first date format in clock cards
+- Spell out DST badge on clock cards
+- Dim DST badge to text_muted
+- Drop unused palette_footer import in ui tests
+- Dim action dialog field keys, brighten values without padding
+- Single space around version arrow in action dialog
+- Restore colon on track details keys
+
+### 📚 Documentation
+
+- Remove stale roadmap content and fix drifted plugin/dev docs
+- Replace static screenshot with video demo on README and website
+- Update DST badge reference
+- Mandate verifying claims against code before asserting
+- Drop hardcoded plugin counts from AGENTS.md
+- Remove hardcoded plugin count, align template manifest metadata
+- Point manifest docs at plugins-manifest.json source of truth
+- Fix plugins.json guidance, document key-value row convention
+
+### 🚀 Features
+
+- Wrap clock grid in full-window panel with title
+- Redesign rename popup to match palette style
+- Restore default label with shift+R in rename popup
+- Use Ctrl+R to restore default label
+- Standardize palette footer rendering
+- Toggle card date format with t key
+- Toggle 12/24 hour clock with f key
+
+Full Changelog: [v0.2.36...](https://github.com/sonyarianto/santui/compare/v0.2.36...)
 ## [0.2.36] - 2026-08-01
 
 ### ◀️ Revert
