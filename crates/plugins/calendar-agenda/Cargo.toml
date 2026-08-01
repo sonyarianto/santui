@@ -14,4 +14,3 @@ serde_json = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
 chrono = { version = "0.4", features = ["clock", "serde"] }
-arboard = "3"

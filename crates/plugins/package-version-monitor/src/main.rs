@@ -3,6 +3,7 @@ use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
 use chrono::Local;
+use santui_ipc::clipboard::copy_to_clipboard;
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, PluginRequest, RenderCmd, TextStyle, ThemeData, BORDER_ALL,
 };
@@ -643,12 +644,6 @@ fn normalized_exact_version(req: &str) -> Option<String> {
     } else {
         None
     }
-}
-fn copy_to_clipboard(text: &str) -> Result<(), String> {
-    let mut clipboard = arboard::Clipboard::new().map_err(|e| e.to_string())?;
-    clipboard
-        .set_text(text.to_owned())
-        .map_err(|e| e.to_string())
 }
 
 fn render_ui(app: &App) -> Vec<RenderCmd> {

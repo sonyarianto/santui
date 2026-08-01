@@ -8,10 +8,9 @@ name = "santui-regex-tester"
 path = "src/main.rs"
 
 [dependencies]
-santui-ipc = { path = "../../ipc", version = "0.2.35", default-features = false }
+santui-ipc = { path = "../../ipc", version = "0.2.35", default-features = false, features = ["clipboard"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
 regex = "1"
-arboard = "3"

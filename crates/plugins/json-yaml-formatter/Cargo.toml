@@ -8,9 +8,8 @@ name = "santui-json-yaml-formatter"
 path = "src/main.rs"
 
 [dependencies]
-santui-ipc = { path = "../../ipc", version = "0.2.35", default-features = false }
+santui-ipc = { path = "../../ipc", version = "0.2.35", default-features = false, features = ["clipboard"] }
 serde_json = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
 serde_yaml = "0.9"
-arboard = "3"

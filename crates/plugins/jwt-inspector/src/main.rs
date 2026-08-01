@@ -2,6 +2,7 @@ use std::io::{BufRead, BufReader};
 
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine as _;
+use santui_ipc::clipboard::copy_to_clipboard;
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData, BORDER_ALL,
 };
@@ -249,13 +250,6 @@ fn hints() -> Vec<(String, String)> {
         ("↑↓".into(), "history".into()),
         ("esc".into(), "back".into()),
     ]
-}
-
-fn copy_to_clipboard(text: &str) -> Result<(), String> {
-    let mut clipboard = arboard::Clipboard::new().map_err(|e| e.to_string())?;
-    clipboard
-        .set_text(text.to_owned())
-        .map_err(|e| e.to_string())
 }
 
 fn default_theme() -> ThemeData {

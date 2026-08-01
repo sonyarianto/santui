@@ -8,9 +8,8 @@ name = "santui-markdown-previewer"
 path = "src/main.rs"
 
 [dependencies]
-santui-ipc = { path = "../../ipc", version = "0.2.35", default-features = false }
+santui-ipc = { path = "../../ipc", version = "0.2.35", default-features = false, features = ["clipboard"] }
 serde_json = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
 pulldown-cmark = "0.13"
-arboard = "3"

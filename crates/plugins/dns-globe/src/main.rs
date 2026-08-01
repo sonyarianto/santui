@@ -1,3 +1,4 @@
+use santui_ipc::clipboard::copy_to_clipboard;
 use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
 use serde_json::{json, Value};
 use std::io::{BufRead, BufReader};
@@ -275,13 +276,6 @@ fn key_hints() -> Vec<(String, String)> {
         ("t".into(), "toggle type".into()),
         ("c".into(), "copy results".into()),
     ]
-}
-
-fn copy_to_clipboard(text: &str) -> Result<(), String> {
-    let mut clipboard = arboard::Clipboard::new().map_err(|e| e.to_string())?;
-    clipboard
-        .set_text(text.to_owned())
-        .map_err(|e| e.to_string())
 }
 
 fn respond(app: &mut App, consumed: bool) {

@@ -1,5 +1,6 @@
 use std::io::{BufRead, BufReader};
 
+use santui_ipc::clipboard::copy_to_clipboard;
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, TextStyle, ThemeData, BORDER_ALL,
 };
@@ -315,13 +316,6 @@ fn hints() -> Vec<(String, String)> {
         ("up/down".into(), "history".into()),
         ("esc".into(), "back".into()),
     ]
-}
-
-fn copy_to_clipboard(text: &str) -> Result<(), String> {
-    let mut clipboard = arboard::Clipboard::new().map_err(|e| e.to_string())?;
-    clipboard
-        .set_text(text.to_owned())
-        .map_err(|e| e.to_string())
 }
 
 fn default_theme() -> ThemeData {

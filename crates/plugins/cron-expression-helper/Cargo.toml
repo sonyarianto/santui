@@ -8,10 +8,9 @@ name = "santui-cron-expression-helper"
 path = "src/main.rs"
 
 [dependencies]
-santui-ipc = { path = "../../ipc", version = "0.2.35", default-features = false }
+santui-ipc = { path = "../../ipc", version = "0.2.35", default-features = false, features = ["clipboard"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
 chrono = { version = "0.4", features = ["clock", "serde"] }
-arboard = "3"

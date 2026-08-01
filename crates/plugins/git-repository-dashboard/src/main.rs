@@ -3,6 +3,7 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
+use santui_ipc::clipboard::copy_to_clipboard;
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, PluginRequest, RenderCmd, TextStyle, ThemeData, BORDER_ALL,
 };
@@ -480,13 +481,6 @@ fn parse_change_line(line: &str, status: &mut RepositoryStatus) {
     if y != '.' && y != ' ' {
         status.unstaged += 1;
     }
-}
-
-fn copy_to_clipboard(text: &str) -> Result<(), String> {
-    let mut clipboard = arboard::Clipboard::new().map_err(|e| e.to_string())?;
-    clipboard
-        .set_text(text.to_owned())
-        .map_err(|e| e.to_string())
 }
 
 fn open_path(path: &str) -> Result<(), String> {

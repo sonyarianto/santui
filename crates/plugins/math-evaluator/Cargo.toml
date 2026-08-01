@@ -8,9 +8,8 @@ name = "santui-math-evaluator"
 path = "src/main.rs"
 
 [dependencies]
-santui-ipc = { path = "../../ipc", version = "0.2.35", default-features = false }
+santui-ipc = { path = "../../ipc", version = "0.2.35", default-features = false, features = ["clipboard"] }
 serde_json = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
-arboard = "3"
 fasteval = "0.2"

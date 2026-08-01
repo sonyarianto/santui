@@ -1,6 +1,9 @@
 pub mod protocol;
 pub mod ui;
 
+#[cfg(feature = "clipboard")]
+pub mod clipboard;
+
 #[cfg(feature = "host")]
 pub mod host;
 #[cfg(feature = "host")]
