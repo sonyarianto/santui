@@ -350,7 +350,7 @@ impl App {
         };
 
         let ver_value = if installed_idx != usize::MAX && installed_ver != plugin.version {
-            format!("{installed_ver}  →  {new}", new = plugin.version)
+            format!("{installed_ver} → {new}", new = plugin.version)
         } else {
             plugin.version.clone()
         };
