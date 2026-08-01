@@ -198,14 +198,13 @@ fn render_search(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> V
     }
 
     let hint_y = r.y + title_h + item_count as u16 + 1;
-    ui::text_at(
+    ui::hints_row(
         &mut cmds,
+        theme,
         r.ix,
         hint_y,
-        "↑↓ pgup pgdn  ↵ add",
-        theme.text_muted,
-        Some(theme.background_panel),
-        r.iw,
+        &[("↑↓", "navigate"), ("PgUp/Dn", "jump"), ("↵", "add")],
+        r.iw as usize,
     );
 
     cmds
@@ -243,14 +242,13 @@ fn render_rename(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> V
     });
 
     let hint_y = r.y + TITLE_H;
-    ui::text_at(
+    ui::hints_row(
         &mut cmds,
+        theme,
         r.ix,
         hint_y,
-        "↵ save  ctrl+r default",
-        theme.text_muted,
-        Some(theme.background_panel),
-        r.iw,
+        &[("↵", "save"), ("ctrl+r", "default")],
+        r.iw as usize,
     );
 
     cmds

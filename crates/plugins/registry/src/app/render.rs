@@ -405,44 +405,7 @@ impl App {
             ui::palette_item(cmds, t, &pr, action_base + i as u16, &label, focused);
         }
 
-        let footer_y = pr.y + action_base + actions.len() as u16;
-        let dim_fg = Some(t.text_muted);
-        cmds.push(RenderCmd::Text {
-            x: ix,
-            y: footer_y,
-            text: "".into(),
-            fg: dim_fg,
-            bg,
-            bold: false,
-            modifiers: 0,
-        });
-        let key_fg = Some(t.text);
-        let footer_parts: [(&str, u16, Option<[u8; 3]>); 4] = [
-            ("↑↓", ix, key_fg),
-            (" navigate • ", ix + 2, dim_fg),
-            ("↵", ix + 14, key_fg),
-            (" select", ix + 15, dim_fg),
-        ];
-        for (text, x, fg) in footer_parts {
-            cmds.push(RenderCmd::Text {
-                x,
-                y: footer_y + 1,
-                text: text.into(),
-                fg,
-                bg,
-                bold: false,
-                modifiers: 0,
-            });
-        }
-        cmds.push(RenderCmd::Text {
-            x: ix,
-            y: footer_y + 2,
-            text: "".into(),
-            fg: dim_fg,
-            bg,
-            bold: false,
-            modifiers: 0,
-        });
+        ui::palette_footer(cmds, t, &pr, &[("↑↓", "navigate"), ("↵", "select")]);
     }
 }
 

@@ -200,7 +200,7 @@ impl ThemeManager {
             width: inner_w,
             height: footer_h,
         };
-        render_picker_footer(f.buffer_mut(), footer_area, theme);
+        super::palette_controller::render_palette_footer(f.buffer_mut(), footer_area, theme);
     }
 }
 
@@ -256,20 +256,4 @@ fn render_picker_header(buf: &mut Buffer, area: Rect, query: &str, tick: u64, th
     ];
 
     Paragraph::new(header_lines).render(area, buf);
-}
-
-fn render_picker_footer(buf: &mut Buffer, area: Rect, theme: &Theme) {
-    let dim = Style::default().fg(theme.text_muted);
-    let key = Style::default().fg(theme.text);
-    let footer = vec![
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("↑↓", key),
-            Span::styled(" navigate • ", dim),
-            Span::styled("↵", key),
-            Span::styled(" select", dim),
-        ]),
-        Line::from(""),
-    ];
-    Paragraph::new(footer).render(area, buf);
 }

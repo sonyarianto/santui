@@ -186,73 +186,95 @@ pub fn draw_panel(
 
     if let Some(hints) = opts.footer {
         let max_chars = w.saturating_sub(3) as usize;
-        let mut cx = x + 2;
-        let footer_y = y + h - 2;
-        let mut remaining = max_chars;
-        for (i, (key, desc)) in hints.iter().enumerate() {
-            if remaining == 0 {
-                break;
-            }
-            if i > 0 {
-                const SEP: &str = " \u{2022} ";
-                let sep_w = SEP.chars().count();
-                if sep_w <= remaining {
-                    cmds.push(RenderCmd::Text {
-                        x: cx,
-                        y: footer_y,
-                        text: SEP.into(),
-                        fg: Some(theme.text_muted),
-                        bg: None,
-                        bold: false,
-                        modifiers: 0,
-                    });
-                    cx += sep_w as u16;
-                    remaining -= sep_w;
-                }
-            }
-            if remaining == 0 {
-                break;
-            }
-            let k: String = key.chars().take(remaining).collect();
-            if !k.is_empty() {
-                let kw = k.chars().count();
+        hints_row(cmds, theme, x + 2, y + h - 2, hints, max_chars);
+    }
+}
+
+/// Draw one row of `key`/`desc` hint pairs using the standard palette
+/// footer style: keys in `theme.text`, descriptions and ` • ` separators
+/// in `theme.text_muted`. Content is truncated to `max_chars`.
+pub fn hints_row(
+    cmds: &mut Vec<RenderCmd>,
+    theme: &ThemeData,
+    x: u16,
+    y: u16,
+    hints: &[(&str, &str)],
+    max_chars: usize,
+) {
+    let mut cx = x;
+    let mut remaining = max_chars;
+    for (i, (key, desc)) in hints.iter().enumerate() {
+        if remaining == 0 {
+            break;
+        }
+        let k: String = key.chars().take(remaining).collect();
+        if !k.is_empty() {
+            let kw = k.chars().count();
+            cmds.push(RenderCmd::Text {
+                x: cx,
+                y,
+                text: k,
+                fg: Some(theme.text),
+                bg: None,
+                bold: false,
+                modifiers: 0,
+            });
+            cx += kw as u16;
+            remaining -= kw;
+        }
+        if remaining == 0 {
+            break;
+        }
+        if !desc.is_empty() {
+            let sep = if i + 1 < hints.len() {
+                " \u{2022} "
+            } else {
+                ""
+            };
+            let space_needed = 1 + desc.chars().count() + sep.chars().count();
+            if space_needed <= remaining {
+                let span = format!(" {desc}{sep}");
                 cmds.push(RenderCmd::Text {
                     x: cx,
-                    y: footer_y,
-                    text: k,
-                    fg: Some(theme.text),
+                    y,
+                    text: span,
+                    fg: Some(theme.text_muted),
                     bg: None,
                     bold: false,
                     modifiers: 0,
                 });
-                cx += kw as u16;
-                remaining -= kw;
-            }
-            if remaining == 0 {
-                break;
-            }
-            if !desc.is_empty() {
-                let desc_w = desc.chars().count();
-                let space_needed = 1 + desc_w;
-                if space_needed <= remaining {
-                    let d: String = desc.chars().take(remaining - 1).collect();
-                    let dw = d.chars().count();
-                    let display = format!(" {d}");
+                cx += space_needed as u16;
+                remaining -= space_needed;
+            } else {
+                let d: String = desc.chars().take(remaining.saturating_sub(1)).collect();
+                if !d.is_empty() {
                     cmds.push(RenderCmd::Text {
                         x: cx,
-                        y: footer_y,
-                        text: display,
+                        y,
+                        text: format!(" {d}"),
                         fg: Some(theme.text_muted),
                         bg: None,
                         bold: false,
                         modifiers: 0,
                     });
-                    cx += (1 + dw) as u16;
-                    remaining -= 1 + dw;
+                    cx += (1 + d.chars().count()) as u16;
+                    remaining = 0;
                 }
             }
         }
     }
+}
+
+/// Draw the standard palette footer: one blank row, the `hints` row, and
+/// another blank row, anchored to the bottom of `r`.
+pub fn palette_footer(
+    cmds: &mut Vec<RenderCmd>,
+    theme: &ThemeData,
+    r: &PaletteRect,
+    hints: &[(&str, &str)],
+) {
+    let y = r.y + r.h - 2;
+    hints_row(cmds, theme, r.ix, y, hints, r.iw as usize);
 }
 
 /// Truncate a string to fit within `max_len` characters, appending "..." if truncated.
@@ -484,9 +506,72 @@ pub fn scroll_down(scroll: &mut usize, selected: usize, area_h: u16) {
 
 #[cfg(test)]
 mod tests {
-    use super::{draw_panel, max_visible_tracks, PanelOpts};
+    use super::{draw_panel, hints_row, max_visible_tracks, palette_footer, PanelOpts};
     use crate::protocol::RenderCmd;
     use crate::test::theme;
+
+    #[test]
+    fn hints_row_uses_standard_footer_colors() {
+        let mut cmds = Vec::new();
+        hints_row(
+            &mut cmds,
+            &theme(),
+            0,
+            0,
+            &[("↑↓", "navigate"), ("↵", "select")],
+            100,
+        );
+        let parts: Vec<(&str, u16, [u8; 3])> = cmds
+            .iter()
+            .map(|c| match c {
+                RenderCmd::Text { text, x, fg, .. } => (text.as_str(), *x, fg.unwrap()),
+                _ => panic!("expected text"),
+            })
+            .collect();
+        assert_eq!(parts.len(), 4);
+        assert_eq!(parts[0], ("↑↓", 0, theme().text));
+        assert_eq!(parts[1], (" navigate • ", 2, theme().text_muted));
+        assert_eq!(parts[2], ("↵", 14, theme().text));
+        assert_eq!(parts[3], (" select", 15, theme().text_muted));
+    }
+
+    #[test]
+    fn hints_row_truncates_desc_when_narrow() {
+        let mut cmds = Vec::new();
+        hints_row(&mut cmds, &theme(), 0, 0, &[("↑↓", "navigate")], 6);
+        let parts: Vec<(&str, u16)> = cmds
+            .iter()
+            .map(|c| match c {
+                RenderCmd::Text { text, x, .. } => (text.as_str(), *x),
+                _ => panic!("expected text"),
+            })
+            .collect();
+        assert_eq!(parts, vec![("↑↓", 0), (" nav", 2)]);
+    }
+
+    #[test]
+    fn hints_row_skips_last_separator() {
+        let mut cmds = Vec::new();
+        hints_row(
+            &mut cmds,
+            &theme(),
+            0,
+            0,
+            &[("a", "add"), ("d", "delete"), ("esc", "cancel")],
+            100,
+        );
+        let texts: Vec<&str> = cmds
+            .iter()
+            .filter_map(|c| match c {
+                RenderCmd::Text { text, .. } => Some(text.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            texts,
+            vec!["a", " add • ", "d", " delete • ", "esc", " cancel"]
+        );
+    }
 
     #[test]
     fn max_visible_tracks_calculation() {

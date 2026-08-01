@@ -293,7 +293,10 @@ fn render_palette_header(buf: &mut Buffer, area: Rect, query: &str, tick: u64, t
     Paragraph::new(header_lines).render(area, buf);
 }
 
-fn render_palette_footer(buf: &mut Buffer, area: Rect, theme: &Theme) {
+/// Render the standard palette footer: keys in `theme.text`, descriptions
+/// in `theme.text_muted`, separated by ` • `. Shared by the command palette
+/// and the theme picker.
+pub(super) fn render_palette_footer(buf: &mut Buffer, area: Rect, theme: &Theme) {
     let dim = Style::default().fg(theme.text_muted);
     let key = Style::default().fg(theme.text);
     let footer = vec![
