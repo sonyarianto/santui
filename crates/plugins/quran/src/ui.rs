@@ -165,22 +165,23 @@ fn reciter_label(app: &App) -> String {
 
 /// Render `segments` sequentially on one row starting at `x0`, truncating once
 /// `max_x` is reached. Returns the x position after the last rendered segment.
+/// Each segment is `(text, fg, bold)`.
 fn push_segments(
     cmds: &mut Vec<RenderCmd>,
     x0: u16,
     y: u16,
     max_x: u16,
-    segments: &[(String, [u8; 3])],
+    segments: &[(String, [u8; 3], bool)],
 ) -> u16 {
     let mut cx = x0;
-    for (text, fg) in segments {
+    for (text, fg, bold) in segments {
         if cx >= max_x {
             break;
         }
         let t = ui::truncate(text, (max_x - cx) as usize);
         if !t.is_empty() {
             let n = t.chars().count() as u16;
-            push_text(cmds, cx, y, t, *fg, false);
+            push_text(cmds, cx, y, t, *fg, *bold);
             cx += n;
         }
     }
@@ -189,19 +190,19 @@ fn push_segments(
 
 fn render_surah_list_header(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16) {
     let mut segments = vec![
-        ("Surahs: ".to_string(), theme.text_muted),
-        (app.surahs.len().to_string(), theme.text),
-        (" • ".to_string(), theme.text_muted),
-        ("Translation: ".to_string(), theme.text_muted),
-        (translation_label(app), theme.text),
-        (" • ".to_string(), theme.text_muted),
-        ("Reciter: ".to_string(), theme.text_muted),
-        (reciter_label(app), theme.text),
+        ("Surahs: ".to_string(), theme.text_muted, false),
+        (app.surahs.len().to_string(), theme.text, false),
+        (" • ".to_string(), theme.text_muted, false),
+        ("Translation: ".to_string(), theme.text_muted, false),
+        (translation_label(app), theme.text, false),
+        (" • ".to_string(), theme.text_muted, false),
+        ("Reciter: ".to_string(), theme.text_muted, false),
+        (reciter_label(app), theme.text, false),
     ];
     if app.search_mode {
-        segments.push((" • ".to_string(), theme.text_muted));
-        segments.push(("Search: ".to_string(), theme.text_muted));
-        segments.push((app.search.clone(), theme.text));
+        segments.push((" • ".to_string(), theme.text_muted, false));
+        segments.push(("Search: ".to_string(), theme.text_muted, false));
+        segments.push((app.search.clone(), theme.text, false));
     }
     let end_x = push_segments(cmds, 2, 1, w.saturating_sub(2), segments.as_slice());
     if app.search_mode && app.cursor_visible {
@@ -323,22 +324,27 @@ fn render_reader(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16
         push_text(cmds, 2, 3, "No surah loaded", theme.error, true);
         return;
     };
-    let header = format!(
-        "{} ({}) · {} · mode: {} · audio: {}",
-        content.summary.english_name,
-        content.summary.name,
-        content.summary.english_translation,
-        app.prefs.display_mode.label(),
-        app.audio_state.label(),
-    );
-    push_text(
-        cmds,
-        2,
-        1,
-        santui_ipc::ui::truncate(&header, w as usize - 4),
-        theme.text,
-        true,
-    );
+    let segments = vec![
+        (content.summary.english_name.clone(), theme.text, true),
+        (format!(" ({})", content.summary.name), theme.text, true),
+        (" - ".to_string(), theme.text_muted, false),
+        (
+            content.summary.english_translation.clone(),
+            theme.text,
+            true,
+        ),
+        (" - ".to_string(), theme.text_muted, false),
+        ("mode: ".to_string(), theme.text_muted, false),
+        (
+            app.prefs.display_mode.label().to_string(),
+            theme.text,
+            false,
+        ),
+        (" - ".to_string(), theme.text_muted, false),
+        ("audio: ".to_string(), theme.text_muted, false),
+        (app.audio_state.label().to_string(), theme.text, false),
+    ];
+    push_segments(cmds, 2, 1, w.saturating_sub(2), segments.as_slice());
     let list_h = h.saturating_sub(4).max(4);
     let items: Vec<String> = content
         .ayahs
@@ -523,8 +529,8 @@ mod tests {
             1,
             20,
             &[
-                ("Surahs: ".to_string(), theme.text_muted),
-                ("01234567890123456789".to_string(), theme.text),
+                ("Surahs: ".to_string(), theme.text_muted, false),
+                ("01234567890123456789".to_string(), theme.text, true),
             ],
         );
         assert!(end_x <= 20);
