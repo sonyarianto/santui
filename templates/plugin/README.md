@@ -35,19 +35,16 @@ See the `santui-ipc` crate documentation for the full protocol spec.
 
 ## Manifest
 
-Add an entry for this plugin to your `plugins.json` manifest so the registry
-can discover and install it:
+Add an entry for this plugin to your `plugins-manifest.json` so the
+registry can discover and install it. `plugins.json` (which `santui-dev-setup`
+generates from it) is auto-generated and gitignored — do NOT edit it by hand,
+it gets overwritten on the next dev-setup run:
 
 ```json
 {
     "id": "{{project-name}}",
     "name": "{{project-name}}",
     "description": "A short description of your plugin",
-    "publisher": "Your Name",
-    "version": "0.1.0",
-    "download_url": "target/debug/{{project-name}}.exe",
-    "sha256": "",
-    "size": 0,
     "capabilities": []
 }
 ```
