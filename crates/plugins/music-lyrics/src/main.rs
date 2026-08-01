@@ -106,20 +106,7 @@ impl App {
                     }
                     true
                 }
-                IpcKey::Char('c') => {
-                    self.state.results.clear();
-                    self.state.fetch_state = FetchState::Idle;
-                    self.state.query.clear();
-                    self.state.selected = 0;
-                    self.state.scroll = 0;
-                    self.state.show_lyrics = false;
-                    self.state.lyrics_text.clear();
-                    self.state.lyrics_source.clear();
-                    self.state.lyrics_scroll = 0;
-                    self.dirty = true;
-                    true
-                }
-                _ => true,
+                _ => false,
             }
         } else if self.state.search_mode {
             let (consumed, submitted) = santui_ipc::search::handle_search_key(
@@ -210,7 +197,14 @@ impl App {
     }
 
     fn lyrics_visible_lines(&self) -> usize {
-        (self.area.h.saturating_sub(6)) as usize
+        let mut y = 1u16;
+        if !self.state.lyrics_title.is_empty() {
+            y += 1;
+        }
+        if !self.state.lyrics_artist.is_empty() {
+            y += 1;
+        }
+        (self.area.h.saturating_sub(y + 3)) as usize
     }
 
     fn lyrics_max_scroll(&self) -> usize {
@@ -302,7 +296,7 @@ fn hints(state: &LyricsState) -> Vec<(String, String)> {
         vec![
             ("\u{2191}\u{2193}".into(), "scroll".into()),
             ("pg up/dn".into(), "page".into()),
-            ("esc".into(), "back".into()),
+            ("esc".into(), "close".into()),
         ]
     } else {
         vec![
@@ -520,7 +514,7 @@ mod tests {
     #[test]
     fn lyrics_scroll_blocked_when_content_fits() {
         let mut app = App::default();
-        app.area.h = 20; // lyrics_visible_lines = 14
+        app.area.h = 20; // lyrics_visible_lines = 16 (no title/artist)
         app.state.show_lyrics = true;
         app.state.lyrics_text = "only three lines\nline two\nline three".into();
         assert!(!app.lyrics_needs_scroll());
@@ -537,7 +531,7 @@ mod tests {
     #[test]
     fn lyrics_scroll_works_when_content_overflows() {
         let mut app = App::default();
-        app.area.h = 10; // lyrics_visible_lines = 4
+        app.area.h = 10; // lyrics_visible_lines = 6 (no title/artist)
         app.state.show_lyrics = true;
         app.state.lyrics_text = (0..10)
             .map(|i| format!("line {i}"))
@@ -586,7 +580,7 @@ mod tests {
     #[test]
     fn handle_key_up_down_in_lyrics_scrolls() {
         let mut app = App::default();
-        app.area.h = 10; // lyrics_visible_lines = 4
+        app.area.h = 8; // lyrics_visible_lines = 4 (no title/artist)
         app.state.show_lyrics = true;
         app.state.lyrics_text = "line1\nline2\nline3\nline4\nline5\nline6".into();
         assert!(app.lyrics_needs_scroll());
@@ -607,17 +601,26 @@ mod tests {
     }
 
     #[test]
-    fn handle_key_c_clears_results() {
+    fn handle_key_c_blocked_while_lyrics_open() {
         let mut app = App::default();
         app.state.results = vec![make_track(1, "A")];
         app.state.fetch_state = FetchState::Done;
         app.state.show_lyrics = true;
         app.state.lyrics_text = "lyrics".into();
+        assert!(!app.handle_key(IpcKey::Char('c')));
+        assert!(!app.state.results.is_empty());
+        assert!(app.state.show_lyrics);
+        assert!(!app.state.lyrics_text.is_empty());
+    }
+
+    #[test]
+    fn handle_key_c_clears_results_in_list_mode() {
+        let mut app = App::default();
+        app.state.results = vec![make_track(1, "A")];
+        app.state.fetch_state = FetchState::Done;
         assert!(app.handle_key(IpcKey::Char('c')));
         assert!(app.state.results.is_empty());
         assert_eq!(app.state.fetch_state, FetchState::Idle);
-        assert!(!app.state.show_lyrics);
-        assert!(app.state.lyrics_text.is_empty());
     }
 
     #[test]

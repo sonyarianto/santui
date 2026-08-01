@@ -25,42 +25,84 @@ pub fn render_ui(state: &LyricsState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         border_type: None,
     });
 
+    render_search_view(state, theme, w, h, &mut cmds);
+
     if state.show_lyrics {
-        render_lyrics_view(state, theme, w, h, &mut cmds);
-    } else {
-        render_search_view(state, theme, w, h, &mut cmds);
+        render_lyrics_panel(state, theme, w, h, &mut cmds);
     }
 
     cmds
 }
 
-fn render_lyrics_view(
+fn render_lyrics_panel(
     state: &LyricsState,
     theme: &ThemeData,
     w: u16,
     h: u16,
     cmds: &mut Vec<RenderCmd>,
 ) {
-    let inner_w = w.saturating_sub(4) as usize;
+    let popup_w = (w * 2 / 5).max(20);
+    let popup_x = w.saturating_sub(popup_w);
+    if popup_x < 4 || h < 10 {
+        return;
+    }
+
+    ui::popup_backdrop(cmds, theme, popup_x, 0, popup_w, h);
+
+    let footer: &[(&str, &str)] = &[("\u{2191}\u{2193}", "scroll"), ("esc", "close")];
+    ui::draw_panel(
+        cmds,
+        theme,
+        popup_x,
+        0,
+        popup_w,
+        h,
+        "Lyrics",
+        ui::PanelOpts {
+            focused: true,
+            footer: Some(footer),
+            dim_unfocused: false,
+        },
+    );
+
+    let inner_w = popup_w.saturating_sub(4) as usize;
+    let mut y = 1u16;
 
     if !state.lyrics_title.is_empty() {
         let display: String = state.lyrics_title.chars().take(inner_w).collect();
         cmds.push(RenderCmd::Text {
-            x: 2,
-            y: 1,
+            x: popup_x + 2,
+            y,
             text: display,
             fg: Some(theme.accent),
             bg: None,
             bold: true,
             modifiers: 0,
         });
+        y += 1;
     }
     if !state.lyrics_artist.is_empty() {
         let display: String = state.lyrics_artist.chars().take(inner_w).collect();
         cmds.push(RenderCmd::Text {
-            x: 2,
-            y: 2,
+            x: popup_x + 2,
+            y,
             text: display,
+            fg: Some(theme.text_muted),
+            bg: None,
+            bold: false,
+            modifiers: 0,
+        });
+        y += 1;
+    }
+
+    if !state.lyrics_source.is_empty() {
+        let source_text = format!("Source: {}", state.lyrics_source);
+        let display_src: String = source_text.chars().take(inner_w).collect();
+        let sx = popup_x + popup_w.saturating_sub(display_src.len() as u16 + 2);
+        cmds.push(RenderCmd::Text {
+            x: sx,
+            y: h.saturating_sub(2),
+            text: display_src,
             fg: Some(theme.text_muted),
             bg: None,
             bold: false,
@@ -68,25 +110,12 @@ fn render_lyrics_view(
         });
     }
 
-    let source_text = format!("Source: {}", state.lyrics_source);
-    let display_src: String = source_text.chars().take(inner_w).collect();
-    cmds.push(RenderCmd::Text {
-        x: 2,
-        y: 3,
-        text: display_src,
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
-
-    let max_lines = h.saturating_sub(6) as usize;
-    let line_w = w.saturating_sub(4) as usize;
+    let max_lines = h.saturating_sub(y + 3) as usize;
 
     if state.lyrics_loading {
         cmds.push(RenderCmd::Text {
-            x: 2,
-            y: 5,
+            x: popup_x + 2,
+            y,
             text: "Searching lyrics...".into(),
             fg: Some(theme.text_muted),
             bg: None,
@@ -98,8 +127,8 @@ fn render_lyrics_view(
 
     if state.lyrics_text.is_empty() {
         cmds.push(RenderCmd::Text {
-            x: 2,
-            y: 5,
+            x: popup_x + 2,
+            y,
             text: "No lyrics found".into(),
             fg: Some(theme.text_muted),
             bg: None,
@@ -111,30 +140,30 @@ fn render_lyrics_view(
 
     let lines: Vec<&str> = state.lyrics_text.lines().collect();
     let scroll = state.lyrics_scroll.min(lines.len().saturating_sub(1));
-    let mut last_y = 5u16;
+    let mut last_y = y;
     for i in 0..max_lines {
         let idx = scroll + i;
         if idx >= lines.len() {
             break;
         }
-        let display: String = lines[idx].chars().take(line_w).collect();
+        let display: String = lines[idx].chars().take(inner_w).collect();
         cmds.push(RenderCmd::Text {
-            x: 2,
-            y: (5 + i) as u16,
+            x: popup_x + 2,
+            y: y + i as u16,
             text: display,
             fg: Some(theme.text),
             bg: None,
             bold: false,
             modifiers: 0,
         });
-        last_y = 5 + i as u16;
+        last_y = y + i as u16;
     }
 
     let total = lines.len();
     if total > max_lines {
         let pct = ui::scroll_pct(scroll, total, max_lines);
         let scroll_text = format!("{pct}%");
-        let sx = (2 + line_w).saturating_sub(scroll_text.len() + 1) as u16;
+        let sx = (popup_x + 2 + inner_w as u16).saturating_sub(scroll_text.len() as u16 + 1);
         cmds.push(RenderCmd::Text {
             x: sx,
             y: last_y,
@@ -488,6 +517,52 @@ mod tests {
             |c| matches!(c, RenderCmd::Text { ref text, .. } if text == "Searching lyrics..."),
         );
         assert!(has_msg);
+    }
+
+    #[test]
+    fn lyrics_panel_rendered_when_open() {
+        let state = LyricsState {
+            show_lyrics: true,
+            lyrics_title: "Lose Yourself".into(),
+            lyrics_artist: "Eminem".into(),
+            ..LyricsState::default()
+        };
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
+        let panel = cmds.iter().any(|c| {
+            matches!(c, RenderCmd::Border { ref title, x, w, .. } if title.as_deref() == Some("Lyrics") && *x == 48 && *w == 32)
+        });
+        assert!(panel, "expected Lyrics panel snapped right");
+        let has_backdrop = cmds.iter().any(|c| {
+            matches!(c, RenderCmd::Rect { x, w, bg, .. } if *x == 48 && *w == 32 && *bg == santui_ipc::test::theme().background_panel)
+        });
+        assert!(has_backdrop, "expected backdrop behind panel");
+    }
+
+    #[test]
+    fn lyrics_panel_not_rendered_when_closed() {
+        let state = LyricsState::default();
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
+        let panel = cmds.iter().any(|c| {
+            matches!(c, RenderCmd::Border { ref title, .. } if title.as_deref() == Some("Lyrics"))
+        });
+        assert!(!panel, "no panel when lyrics closed");
+    }
+
+    #[test]
+    fn lyrics_panel_shows_footer_hints() {
+        let state = LyricsState {
+            show_lyrics: true,
+            ..LyricsState::default()
+        };
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
+        let has_scroll = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text == "\u{2191}\u{2193}"));
+        let has_close = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text == "esc"));
+        assert!(has_scroll, "expected scroll hint in panel footer");
+        assert!(has_close, "expected close hint in panel footer");
     }
 
     #[test]
