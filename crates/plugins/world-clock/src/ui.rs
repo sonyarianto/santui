@@ -211,7 +211,7 @@ fn render_search(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> V
 }
 
 fn render_rename(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec<RenderCmd> {
-    let mut cmds = Vec::new();
+    let mut cmds = render_grid(state, theme, w, h);
 
     const TITLE_H: u16 = 5;
     let popup_h = TITLE_H + 2;
@@ -420,5 +420,9 @@ mod tests {
                 if *fg == Some(test_theme().inverted_text) && *bg == Some(test_theme().highlight))
         });
         assert!(has_cursor);
+        let has_grid = cmds.iter().any(|c| {
+            matches!(c, RenderCmd::Border { title, .. } if title.as_deref() == Some("World Clock"))
+        });
+        assert!(has_grid);
     }
 }
