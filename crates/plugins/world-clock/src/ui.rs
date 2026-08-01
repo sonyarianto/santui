@@ -70,20 +70,16 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
             y: cy,
             w: cw,
             h: ch,
-            fg: theme.border,
+            fg: if is_selected {
+                theme.highlight
+            } else {
+                theme.text_muted
+            },
             bg: None,
             borders: BORDER_ALL,
-            title: if is_selected {
-                Some("●".into())
-            } else {
-                None
-            },
-            title_fg: if is_selected {
-                Some(theme.border)
-            } else {
-                None
-            },
-            title_dash_fg: Some(theme.border),
+            title: None,
+            title_fg: None,
+            title_dash_fg: None,
             border_type: None,
         });
 
@@ -326,6 +322,54 @@ mod tests {
         s.apply_search();
         let cmds = render_ui(&s, &test_theme(), 120, 30);
         assert!(!cmds.is_empty());
+    }
+
+    #[test]
+    fn selected_card_gets_highlight_border() {
+        let s = state_with_clocks();
+        let cmds = render_ui(&s, &test_theme(), 120, 30);
+        let borders: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Border { .. }))
+            .collect();
+        assert_eq!(borders.len(), 2);
+        if let RenderCmd::Border { fg, x, .. } = borders[0] {
+            assert_eq!(*fg, test_theme().highlight);
+            assert_eq!(*x, 1);
+        } else {
+            panic!("expected border");
+        }
+    }
+
+    #[test]
+    fn unselected_card_gets_muted_border() {
+        let s = state_with_clocks();
+        let cmds = render_ui(&s, &test_theme(), 120, 30);
+        let borders: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Border { .. }))
+            .collect();
+        if let RenderCmd::Border { fg, y, .. } = borders[1] {
+            assert_eq!(*fg, test_theme().text_muted);
+            assert_eq!(*y, 0);
+        } else {
+            panic!("expected border");
+        }
+    }
+
+    #[test]
+    fn selected_card_has_no_title_marker() {
+        let s = state_with_clocks();
+        let cmds = render_ui(&s, &test_theme(), 120, 30);
+        let borders: Vec<&RenderCmd> = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Border { .. }))
+            .collect();
+        for b in borders {
+            if let RenderCmd::Border { title, .. } = b {
+                assert_eq!(title.as_deref(), None);
+            }
+        }
     }
 
     #[test]
