@@ -66,22 +66,20 @@ pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
             });
         }
     } else {
-        let left_text = if state.query.is_empty() {
-            "Search: ".to_string()
-        } else {
-            format!("Search: {}", state.query)
-        };
-        let max_left = inner_w.saturating_sub(right_len + 1);
-        let display_left: String = left_text.chars().take(max_left).collect();
-        cmds.push(RenderCmd::Text {
-            x: 2,
-            y: 1,
-            text: display_left,
-            fg: Some(theme.text_muted),
-            bg: None,
-            bold: false,
-            modifiers: 0,
-        });
+        if !state.query.is_empty() {
+            let left_text = format!("Search: {}", state.query);
+            let max_left = inner_w.saturating_sub(right_len + 1);
+            let display_left: String = left_text.chars().take(max_left).collect();
+            cmds.push(RenderCmd::Text {
+                x: 2,
+                y: 1,
+                text: display_left,
+                fg: Some(theme.text_muted),
+                bg: None,
+                bold: false,
+                modifiers: 0,
+            });
+        }
         if !count_label.is_empty() {
             let right_x = ui::right_align_x(w, &count_label);
             cmds.push(RenderCmd::Text {
@@ -288,17 +286,13 @@ mod tests {
     }
 
     #[test]
-    fn renders_dimmed_search_hint_when_not_searching() {
+    fn no_search_hint_when_idle() {
         let state = MusicState::default();
         let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let hint = cmds
             .iter()
-            .find(|c| matches!(c, RenderCmd::Text { y: 1, .. }));
-        assert!(hint.is_some());
-        if let Some(RenderCmd::Text { text, fg, .. }) = hint {
-            assert_eq!(text, "Search: ");
-            assert_eq!(*fg, Some(santui_ipc::test::theme().text_muted));
-        }
+            .find(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("Search: ")));
+        assert!(hint.is_none());
     }
 
     #[test]

@@ -130,7 +130,7 @@ impl App {
                     );
                     true
                 }
-                IpcKey::Enter => {
+                IpcKey::Enter | IpcKey::Char('p') => {
                     if matches!(self.state.fetch_state, FetchState::Done)
                         && !self.state.results.is_empty()
                     {
