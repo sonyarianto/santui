@@ -50,7 +50,12 @@ impl App {
     }
 
     pub(super) fn render_commands(&self) -> Vec<RenderCmd> {
-        let mut cmds = Vec::new();
+        let mut cmds = vec![RenderCmd::Clear {
+            x: 0,
+            y: 0,
+            w: 4096,
+            h: 4096,
+        }];
 
         if let Some(detail_idx) = self.detail_idx {
             self.render_list(&mut cmds);
@@ -550,6 +555,6 @@ mod tests {
         let mut app = App::new();
         app.area = Area { w: 5, h: 2 };
         let cmds = app.render_commands();
-        assert!(cmds.is_empty());
+        assert!(cmds.iter().all(|c| matches!(c, RenderCmd::Clear { .. })));
     }
 }
