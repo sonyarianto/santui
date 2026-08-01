@@ -506,7 +506,7 @@ pub fn scroll_down(scroll: &mut usize, selected: usize, area_h: u16) {
 
 #[cfg(test)]
 mod tests {
-    use super::{draw_panel, hints_row, max_visible_tracks, palette_footer, PanelOpts};
+    use super::{draw_panel, hints_row, max_visible_tracks, PanelOpts};
     use crate::protocol::RenderCmd;
     use crate::test::theme;
 
