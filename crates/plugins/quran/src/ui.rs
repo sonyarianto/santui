@@ -219,6 +219,20 @@ fn render_surah_list_header(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeD
     }
 }
 
+fn surah_col_widths(inner_w: usize) -> [usize; 6] {
+    let fixed = 4 + 23 + 4 + 11;
+    let rem = inner_w.saturating_sub(fixed);
+    let name_w = ((rem * 2 / 5).max(12)).min(rem);
+    [
+        4usize,
+        23usize,
+        name_w,
+        rem.saturating_sub(name_w),
+        4usize,
+        11usize,
+    ]
+}
+
 fn render_surah_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, h: u16) {
     let list = app.filtered_surahs();
     render_surah_list_header(app, cmds, theme, w);
@@ -247,14 +261,7 @@ fn render_surah_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w:
         "Ayahs",
         "Last Active",
     ];
-    let col_w = [
-        4usize,
-        23usize,
-        15usize.min(inner_w.saturating_sub(67)),
-        25usize.min(inner_w.saturating_sub(57)),
-        4usize,
-        11usize,
-    ];
+    let col_w = surah_col_widths(inner_w);
     let list_h = h.saturating_sub(4).max(4);
     let rows: Vec<Vec<String>> = list
         .iter()
@@ -541,6 +548,16 @@ mod tests {
             .collect();
         assert_eq!(rendered, "Surahs: 0123456...");
         assert_eq!(end_x, 20);
+    }
+
+    #[test]
+    fn surah_col_widths_fill_inner_w() {
+        for inner_w in [72, 76, 100, 116, 150, 200] {
+            let widths = surah_col_widths(inner_w);
+            assert_eq!(widths.iter().sum::<usize>(), inner_w, "inner_w={inner_w}");
+            assert!(widths[2] >= 12, "name column too small at {inner_w}");
+            assert!(widths[3] >= 12, "translation column too small at {inner_w}");
+        }
     }
 
     #[test]
