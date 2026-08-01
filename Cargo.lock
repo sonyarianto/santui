@@ -3600,6 +3600,7 @@ dependencies = [
  "bincode",
  "criterion",
  "crossterm",
+ "libloading",
  "log",
  "ratatui",
  "santui-core",
@@ -3613,7 +3614,6 @@ version = "0.2.35"
 dependencies = [
  "env_logger",
  "libc",
- "libloading",
  "log",
  "santui-ipc",
  "serde",
@@ -3773,7 +3773,6 @@ name = "santui-music-preview"
 version = "0.2.35"
 dependencies = [
  "env_logger",
- "libloading",
  "log",
  "santui-ipc",
  "serde",
@@ -3955,7 +3954,6 @@ name = "santui-quran"
 version = "0.2.35"
 dependencies = [
  "env_logger",
- "libloading",
  "log",
  "santui-ipc",
  "serde",
@@ -3969,7 +3967,6 @@ version = "0.2.35"
 dependencies = [
  "env_logger",
  "libc",
- "libloading",
  "log",
  "rusqlite",
  "santui-ipc",

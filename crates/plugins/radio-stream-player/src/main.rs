@@ -2,7 +2,7 @@ mod database;
 mod http;
 mod itunes;
 mod lrclib;
-mod player;
+
 mod state;
 mod stations;
 mod ui;
@@ -16,7 +16,8 @@ use ui::{HEADER_H, TABLE_TOP};
 
 const LIST_OVERHEAD: u16 = TABLE_TOP + HEADER_H + 1 + 2; // top + search + sep + header + bottom + footer (blank + hints)
 
-use player::Mpv;
+use santui_ipc::mpv;
+use santui_ipc::mpv::Mpv;
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, IpcMouseEvent, MouseButton, MouseEventKind, PluginRequest, RenderCmd,
     ThemeData, UserData,
@@ -46,7 +47,7 @@ struct App {
     rx_msg: Option<mpsc::Receiver<MpvMsg>>,
     tx_msg: Option<mpsc::Sender<MpvMsg>>,
     mpv_thread: Option<thread::JoinHandle<()>>,
-    mpv_wakeup: Option<player::MpvWakeup>,
+    mpv_wakeup: Option<mpv::MpvWakeup>,
     mpv_heartbeat: Arc<AtomicU64>,
     mpv_last_seen: u64,
     mpv_stuck_since: Option<std::time::Instant>,
@@ -165,13 +166,14 @@ impl App {
         self.area = area;
         self.dirty = true;
 
-        let (mut mpv, warns) = match Mpv::new() {
-            Ok(v) => v,
-            Err(e) => {
-                self.init_error = Some(format!("{e}"));
-                return;
-            }
-        };
+        let (mut mpv, warns) =
+            match Mpv::new("santui-radio-stream-player", &[("stream-lavf-o", "icy=1")]) {
+                Ok(v) => v,
+                Err(e) => {
+                    self.init_error = Some(format!("{e}"));
+                    return;
+                }
+            };
 
         for w in &warns {
             log::warn!("  ⚠️  {w}");
@@ -205,19 +207,19 @@ impl App {
                 if let Some(ev) = ev {
                     let id = ev.event_id;
                     let name = match id {
-                        player::MPV_EVENT_SHUTDOWN => "SHUTDOWN",
-                        player::MPV_EVENT_FILE_LOADED => "FILE_LOADED",
-                        player::MPV_EVENT_PLAYBACK_RESTART => "PLAYBACK_RESTART",
-                        player::MPV_EVENT_PROPERTY_CHANGE => "PROPERTY_CHANGE",
-                        player::MPV_EVENT_END_FILE => "END_FILE",
-                        7 => "START_FILE",
+                        mpv::MPV_EVENT_SHUTDOWN => "SHUTDOWN",
+                        mpv::MPV_EVENT_FILE_LOADED => "FILE_LOADED",
+                        mpv::MPV_EVENT_PLAYBACK_RESTART => "PLAYBACK_RESTART",
+                        mpv::MPV_EVENT_PROPERTY_CHANGE => "PROPERTY_CHANGE",
+                        mpv::MPV_EVENT_END_FILE => "END_FILE",
+                        mpv::MPV_EVENT_START_FILE => "START_FILE",
                         _ => "OTHER",
                     };
                     log::info!("mpv_thread: event {name} (id={id})");
-                    if id == player::MPV_EVENT_SHUTDOWN {
+                    if id == mpv::MPV_EVENT_SHUTDOWN {
                         break;
                     }
-                    if id == player::MPV_EVENT_FILE_LOADED {
+                    if id == mpv::MPV_EVENT_FILE_LOADED {
                         let title = mpv
                             .metadata_title()
                             .ok()
@@ -226,7 +228,7 @@ impl App {
                             .unwrap_or_default();
                         let _ = tx_msg_mpv.send(MpvMsg::FileLoaded(title));
                     }
-                    if id == player::MPV_EVENT_PLAYBACK_RESTART {
+                    if id == mpv::MPV_EVENT_PLAYBACK_RESTART {
                         let title = mpv
                             .metadata_title()
                             .ok()
@@ -235,11 +237,11 @@ impl App {
                             .unwrap_or_default();
                         let _ = tx_msg_mpv.send(MpvMsg::FileLoaded(title));
                     }
-                    if id == player::MPV_EVENT_PROPERTY_CHANGE {
+                    if id == mpv::MPV_EVENT_PROPERTY_CHANGE {
                         if ev.data.is_null() {
                             continue;
                         }
-                        let prop: &player::MpvEventProperty = unsafe { &*(ev.data as *const _) };
+                        let prop: &mpv::MpvEventProperty = unsafe { &*(ev.data as *const _) };
                         if prop.name.is_null() {
                             continue;
                         }
@@ -256,11 +258,11 @@ impl App {
                             let _ = tx_msg_mpv.send(MpvMsg::Metadata(t));
                         }
                     }
-                    if id == player::MPV_EVENT_END_FILE {
+                    if id == mpv::MPV_EVENT_END_FILE {
                         if ev.data.is_null() {
                             continue;
                         }
-                        let ef: &player::MpvEventEndFile = unsafe { &*(ev.data as *const _) };
+                        let ef: &mpv::MpvEventEndFile = unsafe { &*(ev.data as *const _) };
                         let _ = tx_msg_mpv.send(MpvMsg::EndFile(ef.reason));
                     }
                 }
@@ -302,7 +304,7 @@ impl App {
                             let _ = mpv.stop();
                             let mut drained = 0u32;
                             while let Some(stale) = mpv.wait_event_raw(0.0) {
-                                if stale.event_id == player::MPV_EVENT_SHUTDOWN {
+                                if stale.event_id == mpv::MPV_EVENT_SHUTDOWN {
                                     break;
                                 }
                                 drained += 1;
@@ -320,7 +322,7 @@ impl App {
                                     // Try stop + retry once to recover a transient state
                                     let _ = mpv.stop();
                                     while let Some(stale) = mpv.wait_event_raw(0.0) {
-                                        if stale.event_id == player::MPV_EVENT_SHUTDOWN {
+                                        if stale.event_id == mpv::MPV_EVENT_SHUTDOWN {
                                             break;
                                         }
                                     }
@@ -775,8 +777,8 @@ impl App {
                         self.state.lyrics_scroll = 0;
                     }
                     MpvMsg::EndFile(reason) => {
-                        let is_error = reason == player::MPV_END_FILE_REASON_EOF
-                            || reason == player::MPV_END_FILE_REASON_ERROR;
+                        let is_error = reason == mpv::MPV_END_FILE_REASON_EOF
+                            || reason == mpv::MPV_END_FILE_REASON_ERROR;
                         log::info!(
                             "handle_tick: EndFile(reason={reason}) state={:?} is_error={is_error}",
                             self.state.play_state,
@@ -787,7 +789,7 @@ impl App {
                         let name = match &self.state.play_state {
                             state::PlayState::Playing(n) => Some(n.clone()),
                             state::PlayState::Connecting(n)
-                                if reason == player::MPV_END_FILE_REASON_ERROR
+                                if reason == mpv::MPV_END_FILE_REASON_ERROR
                                     && self.state.retry_mode =>
                             {
                                 // load_url failed while Connecting — start retry
@@ -957,7 +959,7 @@ impl App {
         let mpv_result = if cfg!(test) {
             Err::<(Mpv, Vec<String>), Box<dyn std::error::Error>>("test mode".into())
         } else {
-            Mpv::new()
+            Mpv::new("santui-radio-stream-player", &[("stream-lavf-o", "icy=1")])
         };
         let (mut mpv, _warns) = match mpv_result {
             Ok(v) => v,
@@ -1005,19 +1007,19 @@ impl App {
                 if let Some(ev) = ev {
                     let id = ev.event_id;
                     let name = match id {
-                        player::MPV_EVENT_SHUTDOWN => "SHUTDOWN",
-                        player::MPV_EVENT_FILE_LOADED => "FILE_LOADED",
-                        player::MPV_EVENT_PLAYBACK_RESTART => "PLAYBACK_RESTART",
-                        player::MPV_EVENT_PROPERTY_CHANGE => "PROPERTY_CHANGE",
-                        player::MPV_EVENT_END_FILE => "END_FILE",
-                        7 => "START_FILE",
+                        mpv::MPV_EVENT_SHUTDOWN => "SHUTDOWN",
+                        mpv::MPV_EVENT_FILE_LOADED => "FILE_LOADED",
+                        mpv::MPV_EVENT_PLAYBACK_RESTART => "PLAYBACK_RESTART",
+                        mpv::MPV_EVENT_PROPERTY_CHANGE => "PROPERTY_CHANGE",
+                        mpv::MPV_EVENT_END_FILE => "END_FILE",
+                        mpv::MPV_EVENT_START_FILE => "START_FILE",
                         _ => "OTHER",
                     };
                     log::info!("reset_mpv thread: event {name} (id={id})");
-                    if id == player::MPV_EVENT_SHUTDOWN {
+                    if id == mpv::MPV_EVENT_SHUTDOWN {
                         break;
                     }
-                    if id == player::MPV_EVENT_FILE_LOADED {
+                    if id == mpv::MPV_EVENT_FILE_LOADED {
                         let title = mpv
                             .metadata_title()
                             .ok()
@@ -1026,7 +1028,7 @@ impl App {
                             .unwrap_or_default();
                         let _ = tx_msg_mpv.send(MpvMsg::FileLoaded(title));
                     }
-                    if id == player::MPV_EVENT_PLAYBACK_RESTART {
+                    if id == mpv::MPV_EVENT_PLAYBACK_RESTART {
                         let title = mpv
                             .metadata_title()
                             .ok()
@@ -1035,11 +1037,11 @@ impl App {
                             .unwrap_or_default();
                         let _ = tx_msg_mpv.send(MpvMsg::FileLoaded(title));
                     }
-                    if id == player::MPV_EVENT_PROPERTY_CHANGE {
+                    if id == mpv::MPV_EVENT_PROPERTY_CHANGE {
                         if ev.data.is_null() {
                             continue;
                         }
-                        let prop: &player::MpvEventProperty = unsafe { &*(ev.data as *const _) };
+                        let prop: &mpv::MpvEventProperty = unsafe { &*(ev.data as *const _) };
                         if prop.name.is_null() {
                             continue;
                         }
@@ -1056,11 +1058,11 @@ impl App {
                             let _ = tx_msg_mpv.send(MpvMsg::Metadata(t));
                         }
                     }
-                    if id == player::MPV_EVENT_END_FILE {
+                    if id == mpv::MPV_EVENT_END_FILE {
                         if ev.data.is_null() {
                             continue;
                         }
-                        let ef: &player::MpvEventEndFile = unsafe { &*(ev.data as *const _) };
+                        let ef: &mpv::MpvEventEndFile = unsafe { &*(ev.data as *const _) };
                         let _ = tx_msg_mpv.send(MpvMsg::EndFile(ef.reason));
                     }
                 }
@@ -1089,7 +1091,7 @@ impl App {
                             }
                             let _ = mpv.stop();
                             while let Some(stale) = mpv.wait_event_raw(0.0) {
-                                if stale.event_id == player::MPV_EVENT_SHUTDOWN {
+                                if stale.event_id == mpv::MPV_EVENT_SHUTDOWN {
                                     break;
                                 }
                             }
@@ -1100,7 +1102,7 @@ impl App {
                                     log::warn!("reset_mpv thread: load_url failed: {e}");
                                     let _ = mpv.stop();
                                     while let Some(stale) = mpv.wait_event_raw(0.0) {
-                                        if stale.event_id == player::MPV_EVENT_SHUTDOWN {
+                                        if stale.event_id == mpv::MPV_EVENT_SHUTDOWN {
                                             break;
                                         }
                                     }
@@ -2014,7 +2016,7 @@ mod tests {
         assert!(matches!(app.state.play_state, PlayState::Connecting(ref n) if n == "Station 1"));
 
         // 1.FM's loadfile replaces 011.FM → END_FILE for old stream
-        push_msg(&mut app, MpvMsg::EndFile(player::MPV_END_FILE_REASON_EOF));
+        push_msg(&mut app, MpvMsg::EndFile(mpv::MPV_END_FILE_REASON_EOF));
         app.handle_tick();
         // EndFile while Connecting → dropped, still Connecting
         assert!(matches!(app.state.play_state, PlayState::Connecting(ref n) if n == "Station 1"));
@@ -2026,7 +2028,7 @@ mod tests {
 
         // ── Step 3: 1.FM has "no sound" ──────────────────────────────
         // 1.FM fails → END_FILE(ERROR)
-        push_msg(&mut app, MpvMsg::EndFile(player::MPV_END_FILE_REASON_ERROR));
+        push_msg(&mut app, MpvMsg::EndFile(mpv::MPV_END_FILE_REASON_ERROR));
         app.handle_tick();
         assert!(matches!(app.state.play_state, PlayState::Retrying(ref n) if n == "Station 1"));
         assert_eq!(app.state.retry_attempt, 1);
@@ -2066,7 +2068,7 @@ mod tests {
 
         // So the events arriving at main thread after both commands are processed:
         // EndFile(EOF) for 1.FM being replaced by 011.FM
-        push_msg(&mut app, MpvMsg::EndFile(player::MPV_END_FILE_REASON_EOF));
+        push_msg(&mut app, MpvMsg::EndFile(mpv::MPV_END_FILE_REASON_EOF));
         app.handle_tick();
         // Connecting → dropped ✓
         assert!(matches!(app.state.play_state, PlayState::Connecting(ref n) if n == "Station 0"));
@@ -2097,7 +2099,7 @@ mod tests {
         assert!(matches!(app.state.play_state, PlayState::Playing(_)));
 
         // Simulate failure → retry
-        push_msg(&mut app, MpvMsg::EndFile(player::MPV_END_FILE_REASON_ERROR));
+        push_msg(&mut app, MpvMsg::EndFile(mpv::MPV_END_FILE_REASON_ERROR));
         app.handle_tick();
         assert!(matches!(app.state.play_state, PlayState::Retrying(_)));
 
@@ -2114,7 +2116,7 @@ mod tests {
         // then only the correct events arriving:
 
         // EndFile from loadfile replace in the SECOND (user's) LoadUrl
-        push_msg(&mut app, MpvMsg::EndFile(player::MPV_END_FILE_REASON_EOF));
+        push_msg(&mut app, MpvMsg::EndFile(mpv::MPV_END_FILE_REASON_EOF));
         app.handle_tick();
         assert!(matches!(app.state.play_state, PlayState::Connecting(ref n) if n == "Station 1"));
 
@@ -2142,7 +2144,7 @@ mod tests {
         assert!(matches!(app.state.play_state, PlayState::Playing(_)));
 
         // Simulate failure → retry
-        push_msg(&mut app, MpvMsg::EndFile(player::MPV_END_FILE_REASON_ERROR));
+        push_msg(&mut app, MpvMsg::EndFile(mpv::MPV_END_FILE_REASON_ERROR));
         app.handle_tick();
         assert!(matches!(app.state.play_state, PlayState::Retrying(_)));
 
@@ -2184,7 +2186,8 @@ mod tests {
         let url_1fm = "https://strmreg.1.fm/back280s_mobile_mp3";
 
         let (mut mpv, warns) =
-            player::Mpv::new().expect("Failed to create mpv — is libmpv installed?");
+            mpv::Mpv::new("santui-radio-stream-player", &[("stream-lavf-o", "icy=1")])
+                .expect("Failed to create mpv — is libmpv installed?");
         for w in &warns {
             eprintln!("mpv warn: {w}");
         }
@@ -2194,7 +2197,7 @@ mod tests {
 
         /// Load a URL and wait for either FILE_LOADED or END_FILE.
         /// Returns the event IDs that arrived.
-        fn load_and_wait(mpv: &player::Mpv, label: &str, url: &str, timeout_secs: f64) -> Vec<u32> {
+        fn load_and_wait(mpv: &mpv::Mpv, label: &str, url: &str, timeout_secs: f64) -> Vec<u32> {
             eprintln!("\n--- {label}: {url} ---");
             mpv.load_url(url).expect("load_url returned error");
             let mut events = Vec::new();

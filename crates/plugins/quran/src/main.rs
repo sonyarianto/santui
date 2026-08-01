@@ -4,12 +4,12 @@ use std::sync::mpsc;
 use std::thread;
 
 mod api;
-mod player;
+
 mod types;
 mod ui;
 
 use api::*;
-use player::*;
+use santui_ipc::mpv::*;
 use santui_ipc::protocol::{Area, HostMsg, IpcKey, PluginRequest, RenderCmd, ThemeData};
 use types::*;
 use ui::*;
@@ -105,7 +105,7 @@ impl App {
     fn init_audio(&mut self) {
         let (tx_cmd, rx_cmd) = mpsc::channel();
         let (tx_msg, rx_msg) = mpsc::channel();
-        match Mpv::new() {
+        match Mpv::new("santui-quran", &[]) {
             Ok((mpv, _errors)) => {
                 self.tx_mpv = Some(tx_cmd);
                 self.rx_mpv = Some(rx_msg);

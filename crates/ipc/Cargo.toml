@@ -10,6 +10,7 @@ repository = "https://github.com/sonyarianto/santui"
 default = ["host"]
 host = ["dep:santui-core", "dep:ratatui", "dep:crossterm"]
 clipboard = ["dep:arboard"]
+mpv = ["dep:libloading"]
 
 [dependencies]
 santui-core = { path = "../core", version = "0.2.35", optional = true }
@@ -19,6 +20,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 bincode = { version = "2", features = ["serde", "std"] }
 arboard = { version = "3", optional = true }
+libloading = { version = "0.9", optional = true }
 log = { workspace = true }
 
 [dev-dependencies]

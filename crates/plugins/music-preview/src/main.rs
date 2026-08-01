@@ -1,5 +1,5 @@
 mod api;
-mod player;
+
 mod state;
 mod ui;
 
@@ -11,7 +11,7 @@ use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, PluginMessage, PluginRequest, RenderCmd, ThemeData,
 };
 
-use player::{Mpv, MpvWakeup};
+use santui_ipc::mpv::{Mpv, MpvWakeup};
 use santui_ipc::ui::max_visible_tracks;
 use state::{FetchState, MusicState};
 use ui::render_ui;
@@ -28,7 +28,7 @@ type MpvIo = (mpsc::Sender<MpvCommand>, MpvWakeup);
 fn spawn_mpv_thread() -> Result<MpvIo, Box<dyn std::error::Error>> {
     let (cmd_tx, cmd_rx) = mpsc::channel::<MpvCommand>();
 
-    let (mpv, errors) = Mpv::new()?;
+    let (mpv, errors) = Mpv::new("santui-music-preview", &[("config-dir", "")])?;
     for e in &errors {
         log::warn!("mpv init warning: {e}");
     }

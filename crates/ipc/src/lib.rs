@@ -1,10 +1,11 @@
-pub mod mpv;
 pub mod protocol;
 pub mod text;
 pub mod ui;
 
 #[cfg(feature = "clipboard")]
 pub mod clipboard;
+#[cfg(feature = "mpv")]
+pub mod mpv;
 
 #[cfg(feature = "host")]
 pub mod host;

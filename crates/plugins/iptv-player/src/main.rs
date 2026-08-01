@@ -1,5 +1,5 @@
 mod m3u;
-mod player;
+
 mod state;
 mod ui;
 
@@ -7,7 +7,8 @@ use std::io::{BufRead, BufReader};
 use std::sync::mpsc;
 use std::thread;
 
-use player::Mpv;
+use santui_ipc::mpv;
+use santui_ipc::mpv::Mpv;
 use santui_ipc::protocol::{Area, HostMsg, IpcKey, PluginRequest, RenderCmd, ThemeData, UserData};
 use state::{IptvState, PlaybackState, Screen};
 
@@ -85,7 +86,7 @@ impl App {
         self.area = area;
         self.dirty = true;
 
-        let (mut mpv, warns) = match Mpv::new() {
+        let (mut mpv, warns) = match Mpv::new("santui-iptv-player", &[]) {
             Ok(v) => v,
             Err(e) => {
                 self.init_error = Some(format!("{e}"));
@@ -115,17 +116,17 @@ impl App {
                 let ev = mpv.wait_event_raw(0.1);
                 if let Some(ev) = ev {
                     let id = ev.event_id;
-                    if id == player::MPV_EVENT_SHUTDOWN {
+                    if id == mpv::MPV_EVENT_SHUTDOWN {
                         break;
                     }
-                    if id == player::MPV_EVENT_FILE_LOADED {
+                    if id == mpv::MPV_EVENT_FILE_LOADED {
                         let _ = tx_msg_mpv.send(MpvMsg::FileLoaded);
                     }
-                    if id == player::MPV_EVENT_END_FILE {
+                    if id == mpv::MPV_EVENT_END_FILE {
                         if ev.data.is_null() {
                             continue;
                         }
-                        let ef: &player::MpvEventEndFile = unsafe { &*(ev.data as *const _) };
+                        let ef: &mpv::MpvEventEndFile = unsafe { &*(ev.data as *const _) };
                         let _ = tx_msg_mpv.send(MpvMsg::EndFile(ef.reason));
                     }
                 }
@@ -604,7 +605,7 @@ impl App {
                         }
                     }
                     MpvMsg::EndFile(reason) => {
-                        if reason == player::MPV_END_FILE_REASON_EOF {
+                        if reason == mpv::MPV_END_FILE_REASON_EOF {
                             let current_idx = match &self.state.play_state {
                                 PlaybackState::Playing { channel_index }
                                 | PlaybackState::Buffering { channel_index }
@@ -617,7 +618,7 @@ impl App {
                                     send_cmd(self, MpvCmd::LoadUrl(next_url));
                                 }
                             }
-                        } else if reason == player::MPV_END_FILE_REASON_ERROR {
+                        } else if reason == mpv::MPV_END_FILE_REASON_ERROR {
                             self.state.play_state =
                                 PlaybackState::Error("Stream connection lost".into());
                         }
