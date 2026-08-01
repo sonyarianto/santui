@@ -1,4 +1,4 @@
-## [unreleased]
+## [0.2.37] - 2026-08-01
 
 ### ⚙️ Miscellaneous
 
@@ -6,6 +6,7 @@
 - Stop publishing to crates.io, guard crates with publish = false
 - Relicense project from MIT to AGPL-3.0
 - Mark as stable plugin
+- Update changelog for v0.2.37
 
 ### 🎨 Refactor
 
@@ -56,7 +57,7 @@
 - Toggle card date format with t key
 - Toggle 12/24 hour clock with f key
 
-Full Changelog: [v0.2.36...](https://github.com/sonyarianto/santui/compare/v0.2.36...)
+Full Changelog: [v0.2.36...v0.2.37](https://github.com/sonyarianto/santui/compare/v0.2.36...v0.2.37)
 ## [0.2.36] - 2026-08-01
 
 ### ◀️ Revert
