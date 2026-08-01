@@ -111,16 +111,4 @@ mod tests {
         assert_eq!(response.result_count, 0);
         assert!(response.results.is_empty());
     }
-
-    #[test]
-    fn url_encode_plain_text() {
-        let encoded = url_encode("hello world");
-        assert_eq!(encoded, "hello+world");
-    }
-
-    #[test]
-    fn url_encode_special_chars() {
-        let encoded = url_encode("artist & song");
-        assert_eq!(encoded, "artist+%26+song");
-    }
 }

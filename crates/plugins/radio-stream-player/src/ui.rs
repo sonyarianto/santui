@@ -656,23 +656,6 @@ mod tests {
             .collect()
     }
 
-    fn default_theme() -> ThemeData {
-        ThemeData {
-            text: [220, 220, 220],
-            text_muted: [140, 140, 140],
-            accent: [157, 124, 216],
-            highlight: [250, 178, 131],
-            logo: [255, 185, 0],
-            background: [20, 20, 20],
-            background_panel: [20, 20, 20],
-            background_overlay: [10, 10, 10],
-            border: [250, 178, 131],
-            success: [127, 216, 143],
-            error: [224, 108, 117],
-            inverted_text: [20, 20, 20],
-        }
-    }
-
     fn state_with(n: usize) -> RadioState {
         RadioState::new(make_stations(n))
     }
@@ -680,17 +663,17 @@ mod tests {
     #[test]
     fn small_area_returns_empty() {
         let state = state_with(5);
-        let cmds = render_ui(&state, &default_theme(), 9, 2);
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 9, 2);
         assert!(cmds.is_empty());
-        let cmds = render_ui(&state, &default_theme(), 10, 2);
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 10, 2);
         assert!(cmds.is_empty());
-        let cmds = render_ui(&state, &default_theme(), 9, 3);
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 9, 3);
         assert!(cmds.is_empty());
     }
 
     #[test]
     fn contains_clear_command() {
-        let cmds = render_ui(&state_with(5), &default_theme(), 80, 24);
+        let cmds = render_ui(&state_with(5), &santui_ipc::test::theme(), 80, 24);
         if let RenderCmd::Clear { x, y, w, h } = &cmds[0] {
             assert_eq!(*x, 0);
             assert_eq!(*y, 0);
@@ -703,7 +686,7 @@ mod tests {
 
     #[test]
     fn contains_stations_panel_border() {
-        let cmds = render_ui(&state_with(5), &default_theme(), 80, 24);
+        let cmds = render_ui(&state_with(5), &santui_ipc::test::theme(), 80, 24);
         let borders: Vec<&RenderCmd> = cmds
             .iter()
             .filter(|c| matches!(c, RenderCmd::Border { .. }))
@@ -717,7 +700,7 @@ mod tests {
 
     #[test]
     fn shows_total_stations_in_normal_mode() {
-        let cmds = render_ui(&state_with(5), &default_theme(), 80, 24);
+        let cmds = render_ui(&state_with(5), &santui_ipc::test::theme(), 80, 24);
         let texts: Vec<&RenderCmd> = cmds
             .iter()
             .filter(|c| matches!(c, RenderCmd::Text { .. }))
@@ -738,7 +721,7 @@ mod tests {
         st.search_mode = true;
         st.query = "test".into();
         st.filtered = vec![0, 3];
-        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let texts: Vec<&RenderCmd> = cmds
             .iter()
             .filter(|c| matches!(c, RenderCmd::Text { .. }))
@@ -766,7 +749,7 @@ mod tests {
         let mut st = state_with(5);
         st.query = "gold".into();
         st.filtered = vec![0, 2, 4];
-        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let texts: Vec<&RenderCmd> = cmds
             .iter()
             .filter(|c| matches!(c, RenderCmd::Text { .. }))
@@ -793,7 +776,7 @@ mod tests {
     fn shows_scan_msg_when_set() {
         let mut st = state_with(5);
         st.scan_msg = Some("Reloaded 5 stations".into());
-        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let texts: Vec<&RenderCmd> = cmds
             .iter()
             .filter(|c| matches!(c, RenderCmd::Text { .. }))
@@ -811,7 +794,7 @@ mod tests {
     #[test]
     fn stopped_shows_no_station_selected() {
         let st = state_with(5);
-        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let texts: Vec<&RenderCmd> = cmds
             .iter()
             .filter(|c| matches!(c, RenderCmd::Text { .. }))
@@ -832,14 +815,14 @@ mod tests {
         st.play_state = PlayState::Playing("Station 1".into());
         st.current_station = Some(1);
         st.song_title = "Some Song".into();
-        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let texts: Vec<&RenderCmd> = cmds
             .iter()
             .filter(|c| matches!(c, RenderCmd::Text { .. }))
             .collect();
         let has_name = texts.iter().any(|t| {
             if let RenderCmd::Text { text, fg, bold, .. } = t {
-                text == "Station 1" && *fg == Some(default_theme().success) && *bold
+                text == "Station 1" && *fg == Some(santui_ipc::test::theme().success) && *bold
             } else {
                 false
             }
@@ -865,7 +848,7 @@ mod tests {
             artist: Some("Artist Name".into()),
             title: None,
         });
-        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let texts: Vec<&RenderCmd> = cmds
             .iter()
             .filter(|c| matches!(c, RenderCmd::Text { .. }))
@@ -884,7 +867,7 @@ mod tests {
     fn playing_no_song_title_shows_no_metadata() {
         let mut st = state_with(5);
         st.play_state = PlayState::Playing("Station 0".into());
-        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let texts: Vec<&RenderCmd> = cmds
             .iter()
             .filter(|c| matches!(c, RenderCmd::Text { .. }))
@@ -903,7 +886,7 @@ mod tests {
     fn error_shows_error_message() {
         let mut st = state_with(5);
         st.play_state = PlayState::Error("connection lost".into());
-        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let texts: Vec<&RenderCmd> = cmds
             .iter()
             .filter(|c| matches!(c, RenderCmd::Text { .. }))
@@ -928,7 +911,7 @@ mod tests {
 
     #[test]
     fn table_has_correct_headers() {
-        let cmds = render_ui(&state_with(5), &default_theme(), 80, 24);
+        let cmds = render_ui(&state_with(5), &santui_ipc::test::theme(), 80, 24);
         let table = cmds
             .iter()
             .find(|c| matches!(c, RenderCmd::Table { .. }))
@@ -942,7 +925,7 @@ mod tests {
 
     #[test]
     fn table_shows_station_rows() {
-        let cmds = render_ui(&state_with(5), &default_theme(), 80, 24);
+        let cmds = render_ui(&state_with(5), &santui_ipc::test::theme(), 80, 24);
         let table = cmds
             .iter()
             .find(|c| matches!(c, RenderCmd::Table { .. }))
@@ -964,7 +947,7 @@ mod tests {
     fn table_selection_highlighted() {
         let mut st = state_with(10);
         st.selected = 3;
-        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let table = cmds
             .iter()
             .find(|c| matches!(c, RenderCmd::Table { .. }))
@@ -981,7 +964,7 @@ mod tests {
         let mut st = state_with(10);
         st.current_station = Some(5);
         st.play_state = PlayState::Playing("Station 5".into());
-        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let table = cmds
             .iter()
             .find(|c| matches!(c, RenderCmd::Table { .. }))
@@ -996,7 +979,7 @@ mod tests {
             assert!(current_style.is_some());
             assert_eq!(
                 current_style.as_ref().unwrap().fg,
-                Some(default_theme().success)
+                Some(santui_ipc::test::theme().success)
             );
         } else {
             panic!("expected Table");
@@ -1007,7 +990,7 @@ mod tests {
     fn lyrics_panel_shown_when_enabled() {
         let mut st = state_with(5);
         st.show_lyrics = true;
-        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let borders: Vec<&RenderCmd> = cmds
             .iter()
             .filter(|c| matches!(c, RenderCmd::Border { .. }))
@@ -1028,7 +1011,7 @@ mod tests {
         let mut st = state_with(5);
         st.show_lyrics = true;
         st.lyrics_loading = true;
-        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let texts: Vec<&RenderCmd> = cmds
             .iter()
             .filter(|c| matches!(c, RenderCmd::Text { .. }))
@@ -1048,7 +1031,7 @@ mod tests {
         let mut st = state_with(5);
         st.show_lyrics = true;
         st.lyrics_text = String::new();
-        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let texts: Vec<&RenderCmd> = cmds
             .iter()
             .filter(|c| matches!(c, RenderCmd::Text { .. }))
@@ -1068,7 +1051,7 @@ mod tests {
         let mut st = state_with(5);
         st.show_lyrics = true;
         st.lyrics_text = "Line one\nLine two\nLine three".into();
-        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let texts: Vec<&RenderCmd> = cmds
             .iter()
             .filter(|c| matches!(c, RenderCmd::Text { .. }))
@@ -1093,7 +1076,7 @@ mod tests {
     #[test]
     fn lyrics_not_shown_when_disabled() {
         let st = state_with(5);
-        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let borders: Vec<&RenderCmd> = cmds
             .iter()
             .filter(|c| matches!(c, RenderCmd::Border { .. }))
@@ -1112,7 +1095,7 @@ mod tests {
     fn lyrics_hidden_when_area_too_narrow() {
         let mut st = state_with(5);
         st.show_lyrics = true;
-        let cmds2 = render_ui(&st, &default_theme(), 20, 24);
+        let cmds2 = render_ui(&st, &santui_ipc::test::theme(), 20, 24);
         let borders2: Vec<&RenderCmd> = cmds2
             .iter()
             .filter(|c| matches!(c, RenderCmd::Border { .. }))
@@ -1131,7 +1114,7 @@ mod tests {
     fn lyrics_overlay_renders_right_snapped_popup() {
         let mut st = state_with(5);
         st.show_lyrics = true;
-        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let has_dim = cmds.iter().any(|c| matches!(c, RenderCmd::Dim { .. }));
         assert!(has_dim, "expected Dim command for overlay");
         let borders: Vec<&RenderCmd> = cmds
@@ -1156,7 +1139,7 @@ mod tests {
     fn now_playing_panel_contains_volume() {
         let mut st = state_with(5);
         st.volume = 75;
-        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let texts: Vec<&RenderCmd> = cmds
             .iter()
             .filter(|c| matches!(c, RenderCmd::Text { .. }))
@@ -1179,7 +1162,7 @@ mod tests {
         st.stations[1].country = "FR".into();
         st.stations[2].country = "XX".into();
         st.apply_filter();
-        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let table = cmds
             .iter()
             .find(|c| matches!(c, RenderCmd::Table { .. }))
@@ -1196,7 +1179,7 @@ mod tests {
         let mut st = state_with(30);
         st.scroll = 10;
         st.selected = 12;
-        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let table = cmds
             .iter()
             .find(|c| matches!(c, RenderCmd::Table { .. }))
@@ -1221,7 +1204,7 @@ mod tests {
         let mut st = state_with(5);
         st.filtered.clear();
         // render_ui accesses state.filtered so with empty it should produce empty rows
-        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let table = cmds
             .iter()
             .find(|c| matches!(c, RenderCmd::Table { .. }))
@@ -1234,7 +1217,7 @@ mod tests {
     #[test]
     fn table_visible_count_limited_by_area() {
         let st = state_with(100);
-        let cmds = render_ui(&st, &default_theme(), 80, 10);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 10);
         let table = cmds
             .iter()
             .find(|c| matches!(c, RenderCmd::Table { .. }))
@@ -1250,14 +1233,14 @@ mod tests {
     fn now_playing_error_shows_red_text() {
         let mut st = state_with(5);
         st.play_state = PlayState::Error("stream failed".into());
-        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let texts: Vec<&RenderCmd> = cmds
             .iter()
             .filter(|c| matches!(c, RenderCmd::Text { .. }))
             .collect();
         let has_error = texts.iter().any(|t| {
             if let RenderCmd::Text { text, fg, .. } = t {
-                text == "⚠ Error" && *fg == Some(default_theme().error)
+                text == "⚠ Error" && *fg == Some(santui_ipc::test::theme().error)
             } else {
                 false
             }
@@ -1275,7 +1258,7 @@ mod tests {
             .collect::<Vec<_>>()
             .join("\n");
         st.lyrics_scroll = 14;
-        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let texts: Vec<&RenderCmd> = cmds
             .iter()
             .filter(|c| matches!(c, RenderCmd::Text { .. }))
@@ -1295,7 +1278,7 @@ mod tests {
         let mut st = state_with(5);
         st.show_lyrics = true;
         st.lyrics_focused = false;
-        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let borders: Vec<&RenderCmd> = cmds
             .iter()
             .filter(|c| matches!(c, RenderCmd::Border { .. }))
@@ -1304,7 +1287,7 @@ mod tests {
         if let RenderCmd::Border { fg, .. } = borders[0] {
             assert_eq!(
                 *fg,
-                default_theme().border,
+                santui_ipc::test::theme().border,
                 "stations panel should use border color when focused"
             );
         }
@@ -1315,7 +1298,7 @@ mod tests {
         let mut st = state_with(5);
         st.show_lyrics = true;
         st.lyrics_focused = true;
-        let cmds = render_ui(&st, &default_theme(), 80, 24);
+        let cmds = render_ui(&st, &santui_ipc::test::theme(), 80, 24);
         let borders: Vec<&RenderCmd> = cmds
             .iter()
             .filter(|c| matches!(c, RenderCmd::Border { .. }))
@@ -1326,7 +1309,7 @@ mod tests {
             assert_eq!(title.as_deref(), Some("Lyrics"));
             assert_eq!(
                 *fg,
-                default_theme().border,
+                santui_ipc::test::theme().border,
                 "lyrics panel should use border color when focused"
             );
         }

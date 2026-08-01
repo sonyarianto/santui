@@ -82,3 +82,39 @@ pub fn parse_tags(input: &str) -> Vec<String> {
 pub fn single_line(value: &str) -> String {
     crate::ui::truncate(&value.replace('\n', " ⏎ "), 90)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn url_encode_alphanumeric() {
+        assert_eq!(url_encode("hello123"), "hello123");
+    }
+
+    #[test]
+    fn url_encode_empty() {
+        assert_eq!(url_encode(""), "");
+    }
+
+    #[test]
+    fn url_encode_safe_punctuation() {
+        assert_eq!(url_encode("-_.~"), "-_.~");
+    }
+
+    #[test]
+    fn url_encode_space_to_plus() {
+        assert_eq!(url_encode("hello world"), "hello+world");
+    }
+
+    #[test]
+    fn url_encode_special_chars() {
+        assert_eq!(url_encode("a&b=c/d"), "a%26b%3Dc%2Fd");
+        assert_eq!(url_encode("artist & song"), "artist+%26+song");
+    }
+
+    #[test]
+    fn url_encode_unicode() {
+        assert_eq!(url_encode("caf\u{e9}"), "caf%C3%A9");
+    }
+}

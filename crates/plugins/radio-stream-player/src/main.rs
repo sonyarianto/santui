@@ -1373,27 +1373,10 @@ mod tests {
             .collect()
     }
 
-    fn default_theme() -> ThemeData {
-        ThemeData {
-            text: [220, 220, 220],
-            text_muted: [140, 140, 140],
-            accent: [157, 124, 216],
-            highlight: [250, 178, 131],
-            logo: [255, 185, 0],
-            background: [20, 20, 20],
-            background_panel: [20, 20, 20],
-            background_overlay: [10, 10, 10],
-            border: [250, 178, 131],
-            success: [127, 216, 143],
-            error: [224, 108, 117],
-            inverted_text: [20, 20, 20],
-        }
-    }
-
     fn base_app_with(n: usize, db: Option<rusqlite::Connection>) -> App {
         App {
             state: RadioState::new(make_stations(n)),
-            theme: default_theme(),
+            theme: santui_ipc::test::theme(),
             area: Area { w: 80, h: 24 },
             tx_cmd: None,
             rx_msg: None,
@@ -1956,7 +1939,7 @@ mod tests {
         let (tx_cmd, _rx_cmd) = mpsc::channel();
         App {
             state: RadioState::new(make_stations(n)),
-            theme: default_theme(),
+            theme: santui_ipc::test::theme(),
             area: Area { w: 80, h: 24 },
             tx_cmd: Some(tx_cmd),
             rx_msg: Some(rx_msg),

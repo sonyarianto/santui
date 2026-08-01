@@ -108,42 +108,26 @@ impl Default for App {
 impl App {
     fn handle_key(&mut self, key: IpcKey) -> bool {
         if self.state.search_mode {
-            match key {
-                IpcKey::Esc => {
-                    self.state.search_mode = false;
-                    self.state.query.clear();
-                    self.dirty = true;
-                    true
-                }
-                IpcKey::Enter => {
-                    let q = self.state.query.trim().to_string();
-                    if !q.is_empty() {
-                        self.state.search_mode = false;
-                        self.trigger_search(q);
-                    }
-                    self.dirty = true;
-                    true
-                }
-                IpcKey::Backspace => {
-                    self.state.query.pop();
-                    self.dirty = true;
-                    true
-                }
-                IpcKey::Char(c) if !c.is_control() => {
-                    self.state.query.push(c);
-                    self.dirty = true;
-                    true
-                }
-                _ => true,
+            let (consumed, submitted) = santui_ipc::search::handle_search_key(
+                &mut self.state.search_mode,
+                &mut self.state.query,
+                &mut self.dirty,
+                key,
+            );
+            if let Some(q) = submitted {
+                self.trigger_search(q);
             }
+            consumed
         } else {
             match key {
                 IpcKey::Char('/') => {
                     self.stop_playback();
                     self.init_error = None;
-                    self.state.search_mode = true;
-                    self.state.query.clear();
-                    self.dirty = true;
+                    santui_ipc::search::enter_search_mode(
+                        &mut self.state.search_mode,
+                        &mut self.state.query,
+                        &mut self.dirty,
+                    );
                     true
                 }
                 IpcKey::Enter => {
@@ -157,21 +141,25 @@ impl App {
                 }
                 IpcKey::Up => {
                     self.state.selected = self.state.selected.saturating_sub(1);
-                    self.adjust_scroll_up();
+                    santui_ipc::ui::scroll_up(&mut self.state.scroll, self.state.selected);
                     self.dirty = true;
                     true
                 }
                 IpcKey::Down => {
                     let max = self.state.results.len().saturating_sub(1);
                     self.state.selected = self.state.selected.min(max).saturating_add(1).min(max);
-                    self.adjust_scroll_down();
+                    santui_ipc::ui::scroll_down(
+                        &mut self.state.scroll,
+                        self.state.selected,
+                        self.area.h,
+                    );
                     self.dirty = true;
                     true
                 }
                 IpcKey::PageUp => {
                     let page_size = max_visible_tracks(self.area.h).max(1);
                     self.state.selected = self.state.selected.saturating_sub(page_size);
-                    self.adjust_scroll_up();
+                    santui_ipc::ui::scroll_up(&mut self.state.scroll, self.state.selected);
                     self.dirty = true;
                     true
                 }
@@ -179,7 +167,11 @@ impl App {
                     let page_size = max_visible_tracks(self.area.h).max(1);
                     let max = self.state.results.len().saturating_sub(1);
                     self.state.selected = self.state.selected.saturating_add(page_size).min(max);
-                    self.adjust_scroll_down();
+                    santui_ipc::ui::scroll_down(
+                        &mut self.state.scroll,
+                        self.state.selected,
+                        self.area.h,
+                    );
                     self.dirty = true;
                     true
                 }
@@ -205,22 +197,6 @@ impl App {
                 IpcKey::Esc => false,
                 _ => false,
             }
-        }
-    }
-
-    fn adjust_scroll_up(&mut self) {
-        if self.state.selected < self.state.scroll {
-            self.state.scroll = self.state.selected;
-        }
-    }
-
-    fn adjust_scroll_down(&mut self) {
-        let max_visible = max_visible_tracks(self.area.h);
-        if self.state.selected >= self.state.scroll + max_visible {
-            self.state.scroll = self
-                .state
-                .selected
-                .saturating_sub(max_visible.saturating_sub(1));
         }
     }
 
@@ -286,7 +262,11 @@ impl App {
                 if wrapped {
                     self.state.scroll = 0;
                 } else {
-                    self.adjust_scroll_down();
+                    santui_ipc::ui::scroll_down(
+                        &mut self.state.scroll,
+                        self.state.selected,
+                        self.area.h,
+                    );
                 }
                 let url = self
                     .state

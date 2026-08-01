@@ -335,36 +335,7 @@ fn render_table(state: &LyricsState, theme: &ThemeData, w: u16, h: u16, cmds: &m
 mod tests {
     use super::*;
     use crate::lrclib::LRCLibTrack;
-
-    fn test_theme() -> ThemeData {
-        ThemeData {
-            text: [200; 3],
-            text_muted: [100; 3],
-            accent: [180; 3],
-            highlight: [220; 3],
-            logo: [255; 3],
-            background: [0; 3],
-            background_panel: [20; 3],
-            background_overlay: [10; 3],
-            border: [150; 3],
-            success: [80; 3],
-            error: [255; 3],
-            inverted_text: [255; 3],
-        }
-    }
-
-    fn make_track(id: u64, name: &str) -> LRCLibTrack {
-        LRCLibTrack {
-            id,
-            track_name: name.into(),
-            artist_name: "Artist".into(),
-            album_name: "Album".into(),
-            duration: 200.0,
-            instrumental: false,
-            plain_lyrics: None,
-            synced_lyrics: None,
-        }
-    }
+    use crate::state::make_track;
 
     #[test]
     fn renders_search_bar_in_search_mode() {
@@ -373,7 +344,7 @@ mod tests {
             search_mode: true,
             ..LyricsState::default()
         };
-        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_search = cmds.iter().any(
             |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Search: eminem")),
         );
@@ -383,21 +354,21 @@ mod tests {
     #[test]
     fn renders_dimmed_search_hint_when_not_searching() {
         let state = LyricsState::default();
-        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let hint = cmds
             .iter()
             .find(|c| matches!(c, RenderCmd::Text { y: 1, .. }));
         assert!(hint.is_some());
         if let Some(RenderCmd::Text { text, fg, .. }) = hint {
             assert_eq!(text, "Search: ");
-            assert_eq!(*fg, Some(test_theme().text_muted));
+            assert_eq!(*fg, Some(santui_ipc::test::theme().text_muted));
         }
     }
 
     #[test]
     fn idle_state_shows_centered_hint() {
         let state = LyricsState::default();
-        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let hint = cmds.iter().find(
             |c| matches!(c, RenderCmd::Text { text, .. } if text == "press / to start search"),
         );
@@ -405,7 +376,7 @@ mod tests {
         if let Some(RenderCmd::Text { x, y, fg, .. }) = hint {
             assert_eq!(*x, (80 - 23) / 2);
             assert_eq!(*y, 12);
-            assert_eq!(*fg, Some(test_theme().text_muted));
+            assert_eq!(*fg, Some(santui_ipc::test::theme().text_muted));
         }
     }
 
@@ -416,7 +387,7 @@ mod tests {
             fetch_state: FetchState::Fetching,
             ..LyricsState::default()
         };
-        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_spinner = cmds
             .iter()
             .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Searching")));
@@ -433,7 +404,7 @@ mod tests {
             fetch_state: FetchState::Done,
             ..LyricsState::default()
         };
-        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_table = cmds.iter().any(|c| matches!(c, RenderCmd::Table { .. }));
         assert!(has_table);
         let has_track = cmds.iter().any(|c| {
@@ -450,7 +421,7 @@ mod tests {
             fetch_state: FetchState::Done,
             ..LyricsState::default()
         };
-        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_no_results = cmds
             .iter()
             .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("No results")));
@@ -460,7 +431,7 @@ mod tests {
     #[test]
     fn renders_border_title() {
         let state = LyricsState::default();
-        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_title = cmds.iter().any(|c| {
             matches!(c, RenderCmd::Border { ref title, .. } if title.as_deref() == Some("Music Lyrics"))
         });
@@ -477,7 +448,7 @@ mod tests {
             lyrics_text: "line one\nline two".into(),
             ..LyricsState::default()
         };
-        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_title = cmds
             .iter()
             .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text == "Lose Yourself"));
@@ -504,7 +475,7 @@ mod tests {
             lyrics_loading: false,
             ..LyricsState::default()
         };
-        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_msg = cmds
             .iter()
             .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text == "No lyrics found"));
@@ -518,7 +489,7 @@ mod tests {
             lyrics_loading: true,
             ..LyricsState::default()
         };
-        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_msg = cmds.iter().any(
             |c| matches!(c, RenderCmd::Text { ref text, .. } if text == "Searching lyrics..."),
         );
@@ -536,7 +507,7 @@ mod tests {
             lyrics_scroll: 30,
             ..LyricsState::default()
         };
-        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let texts: Vec<&RenderCmd> = cmds
             .iter()
             .filter(|c| matches!(c, RenderCmd::Text { .. }))
@@ -558,7 +529,7 @@ mod tests {
             lyrics_text: "only three lines".into(),
             ..LyricsState::default()
         };
-        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_pct = cmds
             .iter()
             .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.ends_with('%')));

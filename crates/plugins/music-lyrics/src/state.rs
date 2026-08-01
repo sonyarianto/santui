@@ -49,22 +49,23 @@ impl Default for LyricsState {
 }
 
 #[cfg(test)]
+pub(crate) fn make_track(id: u64, name: &str) -> LRCLibTrack {
+    LRCLibTrack {
+        id,
+        track_name: name.into(),
+        artist_name: "Artist".into(),
+        album_name: "Album".into(),
+        duration: 200.0,
+        instrumental: false,
+        plain_lyrics: None,
+        synced_lyrics: None,
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::lrclib::LRCLibTrack;
-
-    fn make_track(id: u64, name: &str) -> LRCLibTrack {
-        LRCLibTrack {
-            id,
-            track_name: name.into(),
-            artist_name: "Artist".into(),
-            album_name: "Album".into(),
-            duration: 200.0,
-            instrumental: false,
-            plain_lyrics: None,
-            synced_lyrics: None,
-        }
-    }
 
     #[test]
     fn default_state_empty() {

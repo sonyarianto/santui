@@ -458,6 +458,21 @@ pub fn update_scroll(scroll: &mut u16, selected: usize, area_h: u16) {
     }
 }
 
+/// Move `scroll` up so `selected` stays visible.
+pub fn scroll_up(scroll: &mut usize, selected: usize) {
+    if selected < *scroll {
+        *scroll = selected;
+    }
+}
+
+/// Move `scroll` down so `selected` stays visible (5 rows reserved for header/footer).
+pub fn scroll_down(scroll: &mut usize, selected: usize, area_h: u16) {
+    let max_visible = max_visible_tracks(area_h);
+    if selected >= *scroll + max_visible {
+        *scroll = selected.saturating_sub(max_visible.saturating_sub(1));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::max_visible_tracks;

@@ -260,23 +260,6 @@ mod tests {
     use super::*;
     use crate::api::ItunesTrack;
 
-    fn test_theme() -> ThemeData {
-        ThemeData {
-            text: [200; 3],
-            text_muted: [100; 3],
-            accent: [180; 3],
-            highlight: [220; 3],
-            logo: [255; 3],
-            background: [0; 3],
-            background_panel: [20; 3],
-            background_overlay: [10; 3],
-            border: [150; 3],
-            success: [80; 3],
-            error: [255; 3],
-            inverted_text: [255; 3],
-        }
-    }
-
     fn make_track(id: u64, name: &str) -> ItunesTrack {
         ItunesTrack {
             track_id: id,
@@ -297,7 +280,7 @@ mod tests {
             search_mode: true,
             ..MusicState::default()
         };
-        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_search = cmds.iter().any(
             |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Search: eminem")),
         );
@@ -307,21 +290,21 @@ mod tests {
     #[test]
     fn renders_dimmed_search_hint_when_not_searching() {
         let state = MusicState::default();
-        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let hint = cmds
             .iter()
             .find(|c| matches!(c, RenderCmd::Text { y: 1, .. }));
         assert!(hint.is_some());
         if let Some(RenderCmd::Text { text, fg, .. }) = hint {
             assert_eq!(text, "Search: ");
-            assert_eq!(*fg, Some(test_theme().text_muted));
+            assert_eq!(*fg, Some(santui_ipc::test::theme().text_muted));
         }
     }
 
     #[test]
     fn idle_state_shows_centered_hint() {
         let state = MusicState::default();
-        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let hint = cmds.iter().find(
             |c| matches!(c, RenderCmd::Text { text, .. } if text == "press / to start search"),
         );
@@ -329,7 +312,7 @@ mod tests {
         if let Some(RenderCmd::Text { x, y, fg, .. }) = hint {
             assert_eq!(*x, (80 - 23) / 2);
             assert_eq!(*y, 12);
-            assert_eq!(*fg, Some(test_theme().text_muted));
+            assert_eq!(*fg, Some(santui_ipc::test::theme().text_muted));
         }
     }
 
@@ -340,7 +323,7 @@ mod tests {
             fetch_state: FetchState::Fetching,
             ..MusicState::default()
         };
-        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_spinner = cmds
             .iter()
             .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Searching")));
@@ -357,7 +340,7 @@ mod tests {
             fetch_state: FetchState::Done,
             ..MusicState::default()
         };
-        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_table = cmds.iter().any(|c| matches!(c, RenderCmd::Table { .. }));
         assert!(has_table);
         let has_track = cmds.iter().any(|c| {
@@ -378,7 +361,7 @@ mod tests {
             fetch_state: FetchState::Done,
             ..MusicState::default()
         };
-        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_countdown = cmds.iter().any(|c| {
             matches!(c, RenderCmd::Table { ref rows, .. } if rows[0].last().map(|s| s.as_str()) == Some("0:12"))
         });
@@ -395,7 +378,7 @@ mod tests {
             fetch_state: FetchState::Done,
             ..MusicState::default()
         };
-        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_no_results = cmds.iter().any(
             |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("No tracks found")),
         );
@@ -405,7 +388,7 @@ mod tests {
     #[test]
     fn renders_border_title() {
         let state = MusicState::default();
-        let cmds = render_ui(&state, &test_theme(), 80, 24);
+        let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_title = cmds.iter().any(|c| {
             matches!(c, RenderCmd::Border { ref title, .. } if title.as_deref() == Some("Music Preview"))
         });

@@ -1,5 +1,7 @@
 pub mod platform;
 pub mod protocol;
+pub mod search;
+pub mod test;
 pub mod text;
 pub mod theme;
 pub mod time;

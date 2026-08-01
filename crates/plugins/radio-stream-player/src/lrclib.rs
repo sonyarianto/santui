@@ -85,36 +85,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn url_encode_alphanumeric() {
-        assert_eq!(url_encode("hello123"), "hello123");
-    }
-
-    #[test]
-    fn url_encode_space_to_plus() {
-        assert_eq!(url_encode("hello world"), "hello+world");
-    }
-
-    #[test]
-    fn url_encode_special_chars() {
-        assert_eq!(url_encode("a&b=c/d"), "a%26b%3Dc%2Fd");
-    }
-
-    #[test]
-    fn url_encode_safe_punctuation() {
-        assert_eq!(url_encode("-_.~"), "-_.~");
-    }
-
-    #[test]
-    fn url_encode_empty() {
-        assert_eq!(url_encode(""), "");
-    }
-
-    #[test]
-    fn url_encode_unicode() {
-        assert_eq!(url_encode("café"), "caf%C3%A9");
-    }
-
-    #[test]
     fn split_title_artist_dash_track() {
         let (a, t) = split_title("Artist - Song");
         assert_eq!(a, Some("Artist".into()));
