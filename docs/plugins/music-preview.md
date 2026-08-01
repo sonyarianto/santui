@@ -47,9 +47,10 @@ App
 ```
 
 ## Features
-- Search iTunes catalog by artist/song name
+- Search iTunes catalog by artist/song name (`/` key)
 - Display results with track name, artist, album, genre
-- Play 30-second preview via mpv
+- Play 30-second preview via mpv (`p` key)
+- Track Details side panel with title/artist/album/genre/release info (`d` key toggles, `↑↓` scrolls)
 - Stop playback (`s` key)
 - Auto-advance to next track after 30 seconds (wraps around)
 - Centered error display when mpv initialization fails

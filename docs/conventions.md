@@ -24,3 +24,12 @@ Implementation:
 - Do NOT hand-roll hint rows with `RenderCmd::Text` or `text_at`; every footer must
   go through one of the helpers above so colors and separators stay consistent
 
+## Key-value detail rows
+
+Detail panels (e.g. registry Plugin Actions dialog, music-preview Track Details)
+render `Label: value` rows as two separate `RenderCmd::Text` commands:
+
+- Key renders in `theme.text_muted`, followed by `:` and a single space
+- Value renders in `theme.text` (semantic overrides allowed, e.g. `theme.success` for a status)
+- No alignment padding — value starts right after the key, regardless of other rows
+
