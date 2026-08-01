@@ -20,7 +20,6 @@ pub struct MusicState {
     pub now_playing: Option<usize>,
     pub track_elapsed: Option<u64>,
     pub show_details: bool,
-    pub details_focused: bool,
     pub details_scroll: usize,
 }
 
@@ -38,7 +37,6 @@ impl Default for MusicState {
             now_playing: None,
             track_elapsed: None,
             show_details: false,
-            details_focused: false,
             details_scroll: 0,
         }
     }
@@ -52,13 +50,11 @@ impl MusicState {
     pub fn toggle_details(&mut self) {
         self.show_details = !self.show_details;
         self.details_scroll = 0;
-        self.details_focused = self.show_details;
     }
 
     pub fn close_details(&mut self) {
         self.show_details = false;
         self.details_scroll = 0;
-        self.details_focused = false;
     }
 
     fn details_elapsed(&self) -> Option<u64> {
@@ -387,7 +383,7 @@ mod tests {
     }
 
     #[test]
-    fn toggle_details_toggles_focus_and_resets_scroll() {
+    fn toggle_details_toggles_and_resets_scroll() {
         let mut state = MusicState {
             results: vec![make_track(1, "A", "")],
             details_scroll: 5,
@@ -395,24 +391,20 @@ mod tests {
         };
         state.toggle_details();
         assert!(state.show_details);
-        assert!(state.details_focused);
         assert_eq!(state.details_scroll, 0);
         state.toggle_details();
         assert!(!state.show_details);
-        assert!(!state.details_focused);
     }
 
     #[test]
     fn close_details_resets_state() {
         let mut state = MusicState {
             show_details: true,
-            details_focused: true,
             details_scroll: 3,
             ..MusicState::default()
         };
         state.close_details();
         assert!(!state.show_details);
-        assert!(!state.details_focused);
         assert_eq!(state.details_scroll, 0);
     }
 
@@ -444,7 +436,6 @@ mod tests {
         let mut state = MusicState {
             results: vec![rich_track()],
             show_details: true,
-            details_focused: true,
             ..MusicState::default()
         };
         let max_scroll = detail_lines(&rich_track(), None, 60).len() - 3;

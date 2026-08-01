@@ -120,12 +120,6 @@ impl App {
             consumed
         } else {
             match key {
-                IpcKey::Tab => {
-                    if self.state.show_details {
-                        self.state.details_focused = !self.state.details_focused;
-                    }
-                    true
-                }
                 IpcKey::Char('/') => {
                     if self.state.show_details {
                         false
@@ -152,9 +146,7 @@ impl App {
                 }
                 IpcKey::Up => {
                     if self.state.show_details {
-                        if self.state.details_focused {
-                            self.state.details_scroll_up();
-                        }
+                        self.state.details_scroll_up();
                     } else {
                         self.state.selected = self.state.selected.saturating_sub(1);
                         santui_ipc::ui::scroll_up(&mut self.state.scroll, self.state.selected);
@@ -164,11 +156,9 @@ impl App {
                 }
                 IpcKey::Down => {
                     if self.state.show_details {
-                        if self.state.details_focused {
-                            let panel_h = self.details_panel_height();
-                            let inner_w = self.details_panel_inner_w();
-                            self.state.details_scroll_down(panel_h, inner_w);
-                        }
+                        let panel_h = self.details_panel_height();
+                        let inner_w = self.details_panel_inner_w();
+                        self.state.details_scroll_down(panel_h, inner_w);
                     } else {
                         let max = self.state.results.len().saturating_sub(1);
                         self.state.selected =
@@ -184,10 +174,8 @@ impl App {
                 }
                 IpcKey::PageUp => {
                     if self.state.show_details {
-                        if self.state.details_focused {
-                            let panel_h = self.details_panel_height();
-                            self.state.details_page_up(panel_h.max(1));
-                        }
+                        let panel_h = self.details_panel_height();
+                        self.state.details_page_up(panel_h.max(1));
                     } else {
                         let page_size = max_visible_tracks(self.area.h).max(1);
                         self.state.selected = self.state.selected.saturating_sub(page_size);
@@ -198,11 +186,9 @@ impl App {
                 }
                 IpcKey::PageDown => {
                     if self.state.show_details {
-                        if self.state.details_focused {
-                            let panel_h = self.details_panel_height();
-                            let inner_w = self.details_panel_inner_w();
-                            self.state.details_page_down(panel_h.max(1), inner_w);
-                        }
+                        let panel_h = self.details_panel_height();
+                        let inner_w = self.details_panel_inner_w();
+                        self.state.details_page_down(panel_h.max(1), inner_w);
                     } else {
                         let page_size = max_visible_tracks(self.area.h).max(1);
                         let max = self.state.results.len().saturating_sub(1);
@@ -438,12 +424,7 @@ impl App {
         }
         let mut hints: Vec<(String, String)> = Vec::new();
         if self.state.show_details {
-            if self.state.details_focused {
-                hints.push(("tab".into(), "results".into()));
-                hints.push(("↑↓".into(), "scroll".into()));
-            } else {
-                hints.push(("tab".into(), "details".into()));
-            }
+            hints.push(("↑↓".into(), "scroll".into()));
             hints.push(("d".into(), "hide details".into()));
             hints.push(("esc".into(), "close".into()));
         } else if !self.state.results.is_empty() {
@@ -822,10 +803,8 @@ mod tests {
         assert!(!app.state.show_details);
         assert!(app.handle_key(IpcKey::Char('d')));
         assert!(app.state.show_details);
-        assert!(app.state.details_focused);
         assert!(app.handle_key(IpcKey::Char('d')));
         assert!(!app.state.show_details);
-        assert!(!app.state.details_focused);
     }
 
     #[test]
@@ -844,30 +823,22 @@ mod tests {
     }
 
     #[test]
-    fn handle_key_tab_switches_details_focus() {
+    fn handle_key_tab_unhandled_with_details_open() {
         let mut app = app_with_results();
         app.state.show_details = true;
-        assert!(app.handle_key(IpcKey::Tab));
-        assert!(app.state.details_focused);
-        assert!(app.handle_key(IpcKey::Tab));
-        assert!(!app.state.details_focused);
+        assert!(!app.handle_key(IpcKey::Tab));
+        assert!(app.state.show_details);
     }
 
     #[test]
-    fn handle_key_navigation_respects_details_focus() {
+    fn handle_key_navigation_scrolls_details_when_open() {
         let mut app = app_with_results();
         app.area.h = 5;
         app.state.show_details = true;
-        app.state.details_focused = true;
         let selected_before = app.state.selected;
         app.handle_key(IpcKey::Down);
         assert_eq!(app.state.selected, selected_before);
         assert!(app.state.details_scroll > 0);
-
-        app.handle_key(IpcKey::Tab);
-        app.handle_key(IpcKey::Down);
-        assert_eq!(app.state.selected, selected_before);
-        assert_eq!(app.state.details_scroll, 1);
 
         app.handle_key(IpcKey::Esc);
         app.handle_key(IpcKey::Down);
@@ -900,10 +871,10 @@ mod tests {
 
         let mut details = app_with_results();
         details.state.show_details = true;
-        details.state.details_focused = true;
         let hints = details.status_hints();
         assert!(hints.contains(&("d".into(), "hide details".into())));
-        assert!(hints.contains(&("tab".into(), "results".into())));
+        assert!(hints.contains(&("↑↓".into(), "scroll".into())));
+        assert!(!hints.iter().any(|(k, _)| k == "tab"));
 
         let mut search = app_with_results();
         search.state.search_mode = true;
