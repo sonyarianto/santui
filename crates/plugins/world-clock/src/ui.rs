@@ -134,8 +134,8 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
                 cx + ui::right_align_x(cw, "DST"),
                 cy + 5,
                 "DST",
-                theme.highlight,
-                true,
+                theme.text_muted,
+                false,
             );
         }
     }
