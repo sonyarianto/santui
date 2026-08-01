@@ -23,7 +23,7 @@ features:
     details: Plugins run as separate processes with JSON IPC. Hot-reloadable, crash-isolated, and easy to write in Rust.
 ---
 
-![Santui screenshot](/santui_1.png)
+<video src="/santui-demo.mp4" autoplay loop muted playsinline style="border-radius: 8px; max-width: 100%;"></video>
 
 ## Install
 
