@@ -254,6 +254,11 @@ impl App {
     }
 
     fn handle_tick(&mut self) {
+        self.state.tick_counter = self.state.tick_counter.wrapping_add(1);
+        if matches!(self.state.screen, Screen::Search) && self.state.tick_counter.is_multiple_of(3)
+        {
+            self.dirty = true;
+        }
         let since_epoch = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default();
@@ -261,13 +266,6 @@ impl App {
         if now_secs != self.state.last_second {
             self.state.last_second = now_secs;
             self.dirty = true;
-        }
-        if let Screen::Search = self.state.screen {
-            let blink = (since_epoch.as_millis() / 500).is_multiple_of(2);
-            if blink != self.state.search_cursor_visible {
-                self.state.search_cursor_visible = blink;
-                self.dirty = true;
-            }
         }
     }
 

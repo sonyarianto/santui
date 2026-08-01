@@ -25,7 +25,7 @@ pub struct WorldTimeState {
     pub search_results: Vec<Tz>,
     pub search_cursor: usize,
     pub search_scroll: usize,
-    pub search_cursor_visible: bool,
+    pub tick_counter: u64,
     pub rename_buf: String,
     pub last_second: u32,
 }
@@ -40,7 +40,7 @@ impl Default for WorldTimeState {
             search_results: Vec::new(),
             search_cursor: 0,
             search_scroll: 0,
-            search_cursor_visible: true,
+            tick_counter: 0,
             rename_buf: String::new(),
             last_second: 61,
         }

@@ -44,7 +44,7 @@ App
 
 ### Time Refresh
 - `HostMsg::Tick` → `handle_tick()` compares current epoch second against `last_second`; marks dirty only on actual second change (no wasted re-renders)
-- Search cursor blink toggles every 500ms while in Search screen
+- Search cursor blink uses shared `ui::blink_cursor(tick_counter)`; re-rendered every 3rd tick while in Search screen
 
 ### Preferences Persistence
 - Key: `clocks`

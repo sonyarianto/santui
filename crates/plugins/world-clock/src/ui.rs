@@ -66,15 +66,7 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
     if state.clocks.is_empty() {
         let text = "Add a timezone (press 'a')";
         let x = mx + (w.saturating_sub(4).saturating_sub(text.len() as u16)) / 2;
-        cmds.push(RenderCmd::Text {
-            x,
-            y: my + h / 2,
-            text: text.into(),
-            fg: Some(theme.text_muted),
-            bg: None,
-            bold: false,
-            modifiers: 0,
-        });
+        ui::push_text(&mut cmds, x, my + h / 2, text, theme.text_muted, false);
         return cmds;
     }
 
@@ -107,56 +99,38 @@ fn render_grid(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> Vec
         let offset_str = fmt_offset(clock.tz);
         let dst_active = dt.offset().dst_offset().num_seconds() != 0;
 
-        cmds.push(RenderCmd::Text {
-            x: cx + 2,
-            y: cy + 1,
-            text: santui_ipc::ui::truncate(&clock.label, 12),
-            fg: Some(theme.text),
-            bg: None,
-            bold: false,
-            modifiers: 0,
-        });
-        cmds.push(RenderCmd::Text {
-            x: cx + cw.saturating_sub(2 + offset_str.len() as u16),
-            y: cy + 1,
-            text: offset_str,
-            fg: Some(theme.text_muted),
-            bg: None,
-            bold: false,
-            modifiers: 0,
-        });
+        ui::text_at(
+            &mut cmds,
+            cx + 2,
+            cy + 1,
+            &clock.label,
+            theme.text,
+            None,
+            12,
+        );
+        ui::push_text(
+            &mut cmds,
+            cx + ui::right_align_x(cw, &offset_str),
+            cy + 1,
+            offset_str,
+            theme.text_muted,
+            false,
+        );
 
         let time_str = format!("{:02}:{:02}:{:02}", dt.hour(), dt.minute(), dt.second());
-        cmds.push(RenderCmd::Text {
-            x: cx + 2,
-            y: cy + 3,
-            text: time_str,
-            fg: Some(theme.accent),
-            bg: None,
-            bold: true,
-            modifiers: 0,
-        });
+        ui::push_text(&mut cmds, cx + 2, cy + 3, time_str, theme.accent, true);
 
         let date_str = dt.format("%a, %-d %b %Y").to_string();
-        cmds.push(RenderCmd::Text {
-            x: cx + 2,
-            y: cy + 5,
-            text: date_str,
-            fg: Some(theme.text_muted),
-            bg: None,
-            bold: false,
-            modifiers: 0,
-        });
+        ui::push_text(&mut cmds, cx + 2, cy + 5, date_str, theme.text_muted, false);
         if dst_active {
-            cmds.push(RenderCmd::Text {
-                x: cx + cw - 3,
-                y: cy + 5,
-                text: "D".into(),
-                fg: Some(theme.highlight),
-                bg: None,
-                bold: true,
-                modifiers: 0,
-            });
+            ui::push_text(
+                &mut cmds,
+                cx + ui::right_align_x(cw, "D"),
+                cy + 5,
+                "D",
+                theme.highlight,
+                true,
+            );
         }
     }
 
@@ -177,36 +151,35 @@ fn render_search(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> V
 
     let input_y = r.y + 3;
     if state.search_query.is_empty() {
-        cmds.push(RenderCmd::Text {
-            x: r.ix,
-            y: input_y,
-            text: "Search...".into(),
-            fg: Some(theme.text_muted),
-            bg: Some(theme.background_panel),
-            bold: false,
-            modifiers: 0,
-        });
+        ui::text_at(
+            &mut cmds,
+            r.ix,
+            input_y,
+            "Search...",
+            theme.text_muted,
+            Some(theme.background_panel),
+            r.iw,
+        );
     } else {
+        ui::text_at(
+            &mut cmds,
+            r.ix,
+            input_y,
+            &state.search_query,
+            theme.text,
+            Some(theme.background_panel),
+            r.iw,
+        );
+        let cursor = ui::blink_cursor(state.tick_counter);
         cmds.push(RenderCmd::Text {
-            x: r.ix,
+            x: r.ix + state.search_query.len() as u16,
             y: input_y,
-            text: state.search_query.clone(),
-            fg: Some(theme.text),
-            bg: Some(theme.background_panel),
+            text: cursor.to_string(),
+            fg: Some(theme.inverted_text),
+            bg: Some(theme.highlight),
             bold: false,
             modifiers: 0,
         });
-        if state.search_cursor_visible {
-            cmds.push(RenderCmd::Text {
-                x: r.ix + state.search_query.len() as u16,
-                y: input_y,
-                text: " ".into(),
-                fg: Some(theme.inverted_text),
-                bg: Some(theme.highlight),
-                bold: false,
-                modifiers: 0,
-            });
-        }
     }
 
     let scroll = state.search_scroll;
@@ -225,15 +198,15 @@ fn render_search(state: &WorldTimeState, theme: &ThemeData, w: u16, h: u16) -> V
     }
 
     let hint_y = r.y + title_h + item_count as u16 + 1;
-    cmds.push(RenderCmd::Text {
-        x: r.ix,
-        y: hint_y,
-        text: "↑↓ pgup pgdn  ↵ add".into(),
-        fg: Some(theme.text_muted),
-        bg: Some(theme.background_panel),
-        bold: false,
-        modifiers: 0,
-    });
+    ui::text_at(
+        &mut cmds,
+        r.ix,
+        hint_y,
+        "↑↓ pgup pgdn  ↵ add",
+        theme.text_muted,
+        Some(theme.background_panel),
+        r.iw,
+    );
 
     cmds
 }
@@ -269,15 +242,15 @@ fn render_rename(state: &WorldTimeState, theme: &ThemeData, w: u16, idx: usize) 
     );
 
     let input_text = format!("> {}", state.rename_buf);
-    cmds.push(RenderCmd::Text {
-        x: popup_x + 2,
-        y: popup_y + 1,
-        text: santui_ipc::ui::truncate(&input_text, popup_w.saturating_sub(4) as usize),
-        fg: Some(theme.text),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
+    ui::text_at(
+        &mut cmds,
+        popup_x + 2,
+        popup_y + 1,
+        &input_text,
+        theme.text,
+        None,
+        popup_w.saturating_sub(4),
+    );
 
     cmds
 }
