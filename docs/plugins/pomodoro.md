@@ -68,7 +68,7 @@ App
 - `s` — skip the current phase (advances the timer)
 - `r` — reset the current session back to Idle at full duration
 - `o` — open the settings dialog (palette style: no border, dimmed backdrop, title row, selected row inverted + bold)
-- Settings dialog (6 rows, `↑↓`/`jk` navigate, `←→` adjust, `esc` close & save) with a muted description of the selected row at the bottom:
+- Settings dialog (6 rows, `↑↓`/`jk` navigate, `←→` adjust, `esc` close & save): muted description of the selected row, footer hints row (`↑↓ navigate • ←→ adjust`) at the bottom:
   1. Work duration (minutes, floor 1)
   2. Short break duration (minutes, floor 1)
   3. Long break duration (minutes, floor 1)
