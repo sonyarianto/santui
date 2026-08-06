@@ -1,6 +1,6 @@
 [package]
 name = "santui-music-lyrics"
-version = "0.2.37"
+version = "0.2.38"
 edition = "2021"
 
 [[bin]]
@@ -8,7 +8,7 @@ name = "santui-music-lyrics"
 path = "src/main.rs"
 
 [dependencies]
-santui-ipc  = { path = "../../ipc",  version = "0.2.37", default-features = false }
+santui-ipc  = { path = "../../ipc",  version = "0.2.38", default-features = false }
 serde       = { workspace = true }
 serde_json  = { workspace = true }
 ureq        = "3"

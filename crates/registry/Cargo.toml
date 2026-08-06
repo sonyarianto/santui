@@ -1,6 +1,6 @@
 [package]
 name = "santui-registry"
-version = "0.2.37"
+version = "0.2.38"
 edition = "2021"
 description = "Santui plugin registry — manifest fetch, install, config management"
 license = "AGPL-3.0-only"
@@ -8,7 +8,7 @@ publish = false
 repository = "https://github.com/sonyarianto/santui"
 
 [dependencies]
-santui-core = { path = "../core", version = "0.2.37" }
+santui-core = { path = "../core", version = "0.2.38" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 toml = "1.1"
