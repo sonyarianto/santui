@@ -180,7 +180,6 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
     let gap: u16 = 1;
     let mx: u16 = 1;
     let inner_w = w.saturating_sub(2);
-    let inner_h = h.saturating_sub(2);
 
     // ── Computer panel ──
     let comp_h: u16 = 5;
@@ -225,7 +224,12 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
 
     // ── 4-column row: CPU, Memory, Disk, Network ──
     let mid_y = 1 + comp_h + gap;
-    let mid_h = inner_h.saturating_sub(comp_h + 2).max(8);
+    // Split the space below the system panel between the mid row and the
+    // Processes panel (grows up to 12 rows), so procs_y + procs_h always
+    // fits inside the window (bottom border at h - 1).
+    let avail = (h - 1).saturating_sub(mid_y);
+    let procs_h = (avail / 3).clamp(4, 12).min(avail.saturating_sub(5));
+    let mid_h = avail.saturating_sub(procs_h + gap).max(1);
     let col_w = (inner_w.saturating_sub(gap * 3)) / 4;
 
     // CPU panel
@@ -441,7 +445,6 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
 
     // ── Processes panel ──
     let procs_y = mid_y + mid_h + gap;
-    let procs_h = inner_h.saturating_sub(procs_y - 1).max(4);
     ui::draw_panel(
         &mut cmds,
         theme,
@@ -1037,6 +1040,36 @@ mod tests {
             });
             assert!(has, "missing inner panel {title}");
         }
+    }
+
+    #[test]
+    fn overview_panels_fit_in_window() {
+        let state = SysMonState::default();
+        let theme = test_theme();
+        for (w, h) in [(80, 24), (120, 30), (60, 20), (100, 14)] {
+            let cmds = overview_ui(&state, &theme, w, h);
+            let panels: Vec<&RenderCmd> = cmds
+                .iter()
+                .filter(|c| matches!(c, RenderCmd::Border { title: Some(_), .. }))
+                .collect();
+            for c in &panels {
+                if let RenderCmd::Border {
+                    x, y, w: pw, h: ph, ..
+                } = c
+                {
+                    assert!(
+                        *y + *ph <= h && *x + *pw <= w,
+                        "panel out of bounds at {w}x{h}: y={y} h={ph} x={x} w={pw}"
+                    );
+                }
+            }
+        }
+        let cmds = overview_ui(&state, &theme, 80, 24);
+        let count = cmds
+            .iter()
+            .filter(|c| matches!(c, RenderCmd::Border { title: Some(_), .. }))
+            .count();
+        assert_eq!(count, 6, "expected 6 titled panels at 80x24");
     }
 
     #[test]
