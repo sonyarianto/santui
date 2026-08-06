@@ -13,6 +13,8 @@ pub struct Sampler {
     prev_net_rx: HashMap<String, u64>,
     prev_net_tx: HashMap<String, u64>,
     prev_sample_time: std::time::Instant,
+    total_processes: u16,
+    top_processes: Vec<ProcessSnapshot>,
 }
 
 impl Default for Sampler {
@@ -27,15 +29,19 @@ impl Default for Sampler {
             prev_net_rx: HashMap::new(),
             prev_net_tx: HashMap::new(),
             prev_sample_time: std::time::Instant::now(),
+            total_processes: 0,
+            top_processes: Vec::new(),
         }
     }
 }
 
 impl Sampler {
-    pub fn sample(&mut self) -> SystemSnapshot {
+    pub fn sample(&mut self, refresh_processes: bool) -> SystemSnapshot {
         self.sys.refresh_cpu_all();
         self.sys.refresh_memory();
-        self.sys.refresh_processes(ProcessesToUpdate::All, false);
+        if refresh_processes {
+            self.sys.refresh_processes(ProcessesToUpdate::All, false);
+        }
         self.disks.refresh(true);
         self.networks.refresh(true);
 
@@ -71,7 +77,6 @@ impl Sampler {
                     used: total.saturating_sub(available),
                     total,
                     fs: d.file_system().to_string_lossy().into(),
-                    removable: d.is_removable(),
                 }
             })
             .collect();
@@ -98,25 +103,28 @@ impl Sampler {
         }
         net.sort_by_key(|b| std::cmp::Reverse(b.rx_bytes_sec));
 
-        let all_procs: Vec<ProcessSnapshot> = self
-            .sys
-            .processes()
-            .values()
-            .map(|p| ProcessSnapshot {
-                pid: p.pid().as_u32(),
-                name: p.name().to_string_lossy().into_owned(),
-                cpu_pct: p.cpu_usage(),
-                mem_bytes: p.memory(),
-            })
-            .collect();
-        let total_procs = all_procs.len();
-        let mut procs: Vec<ProcessSnapshot> = all_procs;
-        procs.sort_by(|a, b| {
-            b.cpu_pct
-                .partial_cmp(&a.cpu_pct)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
-        procs.truncate(10);
+        if refresh_processes {
+            let mut all_procs: Vec<ProcessSnapshot> = self
+                .sys
+                .processes()
+                .values()
+                .map(|p| ProcessSnapshot {
+                    pid: p.pid().as_u32(),
+                    name: p.name().to_string_lossy().into_owned(),
+                    cpu_pct: p.cpu_usage(),
+                    mem_bytes: p.memory(),
+                })
+                .collect();
+            self.total_processes = all_procs.len() as u16;
+            all_procs.sort_by(|a, b| {
+                b.cpu_pct
+                    .partial_cmp(&a.cpu_pct)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
+            all_procs.truncate(10);
+            self.top_processes = all_procs;
+        }
+        let top_processes = self.top_processes.clone();
 
         let load_avg = System::load_average();
 
@@ -131,11 +139,10 @@ impl Sampler {
             mem,
             disks,
             net,
-            total_processes: total_procs as u16,
-            top_processes: procs,
+            total_processes: self.total_processes,
+            top_processes,
             hostname: System::host_name().unwrap_or_default(),
             os_name: System::long_os_version().unwrap_or_default(),
-            kernel: System::kernel_version().unwrap_or_default(),
             uptime_secs: System::uptime(),
             load_avg: [load_avg.one, load_avg.five, load_avg.fifteen],
         }

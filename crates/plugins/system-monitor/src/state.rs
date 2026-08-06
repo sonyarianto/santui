@@ -26,8 +26,6 @@ pub struct DiskSnapshot {
     pub used: u64,
     pub total: u64,
     pub fs: String,
-    #[allow(dead_code)]
-    pub removable: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -57,8 +55,6 @@ pub struct SystemSnapshot {
     pub top_processes: Vec<ProcessSnapshot>,
     pub hostname: String,
     pub os_name: String,
-    #[allow(dead_code)]
-    pub kernel: String,
     pub uptime_secs: u64,
     pub load_avg: [f64; 3],
 }

@@ -51,7 +51,7 @@ impl App {
     fn handle_init(&mut self, theme: ThemeData, area: Area) {
         self.theme = theme;
         self.area = area;
-        self.state.snapshot = self.sampler.sample();
+        self.state.snapshot = self.sampler.sample(true);
         self.state.history.push(&self.state.snapshot);
         self.dirty = true;
     }
@@ -63,7 +63,8 @@ impl App {
             .as_secs();
         if now_secs != self.state.last_second {
             self.state.last_second = now_secs;
-            self.state.snapshot = self.sampler.sample();
+            let refresh_procs = matches!(self.state.screen, Screen::Overview | Screen::ProcessList);
+            self.state.snapshot = self.sampler.sample(refresh_procs);
             self.state.history.push(&self.state.snapshot);
             self.dirty = true;
         }
@@ -369,11 +370,9 @@ mod tests {
         let mut app = base_app();
         app.dirty = false;
         app.state.last_second = 0;
-        // We can't mock time, but we can verify the path by forcing a second boundary.
-        // Instead let the tick run naturally and check it works.
+        // now_secs is always > 0, so a real second boundary is detected.
         app.handle_tick();
-        // After tick, either dirty was set (new second) or not (same second).
-        // This test verifies the mechanism doesn't crash.
+        assert!(app.dirty);
     }
 
     #[test]

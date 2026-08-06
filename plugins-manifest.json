@@ -36,7 +36,8 @@
     "id": "system-monitor",
     "name": "System Monitor",
     "description": "Real-time CPU, memory, disk, network, and process monitor",
-    "capabilities": []
+    "capabilities": [],
+    "status": "stable"
   },
   {
     "id": "world-clock",

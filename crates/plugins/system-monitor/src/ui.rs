@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 
-use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData, BORDER_ALL};
+use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData};
+use santui_ipc::ui::{self, PanelOpts};
 
 use crate::sampler::fmt_bytes;
 use crate::state::{Screen, SortBy, SysMonState};
@@ -154,9 +155,9 @@ fn duration_str(secs: u64) -> String {
 
 fn load_avg_str(load: &[f64; 3]) -> String {
     if load[0] == 0.0 && load[1] == 0.0 && load[2] == 0.0 {
-        "  N/A  ".to_string()
+        "N/A".to_string()
     } else {
-        format!("{:.2}  {:.2}  {:.2}", load[0], load[1], load[2])
+        format!("{:.2} {:.2} {:.2}", load[0], load[1], load[2])
     }
 }
 
@@ -164,148 +165,135 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
     let mut cmds = Vec::new();
     let snap = &state.snapshot;
 
+    // ── Full-window panel with title (standard stable-plugin look) ──
+    ui::draw_panel(
+        &mut cmds,
+        theme,
+        0,
+        0,
+        w,
+        h,
+        Some("System Monitor"),
+        PanelOpts::default(),
+    );
+
     let gap: u16 = 1;
     let mx: u16 = 1;
     let inner_w = w.saturating_sub(2);
+    let inner_h = h.saturating_sub(2);
 
-    // ── Computer Panel ──
+    // ── Computer panel ──
     let comp_h: u16 = 5;
-    cmds.push(RenderCmd::Border {
-        x: mx,
-        y: 0,
-        w: inner_w,
-        h: comp_h,
-        fg: theme.border,
-        bg: None,
-        borders: BORDER_ALL,
-        title: Some("Computer".into()),
-        title_fg: Some(theme.border),
-        title_dash_fg: Some(theme.border),
-        border_type: None,
-    });
-    let comp_iy = 1;
-    let max_val_w = inner_w.saturating_sub(4);
-    let comp_row = |cmds: &mut Vec<RenderCmd>, y: u16, key: &str, val: &str| {
-        let label = format!("{}: ", key);
-        let label_w = label.len() as u16;
-        cmds.push(RenderCmd::Text {
-            x: mx + 2,
-            y,
-            text: label.clone(),
-            fg: Some(theme.text_muted),
-            bg: None,
-            bold: false,
-            modifiers: 0,
-        });
-        cmds.push(RenderCmd::Text {
-            x: mx + 2 + label_w,
-            y,
-            text: santui_ipc::ui::truncate(val, max_val_w.saturating_sub(label_w) as usize),
-            fg: Some(theme.text),
-            bg: None,
-            bold: false,
-            modifiers: 0,
-        });
-    };
-    comp_row(&mut cmds, comp_iy, "Name", &snap.hostname);
-    comp_row(&mut cmds, comp_iy + 1, "OS", &snap.os_name);
-    comp_row(
+    ui::draw_panel(
         &mut cmds,
-        comp_iy + 2,
-        "Uptime",
-        &duration_str(snap.uptime_secs),
+        theme,
+        mx,
+        1,
+        inner_w,
+        comp_h,
+        None,
+        PanelOpts::default(),
     );
+    let max_val_w = inner_w.saturating_sub(4);
+    for (i, (key, val)) in [
+        ("Name", snap.hostname.as_str()),
+        ("OS", snap.os_name.as_str()),
+        ("Uptime", duration_str(snap.uptime_secs).as_str()),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let row = 2 + i as u16;
+        ui::push_text(
+            &mut cmds,
+            mx + 2,
+            row,
+            format!("{key}: "),
+            theme.text_muted,
+            false,
+        );
+        ui::text_at(
+            &mut cmds,
+            mx + 2 + (key.len() + 2) as u16,
+            row,
+            val,
+            theme.text,
+            None,
+            max_val_w.saturating_sub((key.len() + 2) as u16),
+        );
+    }
 
-    // Layout: 4 column row (CPU, Memory, Disk, Network) + Processes row
-    let mid_y = comp_h;
+    // ── 4-column row: CPU, Memory, Disk, Network ──
+    let mid_y = 1 + comp_h + gap;
+    let mid_h = inner_h.saturating_sub(comp_h + 2).max(8);
     let col_w = (inner_w.saturating_sub(gap * 3)) / 4;
-    let mid_h = ((h - comp_h - 2) / 2).max(8);
-    let procs_y = mid_y + mid_h;
-    let procs_h = h.saturating_sub(procs_y + 2).max(4);
 
-    // ── CPU Panel ──
-    let cpu_x = mx;
+    // CPU panel
+    ui::draw_panel(
+        &mut cmds,
+        theme,
+        mx,
+        mid_y,
+        col_w,
+        mid_h,
+        Some("CPU"),
+        PanelOpts::default(),
+    );
     let cpu_iw = col_w.saturating_sub(4);
-    let cpu_iy = mid_y + 1;
-    cmds.push(RenderCmd::Border {
-        x: cpu_x,
-        y: mid_y,
-        w: col_w,
-        h: mid_h,
-        fg: theme.border,
-        bg: None,
-        borders: BORDER_ALL,
-        title: Some("CPU".into()),
-        title_fg: Some(theme.border),
-        title_dash_fg: Some(theme.border),
-        border_type: None,
-    });
-
-    let mut cy = cpu_iy;
     let cpu_desc = format!(
-        "{}  · {}c  · {}MHz",
+        "{} · {}c · {}MHz",
         snap.cpu.brand, snap.cpu.core_count, snap.cpu.frequency_mhz
     );
-    let desc = santui_ipc::ui::truncate(&cpu_desc, cpu_iw as usize);
-    cmds.push(RenderCmd::Text {
-        x: cpu_x + 2,
-        y: cy,
-        text: desc,
-        fg: Some(theme.text),
-        bg: None,
-        bold: true,
-        modifiers: 0,
-    });
-    cy += 1;
+    ui::text_at(
+        &mut cmds,
+        mx + 2,
+        mid_y + 1,
+        &cpu_desc,
+        theme.text,
+        None,
+        cpu_iw,
+    );
     cmds.extend(render_bar(
         "",
         snap.cpu.global_pct,
         cpu_iw,
-        cpu_x + 2,
-        cy,
+        mx + 2,
+        mid_y + 2,
         theme,
         None,
     ));
-    cy += 1;
     let spark = render_sparkline(
         &state.history.cpu,
         cpu_iw.min(50),
-        cpu_x + 2,
-        cy,
+        mx + 2,
+        mid_y + 3,
         theme.accent,
     );
     cmds.push(spark);
-    let la_raw = load_avg_str(&snap.load_avg);
-    let la = santui_ipc::ui::truncate(&la_raw, cpu_iw as usize);
-    cmds.push(RenderCmd::Text {
-        x: cpu_x + 2 + cpu_iw.saturating_sub(la.len() as u16 + 2).min(cpu_iw),
-        y: cy,
-        text: la,
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
+    let la = format!("Load: {}", load_avg_str(&snap.load_avg));
+    ui::text_at(
+        &mut cmds,
+        mx + 2,
+        mid_y + 3,
+        &la,
+        theme.text_muted,
+        None,
+        cpu_iw,
+    );
 
-    // ── Memory Panel ──
-    let mem_x = cpu_x + col_w + gap;
+    // Memory panel
+    let mem_x = mx + col_w + gap;
+    ui::draw_panel(
+        &mut cmds,
+        theme,
+        mem_x,
+        mid_y,
+        col_w,
+        mid_h,
+        Some("Memory"),
+        PanelOpts::default(),
+    );
     let mem_iw = col_w.saturating_sub(4);
-    let mem_iy = mid_y + 1;
-    cmds.push(RenderCmd::Border {
-        x: mem_x,
-        y: mid_y,
-        w: col_w,
-        h: mid_h,
-        fg: theme.border,
-        bg: None,
-        borders: BORDER_ALL,
-        title: Some("Memory".into()),
-        title_fg: Some(theme.border),
-        title_dash_fg: Some(theme.border),
-        border_type: None,
-    });
-
-    let mut my = mem_iy;
     let ram_pct = if snap.mem.ram_total > 0 {
         snap.mem.ram_used as f32 / snap.mem.ram_total as f32 * 100.0
     } else {
@@ -321,80 +309,62 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         ram_pct,
         mem_iw,
         mem_x + 2,
-        my,
+        mid_y + 1,
         theme,
         None,
     ));
-    let ram_label_raw = format!(
-        "{} / {}",
-        fmt_bytes(snap.mem.ram_used),
-        fmt_bytes(snap.mem.ram_total)
+    ui::text_at(
+        &mut cmds,
+        mem_x + 2,
+        mid_y + 1,
+        &format!(
+            "{} / {}",
+            fmt_bytes(snap.mem.ram_used),
+            fmt_bytes(snap.mem.ram_total)
+        ),
+        theme.text_muted,
+        None,
+        mem_iw,
     );
-    let ram_label = santui_ipc::ui::truncate(&ram_label_raw, mem_iw as usize);
-    cmds.push(RenderCmd::Text {
-        x: mem_x
-            + 2
-            + mem_iw
-                .saturating_sub(ram_label.len() as u16 + 2)
-                .min(mem_iw),
-        y: my,
-        text: ram_label,
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
-    my += 1;
     cmds.extend(render_bar(
         "SWP",
         swap_pct,
         mem_iw,
         mem_x + 2,
-        my,
+        mid_y + 2,
         theme,
         None,
     ));
-    let swap_label_raw = format!(
-        "{} / {}",
-        fmt_bytes(snap.mem.swap_used),
-        fmt_bytes(snap.mem.swap_total)
+    ui::text_at(
+        &mut cmds,
+        mem_x + 2,
+        mid_y + 2,
+        &format!(
+            "{} / {}",
+            fmt_bytes(snap.mem.swap_used),
+            fmt_bytes(snap.mem.swap_total)
+        ),
+        theme.text_muted,
+        None,
+        mem_iw,
     );
-    let swap_label = santui_ipc::ui::truncate(&swap_label_raw, mem_iw as usize);
-    cmds.push(RenderCmd::Text {
-        x: mem_x
-            + 2
-            + mem_iw
-                .saturating_sub(swap_label.len() as u16 + 2)
-                .min(mem_iw),
-        y: my,
-        text: swap_label,
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
 
-    // ── Disk Panel ──
+    // Disk panel
     let disk_x = mem_x + col_w + gap;
+    ui::draw_panel(
+        &mut cmds,
+        theme,
+        disk_x,
+        mid_y,
+        col_w,
+        mid_h,
+        Some("Disk"),
+        PanelOpts::default(),
+    );
     let disk_iw = col_w.saturating_sub(4);
-    let disk_iy = mid_y + 1;
-    cmds.push(RenderCmd::Border {
-        x: disk_x,
-        y: mid_y,
-        w: col_w,
-        h: mid_h,
-        fg: theme.border,
-        bg: None,
-        borders: BORDER_ALL,
-        title: Some("Disk".into()),
-        title_fg: Some(theme.border),
-        title_dash_fg: Some(theme.border),
-        border_type: None,
-    });
-
-    let mut dy = disk_iy;
+    let mut dy = mid_y + 1;
     for disk in snap.disks.iter() {
-        if dy >= disk_iy + mid_h.saturating_sub(2) {
+        if dy >= mid_y + mid_h.saturating_sub(1) {
             break;
         }
         let pct = if disk.total > 0 {
@@ -410,7 +380,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
             theme.text
         };
         cmds.extend(render_bar(
-            santui_ipc::ui::truncate(&disk.mount, 6).as_str(),
+            ui::truncate(&disk.mount, 6).as_str(),
             pct,
             disk_iw,
             disk_x + 2,
@@ -421,96 +391,78 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         dy += 1;
     }
     if snap.disks.is_empty() {
-        cmds.push(RenderCmd::Text {
-            x: disk_x + 2,
-            y: dy,
-            text: "No disks".into(),
-            fg: Some(theme.text_muted),
-            bg: None,
-            bold: false,
-            modifiers: 0,
-        });
+        ui::push_text(
+            &mut cmds,
+            disk_x + 2,
+            dy,
+            "No disks",
+            theme.text_muted,
+            false,
+        );
     }
 
-    // ── Network Panel ──
+    // Network panel
     let net_x = disk_x + col_w + gap;
-    let net_iy = mid_y + 1;
-    cmds.push(RenderCmd::Border {
-        x: net_x,
-        y: mid_y,
-        w: col_w,
-        h: mid_h,
-        fg: theme.border,
-        bg: None,
-        borders: BORDER_ALL,
-        title: Some("Network".into()),
-        title_fg: Some(theme.border),
-        title_dash_fg: Some(theme.border),
-        border_type: None,
-    });
-
-    let mut ny = net_iy;
+    ui::draw_panel(
+        &mut cmds,
+        theme,
+        net_x,
+        mid_y,
+        col_w,
+        mid_h,
+        Some("Network"),
+        PanelOpts::default(),
+    );
+    let net_iw = col_w.saturating_sub(4);
+    let mut ny = mid_y + 1;
     for iface in snap.net.iter() {
-        if ny >= net_iy + mid_h.saturating_sub(2) {
+        if ny >= mid_y + mid_h.saturating_sub(1) {
             break;
         }
-        let line_raw = format!(
+        let line = format!(
             "{}  ↓{}  ↑{}",
-            santui_ipc::ui::truncate(&iface.name, 12),
-            santui_ipc::ui::truncate(&fmt_bytes(iface.rx_bytes_sec), 7),
-            santui_ipc::ui::truncate(&fmt_bytes(iface.tx_bytes_sec), 7),
+            ui::truncate(&iface.name, 12),
+            fmt_bytes(iface.rx_bytes_sec),
+            fmt_bytes(iface.tx_bytes_sec),
         );
-        let line = santui_ipc::ui::truncate(&line_raw, disk_iw as usize);
-        cmds.push(RenderCmd::Text {
-            x: net_x + 2,
-            y: ny,
-            text: line,
-            fg: Some(theme.text),
-            bg: None,
-            bold: false,
-            modifiers: 0,
-        });
+        ui::text_at(&mut cmds, net_x + 2, ny, &line, theme.text, None, net_iw);
         ny += 1;
     }
     if snap.net.is_empty() {
-        cmds.push(RenderCmd::Text {
-            x: net_x + 2,
-            y: ny,
-            text: "No interfaces".into(),
-            fg: Some(theme.text_muted),
-            bg: None,
-            bold: false,
-            modifiers: 0,
-        });
+        ui::push_text(
+            &mut cmds,
+            net_x + 2,
+            ny,
+            "No interfaces",
+            theme.text_muted,
+            false,
+        );
     }
 
-    // ── Processes Panel ──
-    let procs_iw = inner_w.saturating_sub(4);
-    cmds.push(RenderCmd::Border {
-        x: mx,
-        y: procs_y,
-        w: inner_w,
-        h: procs_h,
-        fg: theme.border,
-        bg: None,
-        borders: BORDER_ALL,
-        title: Some("Processes".into()),
-        title_fg: Some(theme.border),
-        title_dash_fg: Some(theme.border),
-        border_type: None,
-    });
+    // ── Processes panel ──
+    let procs_y = mid_y + mid_h + gap;
+    let procs_h = inner_h.saturating_sub(procs_y - 1).max(4);
+    ui::draw_panel(
+        &mut cmds,
+        theme,
+        mx,
+        procs_y,
+        inner_w,
+        procs_h,
+        Some("Processes"),
+        PanelOpts::default(),
+    );
 
+    let procs_iw = inner_w.saturating_sub(4);
     let procs_iy = procs_y + 1;
-    let proc_count = format!("Total: {}  Showing top 10 by CPU", snap.total_processes);
-    cmds.push(RenderCmd::Text {
-        x: mx + 2,
-        y: procs_iy,
-        text: proc_count,
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
+    ui::push_text(
+        &mut cmds,
+        mx + 2,
+        procs_iy,
+        format!("Total: {}  Showing top 10 by CPU", snap.total_processes),
+        theme.text_muted,
+        false,
+    );
 
     let name_w = (procs_iw / 2).max(10) as usize;
     let max_pty = procs_y + procs_h.saturating_sub(1);
@@ -523,20 +475,12 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         let line = format!(
             " {:>5}  {:width$}  {:>6.1}%  {:>8}",
             proc.pid,
-            santui_ipc::ui::truncate(&proc.name, name_w),
+            ui::truncate(&proc.name, name_w),
             cpu_disp,
             fmt_bytes(proc.mem_bytes),
             width = name_w,
         );
-        cmds.push(RenderCmd::Text {
-            x: mx + 2,
-            y: y_pos,
-            text: line,
-            fg: Some(theme.text),
-            bg: None,
-            bold: false,
-            modifiers: 0,
-        });
+        ui::push_text(&mut cmds, mx + 2, y_pos, line, theme.text, false);
     }
 
     cmds
@@ -546,37 +490,25 @@ fn cpu_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<
     let mut cmds = Vec::new();
     let snap = &state.snapshot;
 
-    cmds.push(RenderCmd::Border {
-        x: 0,
-        y: 0,
+    ui::draw_panel(
+        &mut cmds,
+        theme,
+        0,
+        0,
         w,
         h,
-        fg: theme.border,
-        bg: None,
-        borders: BORDER_ALL,
-        title: Some("CPU Detail".into()),
-        title_fg: Some(theme.border),
-        title_dash_fg: Some(theme.border),
-        border_type: None,
-    });
+        Some("CPU Detail"),
+        PanelOpts::default(),
+    );
 
-    let mut row = 1;
+    let mut row = 2;
     let iw = w.saturating_sub(4);
 
-    row += 1;
     let header = format!(
         "{}  ·  {} cores  ·  {} MHz          Global: {:.1}%",
         snap.cpu.brand, snap.cpu.core_count, snap.cpu.frequency_mhz, snap.cpu.global_pct
     );
-    cmds.push(RenderCmd::Text {
-        x: 2,
-        y: row,
-        text: header,
-        fg: Some(theme.text),
-        bg: None,
-        bold: true,
-        modifiers: 0,
-    });
+    ui::text_at(&mut cmds, 2, row, &header, theme.text, None, iw);
 
     row += 1;
     let half = snap.cpu.core_count.div_ceil(2);
@@ -617,15 +549,7 @@ fn cpu_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<
     let spark = render_sparkline(&state.history.cpu, iw.min(60), 2, row, theme.accent);
     cmds.push(spark);
     let load_text = format!("Load average:  {}", load_avg_str(&snap.load_avg));
-    cmds.push(RenderCmd::Text {
-        x: 2 + iw.saturating_sub(load_text.len() as u16 + 2).min(iw),
-        y: row,
-        text: load_text,
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
+    ui::text_at(&mut cmds, 2, row, &load_text, theme.text_muted, None, iw);
 
     cmds
 }
@@ -634,24 +558,20 @@ fn mem_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<
     let mut cmds = Vec::new();
     let snap = &state.snapshot;
 
-    cmds.push(RenderCmd::Border {
-        x: 0,
-        y: 0,
+    ui::draw_panel(
+        &mut cmds,
+        theme,
+        0,
+        0,
         w,
         h,
-        fg: theme.border,
-        bg: None,
-        borders: BORDER_ALL,
-        title: Some("Memory Detail".into()),
-        title_fg: Some(theme.border),
-        title_dash_fg: Some(theme.border),
-        border_type: None,
-    });
+        Some("Memory Detail"),
+        PanelOpts::default(),
+    );
 
-    let mut row = 1;
+    let mut row = 2;
     let iw = w.saturating_sub(4);
 
-    row += 1;
     let ram_pct = if snap.mem.ram_total > 0 {
         snap.mem.ram_used as f32 / snap.mem.ram_total as f32 * 100.0
     } else {
@@ -664,16 +584,7 @@ fn mem_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         ram_pct
     );
     cmds.extend(render_bar("RAM", ram_pct, iw, 2, row, theme, None));
-    let rw = ram_line.len() as u16;
-    cmds.push(RenderCmd::Text {
-        x: 2 + iw.saturating_sub(rw + 2).min(iw),
-        y: row,
-        text: ram_line,
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
+    ui::text_at(&mut cmds, 2, row, &ram_line, theme.text_muted, None, iw);
 
     row += 1;
     let swap_pct = if snap.mem.swap_total > 0 {
@@ -688,29 +599,19 @@ fn mem_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         swap_pct
     );
     cmds.extend(render_bar("SWAP", swap_pct, iw, 2, row, theme, None));
-    let sw = swap_line.len() as u16;
-    cmds.push(RenderCmd::Text {
-        x: 2 + iw.saturating_sub(sw + 2).min(iw),
-        y: row,
-        text: swap_line,
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
+    ui::text_at(&mut cmds, 2, row, &swap_line, theme.text_muted, None, iw);
 
     row += 2;
     let rspark = render_sparkline(&state.history.ram, iw.min(60), 2, row, theme.accent);
     cmds.push(rspark);
-    cmds.push(RenderCmd::Text {
-        x: 2 + (iw / 2).saturating_sub(15),
-        y: row,
-        text: "RAM history (60s)".into(),
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
+    ui::push_text(
+        &mut cmds,
+        2 + (iw / 2).saturating_sub(8),
+        row,
+        "RAM history (60s)",
+        theme.text_muted,
+        false,
+    );
 
     row += 1;
     let sspark = render_sparkline(
@@ -721,15 +622,14 @@ fn mem_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<
         theme.text_muted,
     );
     cmds.push(sspark);
-    cmds.push(RenderCmd::Text {
-        x: 2 + (iw / 2).saturating_sub(15),
-        y: row,
-        text: "SWAP history (60s)".into(),
-        fg: Some(theme.text_muted),
-        bg: None,
-        bold: false,
-        modifiers: 0,
-    });
+    ui::push_text(
+        &mut cmds,
+        2 + (iw / 2).saturating_sub(9),
+        row,
+        "SWAP history (60s)",
+        theme.text_muted,
+        false,
+    );
 
     cmds
 }
@@ -737,19 +637,16 @@ fn mem_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<
 fn disk_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<RenderCmd> {
     let mut cmds = Vec::new();
 
-    cmds.push(RenderCmd::Border {
-        x: 0,
-        y: 0,
+    ui::draw_panel(
+        &mut cmds,
+        theme,
+        0,
+        0,
         w,
         h,
-        fg: theme.border,
-        bg: None,
-        borders: BORDER_ALL,
-        title: Some("Disk Detail".into()),
-        title_fg: Some(theme.border),
-        title_dash_fg: Some(theme.border),
-        border_type: None,
-    });
+        Some("Disk Detail"),
+        PanelOpts::default(),
+    );
 
     let header = vec![
         "Mount".into(),
@@ -820,19 +717,16 @@ fn disk_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec
 fn net_detail_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<RenderCmd> {
     let mut cmds = Vec::new();
 
-    cmds.push(RenderCmd::Border {
-        x: 0,
-        y: 0,
+    ui::draw_panel(
+        &mut cmds,
+        theme,
+        0,
+        0,
         w,
         h,
-        fg: theme.border,
-        bg: None,
-        borders: BORDER_ALL,
-        title: Some("Network Detail".into()),
-        title_fg: Some(theme.border),
-        title_dash_fg: Some(theme.border),
-        border_type: None,
-    });
+        Some("Network Detail"),
+        PanelOpts::default(),
+    );
 
     let header = vec![
         "Interface".into(),
@@ -904,19 +798,16 @@ fn process_list_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Ve
 
     let title = format!(" Processes (top 10 by {}) ", sort_label);
 
-    cmds.push(RenderCmd::Border {
-        x: 0,
-        y: 0,
+    ui::draw_panel(
+        &mut cmds,
+        theme,
+        0,
+        0,
         w,
         h,
-        fg: theme.border,
-        bg: None,
-        borders: BORDER_ALL,
-        title: Some(title),
-        title_fg: Some(theme.border),
-        title_dash_fg: Some(theme.border),
-        border_type: None,
-    });
+        Some(&title),
+        PanelOpts::default(),
+    );
 
     let core_count = state.snapshot.cpu.core_count.max(1) as f32;
     let header = vec!["PID".into(), "Name".into(), "CPU %".into(), "Memory".into()];
@@ -1096,6 +987,18 @@ mod tests {
     }
 
     #[test]
+    fn overview_renders_full_window_title() {
+        let state = SysMonState::default();
+        let theme = test_theme();
+        let cmds = overview_ui(&state, &theme, 80, 24);
+        let has_title = cmds.iter().any(|c| match c {
+            RenderCmd::Border { ref title, .. } => title.as_deref() == Some("System Monitor"),
+            _ => false,
+        });
+        assert!(has_title);
+    }
+
+    #[test]
     fn overview_renders_cpu_bar() {
         let mut state = SysMonState::default();
         state.snapshot.cpu.brand = "Test CPU".into();
@@ -1117,12 +1020,23 @@ mod tests {
         let cmds = overview_ui(&state, &theme, 80, 24);
         let has_hostname = cmds.iter().any(|c| match c {
             RenderCmd::Text { ref text, .. } => text.contains("testhost"),
-            RenderCmd::Border { ref title, .. } => {
-                title.as_deref().map_or(false, |t| t.contains("testhost"))
-            }
             _ => false,
         });
         assert!(has_hostname);
+    }
+
+    #[test]
+    fn overview_renders_inner_panels() {
+        let state = SysMonState::default();
+        let theme = test_theme();
+        let cmds = overview_ui(&state, &theme, 80, 24);
+        for title in ["CPU", "Memory", "Disk", "Network", "Processes"] {
+            let has = cmds.iter().any(|c| match c {
+                RenderCmd::Border { title: t, .. } => t.as_deref() == Some(title),
+                _ => false,
+            });
+            assert!(has, "missing inner panel {title}");
+        }
     }
 
     #[test]
@@ -1147,7 +1061,6 @@ mod tests {
             used: 100,
             total: 200,
             fs: "ext4".into(),
-            removable: false,
         });
         let theme = test_theme();
         let cmds = disk_detail_ui(&state, &theme, 80, 24);
