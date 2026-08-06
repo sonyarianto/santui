@@ -1,9 +1,10 @@
-## [unreleased]
+## [0.2.38] - 2026-08-06
 
 ### ⚙️ Miscellaneous
 
 - Update changelog for v0.2.37
 - Remove stale audit config files (audit.toml is the active config)
+- Update changelog for v0.2.38
 
 ### 🎨 Refactor
 
@@ -35,7 +36,7 @@
 - Tighten settings dialog spacing above the fields
 - Add blank line before settings dialog hints row
 
-Full Changelog: [v0.2.37...](https://github.com/sonyarianto/santui/compare/v0.2.37...)
+Full Changelog: [v0.2.37...v0.2.38](https://github.com/sonyarianto/santui/compare/v0.2.37...v0.2.38)
 ## [0.2.37] - 2026-08-01
 
 ### ⚙️ Miscellaneous
