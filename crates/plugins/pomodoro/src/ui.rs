@@ -224,7 +224,7 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
 
     const TITLE_H: u16 = 3;
     const FIELD_COUNT: u16 = 6;
-    let popup_h = (TITLE_H + FIELD_COUNT + 4).min(h);
+    let popup_h = (TITLE_H + FIELD_COUNT + 5).min(h);
     let r = santui_ipc::ui::palette_rect(w, h, popup_h);
 
     santui_ipc::ui::palette_bg(&mut cmds, theme, &r);
@@ -311,7 +311,7 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
         );
     }
 
-    let hint_y = r.y + TITLE_H + FIELD_COUNT + 2;
+    let hint_y = r.y + TITLE_H + FIELD_COUNT + 3;
     if hint_y + 1 < h {
         santui_ipc::ui::hints_row(
             &mut cmds,
