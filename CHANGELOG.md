@@ -1,3 +1,41 @@
+## [unreleased]
+
+### ⚙️ Miscellaneous
+
+- Update changelog for v0.2.37
+- Remove stale audit config files (audit.toml is the active config)
+
+### 🎨 Refactor
+
+- Rename plugin from pomodoro-timer to pomodoro
+- Remove radio plugin integration
+
+### 🐛 Bug Fixes
+
+- Use 'o' instead of ',' to open the settings dialog
+- Exclude build artifacts from release leftover check
+
+### 📚 Documentation
+
+- Add total npm downloads badge
+- Describe footer hints row in settings dialog
+
+### 🚀 Features
+
+- Automate release flow with pre-flight version checks
+- Promote to stable plugin
+- Redesign UX/UI
+- Center progress bar and percentage below it
+- Center the phase durations summary at the panel bottom
+- Use bullet separators in stats and summary lines
+- Redesign settings dialog
+- Render settings dialog in the palette style
+- Align settings dialog with the world-clock palette layout
+- Drop esc hint from settings dialog hints row
+- Tighten settings dialog spacing above the fields
+- Add blank line before settings dialog hints row
+
+Full Changelog: [v0.2.37...](https://github.com/sonyarianto/santui/compare/v0.2.37...)
 ## [0.2.37] - 2026-08-01
 
 ### ⚙️ Miscellaneous
