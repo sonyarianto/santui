@@ -49,6 +49,7 @@ FILES+=(
     website/.vitepress/config.ts
     website/public/install.ps1
     plugins.json   # gitignored — bumped for dev mode, never committed
+    scripts/release.sh  # usage comment example version
 )
 for f in "${FILES[@]}"; do
     [ -f "$f" ] || { echo "❌ Missing $f"; exit 1; }
@@ -62,7 +63,7 @@ for f in "${FILES[@]}"; do
 done
 
 # ---- 3. Verify no leftovers ----------------------------------------------
-LEFTOVER="$(grep -rn "$OLD" --exclude-dir=.git --exclude=CHANGELOG.md -l . || true)"
+LEFTOVER="$(grep -rn "$OLD" --exclude-dir=.git --exclude-dir=target --exclude-dir=node_modules --exclude-dir=.vitepress --exclude=CHANGELOG.md --exclude=Cargo.lock -l . || true)"
 if [ -n "$LEFTOVER" ]; then
     echo "❌ Leftover $OLD in:"; echo "$LEFTOVER"; exit 1
 fi
