@@ -177,7 +177,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         PanelOpts::default(),
     );
 
-    let gap: u16 = 1;
+    let gap: u16 = 0;
     let mx: u16 = 1;
     let inner_w = w.saturating_sub(2);
 
@@ -190,7 +190,7 @@ fn overview_ui(state: &SysMonState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
         1,
         inner_w,
         comp_h,
-        None,
+        Some("Computer"),
         PanelOpts::default(),
     );
     let max_val_w = inner_w.saturating_sub(4);
@@ -1069,7 +1069,7 @@ mod tests {
             .iter()
             .filter(|c| matches!(c, RenderCmd::Border { title: Some(_), .. }))
             .count();
-        assert_eq!(count, 6, "expected 6 titled panels at 80x24");
+        assert_eq!(count, 7, "expected 7 titled panels at 80x24");
     }
 
     #[test]
