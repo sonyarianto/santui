@@ -3,7 +3,7 @@ use std::io::{BufRead, BufReader};
 use rand::RngExt;
 use santui_ipc::clipboard::copy_to_clipboard;
 use santui_ipc::protocol::{
-    Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData, BORDER_ALL,
+    Area, BORDER_ALL, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData,
 };
 use santui_ipc::text::word_wrap;
 use santui_ipc::theme::default_theme;
@@ -14,26 +14,86 @@ struct Card {
 }
 
 const CARDS: &[Card] = &[
-    Card { front: "What does the `?` operator do in Rust?", back: "Propagates errors: returns `Err` from the function or unwraps `Ok`." },
-    Card { front: "What is ownership?", back: "Each value has exactly one owner. When owner goes out of scope, value is dropped." },
-    Card { front: "What is a borrow?", back: "A reference to a value without taking ownership. Can be immutable (&T) or mutable (&mut T)." },
-    Card { front: "What is the difference between `String` and `&str`?", back: "`String` owns heap-allocated data. `&str` is a borrowed reference to a string slice." },
-    Card { front: "What is a trait?", back: "A collection of methods that types can implement. Like interfaces in other languages." },
-    Card { front: "What is `impl Trait`?", back: "A concise way to specify an anonymous type that implements a trait, used in argument/return positions." },
-    Card { front: "What is a macro?", back: "Code that writes code. Macros operate on the AST and produce code at compile time." },
-    Card { front: "What is pattern matching?", back: "A control flow construct that matches values against patterns, commonly used with `match` and `if let`." },
-    Card { front: "What is the difference between `Box<T>` and `Rc<T>`?", back: "`Box<T>` provides single-ownership heap allocation. `Rc<T>` provides reference-counted shared ownership." },
-    Card { front: "What is a lifetime?", back: "A compile-time annotation that describes how long a reference is valid. Prevents dangling references." },
-    Card { front: "What is `#[derive(Debug)]`?", back: "Automatically implements the `Debug` trait, enabling `{:?}` formatting for the type." },
-    Card { front: "What is a closure?", back: "An anonymous function that can capture variables from its surrounding scope." },
-    Card { front: "What is a module?", back: "Organizes code into namespaces. Defined with `mod` keyword." },
-    Card { front: "What is `cargo`?", back: "Rust's build system and package manager. Handles building, testing, and dependency management." },
-    Card { front: "What is `panic!`?", back: "A macro that causes the program to abort or unwind, used for unrecoverable errors." },
-    Card { front: "What is `Result<T, E>`?", back: "An enum for recoverable errors: `Ok(T)` for success, `Err(E)` for failure." },
-    Card { front: "What is `Option<T>`?", back: "An enum representing optional values: `Some(T)` for presence, `None` for absence." },
-    Card { front: "What is a struct?", back: "A composite data type that groups related values together with named fields." },
-    Card { front: "What is an enum?", back: "A type that can have multiple variants, optionally carrying data." },
-    Card { front: "What is the `match` expression?", back: "A control flow construct that compares a value against patterns and executes the matching arm." },
+    Card {
+        front: "What does the `?` operator do in Rust?",
+        back: "Propagates errors: returns `Err` from the function or unwraps `Ok`.",
+    },
+    Card {
+        front: "What is ownership?",
+        back: "Each value has exactly one owner. When owner goes out of scope, value is dropped.",
+    },
+    Card {
+        front: "What is a borrow?",
+        back: "A reference to a value without taking ownership. Can be immutable (&T) or mutable (&mut T).",
+    },
+    Card {
+        front: "What is the difference between `String` and `&str`?",
+        back: "`String` owns heap-allocated data. `&str` is a borrowed reference to a string slice.",
+    },
+    Card {
+        front: "What is a trait?",
+        back: "A collection of methods that types can implement. Like interfaces in other languages.",
+    },
+    Card {
+        front: "What is `impl Trait`?",
+        back: "A concise way to specify an anonymous type that implements a trait, used in argument/return positions.",
+    },
+    Card {
+        front: "What is a macro?",
+        back: "Code that writes code. Macros operate on the AST and produce code at compile time.",
+    },
+    Card {
+        front: "What is pattern matching?",
+        back: "A control flow construct that matches values against patterns, commonly used with `match` and `if let`.",
+    },
+    Card {
+        front: "What is the difference between `Box<T>` and `Rc<T>`?",
+        back: "`Box<T>` provides single-ownership heap allocation. `Rc<T>` provides reference-counted shared ownership.",
+    },
+    Card {
+        front: "What is a lifetime?",
+        back: "A compile-time annotation that describes how long a reference is valid. Prevents dangling references.",
+    },
+    Card {
+        front: "What is `#[derive(Debug)]`?",
+        back: "Automatically implements the `Debug` trait, enabling `{:?}` formatting for the type.",
+    },
+    Card {
+        front: "What is a closure?",
+        back: "An anonymous function that can capture variables from its surrounding scope.",
+    },
+    Card {
+        front: "What is a module?",
+        back: "Organizes code into namespaces. Defined with `mod` keyword.",
+    },
+    Card {
+        front: "What is `cargo`?",
+        back: "Rust's build system and package manager. Handles building, testing, and dependency management.",
+    },
+    Card {
+        front: "What is `panic!`?",
+        back: "A macro that causes the program to abort or unwind, used for unrecoverable errors.",
+    },
+    Card {
+        front: "What is `Result<T, E>`?",
+        back: "An enum for recoverable errors: `Ok(T)` for success, `Err(E)` for failure.",
+    },
+    Card {
+        front: "What is `Option<T>`?",
+        back: "An enum representing optional values: `Some(T)` for presence, `None` for absence.",
+    },
+    Card {
+        front: "What is a struct?",
+        back: "A composite data type that groups related values together with named fields.",
+    },
+    Card {
+        front: "What is an enum?",
+        back: "A type that can have multiple variants, optionally carrying data.",
+    },
+    Card {
+        front: "What is the `match` expression?",
+        back: "A control flow construct that compares a value against patterns and executes the matching arm.",
+    },
 ];
 
 struct App {

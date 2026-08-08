@@ -1,7 +1,8 @@
 use crate::protocol::{
-    RenderCmd, TextStyle, ALIGN_CENTER, ALIGN_RIGHT, BORDER_TYPE_DOUBLE, BORDER_TYPE_ROUNDED,
-    BORDER_TYPE_THICK,
+    ALIGN_CENTER, ALIGN_RIGHT, BORDER_TYPE_DOUBLE, BORDER_TYPE_ROUNDED, BORDER_TYPE_THICK,
+    RenderCmd, TextStyle,
 };
+use ratatui::Frame;
 use ratatui::layout::{Alignment, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
@@ -9,7 +10,6 @@ use ratatui::widgets::{
     self, Block, BorderType, Borders, Cell, Gauge, ListState, Paragraph, Row, Table, TableState,
     Wrap,
 };
-use ratatui::Frame;
 
 /// Twin of `crates/core/src/widgets/dim_overlay.rs` `DIM_FACTOR` — keep in sync.
 const DIM_FACTOR: f64 = 0.45;
@@ -66,7 +66,7 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                 alignment,
             } => {
                 let p_area = clipped(area, *x, *y, *w, *h);
-                let mut p = if let Some(ref spans_data) = spans {
+                let mut p = if let Some(spans_data) = spans {
                     let lines: Vec<Line> = spans_data
                         .iter()
                         .map(|s| Line::from(Span::styled(s.text.as_str(), to_style(&s.style))))
@@ -142,22 +142,20 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                             .enumerate()
                             .map(|(j, c)| {
                                 let mut cell = Cell::from(c.as_str());
-                                if let Some(ref styles) = cell_styles {
-                                    if let Some(Some(ref cs)) = styles.get(i).and_then(|r| r.get(j))
-                                    {
-                                        cell = cell.style(to_style(cs));
-                                    }
+                                if let Some(styles) = cell_styles
+                                    && let Some(Some(cs)) = styles.get(i).and_then(|r| r.get(j))
+                                {
+                                    cell = cell.style(to_style(cs));
                                 }
                                 cell
                             })
                             .collect();
                         let mut r = Row::new(cells);
-                        if let Some(cur) = current_row {
-                            if i == *cur {
-                                if let Some(ref cs) = current_style {
-                                    r = r.style(to_style(cs));
-                                }
-                            }
+                        if let Some(cur) = current_row
+                            && i == *cur
+                            && let Some(cs) = current_style
+                        {
+                            r = r.style(to_style(cs));
                         }
                         r
                     })
@@ -257,7 +255,7 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                         .style(Style::default().bg(Color::Rgb(bg_col[0], bg_col[1], bg_col[2])));
                     f.render_widget(widgets::Clear, rect);
                 }
-                if let Some(ref t) = title {
+                if let Some(t) = title {
                     let text_style = title_fg
                         .map(|c| Style::default().fg(Color::Rgb(c[0], c[1], c[2])))
                         .unwrap_or_default();
@@ -290,7 +288,7 @@ pub fn render_commands(f: &mut Frame, area: Rect, commands: &[RenderCmd]) {
                     .ratio(*ratio)
                     .style(to_style(style))
                     .gauge_style(to_style(gauge_style));
-                if let Some(ref lbl) = label {
+                if let Some(lbl) = label {
                     gauge = gauge.label(Span::styled(lbl.as_str(), to_style(style)));
                 }
                 f.render_widget(gauge, gauge_area);

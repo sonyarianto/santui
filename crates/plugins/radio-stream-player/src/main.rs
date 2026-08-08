@@ -7,9 +7,9 @@ mod state;
 mod stations;
 mod ui;
 use std::io::{BufRead, BufReader};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc;
-use std::sync::Arc;
 use std::thread;
 
 use ui::{HEADER_H, TABLE_TOP};
@@ -136,7 +136,7 @@ impl App {
         state.lyrics_loading = true;
         state.metadata_seq += 1;
         let seq = state.metadata_seq;
-        let Some(ref tx) = tx_msg else {
+        let Some(tx) = tx_msg else {
             return;
         };
         let tx = tx.clone();
@@ -476,17 +476,17 @@ impl App {
                 true
             }
             IpcKey::Char('r') => {
-                if !self.state.show_lyrics {
-                    if let Some(ref db) = self.db {
-                        let new_stations = crate::stations::reload(db);
-                        let count = new_stations.len();
-                        self.state.stations = new_stations;
-                        self.state.set_query(String::new());
-                        self.state.selected = 0;
-                        self.state.scroll = 0;
-                        self.state
-                            .set_scan_msg(format!("Reloaded {count} stations from database"));
-                    }
+                if !self.state.show_lyrics
+                    && let Some(ref db) = self.db
+                {
+                    let new_stations = crate::stations::reload(db);
+                    let count = new_stations.len();
+                    self.state.stations = new_stations;
+                    self.state.set_query(String::new());
+                    self.state.selected = 0;
+                    self.state.scroll = 0;
+                    self.state
+                        .set_scan_msg(format!("Reloaded {count} stations from database"));
                 }
                 true
             }
@@ -848,21 +848,20 @@ impl App {
                 changed = true;
             }
         }
-        if let state::PlayState::Retrying(name) = &self.state.play_state {
-            if let Some(deadline) = self.state.retry_deadline {
-                if std::time::Instant::now() >= deadline {
-                    let name = name.clone();
-                    log::info!("handle_tick: Retrying complete for {name}, re-loading");
-                    self.state.retry_mode = true;
-                    self.state.last_metadata.clear();
-                    self.state.song_title.clear();
-                    self.state.track_info = None;
-                    self.state.clear_lyrics();
-                    self.state.lyrics_loading = true;
-                    self.reset_mpv();
-                    changed = true;
-                }
-            }
+        if let state::PlayState::Retrying(name) = &self.state.play_state
+            && let Some(deadline) = self.state.retry_deadline
+            && std::time::Instant::now() >= deadline
+        {
+            let name = name.clone();
+            log::info!("handle_tick: Retrying complete for {name}, re-loading");
+            self.state.retry_mode = true;
+            self.state.last_metadata.clear();
+            self.state.song_title.clear();
+            self.state.track_info = None;
+            self.state.clear_lyrics();
+            self.state.lyrics_loading = true;
+            self.reset_mpv();
+            changed = true;
         }
         // ── mpv thread heartbeat ──────────────────────────────────
         // If the mpv thread stops advancing its heartbeat while we are
@@ -1147,11 +1146,11 @@ impl App {
                 key: "volume".into(),
             });
         } else if key == "volume" {
-            if let Some(json) = value {
-                if let Ok(vol) = serde_json::from_str::<i64>(&json) {
-                    self.state.volume = vol.clamp(0, 100);
-                    send_cmd(self, MpvCmd::SetVolume(self.state.volume));
-                }
+            if let Some(json) = value
+                && let Ok(vol) = serde_json::from_str::<i64>(&json)
+            {
+                self.state.volume = vol.clamp(0, 100);
+                send_cmd(self, MpvCmd::SetVolume(self.state.volume));
             }
             self.dirty = true;
         }

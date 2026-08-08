@@ -57,29 +57,29 @@ fn render_list(state: &NotesState, theme: &ThemeData, w: u16, h: u16) -> Vec<Ren
     let visible_count = (h as usize).saturating_sub(4);
     for i in 0..visible_count {
         let fi = i;
-        if let Some(&idx) = state.filtered_indices.get(fi) {
-            if let Some(note) = state.notes.get(idx) {
-                let marker = if fi == state.list_cursor {
-                    "\u{25b6}"
-                } else {
-                    " "
-                };
-                let line = format!("{} {}", marker, note.title);
-                let fg = if fi == state.list_cursor {
-                    Some(theme.accent)
-                } else {
-                    Some(theme.text)
-                };
-                cmds.push(RenderCmd::Text {
-                    x: 2,
-                    y: 4 + i as u16,
-                    text: line,
-                    fg,
-                    bg: None,
-                    bold: fi == state.list_cursor,
-                    modifiers: 0,
-                });
-            }
+        if let Some(&idx) = state.filtered_indices.get(fi)
+            && let Some(note) = state.notes.get(idx)
+        {
+            let marker = if fi == state.list_cursor {
+                "\u{25b6}"
+            } else {
+                " "
+            };
+            let line = format!("{} {}", marker, note.title);
+            let fg = if fi == state.list_cursor {
+                Some(theme.accent)
+            } else {
+                Some(theme.text)
+            };
+            cmds.push(RenderCmd::Text {
+                x: 2,
+                y: 4 + i as u16,
+                text: line,
+                fg,
+                bg: None,
+                bold: fi == state.list_cursor,
+                modifiers: 0,
+            });
         }
     }
 

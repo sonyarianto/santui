@@ -2,7 +2,7 @@ use std::io::{BufRead, BufReader};
 
 use santui_ipc::clipboard::copy_to_clipboard;
 use santui_ipc::protocol::{
-    Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData, BORDER_ALL,
+    Area, BORDER_ALL, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData,
 };
 use santui_ipc::theme::default_theme;
 
@@ -164,13 +164,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
         border_type: None,
     });
 
-    let fp = |f: Focus| -> &str {
-        if app.focus == f {
-            "> "
-        } else {
-            "  "
-        }
-    };
+    let fp = |f: Focus| -> &str { if app.focus == f { "> " } else { "  " } };
 
     cmds.push(RenderCmd::Text {
         x: 2,

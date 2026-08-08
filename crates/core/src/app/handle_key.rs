@@ -42,17 +42,17 @@ impl super::Santui {
                 let id = self.app_state.builtin_items[bi].0;
                 match id {
                     super::BuiltinId::SignInGoogle => {
-                        if let Some(ref auth) = self.auth {
-                            if let Err(e) = auth.start_sign_in("google") {
-                                log::error!("[auth] Google sign-in error: {e}");
-                            }
+                        if let Some(ref auth) = self.auth
+                            && let Err(e) = auth.start_sign_in("google")
+                        {
+                            log::error!("[auth] Google sign-in error: {e}");
                         }
                     }
                     super::BuiltinId::SignInGitHub => {
-                        if let Some(ref auth) = self.auth {
-                            if let Err(e) = auth.start_sign_in("github") {
-                                log::error!("[auth] GitHub sign-in error: {e}");
-                            }
+                        if let Some(ref auth) = self.auth
+                            && let Err(e) = auth.start_sign_in("github")
+                        {
+                            log::error!("[auth] GitHub sign-in error: {e}");
                         }
                     }
                     super::BuiltinId::SignOut => {

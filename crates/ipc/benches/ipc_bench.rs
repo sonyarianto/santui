@@ -1,6 +1,6 @@
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use santui_ipc::protocol::{
-    write_plugin_msg, HostMsg, IpcKey, IpcKeyModifiers, PluginMsg, RenderCmd, TextStyle,
+    HostMsg, IpcKey, IpcKeyModifiers, PluginMsg, RenderCmd, TextStyle, write_plugin_msg,
 };
 use std::hint::black_box;
 

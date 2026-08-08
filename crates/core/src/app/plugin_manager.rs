@@ -9,8 +9,8 @@ use crate::plugin::{Plugin, PluginCmdItem, PluginContext, PluginFactory};
 use crate::registry_config::RegistryConfig;
 use crate::theme::Theme;
 use crossterm::event::{KeyEvent, MouseEvent};
-use ratatui::layout::Rect;
 use ratatui::Frame;
+use ratatui::layout::Rect;
 use std::sync::Arc;
 
 /// Manages the lifecycle, dispatch, and palette-command registry for all
@@ -201,16 +201,16 @@ impl PluginManager {
         if self.active_idx == idx {
             return;
         }
-        if let Some(old) = self.active_idx {
-            if old < self.plugins.len() {
-                self.plugins[old].on_blur();
-            }
+        if let Some(old) = self.active_idx
+            && old < self.plugins.len()
+        {
+            self.plugins[old].on_blur();
         }
         self.active_idx = idx;
-        if let Some(new) = idx {
-            if new < self.plugins.len() {
-                self.plugins[new].on_focus();
-            }
+        if let Some(new) = idx
+            && new < self.plugins.len()
+        {
+            self.plugins[new].on_focus();
         }
     }
 
@@ -392,10 +392,10 @@ impl PluginManager {
 
         // Update stored mtime *before* init, so if init fails the mtime is
         // still bumped and we don't retry on every frame.
-        if let Some(mtime) = current_mtime {
-            if idx < self.mtimes.len() {
-                self.mtimes[idx] = Some(mtime);
-            }
+        if let Some(mtime) = current_mtime
+            && idx < self.mtimes.len()
+        {
+            self.mtimes[idx] = Some(mtime);
         }
 
         self.plugins[idx].init(ctx)?;
@@ -743,10 +743,9 @@ fn validate_binary_path(
         .ok()
         .and_then(|p| p.parent().map(|d| d.to_path_buf()))
         .and_then(|d| d.canonicalize().ok())
+        && canonical.starts_with(&exe_dir)
     {
-        if canonical.starts_with(&exe_dir) {
-            return Ok(());
-        }
+        return Ok(());
     }
 
     Err(format!(

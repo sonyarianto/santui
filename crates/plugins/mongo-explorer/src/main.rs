@@ -1,7 +1,7 @@
 use std::io::{BufRead, BufReader};
 
-use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
-use serde_json::{json, Value};
+use santui_ipc::protocol::{Area, BORDER_ALL, HostMsg, IpcKey, IpcKeyModifiers, ThemeData};
+use serde_json::{Value, json};
 
 use santui_ipc::theme::default_theme;
 #[derive(Debug, Clone)]
@@ -166,19 +166,19 @@ impl App {
                 true
             }
             (View::Documents(idx), IpcKey::Down) => {
-                if let Some(col) = self.collections.get(*idx) {
-                    if self.selected + 1 < col.docs.len() {
-                        self.selected += 1;
-                    }
+                if let Some(col) = self.collections.get(*idx)
+                    && self.selected + 1 < col.docs.len()
+                {
+                    self.selected += 1;
                 }
                 true
             }
             (View::Documents(idx), IpcKey::Enter) => {
-                if let Some(col) = self.collections.get(*idx) {
-                    if self.selected < col.docs.len() {
-                        self.view = View::DocumentDetail(*idx, self.selected);
-                        self.status = String::from("Document details");
-                    }
+                if let Some(col) = self.collections.get(*idx)
+                    && self.selected < col.docs.len()
+                {
+                    self.view = View::DocumentDetail(*idx, self.selected);
+                    self.status = String::from("Document details");
                 }
                 true
             }
@@ -259,24 +259,24 @@ impl App {
                 }
             }
             View::DocumentDetail(idx, doc_idx) => {
-                if let Some(col) = self.collections.get(*idx) {
-                    if let Some(doc) = col.docs.get(*doc_idx) {
-                        cmds.push(json!({"Text": {
-                            "x": 2, "y": list_y,
-                            "text": format!("_id: {}", doc.id),
-                            "fg": t.accent, "bg": null, "bold": true, "modifiers": 0,
-                        }}));
-                        for (i, (field, value)) in doc.fields.iter().enumerate() {
-                            let y = list_y + 1 + i as u16;
-                            if y + 1 >= h {
-                                break;
-                            }
-                            cmds.push(json!({"Text": {
-                                "x": 2, "y": y,
-                                "text": format!("  {field}: {value}"),
-                                "fg": t.text, "bg": null, "bold": false, "modifiers": 0,
-                            }}));
+                if let Some(col) = self.collections.get(*idx)
+                    && let Some(doc) = col.docs.get(*doc_idx)
+                {
+                    cmds.push(json!({"Text": {
+                        "x": 2, "y": list_y,
+                        "text": format!("_id: {}", doc.id),
+                        "fg": t.accent, "bg": null, "bold": true, "modifiers": 0,
+                    }}));
+                    for (i, (field, value)) in doc.fields.iter().enumerate() {
+                        let y = list_y + 1 + i as u16;
+                        if y + 1 >= h {
+                            break;
                         }
+                        cmds.push(json!({"Text": {
+                            "x": 2, "y": y,
+                            "text": format!("  {field}: {value}"),
+                            "fg": t.text, "bg": null, "bold": false, "modifiers": 0,
+                        }}));
                     }
                 }
             }

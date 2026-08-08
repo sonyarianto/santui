@@ -169,21 +169,21 @@ fn render_main(state: &CurrencyState, theme: &ThemeData, w: u16, _h: u16) -> Vec
             });
         }
         _ => {
-            if let Some(amount) = parsed {
-                if let Some(target_rate) = state.target_rate() {
-                    let source_rate = state.source_to_usd_rate();
-                    let result = crate::api::convert(amount, source_rate, target_rate);
-                    let result_text = format!("{} {} = {:.4} {}", amount, source, result, target);
-                    cmds.push(RenderCmd::Text {
-                        x: (w / 2).saturating_sub(result_text.len() as u16 / 2),
-                        y: 7,
-                        text: result_text,
-                        fg: Some(theme.success),
-                        bg: None,
-                        bold: true,
-                        modifiers: 0,
-                    });
-                }
+            if let Some(amount) = parsed
+                && let Some(target_rate) = state.target_rate()
+            {
+                let source_rate = state.source_to_usd_rate();
+                let result = crate::api::convert(amount, source_rate, target_rate);
+                let result_text = format!("{} {} = {:.4} {}", amount, source, result, target);
+                cmds.push(RenderCmd::Text {
+                    x: (w / 2).saturating_sub(result_text.len() as u16 / 2),
+                    y: 7,
+                    text: result_text,
+                    fg: Some(theme.success),
+                    bg: None,
+                    bold: true,
+                    modifiers: 0,
+                });
             }
         }
     }

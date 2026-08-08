@@ -1,8 +1,8 @@
 use std::io::{BufRead, BufReader};
 use std::sync::mpsc;
 
-use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
-use serde_json::{json, Value};
+use santui_ipc::protocol::{Area, BORDER_ALL, HostMsg, IpcKey, IpcKeyModifiers, ThemeData};
+use serde_json::{Value, json};
 
 use santui_ipc::theme::default_theme;
 #[derive(Debug, Clone)]
@@ -196,21 +196,21 @@ impl App {
     }
 
     fn handle_tick(&mut self) {
-        if let Some(ref rx) = self.rx {
-            if let Ok(msg) = rx.try_recv() {
-                self.fetching = false;
-                match msg {
-                    FetchMsg::Items(items) => {
-                        self.items = items;
-                        self.selected = 0;
-                        self.status = format!("Page {}  {} items", self.page, self.items.len());
-                    }
-                    FetchMsg::Error(e) => {
-                        self.status = format!("Error: {e}");
-                    }
+        if let Some(ref rx) = self.rx
+            && let Ok(msg) = rx.try_recv()
+        {
+            self.fetching = false;
+            match msg {
+                FetchMsg::Items(items) => {
+                    self.items = items;
+                    self.selected = 0;
+                    self.status = format!("Page {}  {} items", self.page, self.items.len());
                 }
-                self.dirty = true;
+                FetchMsg::Error(e) => {
+                    self.status = format!("Error: {e}");
+                }
             }
+            self.dirty = true;
         }
     }
 

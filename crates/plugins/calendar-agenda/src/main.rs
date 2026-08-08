@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use chrono::{Local, NaiveDate, NaiveDateTime, NaiveTime};
 use santui_ipc::protocol::{
-    Area, HostMsg, IpcKey, PluginRequest, RenderCmd, TextStyle, ThemeData, BORDER_ALL,
+    Area, BORDER_ALL, HostMsg, IpcKey, PluginRequest, RenderCmd, TextStyle, ThemeData,
 };
 use santui_ipc::theme::default_theme;
 use santui_ipc::ui::push_text;
@@ -388,10 +388,8 @@ fn parse_ics(text: &str, calendar: &str) -> Vec<Event> {
                 current.clear();
             }
             "END:VEVENT" => {
-                if in_event {
-                    if let Some(event) = parse_event(&current, calendar, events.len()) {
-                        events.push(event);
-                    }
+                if in_event && let Some(event) = parse_event(&current, calendar, events.len()) {
+                    events.push(event);
                 }
                 in_event = false;
             }

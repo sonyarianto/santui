@@ -1,10 +1,10 @@
 use std::io::{BufRead, BufReader};
 
-use rand::seq::IndexedRandom;
 use rand::RngExt;
+use rand::seq::IndexedRandom;
 use santui_ipc::clipboard::copy_to_clipboard;
 use santui_ipc::protocol::{
-    Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData, BORDER_ALL,
+    Area, BORDER_ALL, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData,
 };
 use santui_ipc::text::word_wrap;
 use santui_ipc::theme::default_theme;
@@ -16,51 +16,231 @@ struct Quote {
 }
 
 const QUOTES: &[Quote] = &[
-    Quote { text: "First, solve the problem. Then, write the code.", author: "John Johnson", category: "Programming" },
-    Quote { text: "Any fool can write code that a computer can understand. Good programmers write code that humans can understand.", author: "Martin Fowler", category: "Programming" },
-    Quote { text: "Simplicity is prerequisite for reliability.", author: "Edsger W. Dijkstra", category: "Programming" },
-    Quote { text: "Talk is cheap. Show me the code.", author: "Linus Torvalds", category: "Programming" },
-    Quote { text: "The only way to go fast is to go well.", author: "Robert C. Martin", category: "Programming" },
-    Quote { text: "Debugging is twice as hard as writing the code in the first place.", author: "Brian Kernighan", category: "Programming" },
-    Quote { text: "The best programs are written so that computing machines can perform them quickly.", author: "Alan Perlis", category: "Programming" },
-    Quote { text: "Measuring programming progress by lines of code is like measuring aircraft building progress by weight.", author: "Bill Gates", category: "Programming" },
-    Quote { text: "The most important property of a program is whether it accomplishes the intention of its user.", author: "C.A.R. Hoare", category: "Programming" },
-    Quote { text: "It's not a bug — it's an undocumented feature.", author: "Anonymous", category: "Humor" },
-    Quote { text: "I have not failed. I've just found 10,000 ways that won't work.", author: "Thomas Edison", category: "Wisdom" },
-    Quote { text: "The best time to plant a tree was 20 years ago. The second best time is now.", author: "Chinese Proverb", category: "Wisdom" },
-    Quote { text: "In the middle of every difficulty lies opportunity.", author: "Albert Einstein", category: "Wisdom" },
-    Quote { text: "The only true wisdom is in knowing you know nothing.", author: "Socrates", category: "Philosophy" },
-    Quote { text: "Science is what we understand well enough to explain to a computer.", author: "Donald Knuth", category: "Science" },
-    Quote { text: "If you can't explain it simply, you don't understand it well enough.", author: "Albert Einstein", category: "Science" },
-    Quote { text: "Well done is better than well said.", author: "Benjamin Franklin", category: "Proverbs" },
-    Quote { text: "Actions speak louder than words.", author: "Proverb", category: "Proverbs" },
-    Quote { text: "A journey of a thousand miles begins with a single step.", author: "Lao Tzu", category: "Philosophy" },
-    Quote { text: "The impediment to action advances action. What stands in the way becomes the way.", author: "Marcus Aurelius", category: "Philosophy" },
-    Quote { text: "The purpose of life is not to be happy. It is to be useful, to be honorable.", author: "Ralph Waldo Emerson", category: "Philosophy" },
-    Quote { text: "Stay hungry, stay foolish.", author: "Steve Jobs", category: "Wisdom" },
-    Quote { text: "There are only two hard things in Computer Science: cache invalidation and naming things.", author: "Phil Karlton", category: "Programming" },
-    Quote { text: "Before software can be reusable it first has to be usable.", author: "Ralph Johnson", category: "Programming" },
-    Quote { text: "Make it work, make it right, make it fast.", author: "Kent Beck", category: "Programming" },
-    Quote { text: "The best error message is the one that never shows up.", author: "Thomas Fuchs", category: "Programming" },
-    Quote { text: "A language that doesn't affect the way you think about programming is not worth knowing.", author: "Alan Perlis", category: "Programming" },
-    Quote { text: "The function of good software is to make the complex appear to be simple.", author: "Grady Booch", category: "Programming" },
-    Quote { text: "Optimism is an occupational hazard of programming: feedback is the treatment.", author: "Kent Beck", category: "Programming" },
-    Quote { text: "If debugging is the process of removing bugs, then programming must be the process of putting them in.", author: "Edsger W. Dijkstra", category: "Humor" },
-    Quote { text: "There are two ways to write error-free programs; only the third one works.", author: "Anonymous", category: "Humor" },
-    Quote { text: "The computer was born to solve problems that did not exist before.", author: "Bill Gates", category: "Humor" },
-    Quote { text: "E pur si muove.", author: "Galileo Galilei", category: "Science" },
-    Quote { text: "Equipped with his five senses, man explores the universe around him.", author: "Edwin Hubble", category: "Science" },
-    Quote { text: "The important thing is not to stop questioning.", author: "Albert Einstein", category: "Science" },
-    Quote { text: "An expert is a person who has made all the mistakes that can be made.", author: "Niels Bohr", category: "Science" },
-    Quote { text: "A wise man speaks because he has something to say; a fool because he has to say something.", author: "Plato", category: "Philosophy" },
-    Quote { text: "Happiness depends upon ourselves.", author: "Aristotle", category: "Philosophy" },
-    Quote { text: "It does not matter how slowly you go as long as you do not stop.", author: "Confucius", category: "Wisdom" },
-    Quote { text: "The only limit to our realization of tomorrow will be our doubts of today.", author: "Franklin D. Roosevelt", category: "Wisdom" },
-    Quote { text: "When action grows unprofitable, gather information; when information grows unprofitable, sleep.", author: "Ursula K. Le Guin", category: "Wisdom" },
-    Quote { text: "Better to remain silent and be thought a fool than to speak and remove all doubt.", author: "Maurice Switzer", category: "Proverbs" },
-    Quote { text: "The pen is mightier than the sword.", author: "Edward Bulwer-Lytton", category: "Proverbs" },
-    Quote { text: "When in Rome, do as the Romans do.", author: "St. Ambrose", category: "Proverbs" },
-    Quote { text: "Birds of a feather flock together.", author: "Proverb", category: "Proverbs" },
+    Quote {
+        text: "First, solve the problem. Then, write the code.",
+        author: "John Johnson",
+        category: "Programming",
+    },
+    Quote {
+        text: "Any fool can write code that a computer can understand. Good programmers write code that humans can understand.",
+        author: "Martin Fowler",
+        category: "Programming",
+    },
+    Quote {
+        text: "Simplicity is prerequisite for reliability.",
+        author: "Edsger W. Dijkstra",
+        category: "Programming",
+    },
+    Quote {
+        text: "Talk is cheap. Show me the code.",
+        author: "Linus Torvalds",
+        category: "Programming",
+    },
+    Quote {
+        text: "The only way to go fast is to go well.",
+        author: "Robert C. Martin",
+        category: "Programming",
+    },
+    Quote {
+        text: "Debugging is twice as hard as writing the code in the first place.",
+        author: "Brian Kernighan",
+        category: "Programming",
+    },
+    Quote {
+        text: "The best programs are written so that computing machines can perform them quickly.",
+        author: "Alan Perlis",
+        category: "Programming",
+    },
+    Quote {
+        text: "Measuring programming progress by lines of code is like measuring aircraft building progress by weight.",
+        author: "Bill Gates",
+        category: "Programming",
+    },
+    Quote {
+        text: "The most important property of a program is whether it accomplishes the intention of its user.",
+        author: "C.A.R. Hoare",
+        category: "Programming",
+    },
+    Quote {
+        text: "It's not a bug — it's an undocumented feature.",
+        author: "Anonymous",
+        category: "Humor",
+    },
+    Quote {
+        text: "I have not failed. I've just found 10,000 ways that won't work.",
+        author: "Thomas Edison",
+        category: "Wisdom",
+    },
+    Quote {
+        text: "The best time to plant a tree was 20 years ago. The second best time is now.",
+        author: "Chinese Proverb",
+        category: "Wisdom",
+    },
+    Quote {
+        text: "In the middle of every difficulty lies opportunity.",
+        author: "Albert Einstein",
+        category: "Wisdom",
+    },
+    Quote {
+        text: "The only true wisdom is in knowing you know nothing.",
+        author: "Socrates",
+        category: "Philosophy",
+    },
+    Quote {
+        text: "Science is what we understand well enough to explain to a computer.",
+        author: "Donald Knuth",
+        category: "Science",
+    },
+    Quote {
+        text: "If you can't explain it simply, you don't understand it well enough.",
+        author: "Albert Einstein",
+        category: "Science",
+    },
+    Quote {
+        text: "Well done is better than well said.",
+        author: "Benjamin Franklin",
+        category: "Proverbs",
+    },
+    Quote {
+        text: "Actions speak louder than words.",
+        author: "Proverb",
+        category: "Proverbs",
+    },
+    Quote {
+        text: "A journey of a thousand miles begins with a single step.",
+        author: "Lao Tzu",
+        category: "Philosophy",
+    },
+    Quote {
+        text: "The impediment to action advances action. What stands in the way becomes the way.",
+        author: "Marcus Aurelius",
+        category: "Philosophy",
+    },
+    Quote {
+        text: "The purpose of life is not to be happy. It is to be useful, to be honorable.",
+        author: "Ralph Waldo Emerson",
+        category: "Philosophy",
+    },
+    Quote {
+        text: "Stay hungry, stay foolish.",
+        author: "Steve Jobs",
+        category: "Wisdom",
+    },
+    Quote {
+        text: "There are only two hard things in Computer Science: cache invalidation and naming things.",
+        author: "Phil Karlton",
+        category: "Programming",
+    },
+    Quote {
+        text: "Before software can be reusable it first has to be usable.",
+        author: "Ralph Johnson",
+        category: "Programming",
+    },
+    Quote {
+        text: "Make it work, make it right, make it fast.",
+        author: "Kent Beck",
+        category: "Programming",
+    },
+    Quote {
+        text: "The best error message is the one that never shows up.",
+        author: "Thomas Fuchs",
+        category: "Programming",
+    },
+    Quote {
+        text: "A language that doesn't affect the way you think about programming is not worth knowing.",
+        author: "Alan Perlis",
+        category: "Programming",
+    },
+    Quote {
+        text: "The function of good software is to make the complex appear to be simple.",
+        author: "Grady Booch",
+        category: "Programming",
+    },
+    Quote {
+        text: "Optimism is an occupational hazard of programming: feedback is the treatment.",
+        author: "Kent Beck",
+        category: "Programming",
+    },
+    Quote {
+        text: "If debugging is the process of removing bugs, then programming must be the process of putting them in.",
+        author: "Edsger W. Dijkstra",
+        category: "Humor",
+    },
+    Quote {
+        text: "There are two ways to write error-free programs; only the third one works.",
+        author: "Anonymous",
+        category: "Humor",
+    },
+    Quote {
+        text: "The computer was born to solve problems that did not exist before.",
+        author: "Bill Gates",
+        category: "Humor",
+    },
+    Quote {
+        text: "E pur si muove.",
+        author: "Galileo Galilei",
+        category: "Science",
+    },
+    Quote {
+        text: "Equipped with his five senses, man explores the universe around him.",
+        author: "Edwin Hubble",
+        category: "Science",
+    },
+    Quote {
+        text: "The important thing is not to stop questioning.",
+        author: "Albert Einstein",
+        category: "Science",
+    },
+    Quote {
+        text: "An expert is a person who has made all the mistakes that can be made.",
+        author: "Niels Bohr",
+        category: "Science",
+    },
+    Quote {
+        text: "A wise man speaks because he has something to say; a fool because he has to say something.",
+        author: "Plato",
+        category: "Philosophy",
+    },
+    Quote {
+        text: "Happiness depends upon ourselves.",
+        author: "Aristotle",
+        category: "Philosophy",
+    },
+    Quote {
+        text: "It does not matter how slowly you go as long as you do not stop.",
+        author: "Confucius",
+        category: "Wisdom",
+    },
+    Quote {
+        text: "The only limit to our realization of tomorrow will be our doubts of today.",
+        author: "Franklin D. Roosevelt",
+        category: "Wisdom",
+    },
+    Quote {
+        text: "When action grows unprofitable, gather information; when information grows unprofitable, sleep.",
+        author: "Ursula K. Le Guin",
+        category: "Wisdom",
+    },
+    Quote {
+        text: "Better to remain silent and be thought a fool than to speak and remove all doubt.",
+        author: "Maurice Switzer",
+        category: "Proverbs",
+    },
+    Quote {
+        text: "The pen is mightier than the sword.",
+        author: "Edward Bulwer-Lytton",
+        category: "Proverbs",
+    },
+    Quote {
+        text: "When in Rome, do as the Romans do.",
+        author: "St. Ambrose",
+        category: "Proverbs",
+    },
+    Quote {
+        text: "Birds of a feather flock together.",
+        author: "Proverb",
+        category: "Proverbs",
+    },
 ];
 
 const CATEGORIES: &[&str] = &[

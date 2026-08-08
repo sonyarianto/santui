@@ -1,7 +1,8 @@
 [package]
 name = "santui-fortune-cookie"
 version = "0.2.38"
-edition = "2021"
+edition = "2024"
+rust-version = "1.85"
 
 [[bin]]
 name = "santui-fortune-cookie"

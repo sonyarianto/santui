@@ -1,12 +1,12 @@
 use crate::theme::{self, Theme};
 use crate::widgets::filtered_list::{DisplayItem, FilteredListState};
 use crate::widgets::popup::centered_rect;
+use ratatui::Frame;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Clear, List, ListItem, ListState, Paragraph, StatefulWidget, Widget};
-use ratatui::Frame;
 use std::path::Path;
 
 /// Manages theme selection, preview, and the theme-picker UI state.

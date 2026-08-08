@@ -3,7 +3,7 @@ use std::io::{BufRead, BufReader};
 use pulldown_cmark::{Event, Parser, TagEnd};
 use santui_ipc::clipboard::copy_to_clipboard;
 use santui_ipc::protocol::{
-    Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData, BORDER_ALL,
+    Area, BORDER_ALL, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData,
 };
 use santui_ipc::theme::default_theme;
 

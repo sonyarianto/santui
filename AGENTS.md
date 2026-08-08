@@ -52,7 +52,7 @@ crates/
 
 ## Key Conventions
 
-- Rust edition 2021, no nightly
+- Rust edition 2024, no nightly
 - `ratatui` for rendering; `Theme` semantic colors over hardcoded `Color::*`
 - `impl Default` for any type with a `new()` constructor
 - `cargo fmt` before commit; clippy must pass with `-D warnings` (enforced by lefthook pre-commit)

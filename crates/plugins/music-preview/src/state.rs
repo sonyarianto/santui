@@ -130,16 +130,16 @@ const MONTHS: [&str; 12] = [
 fn fmt_release_date(iso: &str) -> String {
     let date = iso.split('T').next().unwrap_or(iso);
     let parts: Vec<&str> = date.split('-').collect();
-    if parts.len() == 3 {
-        if let (Ok(y), Ok(m), Ok(d)) = (
+    if parts.len() == 3
+        && let (Ok(y), Ok(m), Ok(d)) = (
             parts[0].parse::<u32>(),
             parts[1].parse::<u32>(),
             parts[2].parse::<u32>(),
-        ) {
-            if (1..=12).contains(&m) && (1..=31).contains(&d) {
-                return format!("{} {}, {}", MONTHS[(m - 1) as usize], d, y);
-            }
-        }
+        )
+        && (1..=12).contains(&m)
+        && (1..=31).contains(&d)
+    {
+        return format!("{} {}, {}", MONTHS[(m - 1) as usize], d, y);
     }
     date.to_string()
 }

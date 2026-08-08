@@ -275,13 +275,13 @@ impl App {
 
     fn handle_db_value(&mut self, key: &str, value: Option<String>) {
         if key == "currency-converter" {
-            if let Some(json) = value {
-                if let Ok(p) = serde_json::from_str::<state::PersistedState>(&json) {
-                    self.state.source_currency = p.source_currency;
-                    self.state.target_currency = p.target_currency;
-                    self.state.favorite_pairs = p.favorite_pairs;
-                    self.trigger_rates_fetch();
-                }
+            if let Some(json) = value
+                && let Ok(p) = serde_json::from_str::<state::PersistedState>(&json)
+            {
+                self.state.source_currency = p.source_currency;
+                self.state.target_currency = p.target_currency;
+                self.state.favorite_pairs = p.favorite_pairs;
+                self.trigger_rates_fetch();
             }
             self.dirty = true;
         }

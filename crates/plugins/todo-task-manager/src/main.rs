@@ -2,7 +2,7 @@ use std::io::{BufRead, BufReader};
 
 use chrono::{Datelike, Local, NaiveDate};
 use santui_ipc::protocol::{
-    Area, HostMsg, IpcKey, PluginRequest, RenderCmd, TextStyle, ThemeData, BORDER_ALL,
+    Area, BORDER_ALL, HostMsg, IpcKey, PluginRequest, RenderCmd, TextStyle, ThemeData,
 };
 use santui_ipc::text::parse_tags;
 use santui_ipc::text::single_line;

@@ -53,21 +53,20 @@ impl SyncClient {
     /// the next call.
     pub fn try_sync(&self, auth: &Option<std::sync::Arc<dyn AuthHandle>>) {
         // Step 1: make sure we have a JWT.
-        if self.jwt.lock().map_or(true, |j| j.is_none()) {
-            if let Some(auth) = auth {
-                if let Some(bearer) = auth.bearer_token() {
-                    // Try both providers.
-                    for provider in &["github", "google"] {
-                        match self.exchange_token(provider, &bearer) {
-                            Ok(jwt) => {
-                                if let Ok(mut j) = self.jwt.lock() {
-                                    *j = Some(jwt);
-                                }
-                                break;
-                            }
-                            Err(e) => log::debug!("[sync] {provider} auth failed: {e}"),
+        if self.jwt.lock().map_or(true, |j| j.is_none())
+            && let Some(auth) = auth
+            && let Some(bearer) = auth.bearer_token()
+        {
+            // Try both providers.
+            for provider in &["github", "google"] {
+                match self.exchange_token(provider, &bearer) {
+                    Ok(jwt) => {
+                        if let Ok(mut j) = self.jwt.lock() {
+                            *j = Some(jwt);
                         }
+                        break;
                     }
+                    Err(e) => log::debug!("[sync] {provider} auth failed: {e}"),
                 }
             }
         }

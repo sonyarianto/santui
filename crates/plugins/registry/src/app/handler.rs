@@ -1,7 +1,7 @@
 use santui_ipc::protocol::{
     HostMsg, IpcKey, IpcMouseEvent, MouseButton, MouseEventKind, PluginMsg, PluginRequest,
 };
-use santui_registry::{plugin_filename, PluginManifest};
+use santui_registry::{PluginManifest, plugin_filename};
 
 use super::state::{Action, App, DownloadEvent};
 
@@ -121,21 +121,21 @@ impl App {
                             self.pending_install_id = None;
                             self.pending_install_name = None;
                             self.pending_install_version = None;
-                        } else if let Some(ref mut reg) = self.registry {
-                            if let (Some(id), Some(name), Some(version)) = (
+                        } else if let Some(ref mut reg) = self.registry
+                            && let (Some(id), Some(name), Some(version)) = (
                                 self.pending_install_id.take(),
                                 self.pending_install_name.take(),
                                 self.pending_install_version.take(),
-                            ) {
-                                let caps = std::mem::take(&mut self.pending_install_capabilities);
-                                let target_path = self.plugins_dir.join(plugin_filename(&id));
-                                match reg.add_installed(&id, &name, &version, target_path, &caps) {
-                                    Ok(()) => {
-                                        self.set_status(format!("{name} installed and enabled"));
-                                        request = Some(PluginRequest::PluginsChanged);
-                                    }
-                                    Err(e) => self.set_status(format!("Error: {e}")),
+                            )
+                        {
+                            let caps = std::mem::take(&mut self.pending_install_capabilities);
+                            let target_path = self.plugins_dir.join(plugin_filename(&id));
+                            match reg.add_installed(&id, &name, &version, target_path, &caps) {
+                                Ok(()) => {
+                                    self.set_status(format!("{name} installed and enabled"));
+                                    request = Some(PluginRequest::PluginsChanged);
                                 }
+                                Err(e) => self.set_status(format!("Error: {e}")),
                             }
                         }
                     } else {
@@ -160,7 +160,7 @@ impl App {
                     request: None,
                     plugin_message: None,
                     consumed: false,
-                }
+                };
             }
 
             HostMsg::UserUpdate { .. } => {}
@@ -549,20 +549,20 @@ impl App {
 
         match action {
             Action::Enable => {
-                if let Some(i) = installed_idx {
-                    if reg.set_enabled(i, true).is_ok() {
-                        self.set_status(format!("{} enabled", plugin.name));
-                        *request = Some(PluginRequest::PluginsChanged);
-                    }
+                if let Some(i) = installed_idx
+                    && reg.set_enabled(i, true).is_ok()
+                {
+                    self.set_status(format!("{} enabled", plugin.name));
+                    *request = Some(PluginRequest::PluginsChanged);
                 }
                 self.detail_idx = None;
             }
             Action::Disable => {
-                if let Some(i) = installed_idx {
-                    if reg.set_enabled(i, false).is_ok() {
-                        self.set_status(format!("{} disabled", plugin.name));
-                        *request = Some(PluginRequest::PluginsChanged);
-                    }
+                if let Some(i) = installed_idx
+                    && reg.set_enabled(i, false).is_ok()
+                {
+                    self.set_status(format!("{} disabled", plugin.name));
+                    *request = Some(PluginRequest::PluginsChanged);
                 }
                 self.detail_idx = None;
             }
@@ -571,11 +571,11 @@ impl App {
                 self.detail_idx = None;
             }
             Action::Delete => {
-                if let Some(i) = installed_idx {
-                    if reg.remove_installed(i).is_ok() {
-                        self.set_status(format!("{} deleted", plugin.name));
-                        *request = Some(PluginRequest::PluginsChanged);
-                    }
+                if let Some(i) = installed_idx
+                    && reg.remove_installed(i).is_ok()
+                {
+                    self.set_status(format!("{} deleted", plugin.name));
+                    *request = Some(PluginRequest::PluginsChanged);
                 }
                 self.detail_idx = None;
             }
@@ -599,10 +599,10 @@ impl App {
             if let Some(manifest) = available.iter().find(|m| &m.id == id) {
                 let dest = self.plugins_dir.join(santui_registry::plugin_filename(id));
                 let src = std::path::Path::new(&manifest.download_url);
-                if src.exists() {
-                    if let Err(e) = std::fs::copy(src, &dest) {
-                        log::warn!("sync_dev_plugins: failed to copy {src:?} -> {dest:?}: {e}");
-                    }
+                if src.exists()
+                    && let Err(e) = std::fs::copy(src, &dest)
+                {
+                    log::warn!("sync_dev_plugins: failed to copy {src:?} -> {dest:?}: {e}");
                 }
             }
         }
@@ -632,10 +632,10 @@ impl App {
         self.set_status(format!("Downloading {name}..."));
 
         std::thread::spawn(move || {
-            if let Some(parent) = dest.parent() {
-                if let Err(e) = std::fs::create_dir_all(parent) {
-                    log::warn!("failed to create plugin download directory: {e}");
-                }
+            if let Some(parent) = dest.parent()
+                && let Err(e) = std::fs::create_dir_all(parent)
+            {
+                log::warn!("failed to create plugin download directory: {e}");
             }
             let result = if dev_mode {
                 let src = std::path::Path::new(&url);

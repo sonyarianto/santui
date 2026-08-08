@@ -340,11 +340,7 @@ impl App {
             .unwrap_or((usize::MAX, false, String::new()));
 
         let status_str = if installed_idx != usize::MAX {
-            if is_enabled {
-                "Enabled"
-            } else {
-                "Disabled"
-            }
+            if is_enabled { "Enabled" } else { "Disabled" }
         } else {
             "Not installed"
         };

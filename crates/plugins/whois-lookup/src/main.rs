@@ -1,5 +1,5 @@
-use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
-use serde_json::{json, Value};
+use santui_ipc::protocol::{Area, BORDER_ALL, HostMsg, IpcKey, IpcKeyModifiers, ThemeData};
+use serde_json::{Value, json};
 use std::io::{BufRead, BufReader};
 use std::process::Command;
 

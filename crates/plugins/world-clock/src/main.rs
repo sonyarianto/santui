@@ -242,11 +242,11 @@ impl App {
             }
             IpcKey::Enter => {
                 let buf = self.state.rename_buf.trim().to_string();
-                if !buf.is_empty() {
-                    if let Screen::Rename(idx) = self.state.screen {
-                        self.state.clocks[idx].label = buf;
-                        self.save();
-                    }
+                if !buf.is_empty()
+                    && let Screen::Rename(idx) = self.state.screen
+                {
+                    self.state.clocks[idx].label = buf;
+                    self.save();
                 }
                 self.state.screen = Screen::Grid;
                 self.state.rename_buf.clear();

@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use chrono::Local;
 use santui_ipc::clipboard::copy_to_clipboard;
 use santui_ipc::protocol::{
-    Area, HostMsg, IpcKey, PluginRequest, RenderCmd, TextStyle, ThemeData, BORDER_ALL,
+    Area, BORDER_ALL, HostMsg, IpcKey, PluginRequest, RenderCmd, TextStyle, ThemeData,
 };
 use santui_ipc::theme::default_theme;
 use santui_ipc::ui::push_text;
@@ -768,7 +768,18 @@ fn render_list(app: &App, cmds: &mut Vec<RenderCmd>, theme: &ThemeData, w: u16, 
         border_type: None,
     });
     if let Some(dep) = app.selected_dep() {
-        let detail = format!("{}\nProject: {}\nEcosystem: {}\nRequirement: {}\nLatest: {}\nStatus: {}\nSource: {}\nURL: {}\n{}", dep.name, dep.project, dep.ecosystem.label(), dep.requirement, dep.latest.as_deref().unwrap_or("-"), dep.status.label(), dep.source_file, dep.package_url, dep.error);
+        let detail = format!(
+            "{}\nProject: {}\nEcosystem: {}\nRequirement: {}\nLatest: {}\nStatus: {}\nSource: {}\nURL: {}\n{}",
+            dep.name,
+            dep.project,
+            dep.ecosystem.label(),
+            dep.requirement,
+            dep.latest.as_deref().unwrap_or("-"),
+            dep.status.label(),
+            dep.source_file,
+            dep.package_url,
+            dep.error
+        );
         cmds.push(RenderCmd::Paragraph {
             x: detail_x + 1,
             y: 5,

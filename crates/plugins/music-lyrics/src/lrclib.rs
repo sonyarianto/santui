@@ -71,23 +71,23 @@ pub fn extract_lyrics(track: &LRCLibTrack) -> Option<LyricsData> {
     if track.instrumental {
         return None;
     }
-    if let Some(ref plain) = track.plain_lyrics {
-        if !plain.is_empty() {
+    if let Some(ref plain) = track.plain_lyrics
+        && !plain.is_empty()
+    {
+        return Some(LyricsData {
+            text: plain.clone(),
+            source: "LRCLib".into(),
+        });
+    }
+    if let Some(ref synced) = track.synced_lyrics
+        && !synced.is_empty()
+    {
+        let text = strip_timestamps(synced);
+        if !text.is_empty() {
             return Some(LyricsData {
-                text: plain.clone(),
+                text,
                 source: "LRCLib".into(),
             });
-        }
-    }
-    if let Some(ref synced) = track.synced_lyrics {
-        if !synced.is_empty() {
-            let text = strip_timestamps(synced);
-            if !text.is_empty() {
-                return Some(LyricsData {
-                    text,
-                    source: "LRCLib".into(),
-                });
-            }
         }
     }
     None

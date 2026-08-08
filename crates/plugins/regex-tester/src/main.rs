@@ -3,7 +3,7 @@ use std::io::{BufRead, BufReader};
 use regex::{Regex, RegexBuilder};
 use santui_ipc::clipboard::copy_to_clipboard;
 use santui_ipc::protocol::{
-    Area, HostMsg, IpcKey, PluginRequest, RenderCmd, TextStyle, ThemeData, BORDER_ALL,
+    Area, BORDER_ALL, HostMsg, IpcKey, PluginRequest, RenderCmd, TextStyle, ThemeData,
 };
 use santui_ipc::theme::default_theme;
 use santui_ipc::ui::focus_line;
@@ -301,7 +301,7 @@ fn analyze(pattern: &str, sample: &str, replacement: &str, flags: &RegexFlags) -
                 replacement_preview: None,
                 error: Some(e),
                 truncated: false,
-            }
+            };
         }
     };
     let sample = if sample.len() > MAX_SAMPLE_BYTES {
@@ -590,11 +590,7 @@ fn match_items(analysis: &Analysis) -> Vec<String> {
 }
 
 fn mark(enabled: bool) -> &'static str {
-    if enabled {
-        "x"
-    } else {
-        " "
-    }
+    if enabled { "x" } else { " " }
 }
 
 fn visible_one_line(value: &str) -> String {

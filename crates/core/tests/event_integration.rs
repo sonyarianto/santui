@@ -1,5 +1,5 @@
-use santui_core::event::{Event, EventBus};
 use santui_core::Theme;
+use santui_core::event::{Event, EventBus};
 
 #[test]
 fn event_bus_new_is_empty() {

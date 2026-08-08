@@ -131,10 +131,10 @@ impl App {
                 true
             }
             IpcKey::Char('o') => {
-                if let Some(story) = self.state.stories.get(self.state.selected) {
-                    if let Some(ref url) = story.url {
-                        open_url(url);
-                    }
+                if let Some(story) = self.state.stories.get(self.state.selected)
+                    && let Some(ref url) = story.url
+                {
+                    open_url(url);
                 }
                 true
             }
@@ -156,10 +156,10 @@ impl App {
                 true
             }
             IpcKey::Char('o') => {
-                if let Some(ref story) = self.state.comment_story {
-                    if let Some(ref url) = story.url {
-                        open_url(url);
-                    }
+                if let Some(ref story) = self.state.comment_story
+                    && let Some(ref url) = story.url
+                {
+                    open_url(url);
                 }
                 true
             }

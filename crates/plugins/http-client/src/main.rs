@@ -9,9 +9,9 @@ use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, IpcKeyModifiers, PluginRequest, RenderCmd, ThemeData,
 };
 
-use client::{send_request, HttpMethod, HttpResponse};
+use client::{HttpMethod, HttpResponse, send_request};
 use state::{
-    ClientState, EditField, FetchState, PersistedState, RequestEntry, Screen, HISTORY_MAX,
+    ClientState, EditField, FetchState, HISTORY_MAX, PersistedState, RequestEntry, Screen,
 };
 use ui::render_ui;
 
@@ -389,11 +389,11 @@ impl App {
 
     fn handle_db_value(&mut self, key: &str, value: Option<String>) {
         if key == "http-client" {
-            if let Some(json) = value {
-                if let Ok(p) = serde_json::from_str::<PersistedState>(&json) {
-                    self.state.history = p.history;
-                    self.state.saved_requests = p.saved_requests;
-                }
+            if let Some(json) = value
+                && let Ok(p) = serde_json::from_str::<PersistedState>(&json)
+            {
+                self.state.history = p.history;
+                self.state.saved_requests = p.saved_requests;
             }
             self.dirty = true;
         }
@@ -992,7 +992,7 @@ mod tests {
         });
         app.handle_db_value("http-client", None);
         assert_eq!(app.state.history.len(), 1); // unchanged when nil
-                                                // But wrong key is ignored
+        // But wrong key is ignored
         app.handle_db_value("other-key", Some("{}".into()));
         assert_eq!(app.state.history.len(), 1);
     }

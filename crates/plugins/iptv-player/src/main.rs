@@ -240,42 +240,39 @@ impl App {
                 self.dirty = true;
             }
             "playlist-cache" => {
-                if let Some(json) = value {
-                    if self.state.channels.is_empty() {
-                        if let Ok(channels) =
-                            serde_json::from_str::<Vec<crate::m3u::Channel>>(&json)
-                        {
-                            let count = channels.len();
-                            self.state.channels = channels;
-                            self.state.apply_filter();
-                            if count > 0 {
-                                self.state
-                                    .set_scan_msg(format!("Loaded {count} channels from cache"));
-                            }
-                            self.dirty = true;
-                        }
+                if let Some(json) = value
+                    && self.state.channels.is_empty()
+                    && let Ok(channels) = serde_json::from_str::<Vec<crate::m3u::Channel>>(&json)
+                {
+                    let count = channels.len();
+                    self.state.channels = channels;
+                    self.state.apply_filter();
+                    if count > 0 {
+                        self.state
+                            .set_scan_msg(format!("Loaded {count} channels from cache"));
                     }
+                    self.dirty = true;
                 }
             }
             "playlist-url" => {
-                if let Some(url) = value {
-                    if !url.is_empty() {
-                        self.state.playlist_url = url;
-                    }
+                if let Some(url) = value
+                    && !url.is_empty()
+                {
+                    self.state.playlist_url = url;
                 }
             }
             "preferences" => {
-                if let Some(json) = value {
-                    if let Ok(prefs) = serde_json::from_str::<serde_json::Value>(&json) {
-                        if let Some(vol) = prefs.get("volume").and_then(|v| v.as_i64()) {
-                            self.state.volume = vol.clamp(0, 100);
-                            send_cmd(self, MpvCmd::SetVolume(self.state.volume));
-                        }
-                        if let Some(url) = prefs.get("playlist_url").and_then(|v| v.as_str()) {
-                            if !url.is_empty() {
-                                self.state.playlist_url = url.to_string();
-                            }
-                        }
+                if let Some(json) = value
+                    && let Ok(prefs) = serde_json::from_str::<serde_json::Value>(&json)
+                {
+                    if let Some(vol) = prefs.get("volume").and_then(|v| v.as_i64()) {
+                        self.state.volume = vol.clamp(0, 100);
+                        send_cmd(self, MpvCmd::SetVolume(self.state.volume));
+                    }
+                    if let Some(url) = prefs.get("playlist_url").and_then(|v| v.as_str())
+                        && !url.is_empty()
+                    {
+                        self.state.playlist_url = url.to_string();
                     }
                 }
             }
@@ -612,11 +609,11 @@ impl App {
                                 | PlaybackState::Paused { channel_index } => Some(*channel_index),
                                 _ => None,
                             };
-                            if let Some(idx) = current_idx {
-                                if idx < self.state.channels.len() {
-                                    let next_url = self.state.channels[idx].url.clone();
-                                    send_cmd(self, MpvCmd::LoadUrl(next_url));
-                                }
+                            if let Some(idx) = current_idx
+                                && idx < self.state.channels.len()
+                            {
+                                let next_url = self.state.channels[idx].url.clone();
+                                send_cmd(self, MpvCmd::LoadUrl(next_url));
                             }
                         } else if reason == mpv::MPV_END_FILE_REASON_ERROR {
                             self.state.play_state =

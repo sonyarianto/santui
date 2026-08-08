@@ -1,5 +1,5 @@
-use santui_core::plugin::{Plugin, PluginContext};
 use santui_core::Santui;
+use santui_core::plugin::{Plugin, PluginContext};
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};

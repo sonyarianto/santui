@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 use santui_ipc::clipboard::copy_to_clipboard;
 use santui_ipc::protocol::{
-    Area, HostMsg, IpcKey, PluginRequest, RenderCmd, TextStyle, ThemeData, BORDER_ALL,
+    Area, BORDER_ALL, HostMsg, IpcKey, PluginRequest, RenderCmd, TextStyle, ThemeData,
 };
 use santui_ipc::theme::default_theme;
 use santui_ipc::ui::push_text;
@@ -755,7 +755,11 @@ fn repo_detail(repo: &TrackedRepo) -> String {
         repo.config.path,
         status.root,
         status.branch,
-        if status.upstream.is_empty() { "-" } else { &status.upstream },
+        if status.upstream.is_empty() {
+            "-"
+        } else {
+            &status.upstream
+        },
         status.ahead,
         status.behind,
         status.staged,

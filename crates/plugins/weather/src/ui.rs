@@ -1,6 +1,6 @@
-use santui_ipc::protocol::{RenderCmd, ThemeData, BORDER_ALL};
+use santui_ipc::protocol::{BORDER_ALL, RenderCmd, ThemeData};
 
-use crate::api::{weather_description, weather_symbol, HourlyPoint};
+use crate::api::{HourlyPoint, weather_description, weather_symbol};
 use crate::state::{FetchState, Screen, WeatherState};
 
 pub fn render_ui(state: &WeatherState, theme: &ThemeData, w: u16, h: u16) -> Vec<RenderCmd> {
@@ -496,19 +496,19 @@ fn render_location_search(
 
 fn day_name_from_date(date: &str) -> String {
     let parts: Vec<&str> = date.split('-').collect();
-    if parts.len() == 3 {
-        if let (Ok(_y), Ok(_m), Ok(d)) = (
+    if parts.len() == 3
+        && let (Ok(_y), Ok(_m), Ok(d)) = (
             parts[0].parse::<i32>(),
             parts[1].parse::<u32>(),
             parts[2].parse::<u32>(),
-        ) {
-            let names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-            let day_of_week = ((d as f64
-                + (13.0 * (_m as f64 + 1.0) / 5.0 + _y as f64 + _y as f64 / 4.0 - _y as f64 / 100.0
-                    + _y as f64 / 400.0) as i32 as f64) as i32
-                % 7) as usize;
-            return names[day_of_week % 7].to_string();
-        }
+        )
+    {
+        let names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+        let day_of_week = ((d as f64
+            + (13.0 * (_m as f64 + 1.0) / 5.0 + _y as f64 + _y as f64 / 4.0 - _y as f64 / 100.0
+                + _y as f64 / 400.0) as i32 as f64) as i32
+            % 7) as usize;
+        return names[day_of_week % 7].to_string();
     }
     date.to_string()
 }

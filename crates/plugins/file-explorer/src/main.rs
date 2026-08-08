@@ -1,8 +1,8 @@
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 
-use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
-use serde_json::{json, Value};
+use santui_ipc::protocol::{Area, BORDER_ALL, HostMsg, IpcKey, IpcKeyModifiers, ThemeData};
+use serde_json::{Value, json};
 
 use santui_ipc::theme::default_theme;
 #[derive(Debug, Clone)]
@@ -67,12 +67,12 @@ impl App {
     }
 
     fn enter_dir(&mut self) {
-        if let Some(entry) = self.entries.get(self.selected) {
-            if entry.is_dir {
-                self.current_path.push(&entry.name);
-                self.read_dir();
-                self.dirty = true;
-            }
+        if let Some(entry) = self.entries.get(self.selected)
+            && entry.is_dir
+        {
+            self.current_path.push(&entry.name);
+            self.read_dir();
+            self.dirty = true;
         }
     }
 

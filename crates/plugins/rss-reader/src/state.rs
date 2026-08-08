@@ -140,13 +140,13 @@ impl RssState {
         items: Vec<FeedItem>,
         feed_title_from_meta: Option<String>,
     ) {
-        if let Some(title) = feed_title_from_meta {
-            if let Some(feed) = self.data.feeds.iter_mut().find(|f| f.url == feed_url) {
-                if feed.title == "Loading..." {
-                    feed.title = title;
-                }
-                feed.last_fetched = Some(now_secs());
+        if let Some(title) = feed_title_from_meta
+            && let Some(feed) = self.data.feeds.iter_mut().find(|f| f.url == feed_url)
+        {
+            if feed.title == "Loading..." {
+                feed.title = title;
             }
+            feed.last_fetched = Some(now_secs());
         }
         for item in items {
             if !self.all_items.iter().any(|d| d.item.id == item.id) {

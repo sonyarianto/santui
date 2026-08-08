@@ -1,7 +1,8 @@
 [package]
 name = "santui-db"
 version = "0.2.38"
-edition = "2021"
+edition = "2024"
+rust-version = "1.85"
 description = "Santui central SQLite database — per-user state for plugins"
 license = "AGPL-3.0-only"
 publish = false

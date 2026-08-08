@@ -1,4 +1,4 @@
-use crate::types::{Ayah, Edition, SurahContent, SurahSummary, ARABIC_EDITION};
+use crate::types::{ARABIC_EDITION, Ayah, Edition, SurahContent, SurahSummary};
 
 pub fn fetch_json(url: &str) -> Result<serde_json::Value, String> {
     let mut resp = ureq::get(url).call().map_err(|e| e.to_string())?;

@@ -1,4 +1,4 @@
-use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData, BORDER_ALL};
+use santui_ipc::protocol::{BORDER_ALL, RenderCmd, TextStyle, ThemeData};
 
 use crate::state::{ClipState, Screen};
 

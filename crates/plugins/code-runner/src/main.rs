@@ -1,8 +1,8 @@
 use std::io::{BufRead, BufReader};
 use std::process::Command;
 
-use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
-use serde_json::{json, Value};
+use santui_ipc::protocol::{Area, BORDER_ALL, HostMsg, IpcKey, IpcKeyModifiers, ThemeData};
+use serde_json::{Value, json};
 
 use santui_ipc::theme::default_theme;
 #[derive(Debug, Clone, PartialEq)]
@@ -48,19 +48,19 @@ impl Default for App {
 
 impl App {
     fn detect_language(&self) -> String {
-        if let Some(first) = self.code.first() {
-            if first.starts_with("#!/") {
-                let parts: Vec<&str> = first.splitn(3, '/').collect();
-                if parts.len() >= 3 {
-                    let lang = parts[2].trim();
-                    match lang {
-                        "sh" | "bash" | "zsh" | "dash" => return String::from("bash"),
-                        "python" | "python3" => return String::from("python3"),
-                        "node" | "nodejs" => return String::from("node"),
-                        "ruby" => return String::from("ruby"),
-                        "perl" => return String::from("perl"),
-                        _ => return lang.to_string(),
-                    }
+        if let Some(first) = self.code.first()
+            && first.starts_with("#!/")
+        {
+            let parts: Vec<&str> = first.splitn(3, '/').collect();
+            if parts.len() >= 3 {
+                let lang = parts[2].trim();
+                match lang {
+                    "sh" | "bash" | "zsh" | "dash" => return String::from("bash"),
+                    "python" | "python3" => return String::from("python3"),
+                    "node" | "nodejs" => return String::from("node"),
+                    "ruby" => return String::from("ruby"),
+                    "perl" => return String::from("perl"),
+                    _ => return lang.to_string(),
                 }
             }
         }

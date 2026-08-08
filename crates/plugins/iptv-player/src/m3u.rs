@@ -65,11 +65,7 @@ fn extract_name(line: &str) -> Option<String> {
     let prefix = line.strip_prefix("#EXTINF:")?;
     let comma_idx = find_name_comma(prefix)?;
     let name = prefix[comma_idx + 1..].trim().to_string();
-    if name.is_empty() {
-        None
-    } else {
-        Some(name)
-    }
+    if name.is_empty() { None } else { Some(name) }
 }
 
 fn extract_attrs(line: &str) -> BTreeMap<String, String> {

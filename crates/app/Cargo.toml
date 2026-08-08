@@ -1,7 +1,8 @@
 [package]
 name = "santui"
 version = "0.2.38"
-edition = "2021"
+edition = "2024"
+rust-version = "1.85"
 description = "Santui — keyboard-driven TUI plugin launcher with OAuth sign-in"
 license = "AGPL-3.0-only"
 publish = false

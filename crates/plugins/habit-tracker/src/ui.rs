@@ -1,7 +1,7 @@
 use chrono::{Local, NaiveDate};
-use santui_ipc::protocol::{RenderCmd, ThemeData, BORDER_ALL};
+use santui_ipc::protocol::{BORDER_ALL, RenderCmd, ThemeData};
 
-use crate::state::{FocusField, HabitState, Screen, COLOR_PRESETS};
+use crate::state::{COLOR_PRESETS, FocusField, HabitState, Screen};
 
 pub fn render_ui(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> Vec<RenderCmd> {
     let mut cmds = vec![RenderCmd::Clear {
@@ -306,21 +306,21 @@ fn render_detail(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
             Some(e.note.as_str())
         }
     });
-    if let Some(note_text) = note {
-        if info_y + 1 < h.saturating_sub(2) {
-            cmds.push(RenderCmd::Text {
-                x: 2,
-                y: info_y + 1,
-                text: format!(
-                    "Note: {}",
-                    santui_ipc::ui::truncate(note_text, (w.saturating_sub(10)) as usize)
-                ),
-                fg: Some(theme.text_muted),
-                bg: None,
-                bold: false,
-                modifiers: 0,
-            });
-        }
+    if let Some(note_text) = note
+        && info_y + 1 < h.saturating_sub(2)
+    {
+        cmds.push(RenderCmd::Text {
+            x: 2,
+            y: info_y + 1,
+            text: format!(
+                "Note: {}",
+                santui_ipc::ui::truncate(note_text, (w.saturating_sub(10)) as usize)
+            ),
+            fg: Some(theme.text_muted),
+            bg: None,
+            bold: false,
+            modifiers: 0,
+        });
     }
 
     cmds

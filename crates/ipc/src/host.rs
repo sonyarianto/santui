@@ -5,18 +5,18 @@ use crate::protocol::{
 use crate::render::render_commands;
 use crossterm::event::{KeyCode, KeyEvent};
 use crossterm::terminal;
-use ratatui::layout::Rect;
 use ratatui::Frame;
+use ratatui::layout::Rect;
+use santui_core::LoggerBuffer;
 use santui_core::auth::User;
 use santui_core::theme::Theme;
-use santui_core::LoggerBuffer;
 use santui_core::{AuthHandle, DbAccess, Plugin, PluginCmdItem, PluginContext};
 use std::cell::Cell;
 use std::io::{BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::sync::mpsc::{self, Receiver, RecvTimeoutError, SyncSender};
 use std::sync::Arc;
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError, SyncSender};
 use std::thread;
 use std::time::Duration;
 
@@ -225,7 +225,7 @@ impl IpcPluginHost {
             Priority::High => &self.writer_high_tx,
             Priority::Low => &self.writer_low_tx,
         };
-        let crashed = if let Some(ref tx) = tx {
+        let crashed = if let Some(tx) = tx {
             match tx.try_send(json) {
                 Ok(_) => false,
                 Err(mpsc::TrySendError::Disconnected(_)) => true,
@@ -320,23 +320,23 @@ impl IpcPluginHost {
             }
         }
 
-        if let Some(h) = self.writer_thread.take() {
-            if let Err(e) = h.join() {
-                log::warn!(
-                    "[santui] writer thread join failed for plugin `{}`: {e:?}",
-                    self.id
-                );
-            }
+        if let Some(h) = self.writer_thread.take()
+            && let Err(e) = h.join()
+        {
+            log::warn!(
+                "[santui] writer thread join failed for plugin `{}`: {e:?}",
+                self.id
+            );
         }
 
         self.response_rx = None;
-        if let Some(h) = self.reader_thread.take() {
-            if let Err(e) = h.join() {
-                log::warn!(
-                    "[santui] reader thread join failed for plugin `{}`: {e:?}",
-                    self.id
-                );
-            }
+        if let Some(h) = self.reader_thread.take()
+            && let Err(e) = h.join()
+        {
+            log::warn!(
+                "[santui] reader thread join failed for plugin `{}`: {e:?}",
+                self.id
+            );
         }
     }
 
@@ -493,14 +493,14 @@ impl IpcPluginHost {
         };
         match req {
             PluginRequest::SignIn { provider } => {
-                if let Some(auth) = auth {
-                    if let Err(e) = auth.start_sign_in(&provider) {
-                        log::error!("[santui] Sign-in start failed: {e}");
-                        self.send_recv(&HostMsg::UserUpdate { user: None });
-                    }
-                    // Non-blocking: the main loop drains the result and calls
-                    // on_user_update_all on all plugins when sign-in completes.
+                if let Some(auth) = auth
+                    && let Err(e) = auth.start_sign_in(&provider)
+                {
+                    log::error!("[santui] Sign-in start failed: {e}");
+                    self.send_recv(&HostMsg::UserUpdate { user: None });
                 }
+                // Non-blocking: the main loop drains the result and calls
+                // on_user_update_all on all plugins when sign-in completes.
             }
             PluginRequest::SignOut => {
                 if let Some(auth) = auth {
@@ -585,16 +585,16 @@ impl Plugin for IpcPluginHost {
         );
         self.drain_responses();
 
-        if let Some(ref auth) = ctx.auth {
-            if let Some(user) = auth.current_user() {
-                self.send(
-                    &HostMsg::UserUpdate {
-                        user: Some(user_to_data(&user)),
-                    },
-                    Priority::High,
-                );
-                self.drain_responses();
-            }
+        if let Some(ref auth) = ctx.auth
+            && let Some(user) = auth.current_user()
+        {
+            self.send(
+                &HostMsg::UserUpdate {
+                    user: Some(user_to_data(&user)),
+                },
+                Priority::High,
+            );
+            self.drain_responses();
         }
 
         Ok(())

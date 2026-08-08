@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader};
 
-use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
-use serde_json::{json, Value};
+use santui_ipc::protocol::{Area, BORDER_ALL, HostMsg, IpcKey, IpcKeyModifiers, ThemeData};
+use serde_json::{Value, json};
 
 use santui_ipc::theme::default_theme;
 #[derive(Debug, Clone)]
@@ -225,11 +225,7 @@ impl App {
                     let center = w / 2;
                     for j in 0..w {
                         let c = if j == center {
-                            if has_down {
-                                '\u{257C}'
-                            } else {
-                                ' '
-                            }
+                            if has_down { '\u{257C}' } else { ' ' }
                         } else if has_down {
                             '\u{2500}'
                         } else {

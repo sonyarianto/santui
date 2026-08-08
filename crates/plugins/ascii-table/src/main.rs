@@ -1,6 +1,6 @@
 use std::io::{BufRead, BufReader};
 
-use santui_ipc::protocol::{Area, HostMsg, RenderCmd, ThemeData, BORDER_ALL};
+use santui_ipc::protocol::{Area, BORDER_ALL, HostMsg, RenderCmd, ThemeData};
 
 use santui_ipc::theme::default_theme;
 struct App {

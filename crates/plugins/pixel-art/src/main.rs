@@ -1,7 +1,7 @@
 use std::io::{BufRead, BufReader};
 
-use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
-use serde_json::{json, Value};
+use santui_ipc::protocol::{Area, BORDER_ALL, HostMsg, IpcKey, IpcKeyModifiers, ThemeData};
+use serde_json::{Value, json};
 
 use santui_ipc::theme::default_theme;
 const GRID_W: usize = 16;
@@ -92,17 +92,9 @@ impl App {
                 let on = self.grid[y][x];
                 let cursor = x == self.cursor_x && y == self.cursor_y;
                 let ch = if on {
-                    if cursor {
-                        "\u{2593}"
-                    } else {
-                        "\u{2588}"
-                    }
+                    if cursor { "\u{2593}" } else { "\u{2588}" }
                 } else {
-                    if cursor {
-                        "\u{2592}"
-                    } else {
-                        "\u{2591}"
-                    }
+                    if cursor { "\u{2592}" } else { "\u{2591}" }
                 };
                 cmds.push(json!({"Text": {
                     "x": grid_offset_x + x as u16 * 2,

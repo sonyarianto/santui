@@ -1,7 +1,7 @@
 use std::io::{BufRead, BufReader};
 
 use santui_ipc::clipboard::copy_to_clipboard;
-use santui_ipc::protocol::{Area, HostMsg, IpcKey, RenderCmd, TextStyle, ThemeData, BORDER_ALL};
+use santui_ipc::protocol::{Area, BORDER_ALL, HostMsg, IpcKey, RenderCmd, TextStyle, ThemeData};
 
 use santui_ipc::theme::default_theme;
 use santui_ipc::ui::push_text;

@@ -1,4 +1,4 @@
-use santui_ipc::protocol::{RenderCmd, ThemeData, BORDER_ALL};
+use santui_ipc::protocol::{BORDER_ALL, RenderCmd, ThemeData};
 
 use crate::state::{ClientState, EditField, FetchState, Screen};
 

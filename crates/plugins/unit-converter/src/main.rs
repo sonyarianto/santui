@@ -2,7 +2,7 @@ use std::io::{BufRead, BufReader};
 
 use santui_ipc::clipboard::copy_to_clipboard;
 use santui_ipc::protocol::{
-    Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, TextStyle, ThemeData, BORDER_ALL,
+    Area, BORDER_ALL, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, TextStyle, ThemeData,
 };
 use santui_ipc::theme::default_theme;
 use santui_ipc::ui::focus_line;
@@ -669,11 +669,7 @@ fn trim_float(value: f64, precision: usize) -> String {
             s.pop();
         }
     }
-    if s == "-0" {
-        "0".into()
-    } else {
-        s
-    }
+    if s == "-0" { "0".into() } else { s }
 }
 
 fn render_ui(app: &App) -> Vec<RenderCmd> {
@@ -904,9 +900,11 @@ mod tests {
     #[test]
     fn filters_by_alias_and_category() {
         assert_eq!(filtered_units("feet", None)[0].id, "ft");
-        assert!(filtered_units("storage", None)
-            .iter()
-            .any(|u| u.id == "gib"));
+        assert!(
+            filtered_units("storage", None)
+                .iter()
+                .any(|u| u.id == "gib")
+        );
     }
 
     #[test]

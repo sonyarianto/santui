@@ -1,8 +1,8 @@
 use santui_ipc::protocol::{
-    Area, HostMsg, IpcKey, IpcKeyModifiers, LogEntry, ThemeData, BORDER_ALL,
+    Area, BORDER_ALL, HostMsg, IpcKey, IpcKeyModifiers, LogEntry, ThemeData,
 };
 use santui_ipc::theme::default_theme;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::io::{BufRead, BufReader};
 
 const DEFAULT_PATH: &str = "/var/log/syslog";

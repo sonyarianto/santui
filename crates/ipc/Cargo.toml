@@ -1,7 +1,8 @@
 [package]
 name = "santui-ipc"
 version = "0.2.38"
-edition = "2021"
+edition = "2024"
+rust-version = "1.85"
 description = "Santui IPC protocol — typed messages and host plugin runner over JSON lines"
 license = "AGPL-3.0-only"
 publish = false

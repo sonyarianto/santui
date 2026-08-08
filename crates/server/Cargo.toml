@@ -1,7 +1,8 @@
 [package]
 name = "santui-server"
 version = "0.2.38"
-edition = "2021"
+edition = "2024"
+rust-version = "1.85"
 description = "Santui backend server — sync, auth, and web UI"
 license = "AGPL-3.0-only"
 repository = "https://github.com/sonyarianto/santui"

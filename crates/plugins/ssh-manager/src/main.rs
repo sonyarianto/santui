@@ -8,7 +8,7 @@ use santui_ipc::protocol::{
 };
 
 use santui_ipc::time::unix_now;
-use state::{generate_id, Screen, SshState};
+use state::{Screen, SshState, generate_id};
 use ui::render_ui;
 
 // Keep the original key so existing saved SSH hosts survive the plugin rename.
@@ -396,10 +396,10 @@ impl App {
 
     fn handle_db_value(&mut self, key: &str, value: Option<String>) {
         if key == STORAGE_KEY {
-            if let Some(json) = value {
-                if let Ok(data) = serde_json::from_str::<state::SshData>(&json) {
-                    self.state.data = data;
-                }
+            if let Some(json) = value
+                && let Ok(data) = serde_json::from_str::<state::SshData>(&json)
+            {
+                self.state.data = data;
             }
             self.state.rebuild_filtered_indices();
             self.dirty = true;

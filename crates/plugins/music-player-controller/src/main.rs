@@ -2,8 +2,8 @@ use std::io::{BufRead, BufReader};
 use std::net::TcpStream;
 use std::time::Duration;
 
-use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
-use serde_json::{json, Value};
+use santui_ipc::protocol::{Area, BORDER_ALL, HostMsg, IpcKey, IpcKeyModifiers, ThemeData};
+use serde_json::{Value, json};
 
 use santui_ipc::theme::default_theme;
 #[derive(Debug, Clone)]
@@ -135,12 +135,12 @@ impl App {
             for line in pl_resp.lines() {
                 if let Some(val) = line.strip_prefix("Title: ") {
                     current_title = val.trim().to_string();
-                } else if let Some(val) = line.strip_prefix("file: ") {
-                    if current_title.is_empty() {
-                        let path = val.trim();
-                        let basename = path.rsplit('/').next().unwrap_or(path);
-                        current_title = basename.to_string();
-                    }
+                } else if let Some(val) = line.strip_prefix("file: ")
+                    && current_title.is_empty()
+                {
+                    let path = val.trim();
+                    let basename = path.rsplit('/').next().unwrap_or(path);
+                    current_title = basename.to_string();
                 }
                 if line.trim().is_empty() && !current_title.is_empty() {
                     pl.push(current_title.clone());

@@ -8,7 +8,7 @@ use std::sync::mpsc;
 use santui_ipc::protocol::{Area, HostMsg, IpcKey, PluginRequest, RenderCmd, ThemeData};
 
 use api::{GeoResult, WeatherData};
-use state::{FetchState, Screen, WeatherState, REFRESH_TICKS};
+use state::{FetchState, REFRESH_TICKS, Screen, WeatherState};
 use ui::render_ui;
 
 enum FetchMsg {
@@ -296,12 +296,12 @@ impl App {
 
     fn handle_db_value(&mut self, key: &str, value: Option<String>) {
         if key == "weather" {
-            if let Some(json) = value {
-                if let Ok(settings) = serde_json::from_str::<state::WeatherSettings>(&json) {
-                    self.state.settings = settings;
-                    if self.state.settings.location.is_some() {
-                        self.trigger_weather_fetch();
-                    }
+            if let Some(json) = value
+                && let Ok(settings) = serde_json::from_str::<state::WeatherSettings>(&json)
+            {
+                self.state.settings = settings;
+                if self.state.settings.location.is_some() {
+                    self.trigger_weather_fetch();
                 }
             }
             self.dirty = true;

@@ -34,20 +34,22 @@ fn spawn_mpv_thread() -> Result<MpvIo, Box<dyn std::error::Error>> {
     }
     let wakeup = mpv.make_wakeup();
 
-    std::thread::spawn(move || loop {
-        while let Ok(cmd) = cmd_rx.try_recv() {
-            match cmd {
-                MpvCommand::LoadUrl(url) => {
-                    if let Err(e) = mpv.load_url(&url) {
-                        log::warn!("mpv load_url failed: {e}");
+    std::thread::spawn(move || {
+        loop {
+            while let Ok(cmd) = cmd_rx.try_recv() {
+                match cmd {
+                    MpvCommand::LoadUrl(url) => {
+                        if let Err(e) = mpv.load_url(&url) {
+                            log::warn!("mpv load_url failed: {e}");
+                        }
+                    }
+                    MpvCommand::Stop => {
+                        let _ = mpv.stop();
                     }
                 }
-                MpvCommand::Stop => {
-                    let _ = mpv.stop();
-                }
             }
+            std::thread::sleep(Duration::from_millis(50));
         }
-        std::thread::sleep(Duration::from_millis(50));
     });
 
     Ok((cmd_tx, wakeup))
@@ -391,11 +393,11 @@ impl App {
 
         if self.state.now_playing.is_some() {
             self.state.track_elapsed = self.track_start.map(|start| start.elapsed().as_secs());
-            if let Some(start) = self.track_start {
-                if start.elapsed() >= PREVIEW_DURATION {
-                    log::warn!("timer-based auto-advance after {:?}", start.elapsed());
-                    self.advance_to_next_track();
-                }
+            if let Some(start) = self.track_start
+                && start.elapsed() >= PREVIEW_DURATION
+            {
+                log::warn!("timer-based auto-advance after {:?}", start.elapsed());
+                self.advance_to_next_track();
             }
         }
     }

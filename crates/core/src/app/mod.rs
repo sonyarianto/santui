@@ -21,15 +21,15 @@ use crossterm::event::{
 };
 use crossterm::execute;
 use crossterm::terminal::enable_raw_mode;
+use ratatui::Frame;
+use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::{Color, Style};
 use ratatui::widgets::Widget;
-use ratatui::Frame;
-use ratatui::Terminal;
 use std::io::Write;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -481,13 +481,12 @@ impl Santui {
 
             // Event-driven Esc: if the active plugin had a pending Esc response
             // resolved on this tick, close the plugin if it was not consumed.
-            if let Some(idx) = self.plugin_manager.active() {
-                if let Some(consumed) = self.plugin_manager.drain_esc_result(idx) {
-                    if !consumed {
-                        self.plugin_manager.shutdown_and_remove(idx);
-                        self.app_state.home_selected = None;
-                    }
-                }
+            if let Some(idx) = self.plugin_manager.active()
+                && let Some(consumed) = self.plugin_manager.drain_esc_result(idx)
+                && !consumed
+            {
+                self.plugin_manager.shutdown_and_remove(idx);
+                self.app_state.home_selected = None;
             }
 
             // Poll for config changes (hot-reload).
@@ -511,15 +510,15 @@ impl Santui {
             self.plugin_manager.process_events(&events);
 
             // Check for pending non-blocking sign-in results.
-            if let Some(ref auth) = self.auth {
-                if let Some(result) = auth.drain_pending_sign_in() {
-                    match result {
-                        Ok(user) => {
-                            self.plugin_manager.on_user_update_all(Some(&user));
-                        }
-                        Err(e) => {
-                            log::error!("[auth] background sign-in error: {e}");
-                        }
+            if let Some(ref auth) = self.auth
+                && let Some(result) = auth.drain_pending_sign_in()
+            {
+                match result {
+                    Ok(user) => {
+                        self.plugin_manager.on_user_update_all(Some(&user));
+                    }
+                    Err(e) => {
+                        log::error!("[auth] background sign-in error: {e}");
                     }
                 }
             }
@@ -559,10 +558,10 @@ impl Santui {
     }
 
     pub(super) fn handle_mouse(&mut self, mouse: MouseEvent) {
-        if let Some(idx) = self.plugin_manager.active() {
-            if self.plugin_manager.is_ready(idx) {
-                self.plugin_manager.handle_mouse(idx, mouse);
-            }
+        if let Some(idx) = self.plugin_manager.active()
+            && self.plugin_manager.is_ready(idx)
+        {
+            self.plugin_manager.handle_mouse(idx, mouse);
         }
     }
 

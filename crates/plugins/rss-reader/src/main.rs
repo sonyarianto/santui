@@ -8,8 +8,8 @@ use std::sync::mpsc;
 
 use santui_ipc::protocol::{Area, HostMsg, IpcKey, PluginRequest, RenderCmd, ThemeData};
 
-use fetcher::{spawn_fetch, FetchMsg};
-use state::{FetchStatus, RssState, Screen, REFRESH_TICKS};
+use fetcher::{FetchMsg, spawn_fetch};
+use state::{FetchStatus, REFRESH_TICKS, RssState, Screen};
 use ui::render_ui;
 
 struct App {
@@ -133,10 +133,10 @@ impl App {
                 true
             }
             IpcKey::Char('o') => {
-                if let Some(item) = self.state.current_items.get(self.state.item_cursor) {
-                    if let Some(ref url) = item.item.url {
-                        open_url(url);
-                    }
+                if let Some(item) = self.state.current_items.get(self.state.item_cursor)
+                    && let Some(ref url) = item.item.url
+                {
+                    open_url(url);
                 }
                 true
             }
@@ -176,10 +176,10 @@ impl App {
                 true
             }
             IpcKey::Char('o') => {
-                if let Some(item) = self.state.current_items.get(idx) {
-                    if let Some(ref url) = item.item.url {
-                        open_url(url);
-                    }
+                if let Some(item) = self.state.current_items.get(idx)
+                    && let Some(ref url) = item.item.url
+                {
+                    open_url(url);
                 }
                 true
             }

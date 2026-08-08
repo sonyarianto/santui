@@ -215,19 +215,19 @@ impl Registry {
     /// Copy native/ dependencies from the same directory as `src` to the plugins dir.
     fn copy_native_deps(&self, src: &Path) -> Result<(), String> {
         let native_src = src.parent().map(|p| p.join("native"));
-        if let Some(ref native_dir) = native_src {
-            if native_dir.is_dir() {
-                let native_dst = self.plugins_dir.join("native");
-                std::fs::create_dir_all(&native_dst)
-                    .map_err(|e| format!("Failed to create native dir: {e}"))?;
-                for entry in std::fs::read_dir(native_dir)
-                    .map_err(|e| format!("Failed to read native dir: {e}"))?
-                {
-                    let entry = entry.map_err(|e| format!("Failed to read entry: {e}"))?;
-                    let dst = native_dst.join(entry.file_name());
-                    std::fs::copy(entry.path(), &dst)
-                        .map_err(|e| format!("Failed to copy native dep: {e}"))?;
-                }
+        if let Some(ref native_dir) = native_src
+            && native_dir.is_dir()
+        {
+            let native_dst = self.plugins_dir.join("native");
+            std::fs::create_dir_all(&native_dst)
+                .map_err(|e| format!("Failed to create native dir: {e}"))?;
+            for entry in std::fs::read_dir(native_dir)
+                .map_err(|e| format!("Failed to read native dir: {e}"))?
+            {
+                let entry = entry.map_err(|e| format!("Failed to read entry: {e}"))?;
+                let dst = native_dst.join(entry.file_name());
+                std::fs::copy(entry.path(), &dst)
+                    .map_err(|e| format!("Failed to copy native dep: {e}"))?;
             }
         }
         Ok(())
@@ -244,11 +244,11 @@ impl Registry {
                 .file_stem()
                 .and_then(|s| s.to_str())
                 .map(|s| s.trim_end_matches(".exe"));
-            if let Some(id) = id {
-                if let Some(manifest) = self.available.iter().find(|m| m.id == id) {
-                    let src = Path::new(&manifest.download_url);
-                    self.copy_native_deps(src)?;
-                }
+            if let Some(id) = id
+                && let Some(manifest) = self.available.iter().find(|m| m.id == id)
+            {
+                let src = Path::new(&manifest.download_url);
+                self.copy_native_deps(src)?;
             }
         }
         Ok(())

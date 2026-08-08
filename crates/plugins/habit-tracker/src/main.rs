@@ -6,7 +6,7 @@ use std::io::{BufRead, BufReader};
 use chrono::Local;
 use santui_ipc::protocol::{Area, HostMsg, IpcKey, PluginRequest, RenderCmd, ThemeData};
 
-use state::{FocusField, HabitState, Screen, COLOR_PRESETS};
+use state::{COLOR_PRESETS, FocusField, HabitState, Screen};
 use ui::render_ui;
 
 struct App {
@@ -470,12 +470,12 @@ impl App {
             .map(|h| h.id.clone())
             .unwrap_or_default();
         let weeks = self.state.heatmap_weeks(&habit_id);
-        if let Some(week) = weeks.get(self.state.heatmap_row) {
-            if let Some((date, _)) = week.get(self.state.heatmap_col) {
-                self.state.toggle_entry(&habit_id, date);
-                self.schedule_db_save();
-                self.state.dirty = true;
-            }
+        if let Some(week) = weeks.get(self.state.heatmap_row)
+            && let Some((date, _)) = week.get(self.state.heatmap_col)
+        {
+            self.state.toggle_entry(&habit_id, date);
+            self.schedule_db_save();
+            self.state.dirty = true;
         }
     }
 
@@ -499,17 +499,17 @@ impl App {
             .map(|h| h.id.clone())
             .unwrap_or_default();
         let weeks = self.state.heatmap_weeks(&habit_id);
-        if let Some(week) = weeks.get(self.state.heatmap_row) {
-            if let Some((date, _)) = week.get(self.state.heatmap_col) {
-                let existing_note = self
-                    .state
-                    .get_entry(&habit_id, date)
-                    .map(|e| e.note.clone())
-                    .unwrap_or_default();
-                self.state.note_buffer = existing_note;
-                self.state.note_editing = true;
-                self.state.dirty = true;
-            }
+        if let Some(week) = weeks.get(self.state.heatmap_row)
+            && let Some((date, _)) = week.get(self.state.heatmap_col)
+        {
+            let existing_note = self
+                .state
+                .get_entry(&habit_id, date)
+                .map(|e| e.note.clone())
+                .unwrap_or_default();
+            self.state.note_buffer = existing_note;
+            self.state.note_editing = true;
+            self.state.dirty = true;
         }
     }
 

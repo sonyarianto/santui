@@ -2,8 +2,8 @@ use crate::auth::{AuthHandle, User};
 use crate::db_access::DbAccess;
 use crate::theme::Theme;
 use crossterm::event::{KeyEvent, MouseEvent};
-use ratatui::layout::Rect;
 use ratatui::Frame;
+use ratatui::layout::Rect;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 

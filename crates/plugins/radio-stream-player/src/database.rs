@@ -23,11 +23,11 @@ fn migrate_old_db() {
     let old = app_data_dir().join("radio_streaming_stations.db");
     let new = db_path();
     if old.exists() {
-        if new.exists() {
-            if let Err(e) = std::fs::remove_file(&new) {
-                log::warn!("failed to remove stale empty database: {e}");
-                return;
-            }
+        if new.exists()
+            && let Err(e) = std::fs::remove_file(&new)
+        {
+            log::warn!("failed to remove stale empty database: {e}");
+            return;
         }
         if let Err(e) = std::fs::rename(&old, &new) {
             log::warn!("failed to migrate old database (radio_streaming_stations.db): {e}");
@@ -57,10 +57,10 @@ fn migrate(conn: &Connection) -> Result<(), rusqlite::Error> {
 pub fn open() -> Result<Connection, rusqlite::Error> {
     let path = db_path();
     migrate_old_db();
-    if let Some(parent) = path.parent() {
-        if let Err(e) = std::fs::create_dir_all(parent) {
-            log::warn!("failed to create DB parent directory: {e}");
-        }
+    if let Some(parent) = path.parent()
+        && let Err(e) = std::fs::create_dir_all(parent)
+    {
+        log::warn!("failed to create DB parent directory: {e}");
     }
 
     // Always copy from bundled version if available, so new releases
@@ -78,10 +78,10 @@ pub fn open() -> Result<Connection, rusqlite::Error> {
                 .map(|d| d.join("radio_stream_stations.db"))
                 .filter(|p| p.exists())
         });
-    if let Some(bundled) = bundled {
-        if let Err(e) = std::fs::copy(&bundled, &path) {
-            log::warn!("failed to copy bundled station DB: {e}");
-        }
+    if let Some(bundled) = bundled
+        && let Err(e) = std::fs::copy(&bundled, &path)
+    {
+        log::warn!("failed to copy bundled station DB: {e}");
     }
     let conn = Connection::open(&path)?;
     conn.execute_batch(

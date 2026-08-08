@@ -56,23 +56,23 @@ pub fn fetch(title: &str, artist: Option<&str>) -> Result<Option<LyricsData>, St
         if item.instrumental.unwrap_or(false) {
             continue;
         }
-        if let Some(ref plain) = item.plain_lyrics {
-            if !plain.is_empty() {
+        if let Some(ref plain) = item.plain_lyrics
+            && !plain.is_empty()
+        {
+            return Ok(Some(LyricsData {
+                text: plain.clone(),
+                source: "LRCLib".into(),
+            }));
+        }
+        if let Some(ref synced) = item.synced_lyrics
+            && !synced.is_empty()
+        {
+            let text = strip_timestamps(synced);
+            if !text.is_empty() {
                 return Ok(Some(LyricsData {
-                    text: plain.clone(),
+                    text,
                     source: "LRCLib".into(),
                 }));
-            }
-        }
-        if let Some(ref synced) = item.synced_lyrics {
-            if !synced.is_empty() {
-                let text = strip_timestamps(synced);
-                if !text.is_empty() {
-                    return Ok(Some(LyricsData {
-                        text,
-                        source: "LRCLib".into(),
-                    }));
-                }
             }
         }
     }

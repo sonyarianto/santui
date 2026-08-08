@@ -393,11 +393,7 @@ impl FilteredListState {
 
     fn compute_total_lines(&self) -> usize {
         if self.filtered_indices.is_empty() {
-            if self.query.is_empty() {
-                0
-            } else {
-                1
-            }
+            if self.query.is_empty() { 0 } else { 1 }
         } else {
             let mut lines = 0;
             for (i, g) in self.groups.iter().enumerate() {

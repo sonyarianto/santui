@@ -1,7 +1,7 @@
 use std::io::{BufRead, BufReader};
 
 use santui_ipc::protocol::{
-    Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData, BORDER_ALL,
+    Area, BORDER_ALL, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData,
 };
 use santui_ipc::theme::default_theme;
 
@@ -50,7 +50,9 @@ impl Default for App {
                 Snippet {
                     title: String::from("Fibonacci"),
                     language: String::from("python"),
-                    code: String::from("def fib(n):\n    a, b = 0, 1\n    for _ in range(n):\n        print(a)\n        a, b = b, a + b"),
+                    code: String::from(
+                        "def fib(n):\n    a, b = 0, 1\n    for _ in range(n):\n        print(a)\n        a, b = b, a + b",
+                    ),
                 },
             ],
             cursor: 0,

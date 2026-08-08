@@ -1,7 +1,7 @@
 use std::io::{BufRead, BufReader};
 
-use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
-use serde_json::{json, Value};
+use santui_ipc::protocol::{Area, BORDER_ALL, HostMsg, IpcKey, IpcKeyModifiers, ThemeData};
+use serde_json::{Value, json};
 
 use santui_ipc::theme::default_theme;
 #[derive(Debug, Clone)]
@@ -70,12 +70,11 @@ impl App {
 
     fn read_proc_name(pid: u32) -> String {
         let stat_path = format!("/proc/{pid}/stat");
-        if let Ok(content) = std::fs::read_to_string(&stat_path) {
-            if let Some(open_paren) = content.find('(') {
-                if let Some(close_paren) = content.rfind(')') {
-                    return content[open_paren + 1..close_paren].to_string();
-                }
-            }
+        if let Ok(content) = std::fs::read_to_string(&stat_path)
+            && let Some(open_paren) = content.find('(')
+            && let Some(close_paren) = content.rfind(')')
+        {
+            return content[open_paren + 1..close_paren].to_string();
         }
         String::from("?")
     }

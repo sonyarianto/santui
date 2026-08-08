@@ -1,10 +1,10 @@
-use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData, BORDER_ALL};
+use santui_ipc::protocol::{BORDER_ALL, RenderCmd, TextStyle, ThemeData};
 use santui_ipc::ui;
 use santui_ipc::ui::push_text;
 use unicode_width::UnicodeWidthStr;
 
-use crate::types::{self, Ayah, DisplayMode, Edition, Picker, Screen};
 use crate::App;
+use crate::types::{self, Ayah, DisplayMode, Edition, Picker, Screen};
 
 pub fn render_ui(app: &App) -> Vec<RenderCmd> {
     let mut cmds = Vec::new();

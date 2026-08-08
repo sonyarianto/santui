@@ -1,6 +1,6 @@
 use crate::state::TimerState;
 use crate::state::{Phase, PomodoroState};
-use santui_ipc::protocol::{RenderCmd, ThemeData, BORDER_ALL};
+use santui_ipc::protocol::{BORDER_ALL, RenderCmd, ThemeData};
 
 pub fn render_ui(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> Vec<RenderCmd> {
     let mut cmds = vec![RenderCmd::Clear {

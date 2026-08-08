@@ -1,7 +1,7 @@
-use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData, BORDER_ALL};
+use santui_ipc::protocol::{BORDER_ALL, RenderCmd, TextStyle, ThemeData};
 use santui_ipc::ui;
 
-use crate::state::{detail_lines, FetchState, MusicState};
+use crate::state::{FetchState, MusicState, detail_lines};
 
 pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<RenderCmd> {
     let mut cmds = vec![RenderCmd::Clear {
@@ -151,79 +151,77 @@ pub fn render_ui(state: &MusicState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
     }
 
     // ---- Track Details side panel (snapped right, dim behind) ----
-    if state.show_details {
-        if let Some(track) = state.selected_track() {
-            let popup_w = (w * 2 / 5).max(20);
-            let popup_x = w.saturating_sub(popup_w);
-            let popup_h = h;
-            if popup_x >= 4 && h >= 10 {
-                ui::popup_backdrop(&mut cmds, theme, popup_x, 0, popup_w, popup_h);
+    if state.show_details
+        && let Some(track) = state.selected_track()
+    {
+        let popup_w = (w * 2 / 5).max(20);
+        let popup_x = w.saturating_sub(popup_w);
+        let popup_h = h;
+        if popup_x >= 4 && h >= 10 {
+            ui::popup_backdrop(&mut cmds, theme, popup_x, 0, popup_w, popup_h);
 
-                ui::draw_panel(
-                    &mut cmds,
-                    theme,
-                    popup_x,
-                    0,
-                    popup_w,
-                    popup_h,
-                    Some("Track Details"),
-                    ui::PanelOpts {
-                        focused: true,
-                        footer: Some(&[("↑↓", "scroll"), ("d", "hide details")]),
-                        dim_unfocused: false,
-                        ..Default::default()
-                    },
-                );
+            ui::draw_panel(
+                &mut cmds,
+                theme,
+                popup_x,
+                0,
+                popup_w,
+                popup_h,
+                Some("Track Details"),
+                ui::PanelOpts {
+                    focused: true,
+                    footer: Some(&[("↑↓", "scroll"), ("d", "hide details")]),
+                    dim_unfocused: false,
+                    ..Default::default()
+                },
+            );
 
-                let inner_w = popup_w.saturating_sub(4) as usize;
-                let elapsed = if state.now_playing == Some(state.selected) {
-                    state.track_elapsed
+            let inner_w = popup_w.saturating_sub(4) as usize;
+            let elapsed = if state.now_playing == Some(state.selected) {
+                state.track_elapsed
+            } else {
+                None
+            };
+            let lines = detail_lines(track, elapsed, inner_w);
+            let panel_h = popup_h.saturating_sub(4) as usize;
+            let start = state.details_scroll.min(lines.len().saturating_sub(1));
+            for (y, (i, line)) in (1u16..).zip(lines.iter().enumerate().skip(start).take(panel_h)) {
+                let playing = i == 0 && state.now_playing == Some(state.selected);
+                let base_x = popup_x + 2;
+                let (label, value) = split_key_value(line);
+                if let Some(label) = label {
+                    cmds.push(RenderCmd::Text {
+                        x: base_x,
+                        y,
+                        text: format!("{label}: "),
+                        fg: Some(theme.text_muted),
+                        bg: None,
+                        bold: playing,
+                        modifiers: 0,
+                    });
+                    cmds.push(RenderCmd::Text {
+                        x: base_x + label.len() as u16 + 2,
+                        y,
+                        text: value.to_string(),
+                        fg: Some(if playing { theme.accent } else { theme.text }),
+                        bg: None,
+                        bold: playing,
+                        modifiers: 0,
+                    });
                 } else {
-                    None
-                };
-                let lines = detail_lines(track, elapsed, inner_w);
-                let panel_h = popup_h.saturating_sub(4) as usize;
-                let start = state.details_scroll.min(lines.len().saturating_sub(1));
-                for (y, (i, line)) in
-                    (1u16..).zip(lines.iter().enumerate().skip(start).take(panel_h))
-                {
-                    let playing = i == 0 && state.now_playing == Some(state.selected);
-                    let base_x = popup_x + 2;
-                    let (label, value) = split_key_value(line);
-                    if let Some(label) = label {
-                        cmds.push(RenderCmd::Text {
-                            x: base_x,
-                            y,
-                            text: format!("{label}: "),
-                            fg: Some(theme.text_muted),
-                            bg: None,
-                            bold: playing,
-                            modifiers: 0,
-                        });
-                        cmds.push(RenderCmd::Text {
-                            x: base_x + label.len() as u16 + 2,
-                            y,
-                            text: value.to_string(),
-                            fg: Some(if playing { theme.accent } else { theme.text }),
-                            bg: None,
-                            bold: playing,
-                            modifiers: 0,
-                        });
-                    } else {
-                        cmds.push(RenderCmd::Text {
-                            x: base_x,
-                            y,
-                            text: value.to_string(),
-                            fg: Some(if playing {
-                                theme.accent
-                            } else {
-                                theme.text_muted
-                            }),
-                            bg: None,
-                            bold: playing,
-                            modifiers: 0,
-                        });
-                    }
+                    cmds.push(RenderCmd::Text {
+                        x: base_x,
+                        y,
+                        text: value.to_string(),
+                        fg: Some(if playing {
+                            theme.accent
+                        } else {
+                            theme.text_muted
+                        }),
+                        bg: None,
+                        bold: playing,
+                        modifiers: 0,
+                    });
                 }
             }
         }

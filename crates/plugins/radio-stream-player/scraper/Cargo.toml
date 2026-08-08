@@ -1,7 +1,8 @@
 [package]
 name = "santui-radio-stream-scraper"
 version = "0.2.38"
-edition = "2021"
+edition = "2024"
+rust-version = "1.85"
 
 [dependencies]
 ureq = "3"

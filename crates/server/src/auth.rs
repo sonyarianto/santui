@@ -3,13 +3,13 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
 
 use std::sync::Arc;
 
-use crate::db::UserRow;
 use crate::AppState;
+use crate::db::UserRow;
 
 // ─── JWT Claims ───
 

@@ -3,8 +3,8 @@ use std::sync::mpsc;
 use std::sync::mpsc::TryRecvError;
 use std::time::Duration;
 
-use santui_ipc::protocol::{Area, HostMsg, IpcKey, IpcKeyModifiers, ThemeData, BORDER_ALL};
-use serde_json::{json, Value};
+use santui_ipc::protocol::{Area, BORDER_ALL, HostMsg, IpcKey, IpcKeyModifiers, ThemeData};
+use serde_json::{Value, json};
 use ureq::config::Config;
 
 use santui_ipc::theme::default_theme;

@@ -4,12 +4,12 @@ use crate::theme::Theme;
 use crate::widgets::filtered_list::{DisplayItem, FilteredListState};
 use crate::widgets::popup::centered_rect;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use ratatui::Frame;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Clear, Paragraph, StatefulWidget, Widget};
-use ratatui::Frame;
 
 /// Owns the command-palette overlay state and processes key events against
 /// it, returning actions for the caller to execute.

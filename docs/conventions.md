@@ -1,6 +1,6 @@
 # Santui Conventions
 
-- Rust edition 2021, no nightly features
+- Rust edition 2024, no nightly features
 - Use `ratatui` for all terminal rendering (no direct terminal writes except crossterm for raw mode)
 - Use `Color::Rgb(r, g, b)` for custom colors
 - All widgets use ratatui's `Frame`, `Layout`, `Rect`, `Style`, `Span`, `Line`, `Paragraph`

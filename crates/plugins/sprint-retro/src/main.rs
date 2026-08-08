@@ -1,7 +1,7 @@
 use std::io::{BufRead, BufReader};
 
 use santui_ipc::protocol::{
-    Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData, BORDER_ALL,
+    Area, BORDER_ALL, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData,
 };
 use santui_ipc::theme::default_theme;
 
@@ -344,11 +344,7 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
 
         let scroll = if app.current_column == col {
             let rel = indices.iter().position(|&i| i == app.cursor).unwrap_or(0);
-            if rel >= max_vis {
-                rel - max_vis + 1
-            } else {
-                0
-            }
+            if rel >= max_vis { rel - max_vis + 1 } else { 0 }
         } else {
             0
         };

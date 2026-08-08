@@ -1,5 +1,5 @@
 use crate::lrclib;
-use crate::state::{wrap_text, PlayState, RadioState};
+use crate::state::{PlayState, RadioState, wrap_text};
 use santui_ipc::protocol::{RenderCmd, TextStyle, ThemeData};
 use santui_ipc::ui;
 
@@ -90,11 +90,7 @@ pub fn render_ui(
     let max_visible = table_avail as usize;
     let scroll_pct = {
         let pct = ui::scroll_pct(state.scroll, state.filtered.len(), max_visible);
-        if pct > 0 {
-            Some(pct)
-        } else {
-            None
-        }
+        if pct > 0 { Some(pct) } else { None }
     };
     if state.search_mode {
         let cursor = ui::blink_cursor(state.tick_counter);
@@ -402,18 +398,18 @@ pub fn render_ui(
                     None,
                     r_inner_w,
                 );
-                if let Some(ref info) = state.track_info {
-                    if let Some(ref artist) = info.artist {
-                        ui::text_at(
-                            &mut cmds,
-                            2,
-                            np_y + 3,
-                            artist,
-                            theme.text_muted,
-                            None,
-                            r_inner_w,
-                        );
-                    }
+                if let Some(ref info) = state.track_info
+                    && let Some(ref artist) = info.artist
+                {
+                    ui::text_at(
+                        &mut cmds,
+                        2,
+                        np_y + 3,
+                        artist,
+                        theme.text_muted,
+                        None,
+                        r_inner_w,
+                    );
                 }
             }
         }

@@ -1,7 +1,7 @@
 use std::io::{BufRead, BufReader};
 
 use santui_ipc::protocol::{
-    Area, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData, BORDER_ALL,
+    Area, BORDER_ALL, HostMsg, IpcKey, IpcKeyModifiers, RenderCmd, ThemeData,
 };
 use santui_ipc::theme::default_theme;
 
@@ -197,12 +197,11 @@ fn render_ui(app: &App) -> Vec<RenderCmd> {
                 .headers
                 .iter()
                 .map(|h| {
-                    let s = if h.len() > col_w.saturating_sub(2) {
+                    if h.len() > col_w.saturating_sub(2) {
                         format!("{}...", &h[..col_w.saturating_sub(5)])
                     } else {
                         format!("{:width$}", h, width = col_w.saturating_sub(1))
-                    };
-                    s
+                    }
                 })
                 .collect::<Vec<_>>()
                 .join(" ");

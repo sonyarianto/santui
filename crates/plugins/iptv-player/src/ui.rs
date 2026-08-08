@@ -584,9 +584,10 @@ mod tests {
     fn small_area_shows_hint() {
         let state = IptvState::new();
         let cmds = render_ui(&state, &default_theme(), 10, 5);
-        assert!(cmds
-            .iter()
-            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text == "Window too small")));
+        assert!(
+            cmds.iter()
+                .any(|c| matches!(c, RenderCmd::Text { text, .. } if text == "Window too small"))
+        );
     }
 
     #[test]

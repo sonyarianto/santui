@@ -331,11 +331,7 @@ impl Mpv {
             return Ok(None);
         }
         let s = unsafe { std::ffi::CStr::from_ptr(ptr).to_string_lossy().to_string() };
-        if s.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(s))
-        }
+        if s.is_empty() { Ok(None) } else { Ok(Some(s)) }
     }
 
     pub fn wait_event_raw(&self, timeout: f64) -> Option<&MpvEvent> {

@@ -23,11 +23,11 @@ pub fn strip_timestamps(lyrics: &str) -> String {
             let mut s = line;
             loop {
                 let trimmed = s.trim_start();
-                if trimmed.starts_with('[') {
-                    if let Some(end) = trimmed.find(']') {
-                        s = trimmed[end + 1..].trim_start();
-                        continue;
-                    }
+                if trimmed.starts_with('[')
+                    && let Some(end) = trimmed.find(']')
+                {
+                    s = trimmed[end + 1..].trim_start();
+                    continue;
                 }
                 break;
             }

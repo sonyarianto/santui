@@ -1,6 +1,6 @@
-use santui_ipc::protocol::{RenderCmd, ThemeData, BORDER_ALL};
+use santui_ipc::protocol::{BORDER_ALL, RenderCmd, ThemeData};
 
-use crate::api::{domain_from_url, strip_html, time_ago, HnItem};
+use crate::api::{HnItem, domain_from_url, strip_html, time_ago};
 use crate::state::{FetchState, HnState, Screen};
 
 pub fn render_ui(state: &HnState, theme: &ThemeData, w: u16, h: u16) -> Vec<RenderCmd> {

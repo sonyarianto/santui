@@ -1,4 +1,4 @@
-use crate::protocol::{RenderCmd, TextStyle, ThemeData, BORDER_ALL};
+use crate::protocol::{BORDER_ALL, RenderCmd, TextStyle, ThemeData};
 
 // ── Palette component (Ctrl+P style overlay) ──
 
@@ -315,11 +315,7 @@ pub fn text_at(
 
 /// Blinking cursor character (█ toggling on a 6-tick cycle) for text inputs.
 pub fn blink_cursor(tick_counter: u64) -> char {
-    if tick_counter % 6 < 3 {
-        '█'
-    } else {
-        ' '
-    }
+    if tick_counter % 6 < 3 { '█' } else { ' ' }
 }
 
 /// X coordinate to right-align `text` within an area of width `area_w`
@@ -349,11 +345,7 @@ pub fn vis_selected(selected: usize, scroll: usize, visible_count: usize) -> Opt
 
 /// "♥ " prefix for favorited rows, two spaces otherwise (keeps columns aligned).
 pub fn fav_prefix(favorite: bool) -> &'static str {
-    if favorite {
-        "♥ "
-    } else {
-        "  "
-    }
+    if favorite { "♥ " } else { "  " }
 }
 
 /// Table text styles: muted bold header, plain body, inverted highlight.
@@ -506,7 +498,7 @@ pub fn scroll_down(scroll: &mut usize, selected: usize, area_h: u16) {
 
 #[cfg(test)]
 mod tests {
-    use super::{draw_panel, hints_row, max_visible_tracks, PanelOpts};
+    use super::{PanelOpts, draw_panel, hints_row, max_visible_tracks};
     use crate::protocol::RenderCmd;
     use crate::test::theme;
 

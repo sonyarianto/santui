@@ -79,12 +79,12 @@ impl App {
                 true
             }
             IpcKey::Char('r') => {
-                if let Some(&idx) = self.state.filtered_indices.get(self.state.list_cursor) {
-                    if let Some(note) = self.state.notes.get(idx) {
-                        self.state.title_buf = note.title.clone();
-                        self.state.screen = Screen::Rename(idx);
-                        self.dirty = true;
-                    }
+                if let Some(&idx) = self.state.filtered_indices.get(self.state.list_cursor)
+                    && let Some(note) = self.state.notes.get(idx)
+                {
+                    self.state.title_buf = note.title.clone();
+                    self.state.screen = Screen::Rename(idx);
+                    self.dirty = true;
                 }
                 true
             }
