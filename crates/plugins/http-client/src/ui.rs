@@ -589,10 +589,10 @@ mod tests {
         let cmds = render_ui(&s, &test_theme(), 80, 24);
         let has_method = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Method")));
-        let has_url = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("api.example.com")),
-        );
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("Method")));
+        let has_url = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("api.example.com")));
         assert!(has_method);
         assert!(has_url);
     }
@@ -603,7 +603,7 @@ mod tests {
         s.edit_field = EditField::Url;
         let cmds = render_ui(&s, &test_theme(), 80, 24);
         let has_accent_url = cmds.iter().any(|c| {
-            matches!(c, RenderCmd::Text { ref text, fg, .. } if text.contains("URL") && fg == &Some([180; 3]))
+            matches!(c, RenderCmd::Text { text, fg, .. } if text.contains("URL") && fg == &Some([180; 3]))
         });
         assert!(has_accent_url);
     }
@@ -614,11 +614,11 @@ mod tests {
         s.screen = Screen::MethodPicker;
         let cmds = render_ui(&s, &test_theme(), 80, 24);
         let has_overlay = cmds.iter().any(|c| {
-            matches!(c, RenderCmd::Border { ref title, .. } if title.as_deref() == Some("Select Method"))
+            matches!(c, RenderCmd::Border { title, .. } if title.as_deref() == Some("Select Method"))
         });
         let has_get = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("GET")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("GET")));
         assert!(has_overlay);
         assert!(has_get);
     }
@@ -639,10 +639,10 @@ mod tests {
         let cmds = render_ui(&s, &test_theme(), 80, 24);
         let has_status = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("200 OK")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("200 OK")));
         let has_body = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains(r#""id":42"#)));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains(r#""id":42"#)));
         assert!(has_status);
         assert!(has_body);
     }
@@ -660,11 +660,11 @@ mod tests {
         s.history_cursor = 0;
         let cmds = render_ui(&s, &test_theme(), 80, 24);
         let has_title = cmds.iter().any(|c| {
-            matches!(c, RenderCmd::Border { ref title, .. } if title.as_deref() == Some("HTTP Client — History"))
+            matches!(c, RenderCmd::Border { title, .. } if title.as_deref() == Some("HTTP Client — History"))
         });
-        let has_url = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("api.example.com")),
-        );
+        let has_url = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("api.example.com")));
         assert!(has_title);
         assert!(has_url);
     }
@@ -682,11 +682,11 @@ mod tests {
         s.saved_cursor = 0;
         let cmds = render_ui(&s, &test_theme(), 80, 24);
         let has_title = cmds.iter().any(|c| {
-            matches!(c, RenderCmd::Border { ref title, .. } if title.as_deref() == Some("HTTP Client — Saved"))
+            matches!(c, RenderCmd::Border { title, .. } if title.as_deref() == Some("HTTP Client — Saved"))
         });
         let has_url = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("api.example.com/create")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("api.example.com/create")));
         assert!(has_title);
         assert!(has_url);
     }
@@ -698,7 +698,7 @@ mod tests {
         s.fetch_state = FetchState::Error("connection refused".into());
         let cmds = render_ui(&s, &test_theme(), 80, 24);
         let has_error = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("connection refused")),
+            |c| matches!(c, RenderCmd::Text { text, .. } if text.contains("connection refused")),
         );
         assert!(has_error);
     }
@@ -711,7 +711,7 @@ mod tests {
         let cmds = render_ui(&s, &test_theme(), 80, 24);
         let has_sending = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Sending")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("Sending")));
         assert!(has_sending);
     }
 
@@ -730,7 +730,7 @@ mod tests {
         });
         let cmds = render_ui(&s, &test_theme(), 80, 24);
         let has_truncated = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("truncated at 10KB")),
+            |c| matches!(c, RenderCmd::Text { text, .. } if text.contains("truncated at 10KB")),
         );
         assert!(has_truncated);
     }

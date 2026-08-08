@@ -327,6 +327,7 @@ fn render_settings(state: &PomodoroState, theme: &ThemeData, w: u16, h: u16) -> 
 }
 
 #[cfg(test)]
+#[allow(clippy::field_reassign_with_default)]
 mod tests {
     use super::*;
 
@@ -364,7 +365,7 @@ mod tests {
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_label = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("WORK")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("WORK")));
         assert!(has_label);
     }
 
@@ -374,7 +375,7 @@ mod tests {
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_time = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("23:45")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("23:45")));
         assert!(has_time);
     }
 
@@ -384,10 +385,10 @@ mod tests {
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_bar = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("█")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("█")));
         let has_pct = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("%")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("%")));
         assert!(has_bar);
         assert!(has_pct);
     }
@@ -397,7 +398,7 @@ mod tests {
         let state = test_state();
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_count = cmds.iter().any(|c| {
-            matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Today:")
+            matches!(c, RenderCmd::Text { text, .. } if text.contains("Today:")
                 && text.contains("3 sessions"))
         });
         assert!(has_count);
@@ -409,7 +410,7 @@ mod tests {
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_break = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("30m break")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("30m break")));
         assert!(has_break);
     }
 
@@ -419,7 +420,7 @@ mod tests {
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_cfg = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("25m work")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("25m work")));
         assert!(has_cfg);
     }
 
@@ -429,7 +430,7 @@ mod tests {
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_dots = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("●")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("●")));
         assert!(has_dots);
     }
 
@@ -440,7 +441,7 @@ mod tests {
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_paused = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("[PAUSED]")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("[PAUSED]")));
         assert!(has_paused);
     }
 
@@ -451,7 +452,7 @@ mod tests {
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_done = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("DONE!")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("DONE!")));
         assert!(has_done);
     }
 
@@ -462,7 +463,7 @@ mod tests {
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_overlay = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Settings")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("Settings")));
         assert!(has_overlay);
     }
 
@@ -472,9 +473,9 @@ mod tests {
         state.show_settings = true;
         state.settings_cursor = 0;
         let cmds = render_ui(&state, &test_theme(), 80, 24);
-        let has_work_duration = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Work duration")),
-        );
+        let has_work_duration = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("Work duration")));
         assert!(has_work_duration);
     }
 
@@ -485,7 +486,7 @@ mod tests {
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let time_cmd = cmds
             .iter()
-            .find(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("23:45")));
+            .find(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("23:45")));
         if let Some(RenderCmd::Text { fg, .. }) = time_cmd {
             assert_eq!(*fg, Some(test_theme().text_muted));
         } else {
@@ -497,9 +498,9 @@ mod tests {
     fn renders_focus_time_correctly() {
         let state = test_state();
         let cmds = render_ui(&state, &test_theme(), 80, 24);
-        let has_focus = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("7h 00m focused")),
-        );
+        let has_focus = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("7h 00m focused")));
         assert!(has_focus);
     }
 }

@@ -366,7 +366,7 @@ impl App {
 
     fn handle_tick(&mut self) {
         self.state.tick_counter += 1;
-        if self.state.tick_counter.is_multiple_of(3) {
+        if self.state.tick_counter % 3 == 0 {
             self.dirty = true;
         }
 

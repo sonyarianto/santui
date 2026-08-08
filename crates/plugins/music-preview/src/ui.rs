@@ -353,9 +353,9 @@ mod tests {
             ..MusicState::default()
         };
         let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
-        let has_search = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Search: eminem")),
-        );
+        let has_search = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("Search: eminem")));
         assert!(has_search);
     }
 
@@ -394,7 +394,7 @@ mod tests {
         let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_spinner = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Searching")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("Searching")));
         assert!(has_spinner);
     }
 
@@ -415,7 +415,7 @@ mod tests {
         let has_table = cmds.iter().any(|c| matches!(c, RenderCmd::Table { .. }));
         assert!(has_table);
         let has_track = cmds.iter().any(|c| {
-            matches!(c, RenderCmd::Table { ref rows, .. } if rows.iter().any(|r| r.iter().any(|cell| cell.contains("Lose Yourself"))))
+            matches!(c, RenderCmd::Table { rows, .. } if rows.iter().any(|r| r.iter().any(|cell| cell.contains("Lose Yourself"))))
         });
         assert!(has_track);
     }
@@ -434,7 +434,7 @@ mod tests {
         };
         let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_countdown = cmds.iter().any(|c| {
-            matches!(c, RenderCmd::Table { ref rows, .. } if rows[0].last().map(|s| s.as_str()) == Some("0:12"))
+            matches!(c, RenderCmd::Table { rows, .. } if rows[0].last().map(|s| s.as_str()) == Some("0:12"))
         });
         assert!(has_countdown, "expected countdown in now-playing row");
     }
@@ -452,7 +452,7 @@ mod tests {
         };
         let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let title_cell = cmds.iter().find_map(|c| match c {
-            RenderCmd::Table { ref rows, .. } => rows.first().map(|r| r[0].clone()),
+            RenderCmd::Table { rows, .. } => rows.first().map(|r| r[0].clone()),
             _ => None,
         });
         let title_cell = title_cell.expect("expected a title cell");
@@ -475,9 +475,9 @@ mod tests {
             ..MusicState::default()
         };
         let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
-        let has_no_results = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("No tracks found")),
-        );
+        let has_no_results = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("No tracks found")));
         assert!(has_no_results);
     }
 
@@ -486,7 +486,7 @@ mod tests {
         let state = MusicState::default();
         let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_title = cmds.iter().any(|c| {
-            matches!(c, RenderCmd::Border { ref title, .. } if title.as_deref() == Some("Music Preview"))
+            matches!(c, RenderCmd::Border { title, .. } if title.as_deref() == Some("Music Preview"))
         });
         assert!(has_title);
     }
@@ -514,7 +514,7 @@ mod tests {
         assert!(has_title);
         let has_track = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text == "Lose Yourself"));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text == "Lose Yourself"));
         assert!(has_track);
     }
 

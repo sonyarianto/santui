@@ -281,7 +281,7 @@ mod tests {
         let theme = test_theme();
         let cmds = render_ui(&state, &theme, 80, 24);
         let has_entry = cmds.iter().any(|c| match c {
-            RenderCmd::Text { ref text, .. } => text.contains("test entry content"),
+            RenderCmd::Text { text, .. } => text.contains("test entry content"),
             _ => false,
         });
         assert!(has_entry);
@@ -293,7 +293,7 @@ mod tests {
         let theme = test_theme();
         let cmds = render_ui(&state, &theme, 80, 24);
         let has_empty = cmds.iter().any(|c| match c {
-            RenderCmd::Text { ref text, .. } => text.contains("Clipboard history is empty"),
+            RenderCmd::Text { text, .. } => text.contains("Clipboard history is empty"),
             _ => false,
         });
         assert!(has_empty);
@@ -306,7 +306,7 @@ mod tests {
         let theme = test_theme();
         let cmds = render_ui(&state, &theme, 80, 24);
         let has_search = cmds.iter().any(|c| match c {
-            RenderCmd::Text { ref text, .. } => text.contains("> test query"),
+            RenderCmd::Text { text, .. } => text.contains("> test query"),
             _ => false,
         });
         assert!(has_search);
@@ -321,7 +321,7 @@ mod tests {
         let theme = test_theme();
         let cmds = render_ui(&state, &theme, 80, 24);
         let has_highlight = cmds.iter().any(|c| match c {
-            RenderCmd::Text { ref text, bg, .. } => {
+            RenderCmd::Text { text, bg, .. } => {
                 text.contains("highlighted entry") && *bg == Some(theme.accent)
             }
             _ => false,
@@ -339,8 +339,8 @@ mod tests {
         let theme = test_theme();
         let cmds = render_ui(&state, &theme, 80, 24);
         let has_count = cmds.iter().any(|c| match c {
-            RenderCmd::Border { ref title, .. } => {
-                title.as_deref().map_or(false, |t| t.contains("3 entries"))
+            RenderCmd::Border { title, .. } => {
+                title.as_deref().is_some_and(|t| t.contains("3 entries"))
             }
             _ => false,
         });
@@ -354,7 +354,7 @@ mod tests {
         let theme = test_theme();
         let cmds = render_ui(&state, &theme, 80, 24);
         let has_error = cmds.iter().any(|c| match c {
-            RenderCmd::Text { ref text, fg, .. } => {
+            RenderCmd::Text { text, fg, .. } => {
                 text.contains("Clipboard unavailable") && *fg == Some(theme.error)
             }
             _ => false,
@@ -372,9 +372,7 @@ mod tests {
         let theme = test_theme();
         let cmds = render_ui(&state, &theme, 80, 24);
         let has_paragraph = cmds.iter().any(|c| match c {
-            RenderCmd::Paragraph { ref text, wrap, .. } => {
-                text.contains("testing purposes") && *wrap
-            }
+            RenderCmd::Paragraph { text, wrap, .. } => text.contains("testing purposes") && *wrap,
             _ => false,
         });
         assert!(has_paragraph);
@@ -389,7 +387,7 @@ mod tests {
         let theme = test_theme();
         let cmds = render_ui(&state, &theme, 80, 24);
         let has_flash = cmds.iter().any(|c| match c {
-            RenderCmd::Text { ref text, fg, .. } => {
+            RenderCmd::Text { text, fg, .. } => {
                 text.contains("Copied!") && *fg == Some(theme.success)
             }
             _ => false,

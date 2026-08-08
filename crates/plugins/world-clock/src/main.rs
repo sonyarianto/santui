@@ -277,7 +277,7 @@ impl App {
     fn handle_tick(&mut self) {
         self.state.tick_counter = self.state.tick_counter.wrapping_add(1);
         if matches!(self.state.screen, Screen::Search | Screen::Rename(_))
-            && self.state.tick_counter.is_multiple_of(3)
+            && self.state.tick_counter % 3 == 0
         {
             self.dirty = true;
         }

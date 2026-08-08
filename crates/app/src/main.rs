@@ -194,22 +194,6 @@ fn list_plugins() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test_santui_crate_version_exists() {
-        let version = env!("CARGO_PKG_VERSION");
-        assert!(!version.is_empty());
-        let parts: Vec<&str> = version.split('.').collect();
-        assert_eq!(parts.len(), 3);
-    }
-
-    #[test]
-    fn test_santui_depends_on_core_crate() {
-        let _ = santui_core::Santui::new();
-    }
-}
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
 
@@ -366,4 +350,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     app.run()
+}
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_santui_crate_version_exists() {
+        let version = env!("CARGO_PKG_VERSION");
+        assert!(!version.is_empty());
+        let parts: Vec<&str> = version.split('.').collect();
+        assert_eq!(parts.len(), 3);
+    }
+
+    #[test]
+    fn test_santui_depends_on_core_crate() {
+        let _ = santui_core::Santui::new();
+    }
 }

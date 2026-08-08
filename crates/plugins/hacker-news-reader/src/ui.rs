@@ -441,6 +441,7 @@ impl HnState {
 }
 
 #[cfg(test)]
+#[allow(clippy::field_reassign_with_default)]
 mod tests {
     use super::*;
 
@@ -467,7 +468,7 @@ mod tests {
         state.fetch_state = FetchState::Done;
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_empty = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("No stories loaded")),
+            |c| matches!(c, RenderCmd::Text { text, .. } if text.contains("No stories loaded")),
         );
         assert!(has_empty);
     }
@@ -511,11 +512,11 @@ mod tests {
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_first = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Test Story")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("Test Story")));
         assert!(has_first);
-        let has_second = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Another Story")),
-        );
+        let has_second = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("Another Story")));
         assert!(has_second);
     }
 
@@ -526,7 +527,7 @@ mod tests {
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_fetching = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Fetching")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("Fetching")));
         assert!(has_fetching);
     }
 
@@ -585,11 +586,11 @@ mod tests {
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_comment1 = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("commenter1")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("commenter1")));
         assert!(has_comment1);
         let has_comment2 = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("commenter2")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("commenter2")));
         assert!(has_comment2);
     }
 
@@ -631,7 +632,7 @@ mod tests {
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_deleted = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("[deleted]")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("[deleted]")));
         assert!(has_deleted);
     }
 }

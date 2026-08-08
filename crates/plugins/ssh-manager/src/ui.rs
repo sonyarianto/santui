@@ -292,6 +292,7 @@ fn render_connect(state: &SshState, theme: &ThemeData, w: u16, h: u16) -> Vec<Re
 }
 
 #[cfg(test)]
+#[allow(clippy::field_reassign_with_default)]
 mod tests {
     use super::*;
     use crate::state::SshBookmark;
@@ -331,9 +332,9 @@ mod tests {
     fn renders_empty_list_message() {
         let state = SshState::default();
         let cmds = render_ui(&state, &test_theme(), 80, 24);
-        let has_msg = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("No SSH hosts")),
-        );
+        let has_msg = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("No SSH hosts")));
         assert!(has_msg);
     }
 
@@ -345,7 +346,7 @@ mod tests {
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_bm = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Prod Web")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("Prod Web")));
         assert!(has_bm);
     }
 
@@ -355,9 +356,9 @@ mod tests {
         state.filter_text = "prod".into();
         state.filter_active = true;
         let cmds = render_ui(&state, &test_theme(), 80, 24);
-        let has_filter = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("filter: prod_")),
-        );
+        let has_filter = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("filter: prod_")));
         assert!(has_filter);
     }
 
@@ -369,7 +370,7 @@ mod tests {
         state.detail_idx = Some(0);
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_border = cmds.iter().any(|c| {
-            matches!(c, RenderCmd::Border { ref title, .. } if title.as_deref().map(|t| t.contains("Edit Bookmark")).unwrap_or(false))
+            matches!(c, RenderCmd::Border { title, .. } if title.as_deref().map(|t| t.contains("Edit Bookmark")).unwrap_or(false))
         });
         assert!(has_border);
     }
@@ -385,7 +386,7 @@ mod tests {
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let field_line = cmds
             .iter()
-            .find(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.starts_with("Name")));
+            .find(|c| matches!(c, RenderCmd::Text { text, .. } if text.starts_with("Name")));
         assert!(field_line.is_some());
     }
 }

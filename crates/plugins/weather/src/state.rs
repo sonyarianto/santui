@@ -77,6 +77,7 @@ impl Default for WeatherState {
 }
 
 #[cfg(test)]
+#[allow(clippy::field_reassign_with_default)]
 mod tests {
     use super::*;
 
@@ -84,11 +85,6 @@ mod tests {
     fn units_default_is_celsius() {
         let u = Units::default();
         assert!(matches!(u, Units::Celsius));
-    }
-
-    #[test]
-    fn refresh_tick_threshold_constant_is_positive() {
-        assert!(REFRESH_TICKS > 0);
     }
 
     #[test]

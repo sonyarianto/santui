@@ -65,7 +65,6 @@ pub(crate) fn make_track(id: u64, name: &str) -> LRCLibTrack {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lrclib::LRCLibTrack;
 
     #[test]
     fn default_state_empty() {

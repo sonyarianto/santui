@@ -88,7 +88,7 @@ impl App {
             return;
         }
         self.tick_count += 1;
-        if !self.tick_count.is_multiple_of(self.speed) {
+        if self.tick_count % self.speed != 0 {
             return;
         }
 

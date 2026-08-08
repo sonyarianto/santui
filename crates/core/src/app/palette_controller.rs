@@ -245,7 +245,7 @@ fn render_palette_chrome(buf: &mut Buffer, popup_rect: Rect, theme: &Theme) {
 }
 
 fn render_palette_header(buf: &mut Buffer, area: Rect, query: &str, tick: u64, theme: &Theme) {
-    let cursor_on = (tick / 5).is_multiple_of(2);
+    let cursor_on = (tick / 5) % 2 == 0;
 
     // Title bar: "Commands" + padding + "esc"
     let pad_w = area.width.saturating_sub(11) as usize;

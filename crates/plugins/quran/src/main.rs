@@ -437,7 +437,7 @@ impl App {
 
     fn handle_tick(&mut self) {
         self.tick_count += 1;
-        if self.search_mode && self.tick_count.is_multiple_of(6) {
+        if self.search_mode && self.tick_count % 6 == 0 {
             self.cursor_visible = !self.cursor_visible;
             self.dirty = true;
         }
@@ -1001,8 +1001,10 @@ mod tests {
 
     #[test]
     fn preferences_roundtrip() {
-        let mut prefs = Preferences::default();
-        prefs.last_surah = Some(2);
+        let mut prefs = Preferences {
+            last_surah: Some(2),
+            ..Preferences::default()
+        };
         prefs.per_surah_ayah.insert(2, 3);
         prefs.per_surah_ayah.insert(36, 5);
         let json = serde_json::to_string(&prefs).unwrap();

@@ -802,9 +802,11 @@ mod tests {
     }
     #[test]
     fn filters_events() {
-        let mut app = App::default();
-        app.events = parse_ics(ICS, "Work");
-        app.search = "room".into();
+        let mut app = App {
+            events: parse_ics(ICS, "Work"),
+            search: "room".into(),
+            ..App::default()
+        };
         app.apply_filter();
         assert_eq!(app.filtered.len(), 1);
     }

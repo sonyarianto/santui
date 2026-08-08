@@ -125,10 +125,7 @@ impl PomodoroState {
             Phase::Work => {
                 self.sessions_done += 1;
                 self.data.stats.sessions_completed += 1;
-                if self
-                    .sessions_done
-                    .is_multiple_of(self.data.config.long_break_after)
-                {
+                if self.sessions_done % self.data.config.long_break_after == 0 {
                     self.phase = Phase::LongBreak;
                 } else {
                     self.phase = Phase::ShortBreak;
@@ -186,6 +183,7 @@ impl PomodoroState {
 }
 
 #[cfg(test)]
+#[allow(clippy::field_reassign_with_default)]
 mod tests {
     use super::*;
 

@@ -444,9 +444,9 @@ mod tests {
     fn empty_state_prompt_centered_inside_panel() {
         let s = WorldTimeState::default();
         let cmds = render_ui(&s, &test_theme(), 120, 30);
-        let prompt = cmds.iter().find(|c| {
-            matches!(c, RenderCmd::Text { ref text, .. } if text == "Add a timezone (press 'a')")
-        });
+        let prompt = cmds.iter().find(
+            |c| matches!(c, RenderCmd::Text { text, .. } if text == "Add a timezone (press 'a')"),
+        );
         assert!(prompt.is_some());
     }
 

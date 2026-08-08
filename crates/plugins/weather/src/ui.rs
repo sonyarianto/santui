@@ -514,6 +514,7 @@ fn day_name_from_date(date: &str) -> String {
 }
 
 #[cfg(test)]
+#[allow(clippy::field_reassign_with_default)]
 mod tests {
     use super::*;
 
@@ -538,9 +539,9 @@ mod tests {
     fn renders_no_location_prompt_when_no_location() {
         let state = WeatherState::default();
         let cmds = render_ui(&state, &test_theme(), 80, 24);
-        let has_prompt = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("No location set")),
-        );
+        let has_prompt = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("No location set")));
         assert!(has_prompt);
     }
 
@@ -558,7 +559,7 @@ mod tests {
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_fetching = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Fetching")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("Fetching")));
         assert!(has_fetching);
     }
 
@@ -593,7 +594,7 @@ mod tests {
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_temp = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("28")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("28")));
         assert!(has_temp);
     }
 
@@ -603,9 +604,9 @@ mod tests {
         state.settings.location = Some(crate::state::SavedLocation::default());
         state.fetch_state = FetchState::Error("network error".into());
         let cmds = render_ui(&state, &test_theme(), 80, 24);
-        let has_error = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("network error")),
-        );
+        let has_error = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("network error")));
         assert!(has_error);
     }
 
@@ -616,7 +617,7 @@ mod tests {
         state.search_query = "Tokyo".into();
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_overlay = cmds.iter().any(|c| {
-            matches!(c, RenderCmd::Border { ref title, .. } if title.as_deref() == Some("Set Location"))
+            matches!(c, RenderCmd::Border { title, .. } if title.as_deref() == Some("Set Location"))
         });
         assert!(has_overlay);
     }

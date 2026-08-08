@@ -703,8 +703,10 @@ mod tests {
 
     #[test]
     fn saves_recent_patterns_without_duplicates() {
-        let mut app = App::default();
-        app.pattern = "abc".into();
+        let mut app = App {
+            pattern: "abc".into(),
+            ..App::default()
+        };
         app.save_recent_pattern();
         app.save_recent_pattern();
         assert_eq!(app.recent_patterns.len(), 1);

@@ -362,7 +362,6 @@ fn render_table(state: &LyricsState, theme: &ThemeData, w: u16, h: u16, cmds: &m
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lrclib::LRCLibTrack;
     use crate::state::make_track;
 
     #[test]
@@ -373,9 +372,9 @@ mod tests {
             ..LyricsState::default()
         };
         let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
-        let has_search = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Search: eminem")),
-        );
+        let has_search = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("Search: eminem")));
         assert!(has_search);
     }
 
@@ -414,7 +413,7 @@ mod tests {
         let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_spinner = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Searching")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("Searching")));
         assert!(has_spinner);
     }
 
@@ -432,7 +431,7 @@ mod tests {
         let has_table = cmds.iter().any(|c| matches!(c, RenderCmd::Table { .. }));
         assert!(has_table);
         let has_track = cmds.iter().any(|c| {
-            matches!(c, RenderCmd::Table { ref rows, .. } if rows.iter().any(|r| r.iter().any(|cell| cell.contains("Lose Yourself"))))
+            matches!(c, RenderCmd::Table { rows, .. } if rows.iter().any(|r| r.iter().any(|cell| cell.contains("Lose Yourself"))))
         });
         assert!(has_track);
     }
@@ -449,7 +448,7 @@ mod tests {
         };
         let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let title_cell = cmds.iter().find_map(|c| match c {
-            RenderCmd::Table { ref rows, .. } => rows.first().map(|r| r[0].clone()),
+            RenderCmd::Table { rows, .. } => rows.first().map(|r| r[0].clone()),
             _ => None,
         });
         let title_cell = title_cell.expect("expected a title cell");
@@ -472,7 +471,7 @@ mod tests {
         let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_no_results = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("No results")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("No results")));
         assert!(has_no_results);
     }
 
@@ -481,7 +480,7 @@ mod tests {
         let state = LyricsState::default();
         let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_title = cmds.iter().any(|c| {
-            matches!(c, RenderCmd::Border { ref title, .. } if title.as_deref() == Some("Music Lyrics"))
+            matches!(c, RenderCmd::Border { title, .. } if title.as_deref() == Some("Music Lyrics"))
         });
         assert!(has_title);
     }
@@ -499,19 +498,19 @@ mod tests {
         let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_title = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text == "Lose Yourself"));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text == "Lose Yourself"));
         assert!(has_title);
         let has_artist = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text == "Eminem"));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text == "Eminem"));
         assert!(has_artist);
-        let has_source = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Source: LRCLib")),
-        );
+        let has_source = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("Source: LRCLib")));
         assert!(has_source);
         let has_lyric = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text == "line one"));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text == "line one"));
         assert!(has_lyric);
     }
 
@@ -526,7 +525,7 @@ mod tests {
         let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_msg = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text == "No lyrics found"));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text == "No lyrics found"));
         assert!(has_msg);
     }
 
@@ -538,9 +537,9 @@ mod tests {
             ..LyricsState::default()
         };
         let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
-        let has_msg = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text == "Searching lyrics..."),
-        );
+        let has_msg = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text == "Searching lyrics..."));
         assert!(has_msg);
     }
 
@@ -554,7 +553,7 @@ mod tests {
         };
         let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let panel = cmds.iter().any(|c| {
-            matches!(c, RenderCmd::Border { ref title, x, w, .. } if title.as_deref() == Some("Lyrics") && *x == 48 && *w == 32)
+            matches!(c, RenderCmd::Border { title, x, w, .. } if title.as_deref() == Some("Lyrics") && *x == 48 && *w == 32)
         });
         assert!(panel, "expected Lyrics panel snapped right");
         let has_backdrop = cmds.iter().any(|c| {
@@ -567,9 +566,9 @@ mod tests {
     fn lyrics_panel_not_rendered_when_closed() {
         let state = LyricsState::default();
         let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
-        let panel = cmds.iter().any(|c| {
-            matches!(c, RenderCmd::Border { ref title, .. } if title.as_deref() == Some("Lyrics"))
-        });
+        let panel = cmds.iter().any(
+            |c| matches!(c, RenderCmd::Border { title, .. } if title.as_deref() == Some("Lyrics")),
+        );
         assert!(!panel, "no panel when lyrics closed");
     }
 
@@ -582,10 +581,10 @@ mod tests {
         let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_scroll = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text == "\u{2191}\u{2193}"));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text == "\u{2191}\u{2193}"));
         let has_close = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text == "esc"));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text == "esc"));
         assert!(has_scroll, "expected scroll hint in panel footer");
         assert!(has_close, "expected close hint in panel footer");
     }
@@ -626,7 +625,7 @@ mod tests {
         let cmds = render_ui(&state, &santui_ipc::test::theme(), 80, 24);
         let has_pct = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.ends_with('%')));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.ends_with('%')));
         assert!(!has_pct, "no percentage when content fits");
     }
 }

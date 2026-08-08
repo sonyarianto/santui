@@ -566,9 +566,9 @@ mod tests {
     fn renders_empty_overview_when_no_habits() {
         let state = crate::state::HabitState::default();
         let cmds = render_ui(&state, &test_theme(), 80, 24);
-        let has_empty = cmds.iter().any(
-            |c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("No habits yet")),
-        );
+        let has_empty = cmds
+            .iter()
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("No habits yet")));
         assert!(has_empty);
     }
 
@@ -578,7 +578,7 @@ mod tests {
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_exercise = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Exercise")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("Exercise")));
         assert!(has_exercise);
     }
 
@@ -587,7 +587,7 @@ mod tests {
         let state = make_state();
         let cmds = render_ui(&state, &test_theme(), 120, 24);
         let has_heatmap = cmds.iter().any(|c| {
-            matches!(c, RenderCmd::Text { ref text, .. } if text.contains('\u{25c9}') || text.contains('\u{25cc}'))
+            matches!(c, RenderCmd::Text { text, .. } if text.contains('\u{25c9}') || text.contains('\u{25cc}'))
         });
         assert!(has_heatmap);
     }
@@ -600,10 +600,10 @@ mod tests {
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_header = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Mon")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("Mon")));
         assert!(has_header);
         let has_cell = cmds.iter().any(|c| {
-            matches!(c, RenderCmd::Text { ref text, .. } if text.contains('\u{25c9}') || text.contains('\u{25cc}') || text.contains('\u{2591}'))
+            matches!(c, RenderCmd::Text { text, .. } if text.contains('\u{25c9}') || text.contains('\u{25cc}') || text.contains('\u{2591}'))
         });
         assert!(has_cell);
     }
@@ -623,11 +623,11 @@ mod tests {
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_name = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Name")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("Name")));
         assert!(has_name);
         let has_preset = cmds
             .iter()
-            .any(|c| matches!(c, RenderCmd::Text { ref text, .. } if text.contains("green")));
+            .any(|c| matches!(c, RenderCmd::Text { text, .. } if text.contains("green")));
         assert!(has_preset);
     }
 
@@ -638,11 +638,11 @@ mod tests {
         state.day_detail_date = "2026-06-15".into();
         let cmds = render_ui(&state, &test_theme(), 80, 24);
         let has_date = cmds.iter().any(|c| {
-            matches!(c, RenderCmd::Border { ref title, .. } if title.as_deref().map_or(false, |t| t.contains("2026-06-15")))
+            matches!(c, RenderCmd::Border { title, .. } if title.as_deref().is_some_and(|t| t.contains("2026-06-15")))
         });
         assert!(has_date);
         let has_status = cmds.iter().any(|c| {
-            matches!(c, RenderCmd::Text { ref text, .. } if text.contains("Done") || text.contains("Missed"))
+            matches!(c, RenderCmd::Text { text, .. } if text.contains("Done") || text.contains("Missed"))
         });
         assert!(has_status);
     }

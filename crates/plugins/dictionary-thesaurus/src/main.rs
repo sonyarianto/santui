@@ -723,8 +723,10 @@ mod tests {
     }
     #[test]
     fn related_words_are_deduped() {
-        let mut app = App::default();
-        app.result = Some(parse_lookup_response(BODY).unwrap());
+        let app = App {
+            result: Some(parse_lookup_response(BODY).unwrap()),
+            ..App::default()
+        };
         assert_eq!(app.related_words(), vec!["certainty", "trial"]);
     }
     #[test]
