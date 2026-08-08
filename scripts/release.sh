@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Release automation: bump version everywhere, changelog, tag, push, release.
 #
-# Usage: ./scripts/release.sh <version>     e.g. ./scripts/release.sh 0.2.39
+# Usage: ./scripts/release.sh <version>     e.g. ./scripts/release.sh 0.2.40
 #
 # Steps:
 #   1. Pre-flight: clean tree + every version-bearing file contains OLD version

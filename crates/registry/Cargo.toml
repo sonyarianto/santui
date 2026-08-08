@@ -1,6 +1,6 @@
 [package]
 name = "santui-registry"
-version = "0.2.39"
+version = "0.2.40"
 edition = "2024"
 rust-version = "1.85"
 description = "Santui plugin registry — manifest fetch, install, config management"
@@ -9,7 +9,7 @@ publish = false
 repository = "https://github.com/sonyarianto/santui"
 
 [dependencies]
-santui-core = { path = "../core", version = "0.2.39" }
+santui-core = { path = "../core", version = "0.2.40" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 toml = "1.1"

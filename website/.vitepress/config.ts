@@ -15,7 +15,7 @@ export default defineConfig({
     siteTitle: 'Santui',
     nav: [
       { text: 'Guide', link: '/guide/' },
-      { text: 'v0.2.39', link: 'https://github.com/sonyarianto/santui/releases/tag/v0.2.39' },
+      { text: 'v0.2.40', link: 'https://github.com/sonyarianto/santui/releases/tag/v0.2.40' },
     ],
     sidebar: {
       '/guide/': [
@@ -35,7 +35,7 @@ export default defineConfig({
       { icon: 'github', link: 'https://github.com/sonyarianto/santui' },
     ],
     footer: {
-      message: 'Santui v0.2.39 — Copyright \u00a9 2026 Santui contributors',
+      message: 'Santui v0.2.40 — Copyright \u00a9 2026 Santui contributors',
     },
   },
 })

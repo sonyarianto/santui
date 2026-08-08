@@ -1,6 +1,6 @@
 [package]
 name = "santui-network-bandwidth-monitor"
-version = "0.2.39"
+version = "0.2.40"
 edition = "2024"
 rust-version = "1.85"
 
@@ -9,7 +9,7 @@ name = "santui-network-bandwidth-monitor"
 path = "src/main.rs"
 
 [dependencies]
-santui-ipc  = { path = "../../ipc",  version = "0.2.39", default-features = false }
+santui-ipc  = { path = "../../ipc",  version = "0.2.40", default-features = false }
 serde_json  = "1"
 log         = "0.4"
 env_logger  = "0.11"
