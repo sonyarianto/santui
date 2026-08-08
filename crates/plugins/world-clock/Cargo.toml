@@ -1,6 +1,6 @@
 [package]
 name = "santui-world-clock"
-version = "0.2.38"
+version = "0.2.39"
 edition = "2024"
 rust-version = "1.85"
 
@@ -9,7 +9,7 @@ name = "santui-world-clock"
 path = "src/main.rs"
 
 [dependencies]
-santui-ipc  = { path = "../../ipc",  version = "0.2.38", default-features = false }
+santui-ipc  = { path = "../../ipc",  version = "0.2.39", default-features = false }
 chrono      = { version = "0.4", features = ["clock"] }
 chrono-tz   = { version = "0.10", features = ["serde"] }
 serde       = { workspace = true }

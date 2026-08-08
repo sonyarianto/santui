@@ -1,6 +1,6 @@
 [package]
 name = "santui-text-toolkit"
-version = "0.2.38"
+version = "0.2.39"
 edition = "2024"
 rust-version = "1.85"
 
@@ -9,7 +9,7 @@ name = "santui-text-toolkit"
 path = "src/main.rs"
 
 [dependencies]
-santui-ipc = { path = "../../ipc", version = "0.2.38", default-features = false, features = ["clipboard"] }
+santui-ipc = { path = "../../ipc", version = "0.2.39", default-features = false, features = ["clipboard"] }
 serde_json = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }

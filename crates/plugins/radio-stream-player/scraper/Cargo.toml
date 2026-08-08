@@ -1,6 +1,6 @@
 [package]
 name = "santui-radio-stream-scraper"
-version = "0.2.38"
+version = "0.2.39"
 edition = "2024"
 rust-version = "1.85"
 
