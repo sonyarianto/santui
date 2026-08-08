@@ -1,3 +1,31 @@
+## [unreleased]
+
+### ⚙️ Miscellaneous
+
+- Update changelog for v0.2.38
+- Migrate workspace to Rust edition 2024
+- Add scripts/check.sh fast verification set
+
+### 🎨 Refactor
+
+- Edition 2024 cleanup (match ergonomics, is_multiple_of, test hygiene)
+
+### 🐛 Bug Fixes
+
+- Keep Processes panel inside the window
+
+### 📚 Documentation
+
+- Sync docs and plugin template with current protocol and tooling
+
+### 🚀 Features
+
+- Promote to stable plugin
+- Title Computer panel, remove inter-panel gap
+- Scraper CLI args, enable search tests
+- Battery, process paths, swap history, detail screens; fix table column alignment
+
+Full Changelog: [v0.2.38...](https://github.com/sonyarianto/santui/compare/v0.2.38...)
 ## [0.2.38] - 2026-08-06
 
 ### ⚙️ Miscellaneous
