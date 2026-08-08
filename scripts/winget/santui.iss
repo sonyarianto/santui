@@ -1,6 +1,6 @@
 ; Inno Setup script for Santui.
 ; Build with:
-;   ISCC.exe scripts/winget/santui.iss /DMyAppVersion=0.2.39
+;   ISCC.exe scripts/winget/santui.iss /DMyAppVersion=X.Y.Z
 ; The staging directory (containing santui.exe + plugin binaries) must exist
 ; next to this script under `staging/`.
 
