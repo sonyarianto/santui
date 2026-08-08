@@ -6,4 +6,4 @@ pre-commit:
       run: cargo fmt --check
     - name: clippy
       glob: "*.rs"
-      run: cargo clippy --workspace -- -D warnings
+      run: ./scripts/check.sh clippy

@@ -3,18 +3,22 @@
 ## Build & Test
 
 ```bash
-cargo build              # build all workspace crates (SLOW + heavy on disk — compiles every plugin binary)
-cargo check              # fast compile check
-cargo clippy --workspace -- -D warnings  # lint
-cargo fmt --check        # formatting check
-cargo fmt                # auto-format
-cargo test --workspace   # run tests (SLOW — compiles every plugin binary)
-cargo test -p santui-core -p santui-ipc -p santui-registry -p santui-db -p santui-server -p santui-auth  # fast — only crates with tests
+./scripts/check.sh check    # fast compile check — host + core + stable plugins only
+./scripts/check.sh clippy   # lint (same fast set)
+./scripts/check.sh test     # tests (core crates + stable plugin tests)
+./scripts/check.sh fmt      # formatting check
+cargo fmt                   # auto-format
 
-When running tests, prefer the short list above over `--workspace` to avoid recompiling every plugin binary. Same applies to `cargo build` — prefer `cargo build -p santui` (or add specific -p flags) to save disk space.
+cargo build -p santui       # build just the host app (add specific -p flags for more)
+cargo check --workspace     # SLOW — all ~127 crates incl. experimental plugins (CI's job)
+cargo clippy --workspace -- -D warnings  # SLOW — only needed when touching experimental plugins
+cargo clippy --workspace --all-targets -- -D warnings  # SLOW — ONLY this flag lints plugin #[cfg(test)] code; CI gate
+cargo test --workspace      # SLOW — compiles every plugin binary; prefer `./scripts/check.sh test`
 ```
 
-lefthook pre-commit runs `cargo fmt --check` + `cargo clippy` automatically. Install hooks: `lefthook install`.
+**Default verification = `scripts/check.sh`** (host + core + builtins + stable plugins from `plugins-manifest.json`; stable set is generated via `santui-dev-setup list-ids`). Full-workspace verification runs in CI on every push — you only need `--workspace` locally when you're working on an experimental plugin. lefthook pre-commit runs `cargo fmt --check` + `./scripts/check.sh clippy` automatically. Install hooks: `lefthook install`.
+
+**Important**: `check.sh clippy` and the pre-commit hook lint non-test code only. Plugin `#[cfg(test)]` code (and any `#[cfg(test)]`-gated items like test modules) is compiled and linted **only** by CI's `cargo clippy --workspace --all-targets -- -D warnings`. When you edit a plugin's tests or reorder code around a `mod tests` block, run that exact command locally — a dropped `#[cfg(test)]` attribute or a bad test-only pattern compiles fine in the fast set but fails CI.
 
 Run: `cargo build -p santui && cargo run -p santui` or `.\target\debug\santui.exe`
 
