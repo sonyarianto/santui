@@ -658,6 +658,202 @@ fn enrich_genres(conn: &Connection, http_permits: &HttpSemaphore, now: &str) {
     });
 }
 
+fn main() {
+    let _ = env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))
+        .format_timestamp(None)
+        .format_target(false)
+        .try_init();
+
+    // Parse CLI args
+    let mut db_override: Option<String> = None;
+    let mut prune_days: Option<u64> = None;
+    let mut args = std::env::args().skip(1);
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
+            "--db-path" => {
+                db_override = Some(args.next().expect("--db-path requires a PATH argument"));
+            }
+            "--prune" => {
+                prune_days = Some(args.next().and_then(|v| v.parse().ok()).unwrap_or(90));
+            }
+            "--help" | "-h" => {
+                print_usage();
+                std::process::exit(0);
+            }
+            _ => {
+                eprintln!("Unknown argument: {arg}");
+                print_usage();
+                std::process::exit(1);
+            }
+        }
+    }
+
+    let db_path_str = db_override.as_deref();
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+        .to_string();
+
+    let num_workers: usize = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(4);
+    let http_permits = HttpSemaphore::new(MAX_CONCURRENT_HTTP);
+
+    println!("Radio Station Scraper");
+    println!(
+        "{} countries to scan ({} workers, {} max HTTP)",
+        ALL_COUNTRIES.len(),
+        num_workers,
+        MAX_CONCURRENT_HTTP,
+    );
+    println!();
+
+    let conn = match open_db(db_path_str) {
+        Ok(c) => c,
+        Err(e) => {
+            log::error!("Failed to open database: {e}");
+            std::process::exit(1);
+        }
+    };
+
+    // Clean up ?dist=onlineradiobox and ?ref=onlineradiobox26 from existing URLs
+    // First, remove duplicates where the cleaned URL already exists
+    let deleted = conn
+        .execute(
+            "DELETE FROM stations WHERE (url LIKE '%dist=onlineradiobox%' OR url LIKE '%ref=onlineradiobox26%') AND EXISTS (
+                SELECT 1 FROM stations AS s2
+                WHERE s2.name = stations.name
+                AND s2.url = REPLACE(REPLACE(REPLACE(REPLACE(stations.url, '?dist=onlineradiobox', ''), '&dist=onlineradiobox', ''), '?ref=onlineradiobox26', ''), '&ref=onlineradiobox26', '')
+            )",
+            [],
+        )
+        .unwrap_or(0);
+    if deleted > 0 {
+        println!("Removed {deleted} duplicate stations with tracking params");
+    }
+    // Then clean the remaining
+    let cleaned = conn
+        .execute(
+            "UPDATE stations SET url = REPLACE(REPLACE(REPLACE(REPLACE(url, '?dist=onlineradiobox', ''), '&dist=onlineradiobox', ''), '?ref=onlineradiobox26', ''), '&ref=onlineradiobox26', '') WHERE url LIKE '%dist=onlineradiobox%' OR url LIKE '%ref=onlineradiobox26%'",
+            [],
+        )
+        .unwrap_or(0);
+    if cleaned > 0 {
+        println!("Cleaned {cleaned} existing URLs");
+    }
+
+    if let Err(e) = conn.execute_batch("BEGIN TRANSACTION") {
+        log::error!("Failed to begin transaction: {e}");
+        std::process::exit(1);
+    }
+
+    let (tx, rx) = std::sync::mpsc::channel::<(String, String, Vec<(String, String, String)>)>();
+    let countries: Vec<(&str, &str)> = ALL_COUNTRIES.to_vec();
+    let chunk_size = countries.len().div_ceil(num_workers);
+
+    let mut total_fetched = 0usize;
+    let mut countries_with_data = 0usize;
+
+    let hp = &http_permits;
+    std::thread::scope(|s| {
+        for chunk in countries.chunks(chunk_size) {
+            let tx = tx.clone();
+            let chunk: Vec<(&str, &str)> = chunk.to_vec();
+            s.spawn(move || {
+                for &(url_code, iso_code) in &chunk {
+                    let _permit = hp.acquire();
+                    match fetch_country_http(url_code) {
+                        Ok(stations) => {
+                            let _ = tx.send((iso_code.to_string(), url_code.to_string(), stations));
+                        }
+                        Err(e) => {
+                            log::warn!("  \u{26a0}\u{fe0f}  {url_code}: {e}");
+                        }
+                    }
+                }
+            });
+        }
+        drop(tx);
+
+        for (iso_code, _url_code, stations) in rx {
+            if stations.is_empty() {
+                continue;
+            }
+            countries_with_data += 1;
+            total_fetched += stations.len();
+
+            let mut inserted = 0usize;
+            for (name, url, radio_id) in &stations {
+                match conn.execute(
+                    "INSERT INTO stations (name, url, country, genre, radio_id, last_seen_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT(name, url) DO UPDATE SET last_seen_at = ?6",
+                    rusqlite::params![name, url, iso_code, "", radio_id, now],
+                ) {
+                    Ok(rows) => {
+                        if rows > 0 {
+                            inserted += 1;
+                        }
+                    }
+                    Err(e) => {
+                        log::error!("  \u{26a0}\u{fe0f}  insert error for {name}: {e}");
+                    }
+                }
+            }
+
+            let total: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM stations WHERE country = ?1",
+                    rusqlite::params![iso_code],
+                    |row| row.get(0),
+                )
+                .unwrap_or(0);
+
+            println!(
+                "  {iso_code}: +{inserted} new (={total} total, {} fetched)",
+                stations.len()
+            );
+        }
+    });
+
+    if let Err(e) = conn.execute_batch("COMMIT") {
+        log::error!("Failed to commit transaction: {e}");
+        std::process::exit(1);
+    }
+
+    if let Some(days) = prune_days {
+        let cutoff = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            .saturating_sub(days * 86400)
+            .to_string();
+        match conn.execute(
+            "DELETE FROM stations WHERE last_seen_at != '' AND last_seen_at < ?1",
+            rusqlite::params![cutoff],
+        ) {
+            Ok(count) => {
+                if count > 0 {
+                    println!("\nPruned {count} stations not seen in {days} days");
+                }
+            }
+            Err(e) => log::warn!("Prune error: {e}"),
+        }
+    }
+
+    let total: i64 = conn
+        .query_row("SELECT COUNT(*) FROM stations", [], |row| row.get(0))
+        .unwrap_or(0);
+
+    println!();
+    println!(
+        "Done \u{2014} {countries_with_data} countries with \
+         stations, {total_fetched} stations fetched, \
+         {total} total in DB"
+    );
+    println!("Database: {}", db_path(db_path_str).display());
+
+    enrich_genres(&conn, &http_permits, &now);
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -919,201 +1115,4 @@ mod tests {
         assert!(iso_codes.contains(&"US"));
         assert!(iso_codes.contains(&"DE"));
     }
-}
-
-fn main() {
-    let _ = env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))
-        .format_timestamp(None)
-        .format_target(false)
-        .try_init();
-
-    // Parse CLI args
-    let mut db_override: Option<String> = None;
-    let mut prune_days: Option<u64> = None;
-    let mut args = std::env::args().skip(1);
-    while let Some(arg) = args.next() {
-        match arg.as_str() {
-            "--db-path" => {
-                db_override = Some(args.next().expect("--db-path requires a PATH argument"));
-            }
-            "--prune" => {
-                prune_days = Some(args.next().and_then(|v| v.parse().ok()).unwrap_or(90));
-            }
-            "--help" | "-h" => {
-                print_usage();
-                std::process::exit(0);
-            }
-            _ => {
-                eprintln!("Unknown argument: {arg}");
-                print_usage();
-                std::process::exit(1);
-            }
-        }
-    }
-
-    let db_path_str = db_override.as_deref();
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_secs()
-        .to_string();
-
-    let num_workers: usize = std::thread::available_parallelism()
-        .map(|n| n.get())
-        .unwrap_or(4);
-    let http_permits = HttpSemaphore::new(MAX_CONCURRENT_HTTP);
-
-    println!("Radio Station Scraper");
-    println!(
-        "{} countries to scan ({} workers, {} max HTTP)",
-        ALL_COUNTRIES.len(),
-        num_workers,
-        MAX_CONCURRENT_HTTP,
-    );
-    println!();
-
-    let conn = match open_db(db_path_str) {
-        Ok(c) => c,
-        Err(e) => {
-            log::error!("Failed to open database: {e}");
-            std::process::exit(1);
-        }
-    };
-
-    // Clean up ?dist=onlineradiobox and ?ref=onlineradiobox26 from existing URLs
-    // First, remove duplicates where the cleaned URL already exists
-    let deleted = conn
-        .execute(
-            "DELETE FROM stations WHERE (url LIKE '%dist=onlineradiobox%' OR url LIKE '%ref=onlineradiobox26%') AND EXISTS (
-                SELECT 1 FROM stations AS s2
-                WHERE s2.name = stations.name
-                AND s2.url = REPLACE(REPLACE(REPLACE(REPLACE(stations.url, '?dist=onlineradiobox', ''), '&dist=onlineradiobox', ''), '?ref=onlineradiobox26', ''), '&ref=onlineradiobox26', '')
-            )",
-            [],
-        )
-        .unwrap_or(0);
-    if deleted > 0 {
-        println!("Removed {deleted} duplicate stations with tracking params");
-    }
-    // Then clean the remaining
-    let cleaned = conn
-        .execute(
-            "UPDATE stations SET url = REPLACE(REPLACE(REPLACE(REPLACE(url, '?dist=onlineradiobox', ''), '&dist=onlineradiobox', ''), '?ref=onlineradiobox26', ''), '&ref=onlineradiobox26', '') WHERE url LIKE '%dist=onlineradiobox%' OR url LIKE '%ref=onlineradiobox26%'",
-            [],
-        )
-        .unwrap_or(0);
-    if cleaned > 0 {
-        println!("Cleaned {cleaned} existing URLs");
-    }
-
-    if let Err(e) = conn.execute_batch("BEGIN TRANSACTION") {
-        log::error!("Failed to begin transaction: {e}");
-        std::process::exit(1);
-    }
-
-    let (tx, rx) = std::sync::mpsc::channel::<(String, String, Vec<(String, String, String)>)>();
-    let countries: Vec<(&str, &str)> = ALL_COUNTRIES.to_vec();
-    let chunk_size = countries.len().div_ceil(num_workers);
-
-    let mut total_fetched = 0usize;
-    let mut countries_with_data = 0usize;
-
-    let hp = &http_permits;
-    std::thread::scope(|s| {
-        for chunk in countries.chunks(chunk_size) {
-            let tx = tx.clone();
-            let chunk: Vec<(&str, &str)> = chunk.to_vec();
-            s.spawn(move || {
-                for &(url_code, iso_code) in &chunk {
-                    let _permit = hp.acquire();
-                    match fetch_country_http(url_code) {
-                        Ok(stations) => {
-                            let _ = tx.send((iso_code.to_string(), url_code.to_string(), stations));
-                        }
-                        Err(e) => {
-                            log::warn!("  \u{26a0}\u{fe0f}  {url_code}: {e}");
-                        }
-                    }
-                }
-            });
-        }
-        drop(tx);
-
-        for (iso_code, _url_code, stations) in rx {
-            if stations.is_empty() {
-                continue;
-            }
-            countries_with_data += 1;
-            total_fetched += stations.len();
-
-            let mut inserted = 0usize;
-            for (name, url, radio_id) in &stations {
-                match conn.execute(
-                    "INSERT INTO stations (name, url, country, genre, radio_id, last_seen_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT(name, url) DO UPDATE SET last_seen_at = ?6",
-                    rusqlite::params![name, url, iso_code, "", radio_id, now],
-                ) {
-                    Ok(rows) => {
-                        if rows > 0 {
-                            inserted += 1;
-                        }
-                    }
-                    Err(e) => {
-                        log::error!("  \u{26a0}\u{fe0f}  insert error for {name}: {e}");
-                    }
-                }
-            }
-
-            let total: i64 = conn
-                .query_row(
-                    "SELECT COUNT(*) FROM stations WHERE country = ?1",
-                    rusqlite::params![iso_code],
-                    |row| row.get(0),
-                )
-                .unwrap_or(0);
-
-            println!(
-                "  {iso_code}: +{inserted} new (={total} total, {} fetched)",
-                stations.len()
-            );
-        }
-    });
-
-    if let Err(e) = conn.execute_batch("COMMIT") {
-        log::error!("Failed to commit transaction: {e}");
-        std::process::exit(1);
-    }
-
-    if let Some(days) = prune_days {
-        let cutoff = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs()
-            .saturating_sub(days * 86400)
-            .to_string();
-        match conn.execute(
-            "DELETE FROM stations WHERE last_seen_at != '' AND last_seen_at < ?1",
-            rusqlite::params![cutoff],
-        ) {
-            Ok(count) => {
-                if count > 0 {
-                    println!("\nPruned {count} stations not seen in {days} days");
-                }
-            }
-            Err(e) => log::warn!("Prune error: {e}"),
-        }
-    }
-
-    let total: i64 = conn
-        .query_row("SELECT COUNT(*) FROM stations", [], |row| row.get(0))
-        .unwrap_or(0);
-
-    println!();
-    println!(
-        "Done \u{2014} {countries_with_data} countries with \
-         stations, {total_fetched} stations fetched, \
-         {total} total in DB"
-    );
-    println!("Database: {}", db_path(db_path_str).display());
-
-    enrich_genres(&conn, &http_permits, &now);
 }

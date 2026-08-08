@@ -118,6 +118,25 @@ pub fn load_all(conn: &Connection) -> Result<Vec<Station>, rusqlite::Error> {
 }
 
 #[cfg(test)]
+pub fn search(conn: &Connection, query: &str) -> Result<Vec<Station>, rusqlite::Error> {
+    let pattern = format!("%{}%", query);
+    let mut stmt = conn.prepare(
+        "SELECT name, url, country, genre FROM stations WHERE name LIKE ?1 OR country LIKE ?1 OR genre LIKE ?1 ORDER BY name",
+    )?;
+    let stations = stmt
+        .query_map(rusqlite::params![pattern], |row| {
+            Ok(Station {
+                name: row.get(0)?,
+                url: row.get(1)?,
+                country: row.get(2)?,
+                genre: row.get(3)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(stations)
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -291,23 +310,4 @@ mod tests {
 
         let _ = std::fs::remove_dir_all(&dir);
     }
-}
-
-#[allow(dead_code)]
-pub fn search(conn: &Connection, query: &str) -> Result<Vec<Station>, rusqlite::Error> {
-    let pattern = format!("%{}%", query);
-    let mut stmt = conn.prepare(
-        "SELECT name, url, country, genre FROM stations WHERE name LIKE ?1 OR country LIKE ?1 OR genre LIKE ?1 ORDER BY name",
-    )?;
-    let stations = stmt
-        .query_map(rusqlite::params![pattern], |row| {
-            Ok(Station {
-                name: row.get(0)?,
-                url: row.get(1)?,
-                country: row.get(2)?,
-                genre: row.get(3)?,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(stations)
 }

@@ -902,7 +902,7 @@ impl App {
         if self.state.tick_scan_msg() {
             changed = true;
         }
-        if self.state.search_mode && self.state.tick_counter.is_multiple_of(3) {
+        if self.state.search_mode && self.state.tick_counter % 3 == 0 {
             changed = true;
         }
         self.dirty = changed;
