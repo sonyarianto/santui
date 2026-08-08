@@ -1,10 +1,11 @@
-## [unreleased]
+## [0.2.39] - 2026-08-08
 
 ### ⚙️ Miscellaneous
 
 - Update changelog for v0.2.38
 - Migrate workspace to Rust edition 2024
 - Add scripts/check.sh fast verification set
+- Update changelog for v0.2.39
 
 ### 🎨 Refactor
 
@@ -25,7 +26,7 @@
 - Scraper CLI args, enable search tests
 - Battery, process paths, swap history, detail screens; fix table column alignment
 
-Full Changelog: [v0.2.38...](https://github.com/sonyarianto/santui/compare/v0.2.38...)
+Full Changelog: [v0.2.38...v0.2.39](https://github.com/sonyarianto/santui/compare/v0.2.38...v0.2.39)
 ## [0.2.38] - 2026-08-06
 
 ### ⚙️ Miscellaneous
