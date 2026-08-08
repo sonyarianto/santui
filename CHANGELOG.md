@@ -1,3 +1,23 @@
+## [unreleased]
+
+### ⚙️ Miscellaneous
+
+- Update changelog for v0.2.39
+- Remove unused packages/winget directory
+
+### 🐛 Bug Fixes
+
+- Remove hardcoded version example from winget iss
+
+### 📚 Documentation
+
+- Remove outdated Windows block warning
+
+### 🚀 Features
+
+- Add winget publishing via Inno Setup installer
+
+Full Changelog: [v0.2.39...](https://github.com/sonyarianto/santui/compare/v0.2.39...)
 ## [0.2.39] - 2026-08-08
 
 ### ⚙️ Miscellaneous
