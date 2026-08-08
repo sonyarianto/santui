@@ -1,9 +1,10 @@
-## [unreleased]
+## [0.2.40] - 2026-08-08
 
 ### ⚙️ Miscellaneous
 
 - Update changelog for v0.2.39
 - Remove unused packages/winget directory
+- Update changelog for v0.2.40
 
 ### 🐛 Bug Fixes
 
@@ -17,7 +18,7 @@
 
 - Add winget publishing via Inno Setup installer
 
-Full Changelog: [v0.2.39...](https://github.com/sonyarianto/santui/compare/v0.2.39...)
+Full Changelog: [v0.2.39...v0.2.40](https://github.com/sonyarianto/santui/compare/v0.2.39...v0.2.40)
 ## [0.2.39] - 2026-08-08
 
 ### ⚙️ Miscellaneous
