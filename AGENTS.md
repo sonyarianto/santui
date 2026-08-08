@@ -129,6 +129,8 @@ awk 'BEGIN{f=0} /^## \['"$VERSION"'\]/{f=1; next} /^## \[/{if(f) exit} f' CHANGE
 
 Prerequisites:
 - `NPM_TOKEN` secret set in GitHub repo Settings → Secrets → Actions
+- `WINGET_TOKEN` secret (PAT with `public_repo` scope) — used by the
+  `winget.yml` workflow to submit each release to `microsoft/winget-pkgs`.
 
 ## Docs Index
 

@@ -194,6 +194,16 @@ jobs:
             echo "Collected plugin: $target_name ($size bytes)"
           done
 
+      - name: Build Windows installer
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          choco install innosetup --version=6.3.3 --no-progress -y
+          $sourceDir = Join-Path (Get-Location) "staging"
+          $outputDir = Join-Path (Get-Location) "staging-installer"
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "scripts/winget/santui.iss" /DMyAppVersion="$env:VERSION" /DSourceDir="$sourceDir" /DOutputDir="$outputDir"
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
+
       - name: Package Windows
         if: matrix.os == 'windows-latest'
         shell: pwsh
@@ -224,6 +234,13 @@ jobs:
           name: plugin-binaries-${{ matrix.target }}
           path: plugin-binaries/
 
+      - name: Upload artifact (Windows installer)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v7
+        with:
+          name: installer-${{ matrix.target }}
+          path: staging-installer/*.exe
+
   release:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: build
@@ -247,6 +264,12 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           pattern: plugin-binaries-*
+          merge-multiple: true
+          path: _assets
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: installer-*
           merge-multiple: true
           path: _assets
 
