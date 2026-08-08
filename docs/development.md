@@ -5,7 +5,7 @@
 lefthook runs the following checks automatically on commit:
 
 - `cargo fmt --check` (or `cargo fmt` to auto-fix)
-- `cargo clippy --workspace -- -D warnings`
+- `./scripts/check.sh clippy` (host + core + builtins + stable plugins only)
 
 Install hooks: `lefthook install`. You can also run these manually — CI will also catch failures on push.
 
@@ -61,6 +61,7 @@ santui/
 │   └── app/            — binary entry point (main.rs)
 ├── templates/          — cargo-generate plugin SDK template
 ├── website/            — VitePress docs site
+├── packages/           — npm / scoop / chocolatey / winget packages
 ├── docs/               — architecture & dev docs
 ├── scripts/            — dev setup & release packaging
 ├── native/             — runtime native dependencies (mpv DLLs, station DB)

@@ -11,7 +11,7 @@ santui.exe (host)
        └─ reads PluginMsg { commands, hints, palette_commands, request, plugin_message, consumed } from plugin's stdout
 ```
 
-- The host owns all rendering. Your plugin returns a list of `RenderCmd` values — `Text`, `Clear`, `Rect`, `Dim`, `Border`, `Paragraph`, `List`, and `Table`.
+- The host owns all rendering. Your plugin returns a list of `RenderCmd` values — `Text`, `Clear`, `Rect`, `Dim`, `Border`, `Paragraph`, `List`, `Table`, and `Gauge`.
 - The host polls your plugin every frame via `Tick`. Response handling is non-blocking — the host never waits on your plugin.
 - `Init` is non-blocking: the host sends `Init` and drains any pending responses without waiting — a loading state is shown until the plugin sends its first response. Key events are also non-blocking: the host sends the key, drains pending responses, and uses the latest `consumed` flag. For `Esc`, the host uses an event-driven protocol resolved over ~10 frames (~1s).
 
@@ -19,7 +19,7 @@ santui.exe (host)
 
 ### Prerequisites
 
-- [Rust](https://rustup.rs/) 1.70+
+- [Rust](https://rustup.rs/) 1.85+ (edition 2024)
 - [cargo-generate](https://github.com/cargo-generate/cargo-generate):
   ```bash
   cargo install cargo-generate
@@ -102,6 +102,7 @@ Add your own fields here. The `Init` message provides the current theme and term
 | `PaletteCommand` | User selected a palette command from `palette_commands` |
 | `PluginMessage` | Another plugin sent a message |
 | `DbValue` | Response to a `PluginRequest::DbGet` or `DbSet` — contains `key` and `value` from the database |
+| `LogEntries` | Log entries captured by the host's runtime logger — sent to the log-viewer plugin on every tick while entries are pending |
 | `Shutdown` | Santui is closing — exit cleanly |
 
 ### Responding
@@ -137,14 +138,14 @@ fn respond(&self, consumed: bool) {
 
 | Command | Purpose |
 |---------|---------|
-| `Text { x, y, text, fg, bg, bold }` | Draw a string at (x,y) with optional colours and bold |
+| `Text { x, y, text, fg, bg, bold, modifiers? }` | Draw a string at (x,y) with optional colours and bold (`modifiers` is a `MOD_*` bitmask) |
 | `Clear { x, y, w, h }` | Clear a rectangular region |
 | `Rect { x, y, w, h, bg }` | Fill a rectangle with a background colour |
 | `Dim { x, y, w, h, bg }` | Dim an area: darkens existing foreground/background and applies `bg` to cells without an explicit background. Use for palette/modal overlays |
-| `Border { x, y, w, h, fg, borders, bg?, title?, title_fg?, title_dash_fg? }` | Draw a box border (bitmask: 1=LEFT, 2=RIGHT, 4=TOP, 8=BOTTOM, 15=ALL) with optional fill and title |
-| `Paragraph { x, y, w, h, text, style, wrap }` | Rendered wrapped text within a rectangle |
+| `Border { x, y, w, h, fg, borders, bg?, title?, title_fg?, title_dash_fg?, border_type? }` | Draw a box border (bitmask: 1=LEFT, 2=RIGHT, 4=TOP, 8=BOTTOM, 15=ALL) with optional fill and title. `border_type` is `BORDER_TYPE_PLAIN` (default), `BORDER_TYPE_ROUNDED`, `BORDER_TYPE_DOUBLE`, or `BORDER_TYPE_THICK` |
+| `Paragraph { x, y, w, h, text?, style, wrap?, spans?, alignment? }` | Rendered wrapped text within a rectangle. `spans` provides per-span inline styling (overrides `text`); `alignment` is `ALIGN_LEFT` (default), `ALIGN_CENTER`, or `ALIGN_RIGHT` |
 | `List { x, y, w, h, items, selected?, style, highlight_style }` | A scrollable list with selection highlighting |
-| `Table { x, y, w, h, header, header_style, rows, column_widths, selected?, style, highlight_style, current_row?, current_style? }` | A table with header, rows, optional current-row highlight |
+| `Table { x, y, w, h, header, header_style, rows, column_widths, selected?, style, highlight_style, current_row?, current_style?, cell_styles? }` | A table with header, rows, optional current-row highlight, and optional per-cell styles |
 
 Colours are `[u8; 3]` RGB arrays (e.g. `[255, 0, 0]` for red). Use `None` for `fg`/`bg` to inherit the terminal default.
 
@@ -154,6 +155,7 @@ pub struct TextStyle {
     pub fg: Option<[u8; 3]>,
     pub bg: Option<[u8; 3]>,
     pub bold: bool,
+    pub modifiers: u16,  // bitmask of MOD_* constants (e.g. MOD_UNDERLINED)
 }
 ```
 

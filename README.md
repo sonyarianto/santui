@@ -74,7 +74,7 @@ cd santui
 cargo build --workspace && cargo run -p santui
 ```
 
-Requires Rust 1.70+. No plugins included — install them from the Plugin Registry after launching.
+Requires Rust 1.85+ (edition 2024). No plugins included — install them from the Plugin Registry after launching.
 
 ### Dev mode (testing plugins locally)
 

@@ -42,7 +42,7 @@ App
 - Heartbeat monitoring detects and resets stuck mpv thread
 
 ## Features
-- Search radio stations by name, country, language, tag
+- Search radio stations by name, country, or genre
 - Browse by country/category with accordion sidebar
 - Play station via mpv with auto-reconnect on failure
 - Real-time metadata display (song title, artist)

@@ -26,13 +26,13 @@ ui.rs     → rendering (overview + 5 detail screens)
 ```
 App
 ├── state: SysMonState
-│   ├── snapshot: SystemSnapshot  — cpu / mem / disks / net / processes / hostname / load avg
-│   ├── history: MetricHistory    — 60-sample ring buffers for CPU, RAM, net RX/TX
+│   ├── snapshot: SystemSnapshot  — cpu / mem / disks / net / processes / hostname / load avg / battery / shell
+│   ├── history: MetricHistory    — 60-sample ring buffers for CPU, RAM, SWAP, net RX/TX
 │   ├── screen: Screen            — Overview / CpuDetail / MemDetail / DiskDetail / NetDetail / ProcessList
 │   ├── process_sort: SortBy      — CPU % / Memory / Name
 │   ├── selected_process          — process list cursor
 │   └── last_second               — tick guard for 1s sampling
-├── sampler: Sampler              — sysinfo handles + cached process top-10
+├── sampler: Sampler              — sysinfo handles + cached process top-20
 ├── theme / area / dirty / cached_commands
 └── pending_request               — always None (stateless, no persistence)
 ```
@@ -50,16 +50,16 @@ App
 
 ## Features
 - Full-window panel with title ("System Monitor") using the shared `ui::draw_panel` (same visual language as other stable plugins); inner panels share the same component
-- Overview: Computer info (name/OS/uptime), CPU / Memory / Disk / Network 4-panel row with usage bars + 60s sparklines, top-10 processes list
+- Overview: Computer info (name/OS/uptime), CPU / Memory / Disk / Network 4-panel row with usage bars + 60s sparklines, top-20 processes list
 - Color-coded bars: `theme.success` (<60%), `theme.highlight` (60-80%), `theme.error` (>80%); disk uses its own thresholds
 - Detail screens (`1`-`5`):
   1. CPU: per-core bars (2 columns), global %, sparkline, load average
   2. Memory: RAM/SWAP bars + usage text, 60s RAM/SWAP history sparklines
   3. Disk: mount / device / FS / used / total / usage table
   4. Network: per-interface ↓/↑ speed + totals table
-  5. Processes: PID / name / CPU % / memory table, `s` cycles sort (CPU → Memory → Name), `↑↓`/`jk` navigate
+  5. Processes: PID / name / path / CPU % / memory table, `s` cycles sort (CPU → Memory → Name), `↑↓`/`jk` navigate
 - `Esc` on detail screens returns to Overview; `Esc` on Overview passes through to the host (plugin close)
-- `status_hints` reflect the active screen (1-5 on overview, sort/navigate on process list)
+- `status_hints` reflect the active screen (1-5 on overview, none on detail screens, sort/navigate on process list)
 - Load average and uptime formatting handle long-running systems
 
 ## Constraints & Rules

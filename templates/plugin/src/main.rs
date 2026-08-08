@@ -1,7 +1,7 @@
 use santui_ipc::protocol::{
     Area, HostMsg, IpcKey, IpcKeyModifiers, PluginMsg, RenderCmd, ThemeData,
 };
-use std::io::{self, BufRead};
+use std::io;
 
 /// Per-plugin state.  Add your own fields below.
 struct PluginState {
@@ -48,6 +48,7 @@ impl PluginState {
             fg: Some(self.theme.accent),
             bg: None,
             bold: true,
+            modifiers: 0,
         }]
     }
 
@@ -58,6 +59,7 @@ impl PluginState {
             hints: vec![("Ctrl+P".into(), "commands".into())],
             palette_commands: vec![],
             request: None,
+            plugin_message: None,
             consumed,
         };
         let mut out = io::stdout().lock();
@@ -117,6 +119,7 @@ fn main() {
                 // arm to update your state from the database response.
                 let _ = (key, value);
             }
+            HostMsg::LogEntries { .. } => {}
         }
 
         // Every host message expects at least one response.
@@ -133,6 +136,7 @@ fn main() {
                 hints: vec![],
                 palette_commands: vec![],
                 request: None,
+                plugin_message: None,
                 consumed: false,
             };
             let mut out = io::stdout().lock();

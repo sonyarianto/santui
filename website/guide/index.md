@@ -128,7 +128,7 @@ To build Santui from source and test plugins locally without a GitHub release:
 
 ### Prerequisites
 
-- [Rust](https://rustup.rs/) 1.70+
+- [Rust](https://rustup.rs/) 1.85+ (edition 2024)
 - For the Radio Stream Player: [libmpv](https://mpv.io/installation/) (`apt install libmpv2`, `brew install mpv`, `dnf install libmpv`, or bundled on Windows)
 
 ### Build & run
@@ -154,7 +154,7 @@ By default, the Plugin Registry fetches manifests from GitHub Releases. In devel
 ```
 
 What `dev-setup` does:
-1. Builds the workspace (`cargo build --workspace`)
+1. Builds the host binary + builtins + stable plugins (those with `"status": "stable"` in `plugins-manifest.json`)
 2. Copies native assets into `target/debug/native/`
 3. Scans for plugin binaries and generates `plugins.json` with real SHA-256 hashes
 
