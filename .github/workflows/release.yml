@@ -199,9 +199,14 @@ jobs:
         shell: pwsh
         run: |
           choco install innosetup --version=6.3.3 --no-progress -y
-          $sourceDir = Join-Path (Get-Location) "staging"
+          $installerStage = Join-Path (Get-Location) "installer-staging"
+          New-Item -ItemType Directory -Path $installerStage -Force | Out-Null
+          Copy-Item "staging\santui.exe" $installerStage
+          Copy-Item "staging\santui-registry-plugin.exe" $installerStage -ErrorAction SilentlyContinue
+          Copy-Item "staging\santui-log-viewer.exe" $installerStage -ErrorAction SilentlyContinue
+          if (Test-Path "staging\native") { Copy-Item "staging\native" "$installerStage\native" -Recurse -Force }
           $outputDir = Join-Path (Get-Location) "staging-installer"
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "scripts/winget/santui.iss" /DMyAppVersion="$env:VERSION" /DSourceDir="$sourceDir" /DOutputDir="$outputDir"
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "scripts/winget/santui.iss" /DMyAppVersion="$env:VERSION" /DSourceDir="$installerStage" /DOutputDir="$outputDir"
           if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
 
       - name: Package Windows

@@ -48,7 +48,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "{#SourceDir}\santui.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SourceDir}\santui-*.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceDir}\santui-registry-plugin.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#SourceDir}\santui-log-viewer.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "{#SourceDir}\*.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "{#SourceDir}\native\*"; DestDir: "{app}\native"; Flags: ignoreversion recursesubdirs skipifsourcedoesntexist
 
