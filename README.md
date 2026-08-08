@@ -43,7 +43,7 @@ npm install -g santui
 santui
 ```
 
-**PowerShell** — ⚠️ Windows may block the downloaded binary:
+**PowerShell**:
 
 ```powershell
 irm https://santuiapp.vercel.app/install.ps1 | iex
