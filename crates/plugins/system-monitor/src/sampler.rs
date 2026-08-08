@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use sysinfo::{Disks, Networks, ProcessesToUpdate, RefreshKind, System};
 
 use crate::state::{
-    CpuSnapshot, DiskSnapshot, MemSnapshot, NetSnapshot, ProcessSnapshot, SystemSnapshot,
+    BatterySnapshot, CpuSnapshot, DiskSnapshot, MemSnapshot, NetSnapshot, ProcessSnapshot,
+    SystemSnapshot,
 };
 
 pub struct Sampler {
@@ -13,7 +14,7 @@ pub struct Sampler {
     prev_net_rx: HashMap<String, u64>,
     prev_net_tx: HashMap<String, u64>,
     prev_sample_time: std::time::Instant,
-    total_processes: u16,
+    total_processes: u32,
     top_processes: Vec<ProcessSnapshot>,
 }
 
@@ -108,20 +109,32 @@ impl Sampler {
                 .sys
                 .processes()
                 .values()
-                .map(|p| ProcessSnapshot {
-                    pid: p.pid().as_u32(),
-                    name: p.name().to_string_lossy().into_owned(),
-                    cpu_pct: p.cpu_usage(),
-                    mem_bytes: p.memory(),
+                .map(|p| {
+                    let full_name = p
+                        .cmd()
+                        .first()
+                        .and_then(|c| std::path::Path::new(c).file_name())
+                        .map(|f| f.to_string_lossy().into_owned())
+                        .unwrap_or_else(|| p.name().to_string_lossy().into_owned());
+                    ProcessSnapshot {
+                        pid: p.pid().as_u32(),
+                        name: full_name,
+                        path: p
+                            .exe()
+                            .map(|e| e.to_string_lossy().into_owned())
+                            .unwrap_or_default(),
+                        cpu_pct: p.cpu_usage(),
+                        mem_bytes: p.memory(),
+                    }
                 })
                 .collect();
-            self.total_processes = all_procs.len() as u16;
+            self.total_processes = all_procs.len() as u32;
             all_procs.sort_by(|a, b| {
                 b.cpu_pct
                     .partial_cmp(&a.cpu_pct)
                     .unwrap_or(std::cmp::Ordering::Equal)
             });
-            all_procs.truncate(10);
+            all_procs.truncate(crate::state::TOP_PROCESSES);
             self.top_processes = all_procs;
         }
         let top_processes = self.top_processes.clone();
@@ -145,8 +158,54 @@ impl Sampler {
             os_name: System::long_os_version().unwrap_or_default(),
             uptime_secs: System::uptime(),
             load_avg: [load_avg.one, load_avg.five, load_avg.fifteen],
+            battery: read_battery(),
+            shell: std::env::var("SHELL")
+                .ok()
+                .and_then(|s| {
+                    std::path::Path::new(&s)
+                        .file_name()
+                        .map(|f| f.to_string_lossy().into_owned())
+                })
+                .unwrap_or_default(),
         }
     }
+}
+
+/// Reads the first battery from sysfs (`/sys/class/power_supply`).
+/// Returns `None` on non-Linux systems or when no battery is present.
+#[cfg(target_os = "linux")]
+fn read_battery() -> Option<BatterySnapshot> {
+    let entries = std::fs::read_dir("/sys/class/power_supply").ok()?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let kind = std::fs::read_to_string(path.join("type")).unwrap_or_default();
+        if kind.trim() != "Battery" {
+            continue;
+        }
+        let pct = std::fs::read_to_string(path.join("capacity"))
+            .ok()?
+            .trim()
+            .parse::<f32>()
+            .ok()?;
+        let status = std::fs::read_to_string(path.join("status")).unwrap_or_default();
+        let state = match status.trim() {
+            "Charging" => "Charging",
+            "Discharging" => "Discharging",
+            "Full" => "Full",
+            "Not charging" => "Not charging",
+            _ => "Unknown",
+        };
+        return Some(BatterySnapshot {
+            pct: pct.clamp(0.0, 100.0),
+            state: state.into(),
+        });
+    }
+    None
+}
+
+#[cfg(not(target_os = "linux"))]
+fn read_battery() -> Option<BatterySnapshot> {
+    None
 }
 
 pub fn fmt_bytes(bytes: u64) -> String {

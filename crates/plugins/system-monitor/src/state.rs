@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 
 pub const HISTORY_LEN: usize = 60;
+pub const TOP_PROCESSES: usize = 20;
 
 #[derive(Debug, Clone, Default)]
 pub struct CpuSnapshot {
@@ -41,8 +42,15 @@ pub struct NetSnapshot {
 pub struct ProcessSnapshot {
     pub pid: u32,
     pub name: String,
+    pub path: String,
     pub cpu_pct: f32,
     pub mem_bytes: u64,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct BatterySnapshot {
+    pub pct: f32,
+    pub state: String,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -51,17 +59,20 @@ pub struct SystemSnapshot {
     pub mem: MemSnapshot,
     pub disks: Vec<DiskSnapshot>,
     pub net: Vec<NetSnapshot>,
-    pub total_processes: u16,
+    pub total_processes: u32,
     pub top_processes: Vec<ProcessSnapshot>,
     pub hostname: String,
     pub os_name: String,
     pub uptime_secs: u64,
     pub load_avg: [f64; 3],
+    pub battery: Option<BatterySnapshot>,
+    pub shell: String,
 }
 
 pub struct MetricHistory {
     pub cpu: VecDeque<f32>,
     pub ram: VecDeque<f32>,
+    pub swap: VecDeque<f32>,
     pub net_rx: VecDeque<u64>,
     pub net_tx: VecDeque<u64>,
 }
@@ -71,6 +82,7 @@ impl Default for MetricHistory {
         Self {
             cpu: VecDeque::with_capacity(HISTORY_LEN),
             ram: VecDeque::with_capacity(HISTORY_LEN),
+            swap: VecDeque::with_capacity(HISTORY_LEN),
             net_rx: VecDeque::with_capacity(HISTORY_LEN),
             net_tx: VecDeque::with_capacity(HISTORY_LEN),
         }
@@ -84,9 +96,15 @@ impl MetricHistory {
         } else {
             0.0
         };
+        let swap_pct = if snap.mem.swap_total > 0 {
+            snap.mem.swap_used as f32 / snap.mem.swap_total as f32 * 100.0
+        } else {
+            0.0
+        };
 
         self.cpu.push_back(snap.cpu.global_pct);
         self.ram.push_back(ram_pct);
+        self.swap.push_back(swap_pct);
 
         let net_rx: u64 = snap.net.iter().map(|n| n.rx_bytes_sec).sum();
         let net_tx: u64 = snap.net.iter().map(|n| n.tx_bytes_sec).sum();
@@ -98,6 +116,9 @@ impl MetricHistory {
         }
         while self.ram.len() > HISTORY_LEN {
             self.ram.pop_front();
+        }
+        while self.swap.len() > HISTORY_LEN {
+            self.swap.pop_front();
         }
         while self.net_rx.len() > HISTORY_LEN {
             self.net_rx.pop_front();
@@ -184,6 +205,7 @@ mod tests {
         }
         assert_eq!(mh.cpu.len(), HISTORY_LEN);
         assert_eq!(mh.ram.len(), HISTORY_LEN);
+        assert_eq!(mh.swap.len(), HISTORY_LEN);
         assert_eq!(mh.net_rx.len(), HISTORY_LEN);
         assert_eq!(mh.net_tx.len(), HISTORY_LEN);
     }
@@ -202,6 +224,7 @@ mod tests {
         ProcessSnapshot {
             pid: 0,
             name: name.into(),
+            path: String::new(),
             cpu_pct: cpu,
             mem_bytes: mem,
         }

@@ -160,16 +160,15 @@ impl App {
         match self.state.screen {
             Screen::Overview => vec![
                 ("1".into(), "cpu".into()),
-                ("2".into(), "mem".into()),
+                ("2".into(), "memory".into()),
                 ("3".into(), "disk".into()),
-                ("4".into(), "net".into()),
-                ("5".into(), "procs".into()),
+                ("4".into(), "network".into()),
+                ("5".into(), "processes".into()),
             ],
             Screen::CpuDetail | Screen::MemDetail | Screen::DiskDetail | Screen::NetDetail => {
-                vec![("Esc".into(), "overview".into())]
+                vec![]
             }
             Screen::ProcessList => vec![
-                ("Esc".into(), "overview".into()),
                 ("s".into(), "sort".into()),
                 ("↑↓".into(), "navigate".into()),
             ],
@@ -330,6 +329,7 @@ mod tests {
             .push(state::ProcessSnapshot {
                 pid: 1,
                 name: "a".into(),
+                path: String::new(),
                 cpu_pct: 10.0,
                 mem_bytes: 100,
             });
@@ -339,6 +339,7 @@ mod tests {
             .push(state::ProcessSnapshot {
                 pid: 2,
                 name: "b".into(),
+                path: String::new(),
                 cpu_pct: 20.0,
                 mem_bytes: 200,
             });
@@ -357,6 +358,7 @@ mod tests {
             .push(state::ProcessSnapshot {
                 pid: 1,
                 name: "a".into(),
+                path: String::new(),
                 cpu_pct: 10.0,
                 mem_bytes: 100,
             });
