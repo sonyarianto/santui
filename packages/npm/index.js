@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const { spawn, execSync } = require('child_process');
+const { spawn, execFileSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
@@ -49,6 +49,113 @@ function download(url, dest) {
 
 function die(msg) { console.error(msg); process.exit(1); }
 
+// ── Extraction helpers ──
+
+// Run a command quietly (no shell → no quoting bugs). Returns null on
+// success, or a truncated error string on failure (including stderr).
+function runQuiet(cmd, args, env) {
+  try {
+    execFileSync(cmd, args, { stdio: 'pipe', env: env || process.env });
+    return null;
+  } catch (err) {
+    const chunks = [];
+    if (err.stderr) chunks.push(err.stderr.toString());
+    if (err.stdout) chunks.push(err.stdout.toString());
+    // err.message contains "Command failed: ..." but not always the stderr,
+    // so include both. Truncate: PowerShell errors are very verbose.
+    let msg = chunks.join('\n').trim() || err.message || String(err);
+    if (msg.length > 2000) msg = msg.slice(0, 2000) + '\n... (truncated)';
+    return msg;
+  }
+}
+
+// Quote a path for PowerShell -Command using single quotes
+// (embedded single quotes are doubled per PowerShell rules).
+function psQuote(p) { return `'${String(p).replace(/'/g, "''")}'`; }
+
+// `powershell.exe` (Desktop 5.1) inherits PSModulePath from the parent
+// process. When launched from inside pwsh 7 (esp. the Store build), it tries
+// to autoload Microsoft.PowerShell.Archive from the PS7 module dir and fails
+// with CouldNotAutoloadMatchingModule. Strip PS7/Store entries and make sure
+// the classic Desktop module path is present.
+function desktopPsEnv() {
+  const env = { ...process.env };
+  const key = Object.keys(env).find((k) => k.toLowerCase() === 'psmodulepath');
+  const sysRoot = env.SystemRoot || env.systemroot || 'C:\\Windows';
+  const classic = `${sysRoot}\\System32\\WindowsPowerShell\\v1.0\\Modules`;
+  const current = (key && env[key]) || env.PSModulePath || '';
+  const parts = current
+    .split(';')
+    .map((p) => p.trim())
+    .filter((p) => p !== '')
+    .filter((p) => {
+      const l = p.toLowerCase();
+      return !l.includes('powershell\\7') && !l.includes('powershell/7') && !l.includes('windowsapps');
+    });
+  if (!parts.some((p) => p.toLowerCase() === classic.toLowerCase())) parts.push(classic);
+  env.PSModulePath = parts.join(';');
+  if (key) env[key] = env.PSModulePath;
+  return env;
+}
+
+const PS_FLAGS = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass'];
+
+// Windows zip extraction with fallbacks:
+//   1. tar.exe (bsdtar, built into Win10 17063+/Server 2019+) — no PowerShell.
+//   2. powershell 5.1 Expand-Archive with Bypass + sanitized PSModulePath.
+//   3. pwsh 7 Expand-Archive with Bypass (if pwsh is installed).
+//   4. .NET ZipFile via powershell/pwsh — needs no Archive module at all.
+function extractZipWindows(archivePath, tmpDir) {
+  const attempts = [];
+
+  const tarErr = runQuiet('tar', ['-xf', archivePath, '-C', tmpDir]);
+  if (!tarErr) return;
+  attempts.push(`[tar]\n${tarErr}`);
+
+  const expandCmd =
+    `Expand-Archive -LiteralPath ${psQuote(archivePath)} ` +
+    `-DestinationPath ${psQuote(tmpDir)} -Force`;
+  const psEnv = desktopPsEnv();
+  const psErr = runQuiet('powershell', [...PS_FLAGS, '-Command', expandCmd], psEnv);
+  if (!psErr) return;
+  attempts.push(`[powershell Expand-Archive]\n${psErr}`);
+
+  const pwshErr = runQuiet('pwsh', [...PS_FLAGS, '-Command', expandCmd]);
+  // pwsh may simply not be installed (ENOENT) — only record if powershell
+  // also failed, which it did at this point.
+  if (!pwshErr) return;
+  attempts.push(`[pwsh Expand-Archive]\n${pwshErr}`);
+
+  const dotnetCmd =
+    `Add-Type -AssemblyName System.IO.Compression.FileSystem; ` +
+    `[System.IO.Compression.ZipFile]::ExtractToDirectory(${psQuote(archivePath)}, ${psQuote(tmpDir)})`;
+  const dotnetErr = runQuiet('powershell', [...PS_FLAGS, '-Command', dotnetCmd], psEnv);
+  if (!dotnetErr) return;
+  attempts.push(`[powershell .NET ZipFile]\n${dotnetErr}`);
+
+  const dotnetPwshErr = runQuiet('pwsh', [...PS_FLAGS, '-Command', dotnetCmd]);
+  if (!dotnetPwshErr) return;
+  attempts.push(`[pwsh .NET ZipFile]\n${dotnetPwshErr}`);
+
+  throw new Error(
+    `All Windows extraction methods failed:\n${attempts.join('\n\n')}\n\n` +
+    'Workarounds:\n' +
+    `  1. Manually download the zip and extract it into this folder:\n     ${path.join(__dirname)}\n` +
+    '  2. Or run from cmd.exe (not PowerShell 7 Store) and retry:\n' +
+    '       santui\n' +
+    "  3. Check ExecutionPolicy: Get-ExecutionPolicy -List"
+  );
+}
+
+function extractArchive(archivePath, tmpDir, ext) {
+  if (ext !== 'zip') {
+    const err = runQuiet('tar', ['xzf', archivePath, '-C', tmpDir]);
+    if (err) throw new Error(`tar extraction failed: ${err}`);
+    return;
+  }
+  extractZipWindows(archivePath, tmpDir);
+}
+
 async function downloadBinary() {
   const target = getTarget();
   const ext = getArchiveExt();
@@ -64,11 +171,7 @@ async function downloadBinary() {
     await download(archiveUrl, archivePath);
     console.error('  Extracting...');
 
-    if (ext === 'zip') {
-      execSync(`powershell -Command "Expand-Archive -Path '${archivePath}' -DestinationPath '${tmpDir}' -Force"`, { stdio: 'pipe' });
-    } else {
-      execSync(`tar xzf '${archivePath}' -C '${tmpDir}'`, { stdio: 'pipe' });
-    }
+    extractArchive(archivePath, tmpDir, ext);
 
     // Determine extracted root (some archives wrap in a top-level folder)
     const entries = fs.readdirSync(tmpDir).filter(e => e !== path.basename(archivePath));
