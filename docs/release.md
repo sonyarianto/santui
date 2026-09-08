@@ -58,7 +58,7 @@ submitted manually. After that, subsequent releases are automated.
    (Inno Setup) and attaches it to the GitHub Release.
 2. On a machine with `wingetcreate` installed:
    ```powershell
-   wingetcreate update sonyarianto.Santui -u https://github.com/sonyarianto/santui/releases/download/v0.2.40/santui-setup.exe -v 0.2.40
+    wingetcreate update sonyarianto.Santui -u https://github.com/sonyarianto/santui/releases/download/vx.y.z/santui-setup.exe -v x.y.z
    ```
 3. This creates the manifest locally; review it, then submit a PR to
    `microsoft/winget-pkgs` (or let `wingetcreate` submit it with `--submit`).
