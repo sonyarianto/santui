@@ -1,3 +1,16 @@
+## [unreleased]
+
+### ⚙️ Miscellaneous
+
+- Update changelog for v0.2.41
+
+### 🐛 Bug Fixes
+
+- Replace useless format! with to_string in dictionary-thesaurus
+- Replace useless format! with to_string in iptv-player and habit-tracker
+- Bundle libmpv LGPL in Windows release and improve missing-DLL error
+
+Full Changelog: [v0.2.41...](https://github.com/sonyarianto/santui/compare/v0.2.41...)
 ## [0.2.41] - 2026-09-08
 
 ### ⚙️ Miscellaneous
