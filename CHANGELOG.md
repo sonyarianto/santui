@@ -1,3 +1,22 @@
+## [unreleased]
+
+### ⚙️ Miscellaneous
+
+- Update changelog for v0.2.40
+
+### 🐛 Bug Fixes
+
+- Make Windows npm zip extraction resilient with fallbacks
+
+### 📚 Documentation
+
+- Use placeholder version in winget example
+
+### 🚀 Features
+
+- Bundle only builtin plugins in winget installer
+
+Full Changelog: [v0.2.40...](https://github.com/sonyarianto/santui/compare/v0.2.40...)
 ## [0.2.40] - 2026-08-08
 
 ### ⚙️ Miscellaneous
