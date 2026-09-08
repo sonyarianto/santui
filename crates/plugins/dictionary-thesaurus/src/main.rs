@@ -606,7 +606,7 @@ fn meaning_items(result: &LookupResult) -> Vec<String> {
         .meanings
         .iter()
         .flat_map(|m| {
-            let mut rows = vec![format!("{}", m.part_of_speech)];
+            let mut rows = vec![m.part_of_speech.to_string()];
             rows.extend(m.definitions.iter().take(3).map(|d| {
                 format!(
                     "  - {}{}",
