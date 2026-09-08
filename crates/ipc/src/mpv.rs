@@ -158,13 +158,34 @@ impl Mpv {
             Some(l) => Arc::new(l),
             None => {
                 let hint = if cfg!(target_os = "macos") {
-                    "Try: brew install mpv"
+                    "Try: brew install mpv".to_string()
                 } else if cfg!(target_os = "linux") {
-                    "Install libmpv: apt install libmpv2/libmpv2t64 (Debian/Ubuntu) or dnf install libmpv (Fedora)"
+                    "Install libmpv: apt install libmpv2/libmpv2t64 (Debian/Ubuntu) or dnf install libmpv (Fedora)".to_string()
                 } else if cfg!(target_os = "windows") {
-                    "Ensure libmpv-2.dll is in the native/ directory"
+                    // Name the exact directories that were searched — there are
+                    // two `native/` candidates (plugin dir and host dir) and a
+                    // bare "native/" in the message does not say which one.
+                    let mut locations: Vec<String> = Vec::new();
+                    if let Some(ref d) = native_dir {
+                        locations.push(d.join("libmpv-2.dll").display().to_string());
+                    }
+                    if let Some(dir) = std::env::var_os("SANTUI_NATIVE_DIR") {
+                        let p = std::path::PathBuf::from(dir)
+                            .join("libmpv-2.dll")
+                            .display()
+                            .to_string();
+                        if !locations.contains(&p) {
+                            locations.push(p);
+                        }
+                    }
+                    locations.push("libmpv-2.dll / mpv.dll found via PATH".to_string());
+                    format!(
+                        "Searched:\n    {}\n  Fix: copy libmpv-2.dll into one of those directories (recent Santui releases bundle it — upgrade Santui), \
+                        or install an mpv player build and add it to PATH.\n  Standalone DLL: download mpv-dev-lgpl-x86_64-*.7z from https://github.com/zhongfly/mpv-winbuild/releases",
+                        locations.join("\n    ")
+                    )
                 } else {
-                    "Install libmpv for your platform"
+                    "Install libmpv for your platform".to_string()
                 };
                 let msg = format!("libmpv not found. {hint}");
                 errors.push(msg.clone());
