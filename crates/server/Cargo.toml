@@ -4,7 +4,7 @@ version = "0.2.42"
 edition = "2024"
 rust-version = "1.85"
 description = "Santui backend server — sync, auth, and web UI"
-license = "AGPL-3.0-only"
+license = "MIT OR Apache-2.0"
 repository = "https://github.com/sonyarianto/santui"
 
 [dependencies]

@@ -4,7 +4,7 @@ version = "0.2.42"
 edition = "2024"
 rust-version = "1.85"
 description = "Santui central SQLite database — per-user state for plugins"
-license = "AGPL-3.0-only"
+license = "MIT OR Apache-2.0"
 publish = false
 repository = "https://github.com/sonyarianto/santui"
 
