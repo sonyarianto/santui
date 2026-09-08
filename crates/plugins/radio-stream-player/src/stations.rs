@@ -22,6 +22,95 @@ pub fn load(conn: &Connection) -> Vec<Station> {
     })
 }
 
+/// Server-first catalog load with local SQLite fallback.
+///
+/// Tries `{SANTUI_API_URL}/api/v1/stations` (default `https://api3.sony-ak.com`)
+/// so station data can be maintained centrally; any failure — network error,
+/// non-200 status, invalid JSON, or an empty catalog — falls back to the local
+/// database, which always works offline. Kept separate from [`load`] so the
+/// local path stays directly testable without network access.
+pub fn load_remote_or_local(conn: &Connection) -> Vec<Station> {
+    match fetch_remote() {
+        Ok(remote) if !remote.is_empty() => {
+            log::info!(
+                "  📡 stations loaded from {} ({} stations)",
+                api_base_url(),
+                remote.len()
+            );
+            remote
+        }
+        Ok(_) => {
+            log::warn!("  ⚠️  remote catalog empty, falling back to local SQLite");
+            load(conn)
+        }
+        Err(e) => {
+            log::warn!("  ⚠️  remote stations failed ({e}), falling back to local SQLite");
+            load(conn)
+        }
+    }
+}
+
+pub const DEFAULT_API_BASE_URL: &str = "https://api3.sony-ak.com";
+const REMOTE_PAGE_LIMIT: i64 = 20_000;
+
+/// Pure base-URL resolution (trailing slashes trimmed); reads no environment
+/// so it stays hermetic under test. See [`api_base_url`].
+pub fn api_base_url_from(env_value: Option<&str>) -> String {
+    let base = env_value
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or(DEFAULT_API_BASE_URL);
+    base.trim_end_matches('/').to_string()
+}
+
+pub fn api_base_url() -> String {
+    api_base_url_from(std::env::var("SANTUI_API_URL").ok().as_deref())
+}
+
+#[derive(Deserialize)]
+struct StationsPage {
+    #[serde(default)]
+    stations: Vec<Station>,
+    #[serde(default)]
+    total: i64,
+}
+
+fn parse_stations_response(text: &str) -> Result<StationsPage, String> {
+    serde_json::from_str(text).map_err(|e| format!("stations parse failed: {e}"))
+}
+
+fn fetch_page(base: &str, limit: i64, offset: i64) -> Result<StationsPage, String> {
+    let url = format!("{base}/api/v1/stations?limit={limit}&offset={offset}");
+    let mut resp = crate::http::agent()
+        .get(&url)
+        .call()
+        .map_err(|e| format!("stations request failed: {e}"))?;
+    let body = resp
+        .body_mut()
+        .read_to_string()
+        .map_err(|e| format!("stations read body failed: {e}"))?;
+    parse_stations_response(&body)
+}
+
+/// Fetch the full remote catalog, following pages if it outgrows one page.
+pub fn fetch_remote() -> Result<Vec<Station>, String> {
+    let base = api_base_url();
+    let mut all = Vec::new();
+    let mut offset = 0i64;
+    loop {
+        let page = fetch_page(&base, REMOTE_PAGE_LIMIT, offset)?;
+        if page.stations.is_empty() {
+            break;
+        }
+        offset += page.stations.len() as i64;
+        let done = page.total <= 0 || offset >= page.total;
+        all.extend(page.stations);
+        if done {
+            break;
+        }
+    }
+    Ok(all)
+}
+
 pub fn reload(conn: &Connection) -> Vec<Station> {
     crate::database::load_all(conn).unwrap_or_default()
 }
@@ -416,5 +505,94 @@ mod tests {
             genre: String::new(),
         };
         assert_eq!(s.country_name(), "XX");
+    }
+
+    #[test]
+    fn api_base_url_defaults_and_trims() {
+        assert_eq!(api_base_url_from(None), DEFAULT_API_BASE_URL);
+        assert_eq!(api_base_url_from(Some("")), DEFAULT_API_BASE_URL);
+        assert_eq!(api_base_url_from(Some("   ")), DEFAULT_API_BASE_URL);
+        assert_eq!(
+            api_base_url_from(Some("http://localhost:9876")),
+            "http://localhost:9876"
+        );
+        assert_eq!(
+            api_base_url_from(Some("https://api3.sony-ak.com///")),
+            "https://api3.sony-ak.com"
+        );
+    }
+
+    #[test]
+    fn parse_stations_response_valid() {
+        let body = r#"{"stations":[{"name":"Rock FM","url":"http://rock","country":"US","genre":"Rock"}],"total":1,"limit":20000,"offset":0}"#;
+        let page = parse_stations_response(body).unwrap();
+        assert_eq!(page.total, 1);
+        assert_eq!(page.stations.len(), 1);
+        assert_eq!(page.stations[0].name, "Rock FM");
+        assert_eq!(page.stations[0].genre, "Rock");
+    }
+
+    #[test]
+    fn parse_stations_response_tolerates_shape_drift() {
+        // Extra fields ignored; missing optional fields defaulted.
+        let body = r#"{"stations":[],"total":0,"limit":1,"offset":0,"extra":{}}"#;
+        let page = parse_stations_response(body).unwrap();
+        assert!(page.stations.is_empty());
+        let body = r#"{"stations":[]}"#;
+        let page = parse_stations_response(body).unwrap();
+        assert_eq!(page.total, 0);
+    }
+
+    #[test]
+    fn parse_stations_response_rejects_garbage() {
+        assert!(parse_stations_response("not json").is_err());
+        assert!(parse_stations_response(r#"{"stations":"nope"}"#).is_err());
+        // Cloudflare-style HTML error page must not parse as stations.
+        assert!(parse_stations_response("<html><body>error</body></html>").is_err());
+    }
+
+    const STUB_PAGE_1: &str = r#"{"stations":[{"name":"A","url":"http://a","country":"US","genre":"Rock"},{"name":"B","url":"http://b","country":"GB","genre":"Pop"}],"total":3,"limit":20000,"offset":0}"#;
+    const STUB_PAGE_2: &str = r#"{"stations":[{"name":"C","url":"http://c","country":"DE","genre":"Jazz"}],"total":3,"limit":20000,"offset":2}"#;
+
+    #[test]
+    fn fetch_remote_paginates_against_stub_server() {
+        use std::io::{Read, Write};
+
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let handle = std::thread::spawn(move || {
+            for stream in listener.incoming().take(2) {
+                let mut s = stream.unwrap();
+                let mut buf = [0u8; 4096];
+                let n = s.read(&mut buf).unwrap_or(0);
+                let req = String::from_utf8_lossy(&buf[..n]).into_owned();
+                let body = if req.contains("offset=2") {
+                    STUB_PAGE_2
+                } else {
+                    STUB_PAGE_1
+                };
+                let resp = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                );
+                s.write_all(resp.as_bytes()).unwrap();
+            }
+        });
+
+        // SAFETY: no other test in this binary reads or writes SANTUI_API_URL,
+        // so scoped mutation here cannot race.
+        unsafe {
+            std::env::set_var("SANTUI_API_URL", format!("http://{addr}"));
+        }
+        let result = fetch_remote();
+        unsafe {
+            std::env::remove_var("SANTUI_API_URL");
+        }
+        handle.join().unwrap();
+
+        let stations = result.unwrap();
+        assert_eq!(stations.len(), 3);
+        assert_eq!(stations[2].name, "C");
     }
 }

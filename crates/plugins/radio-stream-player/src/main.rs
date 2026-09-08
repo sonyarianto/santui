@@ -69,7 +69,7 @@ impl App {
     fn new() -> Self {
         let (db, station_list, init_error) = match database::open() {
             Ok(db) => {
-                let list = stations::load(&db);
+                let list = stations::load_remote_or_local(&db);
                 (Some(db), list, None)
             }
             Err(e) => {

@@ -69,5 +69,8 @@ Press `l` to toggle lyrics overlay. The lyrics panel snaps to the right (40% wid
 - Mpv thread heartbeat must never false-positive mark a healthy thread as stuck
 - Favorites loaded on init via `PluginRequest::DbGet { key: "favorites" }`
 - Station DB (`radio_stream_stations.db`) bundled in `native/` directory
+- Station catalog is server-first: on startup the plugin tries
+  `{SANTUI_API_URL}/api/v1/stations` (default `https://api3.sony-ak.com`)
+  and falls back to the local SQLite DB on any failure, so offline always works
 - Audio backend is libmpv (`libmpv-2.dll` on Windows, bundled in `native/` by the release workflow from zhongfly's LGPL mpv build — see https://github.com/zhongfly/mpv-winbuild). mpv is © the mpv developers, licensed LGPLv2.1+ in this build.
 - Metadata seq number prevents stale iTunes/lyrics results from overwriting newer metadata

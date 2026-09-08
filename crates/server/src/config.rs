@@ -31,6 +31,9 @@ pub struct CliArgs {
 
     #[arg(short = 's', long = "jwt-secret")]
     pub jwt_secret: Option<String>,
+
+    #[arg(long = "stations-db")]
+    pub stations_db: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone)]
@@ -39,6 +42,7 @@ pub struct ServerConfig {
     pub host: String,
     pub data_dir: PathBuf,
     pub jwt_secret: String,
+    pub stations_db: Option<PathBuf>,
 }
 
 fn default_data_dir() -> PathBuf {
@@ -97,11 +101,16 @@ impl ServerConfig {
             .or_else(|| std::env::var("SANTUI_SERVER_HOST").ok())
             .unwrap_or_else(|| "127.0.0.1".to_string());
 
+        let stations_db = args
+            .stations_db
+            .or_else(|| std::env::var("SANTUI_STATIONS_DB").ok().map(PathBuf::from));
+
         ServerConfig {
             port,
             host,
             data_dir,
             jwt_secret,
+            stations_db,
         }
     }
 }

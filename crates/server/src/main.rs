@@ -1,6 +1,7 @@
 mod auth;
 mod config;
 mod db;
+mod stations;
 mod sync;
 mod web;
 
@@ -13,6 +14,7 @@ use std::sync::Arc;
 pub struct AppState {
     pub config: config::ServerConfig,
     pub db: db::Database,
+    pub stations: stations::StationsDb,
 }
 
 #[tokio::main]
@@ -40,11 +42,13 @@ async fn main() {
     let state = Arc::new(AppState {
         config: config.clone(),
         db,
+        stations: stations::StationsDb::open(config.stations_db.clone()),
     });
 
     let app = Router::new()
         .route("/auth/login", post(auth::post_login))
         .route("/auth/me", get(auth::me))
+        .route("/api/v1/stations", get(stations::list_stations))
         .route(
             "/api/v1/data/{plugin}",
             get(sync::get_values).post(sync::upsert_values),
