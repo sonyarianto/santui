@@ -1,0 +1,13 @@
+# SQLite data (santui-server.db, .jwt_secret) + local backups.
+# local-path RWO is fine on this single-node cluster (same pattern as n8n/mysql).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: santui-data
+  namespace: santui
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi

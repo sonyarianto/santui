@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: santui-server
+  namespace: santui
+spec:
+  selector:
+    app: santui-server
+  ports:
+    - name: http
+      port: 9876
+      targetPort: http

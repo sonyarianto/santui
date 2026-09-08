@@ -1,0 +1,8 @@
+target/
+.git/
+website/node_modules/
+website/.vitepress/dist/
+website/.vitepress/cache/
+releases/
+*.log
+.DS_Store

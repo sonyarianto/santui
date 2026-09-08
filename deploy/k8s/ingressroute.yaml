@@ -1,0 +1,35 @@
+# Mirrors the apps/api2 IngressRoute shape: websecure + wildcard TLS,
+# plus an http companion that redirects to https.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: api3
+  namespace: santui
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`api3.sony-ak.com`)
+      services:
+        - name: santui-server
+          port: 9876
+  tls:
+    secretName: wildcard-sony-ak-com-tls
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: api3-http
+  namespace: santui
+spec:
+  entryPoints:
+    - web
+  routes:
+    - kind: Rule
+      match: Host(`api3.sony-ak.com`)
+      middlewares:
+        - name: redirect-to-https
+      services:
+        - name: santui-server
+          port: 9876

@@ -1,0 +1,56 @@
+name: server-image
+
+# Builds santui-server and pushes to GHCR. The k3s manifests in deploy/k8s
+# reference ghcr.io/<owner>/santui-server by tag. Make the package PUBLIC
+# (one click on the package page) or cluster pulls fail.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'crates/server/**'
+      - 'crates/core/**'
+      - 'crates/ipc/**'
+      - 'native/radio_stream_stations.db'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'Dockerfile'
+      - '.dockerignore'
+      - '.github/workflows/docker.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/santui-server
+          tags: |
+            type=sha
+            type=raw,value=edge
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

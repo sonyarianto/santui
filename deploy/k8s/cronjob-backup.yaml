@@ -1,0 +1,47 @@
+# Nightly online backup of the SQLite DB using the same image (it ships the
+# sqlite3 CLI). Keeps 7 daily copies on the PVC; offsite sync is a later step.
+# RWO multi-attach is safe here: single-node cluster, same node as the server.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: santui-db-backup
+  namespace: santui
+spec:
+  schedule: "0 2 * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          securityContext:
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+          containers:
+            - name: backup
+              image: ghcr.io/sonyarianto/santui-server:edge
+              imagePullPolicy: Always
+              command:
+                - sh
+                - -c
+                - |
+                  set -e
+                  mkdir -p /data/backups
+                  sqlite3 /data/santui-server.db ".backup '/data/backups/santui-server-$(date +%F).db'"
+                  ls -t /data/backups/santui-server-*.db | tail -n +8 | xargs -r rm --
+                  ls -la /data/backups | tail -5
+              volumeMounts:
+                - name: data
+                  mountPath: /data
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 250m
+                  memory: 256Mi
+          volumes:
+            - name: data
+              persistentVolumeClaim:
+                claimName: santui-data
