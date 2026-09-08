@@ -1,8 +1,9 @@
-## [unreleased]
+## [0.2.41] - 2026-09-08
 
 ### ⚙️ Miscellaneous
 
 - Update changelog for v0.2.40
+- Update changelog for v0.2.41
 
 ### 🐛 Bug Fixes
 
@@ -16,7 +17,7 @@
 
 - Bundle only builtin plugins in winget installer
 
-Full Changelog: [v0.2.40...](https://github.com/sonyarianto/santui/compare/v0.2.40...)
+Full Changelog: [v0.2.40...v0.2.41](https://github.com/sonyarianto/santui/compare/v0.2.40...v0.2.41)
 ## [0.2.40] - 2026-08-08
 
 ### ⚙️ Miscellaneous
