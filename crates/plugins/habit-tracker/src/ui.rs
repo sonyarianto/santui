@@ -353,23 +353,17 @@ fn render_editor(state: &HabitState, theme: &ThemeData, w: u16, h: u16) -> Vec<R
     let habit = state.editor_habit.clone().unwrap_or_default();
     let fields = ["Name", "Description", "Color"];
     let field_values: Vec<String> = vec![
-        format!(
-            "{}",
-            if state.editing && state.editor_focus == FocusField::Name {
-                format!("{}_", state.editor_buffer)
-            } else {
-                habit.name.clone()
-            }
-        ),
-        format!(
-            "{}",
-            if state.editing && state.editor_focus == FocusField::Description {
-                format!("{}_", state.editor_buffer)
-            } else {
-                habit.description.clone()
-            }
-        ),
-        format!("{}", habit.color),
+        if state.editing && state.editor_focus == FocusField::Name {
+            format!("{}_", state.editor_buffer)
+        } else {
+            habit.name.clone()
+        },
+        if state.editing && state.editor_focus == FocusField::Description {
+            format!("{}_", state.editor_buffer)
+        } else {
+            habit.description.clone()
+        },
+        habit.color.to_string(),
     ];
 
     for (i, (label, value)) in fields.iter().zip(field_values.iter()).enumerate() {

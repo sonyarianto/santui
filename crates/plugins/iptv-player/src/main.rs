@@ -683,7 +683,7 @@ impl App {
                         modifiers: 0,
                     }];
                 } else {
-                    let mut lines = vec![format!("{err}")];
+                    let mut lines = vec![err.to_string()];
                     for w in &self.mpv_warnings {
                         lines.push(format!("  {w}"));
                     }
