@@ -18,15 +18,18 @@ const binaryPath = path.join(__dirname, binaryName);
 function getTarget() {
   const os = process.platform;
   const arch = process.arch;
-  if (arch !== 'x64' && arch !== 'arm64') die(`Unsupported architecture: ${arch}`);
+  // This installer may itself be outdated (it only refreshes on `npm i -g`),
+  // so point at the update first — most "unsupported" reports are stale copies.
+  const updateHint = 'If you installed santui a while ago, update first: npm i -g santui@latest';
+  if (arch !== 'x64' && arch !== 'arm64') die(`Unsupported architecture: ${arch}\n  ${updateHint}`);
   if (os === 'win32') return 'x86_64-pc-windows-msvc';
   if (os === 'darwin') {
     if (arch === 'arm64') return 'aarch64-apple-darwin';
     if (arch === 'x64') return 'x86_64-apple-darwin';
-    die(`Unsupported architecture: ${arch}`);
+    die(`Unsupported architecture: ${arch}\n  ${updateHint}`);
   }
   if (os === 'linux') return 'x86_64-unknown-linux-gnu';
-  die(`Unsupported platform: ${os}`);
+  die(`Unsupported platform: ${os}\n  ${updateHint}`);
 }
 
 function getArchiveExt() { return process.platform === 'win32' ? 'zip' : 'tar.gz'; }
