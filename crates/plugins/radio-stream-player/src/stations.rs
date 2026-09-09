@@ -32,8 +32,16 @@ pub fn load(conn: &Connection) -> Vec<Station> {
 /// which always works offline. Kept separate from [`load`] so the local path
 /// stays directly testable without network access.
 pub fn load_remote_or_local(conn: &mut Connection) -> Vec<Station> {
+    let base = api_base_url();
+    load_remote_or_local_with(conn, &base)
+}
+
+/// Same as [`load_remote_or_local`] with an explicit base URL, so tests stay
+/// hermetic: no test in this binary may touch `SANTUI_API_URL`, because tests
+/// run in parallel threads sharing one process-global environment.
+fn load_remote_or_local_with(conn: &mut Connection, base: &str) -> Vec<Station> {
     let stored = read_stored_etag();
-    match fetch_remote_cached(stored) {
+    match fetch_remote_cached_with(stored, base) {
         FetchResult::Fresh(remote, etag) if !remote.is_empty() => {
             match store_cache(conn, &remote) {
                 Ok(()) => {
@@ -49,8 +57,7 @@ pub fn load_remote_or_local(conn: &mut Connection) -> Vec<Station> {
                 }
             }
             log::info!(
-                "  📡 stations loaded from {} ({} stations)",
-                api_base_url(),
+                "  📡 stations loaded from {base} ({} stations)",
                 remote.len()
             );
             remote
@@ -198,13 +205,13 @@ enum FetchResult {
 /// Fetch the full remote catalog, following pages if it outgrows one page.
 /// The stored ETag is sent on every page: a 304 mid-fetch means the catalog
 /// changed under us, which fails the whole fetch (caller falls back local).
-fn fetch_remote_cached(stored: Option<String>) -> FetchResult {
-    let base = api_base_url();
+/// Takes the base URL explicitly so tests never touch process-global env.
+fn fetch_remote_cached_with(stored: Option<String>, base: &str) -> FetchResult {
     let mut all = Vec::new();
     let mut etag = None;
     let mut offset = 0i64;
     loop {
-        match fetch_page_etag(&base, REMOTE_PAGE_LIMIT, offset, stored.as_deref()) {
+        match fetch_page_etag(base, REMOTE_PAGE_LIMIT, offset, stored.as_deref()) {
             Ok(PageOutcome::NotModified) if offset == 0 => return FetchResult::NotModified,
             Ok(PageOutcome::NotModified) => {
                 return FetchResult::Failed("catalog changed mid-fetch".into());
@@ -746,14 +753,7 @@ mod tests {
     #[test]
     fn fetch_remote_cached_paginates_against_stub_server() {
         let (base, handle) = stub_origin(2);
-        // SAFETY: no other test in this binary reads or writes SANTUI_API_URL.
-        unsafe {
-            std::env::set_var("SANTUI_API_URL", &base);
-        }
-        let result = fetch_remote_cached(None);
-        unsafe {
-            std::env::remove_var("SANTUI_API_URL");
-        }
+        let result = fetch_remote_cached_with(None, &base);
         handle.join().unwrap();
         match result {
             FetchResult::Fresh(stations, etag) => {
@@ -768,15 +768,8 @@ mod tests {
     #[test]
     fn fetch_remote_cached_honors_304() {
         let (base, handle) = stub_origin(3);
-        // SAFETY: see above.
-        unsafe {
-            std::env::set_var("SANTUI_API_URL", &base);
-        }
-        let matching = fetch_remote_cached(Some(STUB_ETAG.to_string()));
-        let stale = fetch_remote_cached(Some("\"stale-etag\"".to_string()));
-        unsafe {
-            std::env::remove_var("SANTUI_API_URL");
-        }
+        let matching = fetch_remote_cached_with(Some(STUB_ETAG.to_string()), &base);
+        let stale = fetch_remote_cached_with(Some("\"stale-etag\"".to_string()), &base);
         handle.join().unwrap();
         assert!(
             matches!(matching, FetchResult::NotModified),
@@ -853,14 +846,7 @@ mod tests {
         )
         .unwrap();
         // Discard port: connection refused immediately, no timeout wait.
-        // SAFETY: no other test in this binary reads or writes SANTUI_API_URL.
-        unsafe {
-            std::env::set_var("SANTUI_API_URL", "http://127.0.0.1:9");
-        }
-        let stations = load_remote_or_local(&mut conn);
-        unsafe {
-            std::env::remove_var("SANTUI_API_URL");
-        }
+        let stations = load_remote_or_local_with(&mut conn, "http://127.0.0.1:9");
         assert_eq!(stations.len(), 1);
         assert_eq!(stations[0].name, "Local Only");
     }
