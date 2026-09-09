@@ -14,7 +14,7 @@ tokio = { version = "1", features = ["full"] }
 tower-http = { version = "0.7", features = ["cors", "fs"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
-jsonwebtoken = "10"
+jsonwebtoken = { version = "10", features = ["rust_crypto"] }
 rusqlite = { version = "0.40", features = ["bundled"] }
 ureq = "3"
 tracing = "0.1"

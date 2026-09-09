@@ -34,6 +34,11 @@ pub struct CliArgs {
 
     #[arg(long = "stations-db")]
     pub stations_db: Option<PathBuf>,
+
+    /// Google OAuth client ID bound to this server. When set, `/auth/login`
+    /// rejects Google tokens not issued to this client (audience check).
+    #[arg(long = "google-client-id")]
+    pub google_client_id: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -43,6 +48,7 @@ pub struct ServerConfig {
     pub data_dir: PathBuf,
     pub jwt_secret: String,
     pub stations_db: Option<PathBuf>,
+    pub google_client_id: Option<String>,
 }
 
 fn default_data_dir() -> PathBuf {
@@ -105,12 +111,17 @@ impl ServerConfig {
             .stations_db
             .or_else(|| std::env::var("SANTUI_STATIONS_DB").ok().map(PathBuf::from));
 
+        let google_client_id = args
+            .google_client_id
+            .or_else(|| std::env::var("SANTUI_GOOGLE_CLIENT_ID").ok());
+
         ServerConfig {
             port,
             host,
             data_dir,
             jwt_secret,
             stations_db,
+            google_client_id,
         }
     }
 }

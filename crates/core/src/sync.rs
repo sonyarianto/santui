@@ -98,15 +98,18 @@ impl SyncClient {
         drop(jwt_guard);
 
         for op in &ops {
+            // JWT travels in the Authorization header — never in URLs or
+            // bodies, which end up in access logs and proxies.
+            let auth_header = format!("Bearer {jwt}");
             match op {
                 SyncOp::Set { plugin, key, value } => {
                     let body = serde_json::json!({
-                        "token": &jwt,
                         "values": [{"key": key, "value": value}],
                     });
                     let url = format!("{}/api/v1/data/{}", self.server_url, plugin);
                     let result = ureq::post(&url)
                         .header("Content-Type", "application/json")
+                        .header("Authorization", &auth_header)
                         .send_json(&body);
                     if let Err(e) = result {
                         log::debug!("[sync] push failed for {plugin}/{key}: {e}");
@@ -116,11 +119,11 @@ impl SyncClient {
                     }
                 }
                 SyncOp::Delete { plugin, key } => {
-                    let url = format!(
-                        "{}/api/v1/data/{}/{}?token={}",
-                        self.server_url, plugin, key, jwt
-                    );
-                    if let Err(e) = ureq::delete(&url).call() {
+                    let url = format!("{}/api/v1/data/{}/{}", self.server_url, plugin, key);
+                    if let Err(e) = ureq::delete(&url)
+                        .header("Authorization", &auth_header)
+                        .call()
+                    {
                         log::debug!("[sync] delete failed for {plugin}/{key}: {e}");
                         if let Ok(mut pending) = self.pending.lock() {
                             pending.push(op.clone());

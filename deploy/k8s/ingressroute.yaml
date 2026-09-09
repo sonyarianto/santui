@@ -11,6 +11,8 @@ spec:
   routes:
     - kind: Rule
       match: Host(`api3.sony-ak.com`)
+      middlewares:
+        - name: api3-ratelimit
       services:
         - name: santui-server
           port: 9876

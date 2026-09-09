@@ -28,6 +28,12 @@ async fn main() {
 
     let config = config::ServerConfig::load();
 
+    if config.google_client_id.is_none() {
+        tracing::warn!(
+            "SANTUI_GOOGLE_CLIENT_ID unset: Google logins skip the audience check (any Google token accepted)"
+        );
+    }
+
     tracing::info!("data dir: {:?}", config.data_dir);
     tracing::info!(
         "jwt secret: {}...",

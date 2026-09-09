@@ -1,6 +1,6 @@
 use axum::{
     extract::{Json, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode, header},
     response::{IntoResponse, Response},
 };
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
@@ -20,7 +20,10 @@ pub struct Claims {
     pub iat: usize,
 }
 
-fn create_jwt(user_id: &str, secret: &str) -> Result<String, jsonwebtoken::errors::Error> {
+pub(crate) fn create_jwt(
+    user_id: &str,
+    secret: &str,
+) -> Result<String, jsonwebtoken::errors::Error> {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
@@ -59,8 +62,36 @@ pub fn extract_user(token: &str, secret: &str) -> Result<AuthUser, AuthError> {
     })
 }
 
+/// Canonical token source: `Authorization: Bearer <jwt>`.
+///
+/// Tokens in URLs/bodies get written to access logs and proxies; the header
+/// does not. Query/body `token` fields remain accepted as a fallback for old
+/// clients (see `resolve_token`), but new clients must use the header.
+pub fn extract_bearer(headers: &HeaderMap) -> Option<String> {
+    let value = headers.get(header::AUTHORIZATION)?.to_str().ok()?;
+    let (scheme, credentials) = value.split_once(' ')?;
+    if !scheme.eq_ignore_ascii_case("bearer") {
+        return None;
+    }
+    let token = credentials.trim().to_string();
+    (!token.is_empty()).then_some(token)
+}
+
+/// Resolve the caller's JWT: header first, legacy `token` field as fallback.
+pub fn resolve_token(
+    headers: &HeaderMap,
+    fallback: Option<&str>,
+    secret: &str,
+) -> Result<AuthUser, AuthError> {
+    let token = extract_bearer(headers)
+        .or_else(|| fallback.map(|s| s.to_string()))
+        .ok_or(AuthError::InvalidToken)?;
+    extract_user(&token, secret)
+}
+
 // ─── Error type ───
 
+#[derive(Debug)]
 pub enum AuthError {
     InvalidToken,
     WrongCredentials,
@@ -140,7 +171,25 @@ fn verify_github_token(token: &str) -> Result<UserInfo, String> {
     })
 }
 
-fn verify_google_token(token: &str) -> Result<UserInfo, String> {
+fn verify_google_token(token: &str, expected_aud: Option<&str>) -> Result<UserInfo, String> {
+    if let Some(expected) = expected_aud {
+        // Bind the token to OUR OAuth client: without this, a token issued
+        // to any other Google app would be accepted here (cross-app replay).
+        let mut resp = ureq::get(&format!(
+            "https://oauth2.googleapis.com/tokeninfo?access_token={token}"
+        ))
+        .call()
+        .map_err(|e| format!("Google tokeninfo error: {e}"))?;
+        let text = resp
+            .body_mut()
+            .read_to_string()
+            .map_err(|e| format!("read error: {e}"))?;
+        let info: serde_json::Value =
+            serde_json::from_str(&text).map_err(|e| format!("parse error: {e}"))?;
+        if !token_aud_matches(&info, expected) {
+            return Err("Google token audience mismatch".to_string());
+        }
+    }
     let mut resp = ureq::get("https://www.googleapis.com/oauth2/v3/userinfo")
         .header("Authorization", &format!("Bearer {token}"))
         .call()
@@ -160,6 +209,11 @@ fn verify_google_token(token: &str) -> Result<UserInfo, String> {
     })
 }
 
+/// Pure audience check over a tokeninfo document (kept separate for tests).
+fn token_aud_matches(info: &serde_json::Value, expected: &str) -> bool {
+    info.get("aud").and_then(|v| v.as_str()) == Some(expected)
+}
+
 // ─── Route handlers ───
 
 pub async fn post_login(
@@ -168,7 +222,8 @@ pub async fn post_login(
 ) -> Result<Json<LoginResponse>, AuthError> {
     let user_info = match req.provider.as_str() {
         "github" => verify_github_token(&req.token).map_err(|_| AuthError::WrongCredentials)?,
-        "google" => verify_google_token(&req.token).map_err(|_| AuthError::WrongCredentials)?,
+        "google" => verify_google_token(&req.token, state.config.google_client_id.as_deref())
+            .map_err(|_| AuthError::WrongCredentials)?,
         _ => return Err(AuthError::WrongCredentials),
     };
 
@@ -197,14 +252,83 @@ pub async fn post_login(
 
 pub async fn me(
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
     axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> Result<Json<UserInfo>, AuthError> {
-    let token = params.get("token").ok_or(AuthError::InvalidToken)?;
-    let auth_user = extract_user(token, &state.config.jwt_secret)?;
+    let query_token = params.get("token").map(|s| s.as_str());
+    let auth_user = resolve_token(&headers, query_token, &state.config.jwt_secret)?;
     let user_row = state
         .db
         .get_user(&auth_user.user_id)
         .map_err(|_| AuthError::InvalidToken)?
         .ok_or(AuthError::InvalidToken)?;
     Ok(Json(user_row.into()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const SECRET: &str = "test-secret-for-unit-tests";
+
+    fn bearer(value: &str) -> HeaderMap {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::AUTHORIZATION,
+            format!("Bearer {value}").parse().unwrap(),
+        );
+        headers
+    }
+
+    #[test]
+    fn extract_bearer_parses_valid_header() {
+        assert_eq!(
+            extract_bearer(&bearer("abc.def.ghi")).as_deref(),
+            Some("abc.def.ghi")
+        );
+    }
+
+    #[test]
+    fn extract_bearer_rejects_malformed() {
+        assert_eq!(extract_bearer(&HeaderMap::new()), None);
+        let mut wrong_scheme = HeaderMap::new();
+        wrong_scheme.insert(header::AUTHORIZATION, "Basic abc".parse().unwrap());
+        assert_eq!(extract_bearer(&wrong_scheme), None);
+        // Scheme is case-insensitive per RFC 9110, empty credentials rejected.
+        let mut lower = HeaderMap::new();
+        lower.insert(header::AUTHORIZATION, "bearer xyz".parse().unwrap());
+        assert_eq!(extract_bearer(&lower).as_deref(), Some("xyz"));
+        let mut empty = HeaderMap::new();
+        empty.insert(header::AUTHORIZATION, "Bearer ".parse().unwrap());
+        assert_eq!(extract_bearer(&empty), None);
+        let mut nospace = HeaderMap::new();
+        nospace.insert(header::AUTHORIZATION, "Bearerabc".parse().unwrap());
+        assert_eq!(extract_bearer(&nospace), None);
+    }
+
+    #[test]
+    fn resolve_token_prefers_header_over_fallback() {
+        let jwt = create_jwt("user-1", SECRET).unwrap();
+        // Valid header wins even with a garbage fallback.
+        let user = resolve_token(&bearer(&jwt), Some("garbage"), SECRET).unwrap();
+        assert_eq!(user.user_id, "user-1");
+        // Valid fallback still works when the header is absent/invalid.
+        let user = resolve_token(&HeaderMap::new(), Some(&jwt), SECRET).unwrap();
+        assert_eq!(user.user_id, "user-1");
+        // Nothing usable anywhere is rejected.
+        assert!(resolve_token(&HeaderMap::new(), None, SECRET).is_err());
+        assert!(resolve_token(&HeaderMap::new(), Some("garbage"), SECRET).is_err());
+    }
+
+    #[test]
+    fn token_aud_matches_expected_client() {
+        let info = serde_json::json!({"aud": "my-client-id.apps.googleusercontent.com"});
+        assert!(token_aud_matches(
+            &info,
+            "my-client-id.apps.googleusercontent.com"
+        ));
+        assert!(!token_aud_matches(&info, "other-client-id"));
+        assert!(!token_aud_matches(&serde_json::json!({}), "my-client-id"));
+        assert!(!token_aud_matches(&serde_json::json!({"aud": 123}), "123"));
+    }
 }

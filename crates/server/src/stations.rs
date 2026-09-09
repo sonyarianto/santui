@@ -57,6 +57,14 @@ fn etag_matches(header_value: &str, etag: &str) -> bool {
 }
 
 impl StationsDb {
+    /// Empty catalog (no database). Used when unconfigured and in tests.
+    pub fn empty() -> Self {
+        StationsDb {
+            conn: None,
+            etag: None,
+        }
+    }
+
     pub fn open(path: Option<PathBuf>) -> Self {
         let etag = path.as_deref().and_then(file_etag);
         let conn = path
@@ -268,6 +276,7 @@ mod tests {
                 data_dir: PathBuf::new(),
                 jwt_secret: String::new(),
                 stations_db: None,
+                google_client_id: None,
             },
             db: crate::db::Database::open(&dir).unwrap(),
             stations: db,
