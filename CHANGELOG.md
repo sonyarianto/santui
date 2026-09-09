@@ -1,3 +1,22 @@
+## [unreleased]
+
+### ⚙️ Miscellaneous
+
+- Update changelog for v0.2.42
+- Relicense from AGPL-3.0-only to MIT OR Apache-2.0
+
+### 🐛 Bug Fixes
+
+- Suggest npm update in unsupported platform errors
+- Remove shared-env race in radio stations tests via base-url injection
+
+### 🚀 Features
+
+- Serve radio station catalog from santui-server with plugin fallback
+- Containerize santui-server and add k3s manifests for api3
+- Conditional station catalog fetch via ETag
+
+Full Changelog: [v0.2.42...](https://github.com/sonyarianto/santui/compare/v0.2.42...)
 ## [0.2.42] - 2026-09-08
 
 ### ⚙️ Miscellaneous
