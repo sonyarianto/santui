@@ -130,6 +130,8 @@ mod tests {
                 jwt_secret: SECRET.to_string(),
                 stations_db: None,
                 google_client_id: None,
+                github_client_id: None,
+                github_client_secret: None,
             },
             db: crate::db::Database::open(&dir).unwrap(),
             stations: crate::stations::StationsDb::empty(),

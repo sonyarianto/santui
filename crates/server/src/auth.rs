@@ -144,7 +144,22 @@ impl From<UserRow> for UserInfo {
 
 // ─── Provider verification ───
 
-fn verify_github_token(token: &str) -> Result<UserInfo, String> {
+fn verify_github_token(token: &str, app_creds: Option<(&str, &str)>) -> Result<UserInfo, String> {
+    if let Some((client_id, client_secret)) = app_creds {
+        // Bind the token to OUR OAuth App: without this, a token issued to
+        // any other GitHub App (or a pasted PAT) would be accepted here.
+        // The applications API answers 200 only for our own tokens.
+        use base64::Engine as _;
+        let credentials = base64::engine::general_purpose::STANDARD
+            .encode(format!("{client_id}:{client_secret}"));
+        let owner_url = format!("https://api.github.com/applications/{client_id}/token");
+        let body = serde_json::json!({ "access_token": token });
+        ureq::post(&owner_url)
+            .header("Accept", "application/vnd.github.v3+json")
+            .header("Authorization", format!("Basic {credentials}"))
+            .send_json(&body)
+            .map_err(|_| "GitHub token not issued to this app".to_string())?;
+    }
     let mut resp = ureq::get("https://api.github.com/user")
         .header("Authorization", &format!("Bearer {token}"))
         .header("Accept", "application/vnd.github.v3+json")
@@ -221,7 +236,16 @@ pub async fn post_login(
     Json(req): Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>, AuthError> {
     let user_info = match req.provider.as_str() {
-        "github" => verify_github_token(&req.token).map_err(|_| AuthError::WrongCredentials)?,
+        "github" => {
+            let creds = match (
+                state.config.github_client_id.as_deref(),
+                state.config.github_client_secret.as_deref(),
+            ) {
+                (Some(id), Some(secret)) => Some((id, secret)),
+                _ => None,
+            };
+            verify_github_token(&req.token, creds).map_err(|_| AuthError::WrongCredentials)?
+        }
         "google" => verify_google_token(&req.token, state.config.google_client_id.as_deref())
             .map_err(|_| AuthError::WrongCredentials)?,
         _ => return Err(AuthError::WrongCredentials),

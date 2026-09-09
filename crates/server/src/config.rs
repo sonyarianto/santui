@@ -39,6 +39,14 @@ pub struct CliArgs {
     /// rejects Google tokens not issued to this client (audience check).
     #[arg(long = "google-client-id")]
     pub google_client_id: Option<String>,
+
+    /// GitHub OAuth App credentials bound to this server. When BOTH are set,
+    /// `/auth/login` rejects GitHub tokens not issued to this app
+    /// (ownership check via the applications API).
+    #[arg(long = "github-client-id")]
+    pub github_client_id: Option<String>,
+    #[arg(long = "github-client-secret")]
+    pub github_client_secret: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -49,6 +57,8 @@ pub struct ServerConfig {
     pub jwt_secret: String,
     pub stations_db: Option<PathBuf>,
     pub google_client_id: Option<String>,
+    pub github_client_id: Option<String>,
+    pub github_client_secret: Option<String>,
 }
 
 fn default_data_dir() -> PathBuf {
@@ -115,6 +125,13 @@ impl ServerConfig {
             .google_client_id
             .or_else(|| std::env::var("SANTUI_GOOGLE_CLIENT_ID").ok());
 
+        let github_client_id = args
+            .github_client_id
+            .or_else(|| std::env::var("SANTUI_GITHUB_CLIENT_ID").ok());
+        let github_client_secret = args
+            .github_client_secret
+            .or_else(|| std::env::var("SANTUI_GITHUB_CLIENT_SECRET").ok());
+
         ServerConfig {
             port,
             host,
@@ -122,6 +139,8 @@ impl ServerConfig {
             jwt_secret,
             stations_db,
             google_client_id,
+            github_client_id,
+            github_client_secret,
         }
     }
 }

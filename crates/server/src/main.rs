@@ -33,6 +33,11 @@ async fn main() {
             "SANTUI_GOOGLE_CLIENT_ID unset: Google logins skip the audience check (any Google token accepted)"
         );
     }
+    if config.github_client_id.is_none() || config.github_client_secret.is_none() {
+        tracing::warn!(
+            "SANTUI_GITHUB_CLIENT_ID/SECRET unset: GitHub logins skip the ownership check (any GitHub token accepted)"
+        );
+    }
 
     tracing::info!("data dir: {:?}", config.data_dir);
     tracing::info!(
