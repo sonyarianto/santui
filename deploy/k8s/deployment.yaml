@@ -40,6 +40,28 @@ spec:
             # with new images.
             - name: SANTUI_STATIONS_DB
               value: "/app/stations/radio_stream_stations.db"
+            # OAuth enforcement (optional): when the `santui-oauth` Secret
+            # exists, logins are bound to our apps (Google audience + GitHub
+            # ownership). Absent Secret = checks skipped with a startup warn.
+            # Ask the operator for values; NEVER commit them.
+            - name: SANTUI_GOOGLE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: santui-oauth
+                  key: google-client-id
+                  optional: true
+            - name: SANTUI_GITHUB_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: santui-oauth
+                  key: github-client-id
+                  optional: true
+            - name: SANTUI_GITHUB_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: santui-oauth
+                  key: github-client-secret
+                  optional: true
           volumeMounts:
             - name: data
               mountPath: /data

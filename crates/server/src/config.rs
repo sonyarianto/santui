@@ -1,6 +1,12 @@
 use clap::Parser;
 use std::path::PathBuf;
 
+/// Public GitHub OAuth App ID used by the desktop Device Flow (see
+/// `crates/app/src/main.rs` — the source of truth; this ID is intentionally
+/// public, like any OAuth frontend identifier). The server falls back to it
+/// when only the client secret is configured.
+pub const DEFAULT_GITHUB_CLIENT_ID: &str = "Ov23liQ8S6DliNvkWmoB";
+
 fn platform_data_dir() -> PathBuf {
     if cfg!(target_os = "windows") {
         std::env::var_os("APPDATA")

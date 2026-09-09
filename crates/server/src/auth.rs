@@ -237,13 +237,20 @@ pub async fn post_login(
 ) -> Result<Json<LoginResponse>, AuthError> {
     let user_info = match req.provider.as_str() {
         "github" => {
-            let creds = match (
-                state.config.github_client_id.as_deref(),
-                state.config.github_client_secret.as_deref(),
-            ) {
-                (Some(id), Some(secret)) => Some((id, secret)),
-                _ => None,
-            };
+            // The client ID is public; the secret alone activates the check.
+            // Falls back to the desktop app's well-known ID (see
+            // `DEFAULT_GITHUB_CLIENT_ID`) so operators only manage the secret.
+            let secret = state.config.github_client_secret.as_deref();
+            let creds = secret.map(|s| {
+                (
+                    state
+                        .config
+                        .github_client_id
+                        .as_deref()
+                        .unwrap_or(crate::config::DEFAULT_GITHUB_CLIENT_ID),
+                    s,
+                )
+            });
             verify_github_token(&req.token, creds).map_err(|_| AuthError::WrongCredentials)?
         }
         "google" => verify_google_token(&req.token, state.config.google_client_id.as_deref())
