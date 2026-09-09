@@ -11,12 +11,12 @@
 use axum::{
     Json,
     extract::{Query, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode, header},
     response::IntoResponse,
 };
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use crate::AppState;
@@ -26,10 +26,39 @@ const MAX_LIMIT: i64 = 20_000;
 
 pub struct StationsDb {
     conn: Option<Mutex<Connection>>,
+    /// Strong ETag for the catalog file (`"<mtime>-<size>"`), computed once at
+    /// startup. The catalog only changes when the file is replaced (redeploy),
+    /// so file metadata is a sufficient version signal — no content scan.
+    etag: Option<String>,
+}
+
+/// ETag for a catalog file. `None` when metadata is unreadable.
+fn file_etag(path: &Path) -> Option<String> {
+    let meta = std::fs::metadata(path).ok()?;
+    let mtime = meta
+        .modified()
+        .ok()?
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()?
+        .as_secs();
+    Some(format!("\"{mtime:x}-{len:x}\"", len = meta.len()))
+}
+
+/// Normalize an `If-None-Match` header value for comparison: strip the weak
+/// `W/` prefix. Supports a single tag or `*` (handled by the caller).
+fn normalize_inm(value: &str) -> &str {
+    value.trim().strip_prefix("W/").unwrap_or(value.trim())
+}
+
+fn etag_matches(header_value: &str, etag: &str) -> bool {
+    header_value
+        .split(',')
+        .any(|tag| normalize_inm(tag) == etag || normalize_inm(tag) == "*")
 }
 
 impl StationsDb {
     pub fn open(path: Option<PathBuf>) -> Self {
+        let etag = path.as_deref().and_then(file_etag);
         let conn = path
             .filter(|p| p.exists())
             .and_then(|p| Connection::open(p).ok());
@@ -40,6 +69,7 @@ impl StationsDb {
         }
         StationsDb {
             conn: conn.map(Mutex::new),
+            etag,
         }
     }
 
@@ -57,6 +87,7 @@ impl StationsDb {
         )?;
         Ok(StationsDb {
             conn: Some(Mutex::new(conn)),
+            etag: None,
         })
     }
 }
@@ -163,6 +194,7 @@ fn unavailable() -> axum::response::Response {
 
 pub async fn list_stations(
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
     Query(query): Query<StationsQuery>,
 ) -> axum::response::Response {
     let Some(mutex) = state.stations.conn.as_ref() else {
@@ -170,15 +202,30 @@ pub async fn list_stations(
     };
     // Hold the guard across both queries so total + page are consistent.
     let conn = mutex.lock().unwrap();
+    let etag_headers = etag_header_map(state.stations.etag.as_deref());
+
+    // Conditional request: catalog unchanged since the client's copy.
+    if let Some(etag) = state.stations.etag.as_deref()
+        && let Some(inm) = headers.get(header::IF_NONE_MATCH)
+        && let Ok(inm) = inm.to_str()
+        && etag_matches(inm, etag)
+    {
+        return (StatusCode::NOT_MODIFIED, etag_headers).into_response();
+    }
+
     let (limit, offset) = clamp_paging(&query);
     match query_stations(&conn, query.q.as_deref(), limit, offset) {
-        Ok((stations, total)) => Json(StationsResponse {
-            stations,
-            total,
-            limit,
-            offset,
-        })
-        .into_response(),
+        Ok((stations, total)) => (
+            StatusCode::OK,
+            etag_headers,
+            Json(StationsResponse {
+                stations,
+                total,
+                limit,
+                offset,
+            }),
+        )
+            .into_response(),
         Err(e) => {
             tracing::error!("stations query error: {e}");
             (
@@ -188,6 +235,17 @@ pub async fn list_stations(
                 .into_response()
         }
     }
+}
+
+/// `ETag` response headers, or empty when the catalog is unconfigured.
+fn etag_header_map(etag: Option<&str>) -> HeaderMap {
+    let mut headers = HeaderMap::new();
+    if let Some(etag) = etag
+        && let Ok(value) = axum::http::HeaderValue::from_str(etag)
+    {
+        headers.insert(header::ETAG, value);
+    }
+    headers
 }
 
 #[cfg(test)]
@@ -227,6 +285,23 @@ mod tests {
         .unwrap();
     }
 
+    fn no_query() -> Query<StationsQuery> {
+        Query(StationsQuery {
+            q: None,
+            limit: None,
+            offset: None,
+        })
+    }
+
+    fn inm_headers(value: &str) -> HeaderMap {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::IF_NONE_MATCH,
+            axum::http::HeaderValue::from_str(value).unwrap(),
+        );
+        headers
+    }
+
     #[tokio::test]
     async fn lists_all_without_query() {
         let db = StationsDb::open_memory().unwrap();
@@ -235,32 +310,50 @@ mod tests {
             seed(&conn);
         }
         let (state, dir) = test_state(db);
-        let resp = list_stations(
-            State(state),
-            Query(StationsQuery {
-                q: None,
-                limit: None,
-                offset: None,
-            }),
-        )
-        .await;
+        let resp = list_stations(State(state), HeaderMap::new(), no_query()).await;
         assert_eq!(resp.status(), StatusCode::OK);
         std::fs::remove_dir_all(&dir).ok();
     }
 
     #[tokio::test]
     async fn unconfigured_catalog_answers_503() {
-        let (state, dir) = test_state(StationsDb { conn: None });
-        let resp = list_stations(
-            State(state),
-            Query(StationsQuery {
-                q: None,
-                limit: None,
-                offset: None,
-            }),
-        )
-        .await;
+        let (state, dir) = test_state(StationsDb {
+            conn: None,
+            etag: None,
+        });
+        let resp = list_stations(State(state), HeaderMap::new(), no_query()).await;
         assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn etag_served_and_honored() {
+        let mut db = StationsDb::open_memory().unwrap();
+        {
+            let conn = db.conn.as_ref().unwrap().lock().unwrap();
+            seed(&conn);
+        }
+        db.etag = Some("\"abc-123\"".to_string());
+        let (state, dir) = test_state(db);
+
+        let resp = list_stations(State(state.clone()), HeaderMap::new(), no_query()).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(resp.headers().get(header::ETAG).unwrap(), "\"abc-123\"");
+
+        for inm in [
+            "\"abc-123\"",
+            "W/\"abc-123\"",
+            "*",
+            "\"other\", \"abc-123\"",
+        ] {
+            let resp = list_stations(State(state.clone()), inm_headers(inm), no_query()).await;
+            assert_eq!(resp.status(), StatusCode::NOT_MODIFIED, "inm={inm}");
+            assert!(resp.headers().contains_key(header::ETAG));
+        }
+
+        let resp = list_stations(State(state.clone()), inm_headers("\"stale\""), no_query()).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+
         std::fs::remove_dir_all(&dir).ok();
     }
 
@@ -297,6 +390,29 @@ mod tests {
         assert_eq!(like_pattern("100%"), "%100\\%%");
         assert_eq!(like_pattern("a_b"), "%a\\_b%");
         assert_eq!(like_pattern("plain"), "%plain%");
+    }
+
+    #[test]
+    fn file_etag_is_stable_and_missing_is_none() {
+        let dir = std::env::temp_dir();
+        let path = dir.join("santui-etag-probe.db");
+        std::fs::write(&path, b"data").unwrap();
+        let a = file_etag(&path);
+        let b = file_etag(&path);
+        assert!(a.is_some());
+        assert_eq!(a, b);
+        assert!(file_etag(&dir.join("santui-etag-missing.db")).is_none());
+        std::fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn etag_matches_weak_wildcard_and_lists() {
+        assert!(etag_matches("\"abc\"", "\"abc\""));
+        assert!(etag_matches("W/\"abc\"", "\"abc\""));
+        assert!(etag_matches("*", "\"abc\""));
+        assert!(etag_matches("\"x\", \"abc\"", "\"abc\""));
+        assert!(!etag_matches("\"stale\"", "\"abc\""));
+        assert!(!etag_matches("", "\"abc\""));
     }
 
     #[test]

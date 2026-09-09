@@ -19,6 +19,12 @@ pub fn db_path() -> PathBuf {
     app_data_dir().join("radio_stream_stations.db")
 }
 
+/// Sidecar file holding the server catalog ETag of the last successful fetch.
+/// Lives next to the DB so the cache + its version marker stay together.
+pub fn catalog_etag_path() -> PathBuf {
+    app_data_dir().join("radio_stream_stations.etag")
+}
+
 fn migrate_old_db() {
     let old = app_data_dir().join("radio_streaming_stations.db");
     let new = db_path();
@@ -54,6 +60,27 @@ fn migrate(conn: &Connection) -> Result<(), rusqlite::Error> {
     Ok(())
 }
 
+/// Idempotent schema setup shared by [`open`] (local seed path) and the
+/// server-cache write path, so both always agree on the table shape.
+pub fn ensure_schema(conn: &Connection) -> Result<(), rusqlite::Error> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS stations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            url TEXT NOT NULL,
+            country TEXT NOT NULL DEFAULT '',
+            genre TEXT NOT NULL DEFAULT ''
+        );",
+    )?;
+    migrate(conn)?;
+    conn.execute_batch(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_stations_name_url ON stations(name, url);
+        CREATE INDEX IF NOT EXISTS idx_stations_country ON stations(country);
+        CREATE INDEX IF NOT EXISTS idx_stations_genre ON stations(genre);",
+    )?;
+    Ok(())
+}
+
 pub fn open() -> Result<Connection, rusqlite::Error> {
     let path = db_path();
     migrate_old_db();
@@ -84,21 +111,7 @@ pub fn open() -> Result<Connection, rusqlite::Error> {
         log::warn!("failed to copy bundled station DB: {e}");
     }
     let conn = Connection::open(&path)?;
-    conn.execute_batch(
-        "CREATE TABLE IF NOT EXISTS stations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            url TEXT NOT NULL,
-            country TEXT NOT NULL DEFAULT '',
-            genre TEXT NOT NULL DEFAULT ''
-        );",
-    )?;
-    migrate(&conn)?;
-    conn.execute_batch(
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_stations_name_url ON stations(name, url);
-        CREATE INDEX IF NOT EXISTS idx_stations_country ON stations(country);
-        CREATE INDEX IF NOT EXISTS idx_stations_genre ON stations(genre);",
-    )?;
+    ensure_schema(&conn)?;
     Ok(conn)
 }
 

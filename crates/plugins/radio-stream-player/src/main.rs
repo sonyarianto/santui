@@ -68,8 +68,8 @@ fn send_cmd(app: &App, cmd: MpvCmd) {
 impl App {
     fn new() -> Self {
         let (db, station_list, init_error) = match database::open() {
-            Ok(db) => {
-                let list = stations::load_remote_or_local(&db);
+            Ok(mut db) => {
+                let list = stations::load_remote_or_local(&mut db);
                 (Some(db), list, None)
             }
             Err(e) => {

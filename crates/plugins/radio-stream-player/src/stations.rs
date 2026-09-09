@@ -25,13 +25,29 @@ pub fn load(conn: &Connection) -> Vec<Station> {
 /// Server-first catalog load with local SQLite fallback.
 ///
 /// Tries `{SANTUI_API_URL}/api/v1/stations` (default `https://api3.sony-ak.com`)
-/// so station data can be maintained centrally; any failure — network error,
-/// non-200 status, invalid JSON, or an empty catalog — falls back to the local
-/// database, which always works offline. Kept separate from [`load`] so the
-/// local path stays directly testable without network access.
-pub fn load_remote_or_local(conn: &Connection) -> Vec<Station> {
-    match fetch_remote() {
-        Ok(remote) if !remote.is_empty() => {
+/// so station data can be maintained centrally. A stored ETag makes repeat
+/// opens cheap: unchanged catalog → `304` → local cache, no download.
+/// Any failure — network error, non-200 status, invalid JSON, an empty
+/// catalog, or a mid-fetch inconsistency — falls back to the local database,
+/// which always works offline. Kept separate from [`load`] so the local path
+/// stays directly testable without network access.
+pub fn load_remote_or_local(conn: &mut Connection) -> Vec<Station> {
+    let stored = read_stored_etag();
+    match fetch_remote_cached(stored) {
+        FetchResult::Fresh(remote, etag) if !remote.is_empty() => {
+            match store_cache(conn, &remote) {
+                Ok(()) => {
+                    if let Some(etag) = etag {
+                        store_etag(&etag);
+                    }
+                }
+                Err(e) => {
+                    // Cache unwritable: drop the version marker too, otherwise
+                    // the next open could 304 into a stale local database.
+                    log::warn!("  ⚠️  stations cache write failed ({e})");
+                    remove_etag_file();
+                }
+            }
             log::info!(
                 "  📡 stations loaded from {} ({} stations)",
                 api_base_url(),
@@ -39,11 +55,15 @@ pub fn load_remote_or_local(conn: &Connection) -> Vec<Station> {
             );
             remote
         }
-        Ok(_) => {
+        FetchResult::Fresh(_, _) => {
             log::warn!("  ⚠️  remote catalog empty, falling back to local SQLite");
             load(conn)
         }
-        Err(e) => {
+        FetchResult::NotModified => {
+            log::info!("  📡 stations catalog unchanged (304), using local cache");
+            load(conn)
+        }
+        FetchResult::Failed(e) => {
             log::warn!("  ⚠️  remote stations failed ({e}), falling back to local SQLite");
             load(conn)
         }
@@ -78,37 +98,135 @@ fn parse_stations_response(text: &str) -> Result<StationsPage, String> {
     serde_json::from_str(text).map_err(|e| format!("stations parse failed: {e}"))
 }
 
-fn fetch_page(base: &str, limit: i64, offset: i64) -> Result<StationsPage, String> {
+/// ETag persistence. Split into path-taking helpers (hermetic under test)
+/// plus thin wrappers bound to the real catalog path.
+fn read_stored_etag_from(path: &std::path::Path) -> Option<String> {
+    let etag = std::fs::read_to_string(path).ok()?;
+    let etag = etag.trim().to_string();
+    (!etag.is_empty()).then_some(etag)
+}
+
+fn write_etag_to(path: &std::path::Path, etag: &str) {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).ok();
+    }
+    if let Err(e) = std::fs::write(path, etag) {
+        log::warn!("  ⚠️  stations etag write failed ({e})");
+    }
+}
+
+fn read_stored_etag() -> Option<String> {
+    read_stored_etag_from(&crate::database::catalog_etag_path())
+}
+
+fn store_etag(etag: &str) {
+    write_etag_to(&crate::database::catalog_etag_path(), etag);
+}
+
+fn remove_etag_file() {
+    std::fs::remove_file(crate::database::catalog_etag_path()).ok();
+}
+
+/// Replace the local cache with a freshly downloaded catalog, atomically.
+fn store_cache(conn: &mut Connection, stations: &[Station]) -> Result<(), String> {
+    crate::database::ensure_schema(conn).map_err(|e| format!("cache schema failed: {e}"))?;
+    let tx = conn
+        .unchecked_transaction()
+        .map_err(|e| format!("cache transaction failed: {e}"))?;
+    tx.execute("DELETE FROM stations", [])
+        .map_err(|e| format!("cache clear failed: {e}"))?;
+    {
+        let mut stmt = tx
+            .prepare("INSERT INTO stations (name, url, country, genre) VALUES (?1, ?2, ?3, ?4)")
+            .map_err(|e| format!("cache insert prepare failed: {e}"))?;
+        for s in stations {
+            stmt.execute(rusqlite::params![s.name, s.url, s.country, s.genre])
+                .map_err(|e| format!("cache insert failed: {e}"))?;
+        }
+    }
+    tx.commit()
+        .map_err(|e| format!("cache commit failed: {e}"))?;
+    Ok(())
+}
+
+enum PageOutcome {
+    Page(StationsPage, Option<String>),
+    NotModified,
+}
+
+fn fetch_page_etag(
+    base: &str,
+    limit: i64,
+    offset: i64,
+    etag: Option<&str>,
+) -> Result<PageOutcome, String> {
     let url = format!("{base}/api/v1/stations?limit={limit}&offset={offset}");
-    let mut resp = crate::http::agent()
-        .get(&url)
-        .call()
-        .map_err(|e| format!("stations request failed: {e}"))?;
+    let mut request = crate::http::agent().get(&url);
+    if let Some(etag) = etag {
+        request = request.header("If-None-Match", etag);
+    }
+    let mut resp = match request.call() {
+        Ok(resp) => resp,
+        // Defensive: ureq 3 only errors on 4xx/5xx, so 304 normally arrives
+        // as Ok — both paths are handled.
+        Err(ureq::Error::StatusCode(304)) => return Ok(PageOutcome::NotModified),
+        Err(e) => return Err(format!("stations request failed: {e}")),
+    };
+    if resp.status().as_u16() == 304 {
+        return Ok(PageOutcome::NotModified);
+    }
+    let response_etag = resp
+        .headers()
+        .get("etag")
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
     let body = resp
         .body_mut()
         .read_to_string()
         .map_err(|e| format!("stations read body failed: {e}"))?;
-    parse_stations_response(&body)
+    parse_stations_response(&body).map(|page| PageOutcome::Page(page, response_etag))
+}
+
+enum FetchResult {
+    /// Full catalog plus the ETag to store (`None` when the server sent none).
+    Fresh(Vec<Station>, Option<String>),
+    /// Server answered 304 on the first page: local cache is current.
+    NotModified,
+    Failed(String),
 }
 
 /// Fetch the full remote catalog, following pages if it outgrows one page.
-pub fn fetch_remote() -> Result<Vec<Station>, String> {
+/// The stored ETag is sent on every page: a 304 mid-fetch means the catalog
+/// changed under us, which fails the whole fetch (caller falls back local).
+fn fetch_remote_cached(stored: Option<String>) -> FetchResult {
     let base = api_base_url();
     let mut all = Vec::new();
+    let mut etag = None;
     let mut offset = 0i64;
     loop {
-        let page = fetch_page(&base, REMOTE_PAGE_LIMIT, offset)?;
-        if page.stations.is_empty() {
-            break;
-        }
-        offset += page.stations.len() as i64;
-        let done = page.total <= 0 || offset >= page.total;
-        all.extend(page.stations);
-        if done {
-            break;
+        match fetch_page_etag(&base, REMOTE_PAGE_LIMIT, offset, stored.as_deref()) {
+            Ok(PageOutcome::NotModified) if offset == 0 => return FetchResult::NotModified,
+            Ok(PageOutcome::NotModified) => {
+                return FetchResult::Failed("catalog changed mid-fetch".into());
+            }
+            Ok(PageOutcome::Page(page, response_etag)) => {
+                if etag.is_none() {
+                    etag = response_etag;
+                }
+                if page.stations.is_empty() {
+                    break;
+                }
+                offset += page.stations.len() as i64;
+                let done = page.total <= 0 || offset >= page.total;
+                all.extend(page.stations);
+                if done {
+                    break;
+                }
+            }
+            Err(e) => return FetchResult::Failed(e),
         }
     }
-    Ok(all)
+    FetchResult::Fresh(all, etag)
 }
 
 pub fn reload(conn: &Connection) -> Vec<Station> {
@@ -553,46 +671,197 @@ mod tests {
 
     const STUB_PAGE_1: &str = r#"{"stations":[{"name":"A","url":"http://a","country":"US","genre":"Rock"},{"name":"B","url":"http://b","country":"GB","genre":"Pop"}],"total":3,"limit":20000,"offset":0}"#;
     const STUB_PAGE_2: &str = r#"{"stations":[{"name":"C","url":"http://c","country":"DE","genre":"Jazz"}],"total":3,"limit":20000,"offset":2}"#;
+    const STUB_ETAG: &str = "\"stub-etag-1\"";
 
-    #[test]
-    fn fetch_remote_paginates_against_stub_server() {
+    /// Minimal stub origin: serves two pages with an ETag, honors
+    /// If-None-Match with a 304. Returns the base URL. Scope the
+    /// SANTUI_API_URL env var to the call (see SAFETY note at call sites).
+    ///
+    /// `expected` bounds the accept loop so a client bug fails the test
+    /// instead of hanging it: extra connections are refused (fetch errors),
+    /// missing ones hit the deadline panic.
+    fn stub_origin(expected: usize) -> (String, std::thread::JoinHandle<()>) {
         use std::io::{Read, Write};
+        use std::time::{Duration, Instant};
+
+        fn header_value<'a>(req: &'a str, name: &str) -> Option<&'a str> {
+            req.lines().find_map(|line| {
+                let (k, v) = line.split_once(':')?;
+                (k.trim().eq_ignore_ascii_case(name)).then_some(v.trim())
+            })
+        }
+
+        fn serve_one(mut s: std::net::TcpStream) {
+            let mut buf = [0u8; 4096];
+            let n = s.read(&mut buf).unwrap_or(0);
+            let req = String::from_utf8_lossy(&buf[..n]).into_owned();
+            let body = if req.contains("offset=2") {
+                STUB_PAGE_2
+            } else {
+                STUB_PAGE_1
+            };
+            let matched = header_value(&req, "If-None-Match").is_some_and(|v| v == STUB_ETAG);
+            let resp = if matched {
+                format!(
+                    "HTTP/1.1 304 Not Modified\r\nETag: {STUB_ETAG}\r\nConnection: close\r\n\r\n"
+                )
+            } else {
+                format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nETag: {STUB_ETAG}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                )
+            };
+            s.write_all(resp.as_bytes()).ok();
+        }
 
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let addr = listener.local_addr().unwrap();
+        listener.set_nonblocking(true).unwrap();
         let handle = std::thread::spawn(move || {
-            for stream in listener.incoming().take(2) {
-                let mut s = stream.unwrap();
-                let mut buf = [0u8; 4096];
-                let n = s.read(&mut buf).unwrap_or(0);
-                let req = String::from_utf8_lossy(&buf[..n]).into_owned();
-                let body = if req.contains("offset=2") {
-                    STUB_PAGE_2
-                } else {
-                    STUB_PAGE_1
-                };
-                let resp = format!(
-                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-                    body.len(),
-                    body
-                );
-                s.write_all(resp.as_bytes()).unwrap();
+            let start = Instant::now();
+            let mut served = 0;
+            while served < expected {
+                match listener.accept() {
+                    Ok((s, _)) => {
+                        serve_one(s);
+                        served += 1;
+                    }
+                    Err(e)
+                        if e.kind() == std::io::ErrorKind::WouldBlock
+                            && start.elapsed() < Duration::from_secs(10) =>
+                    {
+                        std::thread::sleep(Duration::from_millis(5));
+                    }
+                    Err(_) => break,
+                }
+                if start.elapsed() >= Duration::from_secs(10) {
+                    panic!("stub origin timed out waiting for requests");
+                }
             }
         });
+        (format!("http://{addr}"), handle)
+    }
 
-        // SAFETY: no other test in this binary reads or writes SANTUI_API_URL,
-        // so scoped mutation here cannot race.
+    #[test]
+    fn fetch_remote_cached_paginates_against_stub_server() {
+        let (base, handle) = stub_origin(2);
+        // SAFETY: no other test in this binary reads or writes SANTUI_API_URL.
         unsafe {
-            std::env::set_var("SANTUI_API_URL", format!("http://{addr}"));
+            std::env::set_var("SANTUI_API_URL", &base);
         }
-        let result = fetch_remote();
+        let result = fetch_remote_cached(None);
         unsafe {
             std::env::remove_var("SANTUI_API_URL");
         }
         handle.join().unwrap();
+        match result {
+            FetchResult::Fresh(stations, etag) => {
+                assert_eq!(stations.len(), 3);
+                assert_eq!(stations[2].name, "C");
+                assert_eq!(etag.as_deref(), Some(STUB_ETAG));
+            }
+            _ => panic!("expected Fresh, got {:?}", result_debug(&result)),
+        }
+    }
 
-        let stations = result.unwrap();
-        assert_eq!(stations.len(), 3);
-        assert_eq!(stations[2].name, "C");
+    #[test]
+    fn fetch_remote_cached_honors_304() {
+        let (base, handle) = stub_origin(3);
+        // SAFETY: see above.
+        unsafe {
+            std::env::set_var("SANTUI_API_URL", &base);
+        }
+        let matching = fetch_remote_cached(Some(STUB_ETAG.to_string()));
+        let stale = fetch_remote_cached(Some("\"stale-etag\"".to_string()));
+        unsafe {
+            std::env::remove_var("SANTUI_API_URL");
+        }
+        handle.join().unwrap();
+        assert!(
+            matches!(matching, FetchResult::NotModified),
+            "expected NotModified"
+        );
+        match stale {
+            FetchResult::Fresh(stations, _) => assert_eq!(stations.len(), 3),
+            _ => panic!("stale etag must refetch full catalog"),
+        }
+    }
+
+    fn result_debug(result: &FetchResult) -> &'static str {
+        match result {
+            FetchResult::Fresh(_, _) => "Fresh",
+            FetchResult::NotModified => "NotModified",
+            FetchResult::Failed(_) => "Failed",
+        }
+    }
+
+    #[test]
+    fn etag_file_roundtrip_and_absent() {
+        let dir = std::env::temp_dir().join("santui-etag-test");
+        let _ = std::fs::create_dir_all(&dir);
+        let path = dir.join("probe.etag");
+        let _ = std::fs::remove_file(&path);
+        assert_eq!(read_stored_etag_from(&path), None);
+        write_etag_to(&path, "\"v1-2\"");
+        assert_eq!(read_stored_etag_from(&path).as_deref(), Some("\"v1-2\""));
+        // Blank files count as absent so a corrupt marker never sticks.
+        std::fs::write(&path, "  \n").unwrap();
+        assert_eq!(read_stored_etag_from(&path), None);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn store_cache_replaces_contents_atomically() {
+        let mut conn = setup_db();
+        conn.execute(
+            "INSERT INTO stations (name, url) VALUES (?1, ?2)",
+            rusqlite::params!["Old", "http://old"],
+        )
+        .unwrap();
+        let fresh = vec![
+            Station {
+                name: "New A".into(),
+                url: "http://new-a".into(),
+                country: "US".into(),
+                genre: "Rock".into(),
+            },
+            Station {
+                name: "Quote's \"Test\"".into(),
+                url: "http://new-b".into(),
+                country: String::new(),
+                genre: String::new(),
+            },
+        ];
+        store_cache(&mut conn, &fresh).unwrap();
+        let rows = crate::database::load_all(&conn).unwrap();
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0].name, "New A");
+        assert_eq!(rows[0].genre, "Rock");
+        assert_eq!(rows[1].name, "Quote's \"Test\"");
+    }
+
+    #[test]
+    fn load_remote_or_local_falls_back_when_server_unreachable() {
+        // NOTE: this takes the full 8s agent timeout where loopback connects
+        // hang instead of refusing fast (some sandboxes/firewalls); elsewhere
+        // it returns immediately. Either way the fallback must win.
+        let mut conn = setup_db();
+        conn.execute(
+            "INSERT INTO stations (name, url) VALUES (?1, ?2)",
+            rusqlite::params!["Local Only", "http://local"],
+        )
+        .unwrap();
+        // Discard port: connection refused immediately, no timeout wait.
+        // SAFETY: no other test in this binary reads or writes SANTUI_API_URL.
+        unsafe {
+            std::env::set_var("SANTUI_API_URL", "http://127.0.0.1:9");
+        }
+        let stations = load_remote_or_local(&mut conn);
+        unsafe {
+            std::env::remove_var("SANTUI_API_URL");
+        }
+        assert_eq!(stations.len(), 1);
+        assert_eq!(stations[0].name, "Local Only");
     }
 }
