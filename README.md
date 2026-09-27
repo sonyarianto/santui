@@ -124,6 +124,15 @@ santui-server
 
 See [docs/architecture.md](docs/architecture.md) for the full architecture and API reference.
 
+## Support
+
+Santui is free and open source. If it powers your workflow, please support development:
+
+- 💖 [GitHub Sponsors](https://github.com/sponsors/sonyarianto)
+- ☕ [Buy Me a Coffee](https://buymeacoffee.com/sonyarianto)
+- 🧋 [Ko-fi](https://ko-fi.com/sonyarianto)
+- 💳 [PayPal](https://paypal.me/sonyarianto)
+
 ## Documentation
 
 Full docs at [santuiapp.vercel.app](https://santuiapp.vercel.app).
