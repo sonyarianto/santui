@@ -6,6 +6,8 @@
 [![Downloads/day](https://img.shields.io/npm/dm/santui)](https://www.npmjs.com/package/santui)
 [![Downloads (total)](https://img.shields.io/npm/dt/santui?label=Downloads%20total)](https://www.npmjs.com/package/santui)
 [![Sponsor](https://img.shields.io/badge/sponsor-30363D?logo=GitHub-Sponsors&logoColor=#EA4AAA)](https://github.com/sponsors/sonyarianto)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/sonyarianto)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-F16061?logo=ko-fi&logoColor=white)](https://ko-fi.com/sonyarianto)
 
 Your terminal home base.
 
