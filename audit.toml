@@ -2,4 +2,7 @@
 # quick-xml 0.37.x — used transitively by feed-rs 2.x.
 # feed-rs pins to quick-xml 0.37; upstream must bump before we can adopt 0.41.
 # Remove these ignores once feed-rs publishes a version using quick-xml >= 0.41.
-ignore = ["RUSTSEC-2026-0194", "RUSTSEC-2026-0195"]
+# RUSTSEC-2023-0071 (rsa 0.9.10, Marvin timing sidechannel) — pulled in via
+# jsonwebtoken 10 with rust_crypto backend (santui-server, RS256 verify only).
+# Upstream states "No fixed upgrade is available", so ignore until rsa/jsonwebtoken ships a fix.
+ignore = ["RUSTSEC-2026-0194", "RUSTSEC-2026-0195", "RUSTSEC-2023-0071"]
